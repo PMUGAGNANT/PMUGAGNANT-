@@ -110,13 +110,51 @@ export async function GET(request: Request) {
       }
     }
 
-    const totalPlayed = results.filter((r) => r.resultat !== "INCONNU").length;
-    const wins = results.filter((r) => r.resultat === "GAGNANT").length;
-    const places = results.filter((r) => r.resultat === "PLACE").length;
-    const couplePlayed = results.filter((r) => (r.typePari || "").toLowerCase().includes("couple") && r.resultat !== "INCONNU").length;
-    const coupleWins = results.filter((r) => (r.typePari || "").toLowerCase().includes("couple") && r.resultat === "GAGNANT").length;
-    const couplePlaces = results.filter((r) => (r.typePari || "").toLowerCase().includes("couple") && r.resultat === "PLACE").length;
+    const resolvedResults = results.filter((r) => r.resultat !== "INCONNU");
+    const totalPlayed = resolvedResults.length;
+    const wins = resolvedResults.filter((r) => r.resultat === "GAGNANT").length;
+    const places = resolvedResults.filter((r) => r.resultat === "PLACE").length;
+
+    const simpleResults = resolvedResults.filter(
+      (r) => !(r.typePari || "").toLowerCase().includes("couple")
+    );
+    const coupleResults = resolvedResults.filter((r) =>
+      (r.typePari || "").toLowerCase().includes("couple")
+    );
+    const couplePlaceResults = resolvedResults.filter(
+      (r) => (r.typePari || "").toLowerCase() === "couple place"
+    );
+    const coupleGagnantResults = resolvedResults.filter(
+      (r) => (r.typePari || "").toLowerCase() === "couple gagnant"
+    );
+
+    const simplePlayed = simpleResults.length;
+    const simpleWins = simpleResults.filter((r) => r.resultat === "GAGNANT").length;
+    const simplePlaces = simpleResults.filter((r) => r.resultat === "PLACE").length;
+    const simpleSuccess = simpleWins + simplePlaces;
+
+    const couplePlayed = coupleResults.length;
+    const coupleWins = coupleResults.filter((r) => r.resultat === "GAGNANT").length;
+    const couplePlaces = coupleResults.filter((r) => r.resultat === "PLACE").length;
     const coupleSuccess = coupleWins + couplePlaces;
+
+    const overallSuccessRate = totalPlayed > 0 ? Math.round((wins + places) / totalPlayed * 100) : 0;
+    const simpleSuccessRate = simplePlayed > 0 ? Math.round(simpleSuccess / simplePlayed * 100) : 0;
+    const coupleSuccessRate = couplePlayed > 0 ? Math.round(coupleSuccess / couplePlayed * 100) : 0;
+    const couplePlaceSuccessRate = couplePlaceResults.length > 0
+      ? Math.round(couplePlaceResults.filter((r) => r.resultat === "PLACE").length / couplePlaceResults.length * 100)
+      : 0;
+    const coupleGagnantSuccessRate = coupleGagnantResults.length > 0
+      ? Math.round(coupleGagnantResults.filter((r) => r.resultat === "GAGNANT").length / coupleGagnantResults.length * 100)
+      : 0;
+
+    const typeRankings = [
+      { key: "Simple gagnant", played: simplePlayed, rate: simpleSuccessRate },
+      { key: "Couple place", played: couplePlaceResults.length, rate: couplePlaceSuccessRate },
+      { key: "Couple gagnant", played: coupleGagnantResults.length, rate: coupleGagnantSuccessRate },
+    ].filter((entry) => entry.played > 0);
+
+    const bestType = typeRankings.sort((a, b) => b.rate - a.rate)[0]?.key ?? null;
 
     return NextResponse.json({
       success: true,
@@ -124,12 +162,26 @@ export async function GET(request: Request) {
       summary: {
         totalRaces: races.length,
         totalPlayed,
+        totalPredictions: totalPlayed,
         wins,
         places,
+        overallSuccess: wins + places,
+        overallSuccessRate,
+        simplePlayed,
+        simpleWins,
+        simplePlaces,
+        simpleSuccess,
+        simpleSuccessRate,
         couplePlayed,
         coupleWins,
         couplePlaces,
         coupleSuccess,
+        coupleSuccessRate,
+        couplePlacePlayed: couplePlaceResults.length,
+        couplePlaceSuccessRate,
+        coupleGagnantPlayed: coupleGagnantResults.length,
+        coupleGagnantSuccessRate,
+        bestType,
         losses: totalPlayed - wins - places,
       },
       results,

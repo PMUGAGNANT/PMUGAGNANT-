@@ -33,12 +33,26 @@ interface BilanData {
   summary: {
     totalRaces: number;
     totalPlayed: number;
+    totalPredictions?: number;
     wins: number;
     places: number;
+    overallSuccess?: number;
+    overallSuccessRate?: number;
+    simplePlayed?: number;
+    simpleWins?: number;
+    simplePlaces?: number;
+    simpleSuccess?: number;
+    simpleSuccessRate?: number;
     couplePlayed?: number;
     coupleWins?: number;
     couplePlaces?: number;
     coupleSuccess?: number;
+    coupleSuccessRate?: number;
+    couplePlacePlayed?: number;
+    couplePlaceSuccessRate?: number;
+    coupleGagnantPlayed?: number;
+    coupleGagnantSuccessRate?: number;
+    bestType?: string | null;
     losses: number;
   };
   results: BilanResult[];
@@ -204,21 +218,47 @@ export default function BilanPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const totalPlayed = data?.summary.totalPlayed ?? 0;
+  const totalPlayed = data?.summary.totalPredictions ?? data?.summary.totalPlayed ?? 0;
   const wins = data?.summary.wins ?? 0;
   const places = data?.summary.places ?? 0;
+  const overallSuccess = data?.summary.overallSuccess ?? wins + places;
+  const overallSuccessRate = data?.summary.overallSuccessRate ?? 0;
+  const simplePlayed = data?.summary.simplePlayed ?? 0;
+  const simpleSuccess = data?.summary.simpleSuccess ?? wins + places;
+  const simpleSuccessRate = data?.summary.simpleSuccessRate ?? 0;
   const couplePlayed = data?.summary.couplePlayed ?? 0;
   const coupleWins = data?.summary.coupleWins ?? 0;
   const couplePlaces = data?.summary.couplePlaces ?? 0;
   const coupleSuccess = data?.summary.coupleSuccess ?? 0;
+  const coupleSuccessRate = data?.summary.coupleSuccessRate ?? 0;
+  const bestType = data?.summary.bestType ?? null;
 
-  let roiText = "-";
-  let roiColor = "#1A1A1A";
-  if (totalPlayed > 0) {
-    const roi = ((wins * 2 + places * 0.5 - totalPlayed) / totalPlayed) * 100;
-    roiText = roi >= 0 ? `+${roi.toFixed(0)}%` : `${roi.toFixed(0)}%`;
-    roiColor = roi >= 0 ? "#00843D" : "#E74C3C";
+  let dayTone = {
+    bg: "#FDECEA",
+    color: "#E74C3C",
+    title: "Journee difficile",
+    text: "Peu de predictions ont tenu aujourd'hui.",
+  };
+
+  if (overallSuccessRate >= 55) {
+    dayTone = {
+      bg: "#E8F5E9",
+      color: "#00843D",
+      title: "Journee solide",
+      text: "Les predictions du jour tiennent bien la route.",
+    };
+  } else if (overallSuccessRate >= 30) {
+    dayTone = {
+      bg: "#FFF3CD",
+      color: "#856404",
+      title: "Journee mitigee",
+      text: "Il y a du dechet, mais certains signaux restent exploitables.",
+    };
   }
+
+  const bestTypeText = bestType
+    ? `Type le plus fiable du jour: ${bestType}`
+    : "Pas assez de recul pour designer un meilleur type.";
 
   return (
     <div
@@ -273,15 +313,17 @@ export default function BilanPage() {
                 marginTop: 16,
               }}
             >
-              {[
-                { label: "Jouees", value: totalPlayed, color: "#1A1A1A" },
-                { label: "Gagnants", value: wins, color: "#00843D" },
-                { label: "Places", value: places, color: "#E67E22" },
+              {[ 
+                { label: "Predictions IA", value: totalPlayed, color: "#1A1A1A" },
+                { label: "Taux global", value: `${overallSuccessRate}%`, color: overallSuccessRate >= 30 ? "#00843D" : "#E74C3C" },
+                { label: "Simples joues", value: simplePlayed, color: "#1A1A1A" },
+                { label: "Simples reussis", value: simpleSuccess, color: "#E67E22" },
+                { label: "Taux simples", value: `${simpleSuccessRate}%`, color: simpleSuccessRate >= 30 ? "#00843D" : "#E74C3C" },
                 { label: "Couples joues", value: couplePlayed, color: "#1A1A1A" },
                 { label: "Couples reussis", value: coupleSuccess, color: "#00843D" },
+                { label: "Taux couples", value: `${coupleSuccessRate}%`, color: coupleSuccessRate >= 20 ? "#00843D" : "#E74C3C" },
                 { label: "Couples gagnants", value: coupleWins, color: "#00843D" },
                 { label: "Couples places", value: couplePlaces, color: "#E67E22" },
-                { label: "ROI", value: roiText, color: roiColor },
               ].map((card) => (
                 <div
                   key={card.label}
@@ -299,8 +341,22 @@ export default function BilanPage() {
               ))}
             </div>
 
+            <div
+              style={{
+                margin: "16px",
+                padding: "14px 16px",
+                borderRadius: 16,
+                background: dayTone.bg,
+                color: dayTone.color,
+              }}
+            >
+              <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{dayTone.title}</div>
+              <div style={{ fontSize: 13, lineHeight: 1.5 }}>{dayTone.text}</div>
+              <div style={{ fontSize: 13, lineHeight: 1.5, marginTop: 6, fontWeight: 600 }}>{bestTypeText}</div>
+            </div>
+
             <div style={{ fontWeight: 700, fontSize: 18, margin: "24px 16px 8px" }}>
-              Resultats
+              Resultats des predictions IA
             </div>
 
             <div
@@ -321,7 +377,7 @@ export default function BilanPage() {
                   fontWeight: 700,
                 }}
               >
-                Couples reussis: {coupleSuccess}
+                Reussite globale: {overallSuccess}/{totalPlayed}
               </span>
               <span
                 style={{
@@ -333,7 +389,7 @@ export default function BilanPage() {
                   fontWeight: 700,
                 }}
               >
-                Couples places: {couplePlaces}
+                Taux simples: {simpleSuccessRate}%
               </span>
               <span
                 style={{
@@ -345,7 +401,7 @@ export default function BilanPage() {
                   fontWeight: 700,
                 }}
               >
-                Couples joues: {couplePlayed}
+                Taux couples: {coupleSuccessRate}%
               </span>
             </div>
 
