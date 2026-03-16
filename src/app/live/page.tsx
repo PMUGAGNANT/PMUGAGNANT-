@@ -40,6 +40,7 @@ const RECENT_GREY = "#757575";
 const WATCH_WINDOW_MINUTES = 5;
 const LIVE_WINDOW_AFTER_START = -20;
 const RECENT_RESULT_WINDOW = -90;
+const PMU_LIVE_URL = "https://www.pmu.fr/turf/";
 
 function getParisNow() {
   return new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Paris" }));
@@ -68,10 +69,6 @@ function getRaceStatus(heureDepart: string): { status: LiveStatus; minutesUntil:
 
   if (minutesUntil < LIVE_WINDOW_AFTER_START) {
     return { status: "finished", minutesUntil };
-  }
-
-  if (minutesUntil <= 0) {
-    return { status: "live", minutesUntil };
   }
 
   if (minutesUntil <= WATCH_WINDOW_MINUTES) {
@@ -138,13 +135,7 @@ function getLiveLabel(status: LiveStatus, minutesUntil: number, secondsUntil: nu
   return `Terminee il y a ${Math.abs(minutesUntil)} min`;
 }
 
-function SectionTitle({
-  title,
-  subtitle,
-}: {
-  title: string;
-  subtitle: string;
-}) {
+function SectionTitle({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <div style={{ margin: "20px 16px 10px" }}>
       <div style={{ fontSize: 18, fontWeight: 700, color: DARK }}>{title}</div>
@@ -259,6 +250,10 @@ export default function LivePage() {
     };
   }, [fetchData]);
 
+  const handleOpenPmuLive = useCallback(() => {
+    window.open(PMU_LIVE_URL, "_blank", "noopener,noreferrer");
+  }, []);
+
   const handleOpenRace = (race: RaceSummary) => {
     router.push(`/course/${race.reunion}/${race.course}`);
   };
@@ -293,9 +288,7 @@ export default function LivePage() {
             marginBottom: 8,
           }}
         >
-          <div style={{ fontSize: 18, fontWeight: 700, color: accentColor }}>
-            {race.heureDepart}
-          </div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: accentColor }}>{race.heureDepart}</div>
           <span
             style={{
               fontSize: 12,
@@ -376,9 +369,29 @@ export default function LivePage() {
             )}
           </div>
 
-          <span style={{ fontSize: 12, fontWeight: 700, color: accentColor }}>
-            Ouvrir →
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {(status === "live" || status === "watch_now") && (
+              <button
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleOpenPmuLive();
+                }}
+                style={{
+                  border: "none",
+                  borderRadius: 20,
+                  background: "#111",
+                  color: "#fff",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  padding: "8px 12px",
+                  cursor: "pointer",
+                }}
+              >
+                Voir PMU
+              </button>
+            )}
+            <span style={{ fontSize: 12, fontWeight: 700, color: accentColor }}>Ouvrir -&gt;</span>
+          </div>
         </div>
       </div>
     );
@@ -422,11 +435,20 @@ export default function LivePage() {
             background: "rgba(255,255,255,0.1)",
           }}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#fff"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
         </div>
-        <div style={{ color: "#fff", fontWeight: 700, fontSize: 18 }}>
-          ⚡ Live PMU
-        </div>
+        <div style={{ color: "#fff", fontWeight: 700, fontSize: 18 }}>Live PMU</div>
       </div>
 
       <div
@@ -439,9 +461,7 @@ export default function LivePage() {
         }}
       >
         <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 4 }}>Temps reel</div>
-        <div style={{ fontSize: 28, fontWeight: 700, marginBottom: 6 }}>
-          {actualLiveRaces.length} en direct
-        </div>
+        <div style={{ fontSize: 28, fontWeight: 700, marginBottom: 6 }}>{actualLiveRaces.length} en direct</div>
         <div style={{ fontSize: 14, opacity: 0.9 }}>
           {imminentRaces.length} departs imminents - {watchNowRaces.length} a suivre
         </div>
@@ -472,10 +492,36 @@ export default function LivePage() {
               </div>
             )}
             {featuredAnalysis?.analysis?.recommandation?.decision && (
-              <div style={{ fontSize: 12, marginTop: 6, color: featuredAnalysis.analysis.recommandation.vautLeCoup ? "#9FE3B9" : "#FFD28A" }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  marginTop: 6,
+                  color: featuredAnalysis.analysis.recommandation.vautLeCoup ? "#9FE3B9" : "#FFD28A",
+                }}
+              >
                 {featuredAnalysis.analysis.recommandation.decision}
               </div>
             )}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
+              <button
+                onClick={handleOpenPmuLive}
+                style={{
+                  border: "none",
+                  borderRadius: 20,
+                  background: "#fff",
+                  color: "#111",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  padding: "10px 14px",
+                  cursor: "pointer",
+                }}
+              >
+                Voir le live PMU
+              </button>
+              <span style={{ fontSize: 12, color: "#B7B7B7" }}>
+                Ouvre le direct officiel PMU dans un nouvel onglet
+              </span>
+            </div>
           </div>
         )}
       </div>
@@ -483,15 +529,10 @@ export default function LivePage() {
       {loading ? (
         <div style={{ textAlign: "center", padding: 60, color: "#888" }}>Chargement du direct...</div>
       ) : error ? (
-        <div style={{ textAlign: "center", padding: 60, color: "#E74C3C" }}>
-          Impossible de charger le live
-        </div>
+        <div style={{ textAlign: "center", padding: 60, color: "#E74C3C" }}>Impossible de charger le live</div>
       ) : (
         <>
-          <SectionTitle
-            title="En direct"
-            subtitle="Courses parties ou sur le point de partir"
-          />
+          <SectionTitle title="En direct" subtitle="Courses parties ou sur le point de partir" />
           {liveRaces.length > 0 ? (
             liveRaces.map((race) => renderRaceCard(race, LIVE_RED))
           ) : (
@@ -500,10 +541,7 @@ export default function LivePage() {
             </div>
           )}
 
-          <SectionTitle
-            title="A suivre"
-            subtitle="Pronostics disponibles dans les 30 prochaines minutes"
-          />
+          <SectionTitle title="A suivre" subtitle="Pronostics disponibles dans les 30 prochaines minutes" />
           {watchNowRaces.length > 0 ? (
             watchNowRaces.map((race) => renderRaceCard(race, GREEN))
           ) : (
@@ -512,10 +550,7 @@ export default function LivePage() {
             </div>
           )}
 
-          <SectionTitle
-            title="Tout juste termine"
-            subtitle="Courses finies recemment, ouvre-les pour voir le detail"
-          />
+          <SectionTitle title="Tout juste termine" subtitle="Courses finies recemment, ouvre-les pour voir le detail" />
           {recentResults.length > 0 ? (
             recentResults.map((race) => renderRaceCard(race, RECENT_GREY))
           ) : (
@@ -553,7 +588,22 @@ export default function LivePage() {
             gap: 2,
           }}
         >
-          <span style={{ fontSize: 22 }}>🏇</span>
+          <span
+            style={{
+              width: 26,
+              height: 26,
+              borderRadius: "50%",
+              background: "#F0F0F0",
+              color: "#444",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 13,
+              fontWeight: 700,
+            }}
+          >
+            C
+          </span>
           <span style={{ fontSize: 11, color: "#888", fontWeight: 500 }}>Courses</span>
         </div>
 
@@ -567,7 +617,22 @@ export default function LivePage() {
             position: "relative",
           }}
         >
-          <span style={{ fontSize: 22 }}>⚡</span>
+          <span
+            style={{
+              width: 26,
+              height: 26,
+              borderRadius: "50%",
+              background: "#E8F5E9",
+              color: GREEN,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 13,
+              fontWeight: 700,
+            }}
+          >
+            L
+          </span>
           <span style={{ fontSize: 11, color: GREEN, fontWeight: 700 }}>Live</span>
           <div
             style={{
@@ -591,7 +656,22 @@ export default function LivePage() {
             gap: 2,
           }}
         >
-          <span style={{ fontSize: 22 }}>📊</span>
+          <span
+            style={{
+              width: 26,
+              height: 26,
+              borderRadius: "50%",
+              background: "#F0F0F0",
+              color: "#444",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 13,
+              fontWeight: 700,
+            }}
+          >
+            B
+          </span>
           <span style={{ fontSize: 11, color: "#888", fontWeight: 500 }}>Bilan</span>
         </div>
       </div>
