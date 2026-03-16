@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+import {
+  createSupabaseRequestClient,
+  getSupabaseConfigError,
+} from "@/lib/supabase";
 
 function getSupabaseClient(req: NextRequest) {
   const token = req.headers.get("authorization")?.replace("Bearer ", "");
-  const client = createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: token ? { Authorization: `Bearer ${token}` } : {} },
-  });
-  return client;
+  return createSupabaseRequestClient(token);
 }
 
 // GET /api/bets - List user bets
 export async function GET(req: NextRequest) {
   const client = getSupabaseClient(req);
+  if (!client) {
+    return NextResponse.json({ success: false, error: getSupabaseConfigError() }, { status: 500 });
+  }
+
   const { data: { user } } = await client.auth.getUser();
 
   if (!user) {
@@ -48,6 +49,10 @@ export async function GET(req: NextRequest) {
 // POST /api/bets - Place a bet
 export async function POST(req: NextRequest) {
   const client = getSupabaseClient(req);
+  if (!client) {
+    return NextResponse.json({ success: false, error: getSupabaseConfigError() }, { status: 500 });
+  }
+
   const { data: { user } } = await client.auth.getUser();
 
   if (!user) {

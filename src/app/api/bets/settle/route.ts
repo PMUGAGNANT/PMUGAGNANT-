@@ -1,20 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import {
+  createSupabaseRequestClient,
+  getSupabaseConfigError,
+} from "@/lib/supabase";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const PMU_API = "https://online.turfinfo.api.pmu.fr/rest/client/1";
 
 function getSupabaseClient(req: NextRequest) {
   const token = req.headers.get("authorization")?.replace("Bearer ", "");
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: token ? { Authorization: `Bearer ${token}` } : {} },
-  });
+  return createSupabaseRequestClient(token);
 }
 
 // POST /api/bets/settle - Settle pending bets by checking results
 export async function POST(req: NextRequest) {
   const client = getSupabaseClient(req);
+  if (!client) {
+    return NextResponse.json({ success: false, error: getSupabaseConfigError() }, { status: 500 });
+  }
+
   const { data: { user } } = await client.auth.getUser();
 
   if (!user) {

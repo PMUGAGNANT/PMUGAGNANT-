@@ -2,7 +2,11 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { supabase } from "@/lib/supabase";
+import {
+  getSupabaseBrowserClient,
+  getSupabaseConfigError,
+  hasSupabaseConfig,
+} from "@/lib/supabase";
 
 /* ------------------------------------------------------------------ */
 /*  Types (mirroring API response)                                     */
@@ -242,6 +246,7 @@ function Skeleton() {
 export default function CourseDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const supabaseConfigured = hasSupabaseConfig();
   const reunion = params.reunion as string;
   const course = params.course as string;
 
@@ -780,11 +785,19 @@ export default function CourseDetailPage() {
   /* ---------- Bet handler ---------- */
   async function handlePlaceBet() {
     if (!betHorse || !data) return;
+
+    if (!supabaseConfigured) {
+      setBetMessage({ type: "error", text: getSupabaseConfigError() });
+      return;
+    }
+
     setBetLoading(true);
     setBetMessage(null);
 
+    const supabase = getSupabaseBrowserClient();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
+      setBetLoading(false);
       router.push(`/login?redirect=/course/${reunion}/${course}`);
       return;
     }

@@ -2,7 +2,11 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import {
+  getSupabaseBrowserClient,
+  getSupabaseConfigError,
+  hasSupabaseConfig,
+} from "@/lib/supabase";
 
 const GREEN = "#00843D";
 const DARK = "#1A1A1A";
@@ -26,13 +30,22 @@ interface Bet {
 
 export default function MesParisPage() {
   const router = useRouter();
+  const supabaseConfigured = hasSupabaseConfig();
   const [bets, setBets] = useState<Bet[]>([]);
   const [solde, setSolde] = useState(1000);
   const [loading, setLoading] = useState(true);
   const [settling, setSettling] = useState(false);
   const [user, setUser] = useState<{ email?: string } | null>(null);
+  const [error, setError] = useState("");
 
   const fetchBets = useCallback(async () => {
+    if (!supabaseConfigured) {
+      setError(getSupabaseConfigError());
+      setLoading(false);
+      return;
+    }
+
+    const supabase = getSupabaseBrowserClient();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       router.push("/login?redirect=/mes-paris");
@@ -62,9 +75,18 @@ export default function MesParisPage() {
   }, [fetchBets]);
 
   async function handleSettle() {
+    if (!supabaseConfigured) {
+      setError(getSupabaseConfigError());
+      return;
+    }
+
     setSettling(true);
+    const supabase = getSupabaseBrowserClient();
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    if (!session) {
+      setSettling(false);
+      return;
+    }
 
     try {
       await fetch("/api/bets/settle", {
@@ -80,6 +102,12 @@ export default function MesParisPage() {
   }
 
   async function handleLogout() {
+    if (!supabaseConfigured) {
+      router.push("/");
+      return;
+    }
+
+    const supabase = getSupabaseBrowserClient();
     await supabase.auth.signOut();
     router.push("/");
   }
@@ -157,6 +185,20 @@ export default function MesParisPage() {
 
       {loading ? (
         <div style={{ textAlign: "center", padding: 60, color: "#888" }}>Chargement...</div>
+      ) : error ? (
+        <div
+          style={{
+            margin: "16px",
+            background: "#FFF3CD",
+            color: "#856404",
+            padding: "16px",
+            borderRadius: 12,
+            fontSize: 14,
+            fontWeight: 500,
+          }}
+        >
+          {error}
+        </div>
       ) : (
         <>
           {/* Profile card */}

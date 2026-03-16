@@ -2,13 +2,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import {
+  getSupabaseBrowserClient,
+  getSupabaseConfigError,
+  hasSupabaseConfig,
+} from "@/lib/supabase";
 
 const GREEN = "#00843D";
 const DARK = "#1A1A1A";
 
 export default function LoginPage() {
   const router = useRouter();
+  const supabaseConfigured = hasSupabaseConfig();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,9 +23,17 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+
+    if (!supabaseConfigured) {
+      setError(getSupabaseConfigError());
+      return;
+    }
+
     setLoading(true);
 
     try {
+      const supabase = getSupabaseBrowserClient();
+
       if (isSignUp) {
         const { error: signUpError } = await supabase.auth.signUp({
           email,
@@ -129,6 +142,22 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit}>
+          {!supabaseConfigured && (
+            <div
+              style={{
+                background: "#FFF3CD",
+                color: "#856404",
+                padding: "12px 16px",
+                borderRadius: 12,
+                fontSize: 13,
+                fontWeight: 500,
+                marginBottom: 16,
+              }}
+            >
+              Ajoutez vos variables Supabase dans Vercel pour activer la connexion.
+            </div>
+          )}
+
           {/* Email */}
           <div style={{ marginBottom: 16 }}>
             <label
@@ -218,17 +247,17 @@ export default function LoginPage() {
           {/* Submit */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !supabaseConfigured}
             style={{
               width: "100%",
               padding: "16px",
               borderRadius: 12,
               border: "none",
-              background: loading ? "#999" : GREEN,
+              background: loading || !supabaseConfigured ? "#999" : GREEN,
               color: "#fff",
               fontSize: 16,
               fontWeight: 700,
-              cursor: loading ? "not-allowed" : "pointer",
+              cursor: loading || !supabaseConfigured ? "not-allowed" : "pointer",
               transition: "background 0.2s",
             }}
           >
