@@ -836,7 +836,7 @@ export default function CourseDetailPage() {
           </div>
         )}
 
-        {/* Bet success message */}
+        {/* Legacy success box kept disabled; betMessage below is the active feedback path */}
         {false && (
           <div style={{
             margin: "0 16px 16px", padding: "16px", borderRadius: "14px",
