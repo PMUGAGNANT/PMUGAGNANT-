@@ -22,6 +22,9 @@ interface BilanResult {
   typePari?: string;
   recommandation: string;
   confiance: number;
+  coteEstimee?: number | null;
+  coteCheval?: number | null;
+  coteSecondCheval?: number | null;
   resultat: "GAGNANT" | "PLACE" | "PERDU" | "INCONNU";
   ordreArrivee?: number;
   ordreArriveeSecond?: number;
@@ -196,6 +199,27 @@ function getArrivalLabel(result: BilanResult): string | null {
   }
 
   return parts.length ? `Arrivee: ${parts.join(" | ")}` : null;
+}
+
+function getOddsLabel(result: BilanResult): string | null {
+  const parts: string[] = [];
+
+  if (result.coteEstimee != null) {
+    parts.push(`Cote IA ${result.coteEstimee}`);
+  }
+
+  if (result.secondCheval) {
+    if (result.coteCheval != null) {
+      parts.push(`N${result.favori.numPmu} @ ${result.coteCheval}`);
+    }
+    if (result.coteSecondCheval != null) {
+      parts.push(`N${result.secondCheval.numPmu} @ ${result.coteSecondCheval}`);
+    }
+  } else if (result.coteCheval != null) {
+    parts.push(`Cote cheval ${result.coteCheval}`);
+  }
+
+  return parts.length > 0 ? parts.join(" · ") : null;
 }
 
 function getResultPriority(resultat: BilanResult["resultat"]) {
@@ -511,6 +535,9 @@ export default function BilanPage() {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {winnerResults.slice(0, 4).map((result, idx) => (
+                    (() => {
+                      const oddsLabel = getOddsLabel(result);
+                      return (
                     <div
                       key={`winner-${result.courseInfo.reunion}-${result.courseInfo.course}-${idx}`}
                       style={{
@@ -533,7 +560,14 @@ export default function BilanPage() {
                       <div style={{ fontSize: 14, color: "#1A1A1A", fontWeight: 600 }}>
                         {getSelectionLabel(result)}
                       </div>
+                      {oddsLabel && (
+                        <div style={{ fontSize: 12, color: "#666", marginTop: 6, fontWeight: 600 }}>
+                          {oddsLabel}
+                        </div>
+                      )}
                     </div>
+                      );
+                    })()
                   ))}
                 </div>
               </div>
@@ -556,6 +590,7 @@ export default function BilanPage() {
                 const confianceBadge = getConfianceBadgeStyle(result.confiance);
                 const emoji = getRecommandationEmoji(result.recommandation);
                 const arrivalLabel = getArrivalLabel(result);
+                const oddsLabel = getOddsLabel(result);
 
                 return (
                   <div
@@ -596,6 +631,12 @@ export default function BilanPage() {
                     {arrivalLabel && (
                       <div style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>
                         {arrivalLabel}
+                      </div>
+                    )}
+
+                    {oddsLabel && (
+                      <div style={{ fontSize: 12, color: "#666", marginBottom: 8, fontWeight: 600 }}>
+                        {oddsLabel}
                       </div>
                     )}
 

@@ -77,6 +77,7 @@ export async function GET(request: Request) {
                   label: "Simple gagnant",
                   chevaux: [{ numPmu: analysis.favori.numPmu, nom: analysis.favori.nom }],
                   surete: analysis.scoreConfiance?.score ?? 0,
+                  coteEstimee: null,
                 },
               ];
 
@@ -99,6 +100,9 @@ export async function GET(request: Request) {
               typePari: getPariLabel(pari.type),
               recommandation: pari.label || analysis.recommandation?.decision || "-",
               confiance: pari.surete ?? analysis.scoreConfiance?.score ?? 0,
+              coteEstimee: pari.coteEstimee ?? null,
+              coteCheval: premierResultat?.cote ?? null,
+              coteSecondCheval: secondResultat?.cote ?? null,
               resultat: getPariResultat(pari.type, ordreArrivee, ordreArriveeSecond),
               ordreArrivee: ordreArrivee ?? undefined,
               ordreArriveeSecond: ordreArriveeSecond ?? undefined,
