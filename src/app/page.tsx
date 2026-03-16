@@ -27,6 +27,12 @@ type HomeSortMode =
   | "confidence_asc"
   | "opportunity"
   | "allocation_desc";
+type ScoreStage = "preview_1h" | "final_30m" | "finished";
+
+interface RaceScoreMeta {
+  score: number;
+  stage: ScoreStage;
+}
 
 function getMinutesUntilStart(heureDepart: string): number {
   const [hours, minutes] = heureDepart.split(":").map(Number);
@@ -146,7 +152,7 @@ export default function Home() {
   // Confidence filter (persisted in localStorage)
   const [minConfiance, setMinConfiance] = useState<number>(0);
   const [showFilter, setShowFilter] = useState(false);
-  const [scores, setScores] = useState<Record<string, number>>({});
+  const [scores, setScores] = useState<Record<string, RaceScoreMeta>>({});
   const [scoresLoading, setScoresLoading] = useState(false);
   const scoresLoaded = useRef(false);
   const [sortMode, setSortMode] = useState<HomeSortMode>("time_asc");
@@ -249,7 +255,7 @@ export default function Home() {
   const filteredRaces = minConfiance > 0
     ? timeSortedRaces.filter((race) => {
         const key = `${race.reunion}-${race.course}`;
-        const score = scores[key];
+        const score = scores[key]?.score;
         // Keep upcoming races (no score yet) + races matching filter
         if (score === undefined) {
           const status = getRaceStatus(race.heureDepart);
@@ -262,8 +268,8 @@ export default function Home() {
   const sortedRaces = [...filteredRaces].sort((a, b) => {
     const aKey = `${a.reunion}-${a.course}`;
     const bKey = `${b.reunion}-${b.course}`;
-    const aScore = scores[aKey];
-    const bScore = scores[bKey];
+    const aScore = scores[aKey]?.score;
+    const bScore = scores[bKey]?.score;
     const aMinutesUntil = getMinutesUntilStart(a.heureDepart);
     const bMinutesUntil = getMinutesUntilStart(b.heureDepart);
     const aStatus = getRaceStatus(a.heureDepart);
@@ -618,7 +624,9 @@ export default function Home() {
               const isUpcoming = status === "upcoming";
               const isClickable = isProno || isFinished;
               const raceKey = `${race.reunion}-${race.course}`;
-              const confScore = scores[raceKey];
+              const scoreMeta = scores[raceKey];
+              const confScore = scoreMeta?.score;
+              const scoreStage = scoreMeta?.stage;
 
               return (
                 <div
@@ -722,7 +730,7 @@ export default function Home() {
                           {race.distance}m
                         </div>
                         {confScore !== undefined && (
-                          <div style={{ marginTop: 6 }}>
+                          <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 6 }}>
                             <span
                               style={{
                                 display: "inline-block",
@@ -735,6 +743,33 @@ export default function Home() {
                               }}
                             >
                               Confiance {confScore}/10
+                            </span>
+                            <span
+                              style={{
+                                display: "inline-block",
+                                fontSize: 11,
+                                fontWeight: 700,
+                                padding: "2px 8px",
+                                borderRadius: 20,
+                                background:
+                                  scoreStage === "preview_1h"
+                                    ? "#E3F2FD"
+                                    : scoreStage === "final_30m"
+                                      ? "#E8F5E9"
+                                      : "#F5F5F5",
+                                color:
+                                  scoreStage === "preview_1h"
+                                    ? "#1565C0"
+                                    : scoreStage === "final_30m"
+                                      ? "#00843D"
+                                      : "#666",
+                              }}
+                            >
+                              {scoreStage === "preview_1h"
+                                ? "Note 1h"
+                                : scoreStage === "final_30m"
+                                  ? "Note 30 min"
+                                  : "Resultat"}
                             </span>
                           </div>
                         )}

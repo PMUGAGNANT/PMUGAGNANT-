@@ -9,12 +9,18 @@ export async function GET() {
 
   try {
     const races = await getAllRaces(date);
-    const scores: Record<string, number> = {};
+    const scores: Record<
+      string,
+      {
+        score: number;
+        stage: 'preview_1h' | 'final_30m' | 'finished';
+      }
+    > = {};
 
-    // Only compute for races where prono is available or finished
+    // Compute scores from 60 minutes before departure, then keep updating
     const analyzableRaces = races.filter((r: { heureDepart: string }) => {
       const min = getMinutesUntilStart(r.heureDepart);
-      return min <= 30; // prono_available or finished
+      return min <= 60;
     });
 
     // Process in parallel batches of 5
@@ -29,12 +35,23 @@ export async function GET() {
             participants
           );
           const key = `${race.reunion}-${race.course}`;
-          return { key, score: analysis.scoreConfiance?.score ?? null };
+          const minutesUntil = getMinutesUntilStart(race.heureDepart);
+          const stage: 'preview_1h' | 'final_30m' | 'finished' =
+            minutesUntil < -10
+              ? 'finished'
+              : minutesUntil <= 30
+                ? 'final_30m'
+                : 'preview_1h';
+
+          return { key, score: analysis.scoreConfiance?.score ?? null, stage };
         })
       );
       for (const result of results) {
         if (result.status === 'fulfilled' && result.value.score !== null) {
-          scores[result.value.key] = result.value.score;
+          scores[result.value.key] = {
+            score: result.value.score,
+            stage: result.value.stage,
+          };
         }
       }
     }
