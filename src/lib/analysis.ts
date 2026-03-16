@@ -227,6 +227,23 @@ export function scoreRunner(
     else if (participant.age === 4 || participant.age === 9) ageBonus = 3;
   }
 
+  // Draw / stall bonus
+  let drawBonus = 0;
+  if (participant.placeCorde && participant.placeCorde > 0) {
+    if (estPlat) {
+      if (participant.placeCorde <= 3) drawBonus = 3;
+      else if (participant.placeCorde <= 6) drawBonus = 2;
+      else if (participant.placeCorde <= 10) drawBonus = 1;
+      else if (participant.placeCorde >= 16) drawBonus = -2;
+      else if (participant.placeCorde >= 13) drawBonus = -1;
+    } else {
+      if (participant.placeCorde <= 4) drawBonus = 2;
+      else if (participant.placeCorde <= 8) drawBonus = 1;
+      else if (participant.placeCorde >= 13) drawBonus = -1.5;
+      else if (participant.placeCorde >= 10) drawBonus = -0.5;
+    }
+  }
+
   const totalScore =
     formScore +
     serieBonus +
@@ -234,7 +251,8 @@ export function scoreRunner(
     formProgression +
     eliteScore +
     winRateBonus +
-    ageBonus;
+    ageBonus +
+    drawBonus;
 
   // Tocard detection
   let estTocard = false;
@@ -678,6 +696,162 @@ function getRunnerReliability(runner: ScoredParticipant, topScore: number) {
   return clamp(scoreRatio * 4 + fiabilite * 3 + ratioForme * 2 + podiumRate, 0, 10);
 }
 
+function getDrawRating(
+  runner: ScoredParticipant,
+  estPlat: boolean,
+  nombrePartants: number
+) {
+  if (!runner.placeCorde || runner.placeCorde <= 0) {
+    return 0.5;
+  }
+
+  const normalized = 1 - (runner.placeCorde - 1) / Math.max(1, nombrePartants - 1);
+
+  if (estPlat) {
+    return clamp(normalized, 0.1, 1);
+  }
+
+  return clamp(0.35 + normalized * 0.65, 0.2, 1);
+}
+
+function getRunnerSignals(
+  runner: ScoredParticipant,
+  topScore: number,
+  estPlat: boolean,
+  nombrePartants: number,
+  valueTop5: Record<number, ValueAnalysis>
+) {
+  const stats = runner.musicStats;
+  const scoreRatio = topScore > 0 ? runner.scoreAlgo / topScore : 0;
+  const podiumRate = runner.nombreCourses > 0 ? runner.nombrePlaces / runner.nombreCourses : 0;
+  const winRate = runner.nombreCourses > 0 ? runner.nombreVictoires / runner.nombreCourses : 0;
+  const fiabilite = stats?.fiabilite ?? 0.5;
+  const ratioForme = stats?.ratioForme ?? 0.4;
+  const recentWinBoost = stats?.recentPositions?.slice(-3).includes(1) ? 1 : 0;
+  const drawRating = getDrawRating(runner, estPlat, nombrePartants);
+  const valueIndex = valueTop5[runner.numPmu]?.valueIndex ?? 1;
+
+  const podiumChance = clamp(
+    scoreRatio * 0.28 +
+      fiabilite * 0.22 +
+      ratioForme * 0.2 +
+      podiumRate * 0.18 +
+      drawRating * 0.12,
+    0.08,
+    0.88
+  );
+
+  const winChance = clamp(
+    scoreRatio * 0.34 +
+      fiabilite * 0.12 +
+      ratioForme * 0.16 +
+      winRate * 0.16 +
+      recentWinBoost * 0.12 +
+      drawRating * 0.1,
+    0.04,
+    0.8
+  );
+
+  const safetyScore = clamp(
+    podiumChance * 5.8 + fiabilite * 1.7 + ratioForme * 1.5 + drawRating,
+    0,
+    10
+  );
+
+  const attackScore = clamp(
+    winChance * 6.2 + scoreRatio * 2 + recentWinBoost * 0.8 + Math.min(valueIndex, 2.2) * 0.4,
+    0,
+    10
+  );
+
+  return {
+    podiumChance,
+    winChance,
+    fiabilite,
+    ratioForme,
+    drawRating,
+    valueIndex,
+    safetyScore,
+    attackScore,
+  };
+}
+
+function buildPairEvaluations(
+  top5: ScoredParticipant[],
+  topScore: number,
+  estPlat: boolean,
+  nombrePartants: number,
+  valueTop5: Record<number, ValueAnalysis>
+) {
+  const pairs: Array<{
+    runners: [ScoredParticipant, ScoredParticipant];
+    placeScore: number;
+    placeSurete: number;
+    winScore: number;
+    winSurete: number;
+    placeReasons: string[];
+    winReasons: string[];
+  }> = [];
+
+  for (let i = 0; i < top5.length; i++) {
+    for (let j = i + 1; j < top5.length; j++) {
+      const first = top5[i];
+      const second = top5[j];
+      const firstSignals = getRunnerSignals(first, topScore, estPlat, nombrePartants, valueTop5);
+      const secondSignals = getRunnerSignals(second, topScore, estPlat, nombrePartants, valueTop5);
+
+      const pairSafetyFloor = Math.min(firstSignals.podiumChance, secondSignals.podiumChance);
+      const pairSafetyAverage = (firstSignals.podiumChance + secondSignals.podiumChance) / 2;
+      const pairAttackFloor = Math.min(firstSignals.winChance, secondSignals.winChance);
+      const pairAttackAverage = (firstSignals.winChance + secondSignals.winChance) / 2;
+      const combinedDraw = (firstSignals.drawRating + secondSignals.drawRating) / 2;
+      const combinedValue = (firstSignals.valueIndex + secondSignals.valueIndex) / 2;
+      const complementarity =
+        1 - Math.min(Math.abs(firstSignals.attackScore - secondSignals.attackScore), 5) / 10;
+
+      const placeScore = pairSafetyFloor * 0.5 + pairSafetyAverage * 0.32 + complementarity * 0.1 + combinedDraw * 0.08;
+      const winScore = pairAttackFloor * 0.48 + pairAttackAverage * 0.28 + complementarity * 0.08 + combinedDraw * 0.06 + Math.min(combinedValue, 1.8) * 0.1;
+
+      const placeSurete = clamp(
+        placeScore * 9.4 +
+          ((firstSignals.safetyScore + secondSignals.safetyScore) / 2) * 0.18,
+        0,
+        10
+      );
+      const winSurete = clamp(
+        winScore * 10.1 +
+          ((firstSignals.attackScore + secondSignals.attackScore) / 2) * 0.14,
+        0,
+        10
+      );
+
+      const placeReasons = [
+        `Base podium: ${Math.round(pairSafetyFloor * 100)}% / ${Math.round(pairSafetyAverage * 100)}%`,
+        combinedDraw >= 0.62 ? "Positions de depart favorables pour le duo" : "Duo solide meme sans avantage net a la corde",
+        complementarity >= 0.7 ? "Deux profils qui se completent bien" : "Duo plus direct, axe sur la regularite",
+      ];
+
+      const winReasons = [
+        `Potentiel de victoire combine: ${Math.round(pairAttackAverage * 100)}%`,
+        pairAttackFloor >= 0.22 ? "Les deux chevaux gardent une vraie chance de finir tres haut" : "Pari offensif avec un cheval d'appui fort",
+        combinedValue >= 1.15 ? "La paire garde un peu de value" : "Pari principalement base sur la force pure du duo",
+      ];
+
+      pairs.push({
+        runners: [first, second],
+        placeScore,
+        placeSurete,
+        winScore,
+        winSurete,
+        placeReasons,
+        winReasons,
+      });
+    }
+  }
+
+  return pairs;
+}
+
 function getEstimatedBetOdds(
   type: BetRecommendation["type"],
   primary: ScoredParticipant,
@@ -701,6 +875,7 @@ function getEstimatedBetOdds(
 }
 
 export function buildBetRecommendations(
+  courseInfo: RaceSummary,
   top5: ScoredParticipant[],
   favori: ScoredParticipant,
   solidite: FavoriteSolidity,
@@ -712,33 +887,62 @@ export function buildBetRecommendations(
   if (top5.length === 0) return [];
 
   const topScore = top5[0].scoreAlgo || favori.scoreAlgo || 1;
-  const primarySingle = profils.beton || favori;
-  const alternativePairHorse =
-    top5.find((runner) => runner.numPmu !== primarySingle.numPmu && !runner.estTocard) || top5[1] || null;
+  const runnerSignals = top5.map((runner) => ({
+    runner,
+    signals: getRunnerSignals(
+      runner,
+      topScore,
+      courseInfo.estPlat,
+      courseInfo.nombrePartants,
+      valueTop5
+    ),
+  }));
 
-  const safestPlaceHorse =
-    top5
-      .filter((runner) => runner.numPmu !== primarySingle.numPmu)
-      .sort((a, b) => getRunnerReliability(b, topScore) - getRunnerReliability(a, topScore))[0] || null;
-
-  const coupleWinnerHorse =
-    top5
-      .filter((runner) => runner.numPmu !== primarySingle.numPmu)
+  const primarySingle =
+    runnerSignals
+      .slice()
       .sort((a, b) => {
-        const aValue = valueTop5[a.numPmu]?.valueIndex ?? 1;
-        const bValue = valueTop5[b.numPmu]?.valueIndex ?? 1;
-        return b.scoreAlgo + bValue * 10 - (a.scoreAlgo + aValue * 10);
-      })[0] || alternativePairHorse;
+        const aWeight = a.signals.winChance * 0.52 + a.signals.podiumChance * 0.22 + (a.runner.numPmu === favori.numPmu ? 0.08 : 0);
+        const bWeight = b.signals.winChance * 0.52 + b.signals.podiumChance * 0.22 + (b.runner.numPmu === favori.numPmu ? 0.08 : 0);
+        return bWeight - aWeight;
+      })[0]?.runner || profils.beton || favori;
 
-  const simpleSurete = clamp(confiance.score * 0.55 + solidite.score / 22, 0, 10);
-  const couplePlaceBase = safestPlaceHorse
-    ? (getRunnerReliability(primarySingle, topScore) + getRunnerReliability(safestPlaceHorse, topScore)) / 2
-    : 0;
-  const couplePlaceSurete = clamp(couplePlaceBase + (profils.lisibilite === "LISIBLE" ? 0.8 : 0.2), 0, 10);
-  const coupleGagnantBase = coupleWinnerHorse
-    ? (getRunnerReliability(primarySingle, topScore) * 0.55 + getRunnerReliability(coupleWinnerHorse, topScore) * 0.45)
-    : 0;
-  const coupleGagnantSurete = clamp(coupleGagnantBase + solidite.ecartScore / 20 - 0.6, 0, 10);
+  const primarySignals = getRunnerSignals(
+    primarySingle,
+    topScore,
+    courseInfo.estPlat,
+    courseInfo.nombrePartants,
+    valueTop5
+  );
+  const simpleSurete = clamp(
+    primarySignals.attackScore * 0.62 + primarySignals.safetyScore * 0.18 + confiance.score * 0.16 + solidite.score / 25,
+    0,
+    10
+  );
+
+  const pairEvaluations = buildPairEvaluations(
+    top5,
+    topScore,
+    courseInfo.estPlat,
+    courseInfo.nombrePartants,
+    valueTop5
+  );
+
+  const bestPlacePair = pairEvaluations
+    .slice()
+    .sort((a, b) => {
+      const aAnchored = a.runners.some((runner) => runner.numPmu === primarySingle.numPmu) ? 0.18 : 0;
+      const bAnchored = b.runners.some((runner) => runner.numPmu === primarySingle.numPmu) ? 0.18 : 0;
+      return (b.placeScore + bAnchored) - (a.placeScore + aAnchored);
+    })[0];
+
+  const bestWinPair = pairEvaluations
+    .slice()
+    .sort((a, b) => {
+      const aAnchored = a.runners.some((runner) => runner.numPmu === primarySingle.numPmu) ? 0.14 : 0;
+      const bAnchored = b.runners.some((runner) => runner.numPmu === primarySingle.numPmu) ? 0.14 : 0;
+      return (b.winScore + bAnchored) - (a.winScore + aAnchored);
+    })[0];
 
   const recommendations: BetRecommendation[] = [
     {
@@ -756,67 +960,62 @@ export function buildBetRecommendations(
       coteEstimee: getEstimatedBetOdds("SIMPLE_GAGNANT", primarySingle, null, predictionsCotes),
       pourquoi: [
         `Base principale: ${primarySingle.nom}`,
-        `Confiance course ${confiance.score}/10`,
+        `Potentiel victoire estime: ${Math.round(primarySignals.winChance * 100)}%`,
+        primarySignals.drawRating >= 0.7 ? "Bonne stalle / bonne corde pour appuyer le cheval" : "Le profil reste jouable meme sans gros avantage au depart",
         solidite.score >= 65 ? "Favori globalement solide" : "A jouer avec prudence",
       ],
     },
   ];
 
-  if (safestPlaceHorse) {
+  if (bestPlacePair) {
+    const [firstRunner, secondRunner] = bestPlacePair.runners;
     recommendations.push({
       type: "COUPLE_PLACE",
       label: "Couple place",
       emoji: "CP",
       chevaux: [
         {
-          numPmu: primarySingle.numPmu,
-          nom: primarySingle.nom,
-          placeCorde: primarySingle.placeCorde,
+          numPmu: firstRunner.numPmu,
+          nom: firstRunner.nom,
+          placeCorde: firstRunner.placeCorde,
         },
         {
-          numPmu: safestPlaceHorse.numPmu,
-          nom: safestPlaceHorse.nom,
-          placeCorde: safestPlaceHorse.placeCorde,
+          numPmu: secondRunner.numPmu,
+          nom: secondRunner.nom,
+          placeCorde: secondRunner.placeCorde,
         },
       ],
-      surete: round1(couplePlaceSurete),
-      sureteLabel: getSureteLabel(couplePlaceSurete),
-      miseConseillee: couplePlaceSurete >= 8 ? 3 : couplePlaceSurete >= 6 ? 2 : 1,
-      coteEstimee: getEstimatedBetOdds("COUPLE_PLACE", primarySingle, safestPlaceHorse, predictionsCotes),
-      pourquoi: [
-        "Pair la plus reguliere du top 5",
-        profils.lisibilite === "LISIBLE" ? "Course lisible pour un couple place" : "Option defensive sur course moins nette",
-        `Deux chevaux avec un profil de securite combine`,
-      ],
+      surete: round1(bestPlacePair.placeSurete),
+      sureteLabel: getSureteLabel(bestPlacePair.placeSurete),
+      miseConseillee: bestPlacePair.placeSurete >= 8 ? 3 : bestPlacePair.placeSurete >= 6 ? 2 : 1,
+      coteEstimee: getEstimatedBetOdds("COUPLE_PLACE", firstRunner, secondRunner, predictionsCotes),
+      pourquoi: bestPlacePair.placeReasons,
     });
   }
 
-  if (coupleWinnerHorse) {
+  if (bestWinPair) {
+    const [firstRunner, secondRunner] = bestWinPair.runners;
     recommendations.push({
       type: "COUPLE_GAGNANT",
       label: "Couple gagnant",
       emoji: "CG",
       chevaux: [
         {
-          numPmu: primarySingle.numPmu,
-          nom: primarySingle.nom,
-          placeCorde: primarySingle.placeCorde,
+          numPmu: firstRunner.numPmu,
+          nom: firstRunner.nom,
+          placeCorde: firstRunner.placeCorde,
         },
         {
-          numPmu: coupleWinnerHorse.numPmu,
-          nom: coupleWinnerHorse.nom,
-          placeCorde: coupleWinnerHorse.placeCorde,
+          numPmu: secondRunner.numPmu,
+          nom: secondRunner.nom,
+          placeCorde: secondRunner.placeCorde,
         },
       ],
-      surete: round1(coupleGagnantSurete),
-      sureteLabel: getSureteLabel(coupleGagnantSurete),
-      miseConseillee: coupleGagnantSurete >= 7.5 ? 2 : 1,
-      coteEstimee: getEstimatedBetOdds("COUPLE_GAGNANT", primarySingle, coupleWinnerHorse, predictionsCotes),
-      pourquoi: [
-        "Duo avec le meilleur potentiel de victoire combine",
-        solidite.ecartScore >= 10 ? "Le favori garde un vrai avantage au score" : "Pair plus speculative",
-        `Alternative appuyee par la value du top 5`,
-      ],
+      surete: round1(bestWinPair.winSurete),
+      sureteLabel: getSureteLabel(bestWinPair.winSurete),
+      miseConseillee: bestWinPair.winSurete >= 7.5 ? 2 : 1,
+      coteEstimee: getEstimatedBetOdds("COUPLE_GAGNANT", firstRunner, secondRunner, predictionsCotes),
+      pourquoi: bestWinPair.winReasons,
     });
   }
 
@@ -886,6 +1085,7 @@ export function analyzeRace(
     );
 
     parisRecommandes = buildBetRecommendations(
+      courseInfo,
       top5,
       favori,
       soliditeFavori,
