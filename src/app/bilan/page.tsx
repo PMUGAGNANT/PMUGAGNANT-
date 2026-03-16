@@ -143,6 +143,27 @@ function getSelectionLabel(result: BilanResult): string {
   return `N${result.favori.numPmu} ${result.favori.nom}`;
 }
 
+function getResultDisplayLabel(result: BilanResult): string {
+  const type = (result.typePari || "").toLowerCase();
+
+  if (result.resultat === "GAGNANT") {
+    if (type.includes("couple")) return "COUPLE GAGNANT";
+    return "SIMPLE GAGNANT";
+  }
+
+  if (result.resultat === "PLACE") {
+    if (type.includes("couple")) return "COUPLE PLACE";
+    return "PLACE";
+  }
+
+  if (result.resultat === "PERDU") {
+    if (type.includes("couple")) return "COUPLE PERDU";
+    return "PERDU";
+  }
+
+  return "INCONNU";
+}
+
 function getArrivalLabel(result: BilanResult): string | null {
   if (!result.ordreArrivee && !result.ordreArriveeSecond) {
     return null;
@@ -366,7 +387,7 @@ export default function BilanPage() {
                           borderRadius: 20,
                         }}
                       >
-                        {result.resultat}
+                        {getResultDisplayLabel(result)}
                       </span>
                     </div>
                   </div>
