@@ -21,6 +21,12 @@ interface RaceSummary {
 }
 
 type RaceStatus = "upcoming" | "prono_available" | "finished";
+type HomeSortMode =
+  | "time_asc"
+  | "confidence_desc"
+  | "confidence_asc"
+  | "opportunity"
+  | "allocation_desc";
 
 function getMinutesUntilStart(heureDepart: string): number {
   const [hours, minutes] = heureDepart.split(":").map(Number);
@@ -70,6 +76,26 @@ function formatDiscipline(d: string): string {
   if (d.includes("OBSTACLE") || d.includes("HAIES") || d.includes("STEEPLE"))
     return "Obstacle";
   return d;
+}
+
+function getSortLabel(mode: HomeSortMode): string {
+  switch (mode) {
+    case "confidence_desc":
+      return "Note forte";
+    case "confidence_asc":
+      return "Note faible";
+    case "opportunity":
+      return "Opportunites";
+    case "allocation_desc":
+      return "Allocation";
+    default:
+      return "Heure";
+  }
+}
+
+function getRaceMinutes(heureDepart: string): number {
+  const [hours, minutes] = heureDepart.split(":").map(Number);
+  return hours * 60 + minutes;
 }
 
 function getFrenchDate(): string {
@@ -123,12 +149,23 @@ export default function Home() {
   const [scores, setScores] = useState<Record<string, number>>({});
   const [scoresLoading, setScoresLoading] = useState(false);
   const scoresLoaded = useRef(false);
+  const [sortMode, setSortMode] = useState<HomeSortMode>("time_asc");
 
   // Load saved filter from localStorage
   useEffect(() => {
     try {
       const saved = localStorage.getItem("pmu_min_confiance");
       if (saved) setMinConfiance(Number(saved));
+      const savedSort = localStorage.getItem("pmu_sort_mode");
+      if (
+        savedSort === "time_asc" ||
+        savedSort === "confidence_desc" ||
+        savedSort === "confidence_asc" ||
+        savedSort === "opportunity" ||
+        savedSort === "allocation_desc"
+      ) {
+        setSortMode(savedSort);
+      }
     } catch { /* silent */ }
   }, []);
 
@@ -196,16 +233,21 @@ export default function Home() {
     } catch { /* silent */ }
   };
 
+  const handleSortChange = (mode: HomeSortMode) => {
+    setSortMode(mode);
+    try {
+      localStorage.setItem("pmu_sort_mode", mode);
+    } catch { /* silent */ }
+  };
+
   // Sort races by departure time
-  const sortedRaces = [...races].sort((a, b) => {
-    const [ah, am] = a.heureDepart.split(":").map(Number);
-    const [bh, bm] = b.heureDepart.split(":").map(Number);
-    return ah * 60 + am - (bh * 60 + bm);
-  });
+  const timeSortedRaces = [...races].sort(
+    (a, b) => getRaceMinutes(a.heureDepart) - getRaceMinutes(b.heureDepart)
+  );
 
   // Apply confidence filter
   const filteredRaces = minConfiance > 0
-    ? sortedRaces.filter((race) => {
+    ? timeSortedRaces.filter((race) => {
         const key = `${race.reunion}-${race.course}`;
         const score = scores[key];
         // Keep upcoming races (no score yet) + races matching filter
@@ -215,7 +257,56 @@ export default function Home() {
         }
         return score >= minConfiance;
       })
-    : sortedRaces;
+    : timeSortedRaces;
+
+  const sortedRaces = [...filteredRaces].sort((a, b) => {
+    const aKey = `${a.reunion}-${a.course}`;
+    const bKey = `${b.reunion}-${b.course}`;
+    const aScore = scores[aKey];
+    const bScore = scores[bKey];
+    const aMinutesUntil = getMinutesUntilStart(a.heureDepart);
+    const bMinutesUntil = getMinutesUntilStart(b.heureDepart);
+    const aStatus = getRaceStatus(a.heureDepart);
+    const bStatus = getRaceStatus(b.heureDepart);
+
+    if (sortMode === "confidence_desc") {
+      if (aScore === undefined && bScore === undefined) {
+        return getRaceMinutes(a.heureDepart) - getRaceMinutes(b.heureDepart);
+      }
+      if (aScore === undefined) return 1;
+      if (bScore === undefined) return -1;
+      if (bScore !== aScore) return bScore - aScore;
+      return getRaceMinutes(a.heureDepart) - getRaceMinutes(b.heureDepart);
+    }
+
+    if (sortMode === "confidence_asc") {
+      if (aScore === undefined && bScore === undefined) {
+        return getRaceMinutes(a.heureDepart) - getRaceMinutes(b.heureDepart);
+      }
+      if (aScore === undefined) return 1;
+      if (bScore === undefined) return -1;
+      if (aScore !== bScore) return aScore - bScore;
+      return getRaceMinutes(a.heureDepart) - getRaceMinutes(b.heureDepart);
+    }
+
+    if (sortMode === "opportunity") {
+      const aOpportunity =
+        (aStatus === "prono_available" ? 3 : aStatus === "upcoming" ? 2 : 1) +
+        ((aScore ?? 0) / 10);
+      const bOpportunity =
+        (bStatus === "prono_available" ? 3 : bStatus === "upcoming" ? 2 : 1) +
+        ((bScore ?? 0) / 10);
+      if (bOpportunity !== aOpportunity) return bOpportunity - aOpportunity;
+      return aMinutesUntil - bMinutesUntil;
+    }
+
+    if (sortMode === "allocation_desc") {
+      if (b.allocation !== a.allocation) return b.allocation - a.allocation;
+      return getRaceMinutes(a.heureDepart) - getRaceMinutes(b.heureDepart);
+    }
+
+    return getRaceMinutes(a.heureDepart) - getRaceMinutes(b.heureDepart);
+  });
 
   const totalCourses = races.length;
   const reunionSet = new Set(races.map((r) => r.reunion));
@@ -375,6 +466,24 @@ export default function Home() {
           </svg>
           {minConfiance > 0 ? `Confiance ≥ ${minConfiance}/10` : "Filtrer"}
         </button>
+        <button
+          onClick={() => setShowFilter(!showFilter)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "8px 14px",
+            borderRadius: 20,
+            border: "1px solid #ddd",
+            background: "#fff",
+            color: "#555",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          Tri: {getSortLabel(sortMode)}
+        </button>
         {minConfiance > 0 && (
           <button
             onClick={() => handleFilterChange(0)}
@@ -400,6 +509,40 @@ export default function Home() {
             {filteredRaces.length} course{filteredRaces.length > 1 ? "s" : ""}
           </span>
         )}
+      </div>
+
+      <div
+        style={{
+          margin: "0 16px 12px",
+          display: "flex",
+          gap: 8,
+          flexWrap: "wrap",
+        }}
+      >
+        {[
+          { value: "time_asc", label: "Par heure" },
+          { value: "confidence_desc", label: "Meilleure note" },
+          { value: "confidence_asc", label: "Note faible" },
+          { value: "opportunity", label: "Opportunites" },
+          { value: "allocation_desc", label: "Allocation" },
+        ].map((option) => (
+          <button
+            key={option.value}
+            onClick={() => handleSortChange(option.value as HomeSortMode)}
+            style={{
+              padding: "8px 12px",
+              borderRadius: 20,
+              border: sortMode === option.value ? "2px solid #111" : "1px solid #ddd",
+              background: sortMode === option.value ? "#111" : "#fff",
+              color: sortMode === option.value ? "#fff" : "#555",
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            {option.label}
+          </button>
+        ))}
       </div>
 
       {/* FILTER PANEL */}
