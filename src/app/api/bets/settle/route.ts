@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   createSupabaseRequestClient,
   getSupabaseConfigError,
+  getSupabaseSetupError,
+  normalizeSupabaseAppError,
 } from "@/lib/supabase";
 
 const PMU_API = "https://online.turfinfo.api.pmu.fr/rest/client/1";
@@ -18,18 +20,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: getSupabaseConfigError() }, { status: 500 });
   }
 
-  const { data: { user } } = await client.auth.getUser();
+  const {
+    data: { user },
+  } = await client.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ success: false, error: "Non connecté" }, { status: 401 });
+    return NextResponse.json({ success: false, error: "Non connecte" }, { status: 401 });
   }
 
-  // Get all pending bets for user
-  const { data: pendingBets } = await client
+  const { data: pendingBets, error: pendingError } = await client
     .from("bets")
     .select("*")
     .eq("user_id", user.id)
     .eq("statut", "EN_ATTENTE");
+
+  if (pendingError) {
+    return NextResponse.json({ success: false, error: normalizeSupabaseAppError(pendingError) }, { status: 500 });
+  }
 
   if (!pendingBets || pendingBets.length === 0) {
     return NextResponse.json({ success: true, settled: 0 });
@@ -40,20 +47,16 @@ export async function POST(req: NextRequest) {
 
   for (const bet of pendingBets) {
     try {
-      // Fetch race results from PMU API
       const url = `${PMU_API}/programme/${bet.date_str}/R${bet.reunion}/C${bet.course}/participants`;
       const res = await fetch(url);
       if (!res.ok) continue;
 
       const data = await res.json();
       const participants = data.participants || [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const horse = participants.find((p: any) => p.numPmu === bet.cheval_num);
 
-      // Find our horse
-      const horse = participants.find(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (p: any) => p.numPmu === bet.cheval_num
-      );
-      if (!horse || !horse.ordreArrivee) continue; // race not finished yet
+      if (!horse || !horse.ordreArrivee) continue;
 
       const position = horse.ordreArrivee;
       let statut: string;
@@ -67,45 +70,49 @@ export async function POST(req: NextRequest) {
           statut = "PERDU";
           gain = -bet.mise;
         }
+      } else if (position <= 3) {
+        statut = "PLACE";
+        gain = Math.round((bet.mise * (bet.cote * 0.3) - bet.mise) * 100) / 100;
+        if (gain < 0) gain = 0;
       } else {
-        // PLACE - top 3
-        if (position <= 3) {
-          statut = "PLACE";
-          gain = Math.round((bet.mise * (bet.cote * 0.3) - bet.mise) * 100) / 100;
-          // Minimum gain for place = 0 (return stake if cote too low)
-          if (gain < 0) gain = 0;
-        } else {
-          statut = "PERDU";
-          gain = -bet.mise;
-        }
+        statut = "PERDU";
+        gain = -bet.mise;
       }
 
-      // Update bet
-      await client
-        .from("bets")
-        .update({ statut, gain })
-        .eq("id", bet.id);
+      const { error: betUpdateError } = await client.from("bets").update({ statut, gain }).eq("id", bet.id);
+      if (betUpdateError) {
+        return NextResponse.json({ success: false, error: normalizeSupabaseAppError(betUpdateError) }, { status: 500 });
+      }
 
-      // Update solde (add back gains, or nothing if lost since we already deducted)
       if (gain > 0) {
-        const { data: profile } = await client
+        const { data: profile, error: profileError } = await client
           .from("profiles")
           .select("solde")
           .eq("id", user.id)
           .single();
 
-        const currentSolde = profile?.solde ?? 1000;
-        await client
+        if (profileError || !profile) {
+          return NextResponse.json(
+            { success: false, error: normalizeSupabaseAppError(profileError, getSupabaseSetupError()) },
+            { status: 500 }
+          );
+        }
+
+        const currentSolde = profile.solde ?? 1000;
+        const { error: profileUpdateError } = await client
           .from("profiles")
-          .update({ solde: currentSolde + gain + bet.mise }) // return stake + gains
+          .update({ solde: currentSolde + gain + bet.mise })
           .eq("id", user.id);
+
+        if (profileUpdateError) {
+          return NextResponse.json({ success: false, error: normalizeSupabaseAppError(profileUpdateError) }, { status: 500 });
+        }
 
         totalGains += gain + bet.mise;
       }
 
       settledCount++;
     } catch {
-      // Skip this bet if API fails
       continue;
     }
   }

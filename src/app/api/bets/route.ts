@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   createSupabaseRequestClient,
   getSupabaseConfigError,
+  getSupabaseSetupError,
+  normalizeSupabaseAppError,
 } from "@/lib/supabase";
 
 function getSupabaseClient(req: NextRequest) {
@@ -16,33 +18,41 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: getSupabaseConfigError() }, { status: 500 });
   }
 
-  const { data: { user } } = await client.auth.getUser();
+  const {
+    data: { user },
+  } = await client.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ success: false, error: "Non connecté" }, { status: 401 });
+    return NextResponse.json({ success: false, error: "Non connecte" }, { status: 401 });
   }
 
-  const { data: bets, error } = await client
+  const { data: bets, error: betsError } = await client
     .from("bets")
     .select("*")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
-  if (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  if (betsError) {
+    return NextResponse.json({ success: false, error: normalizeSupabaseAppError(betsError) }, { status: 500 });
   }
 
-  // Get user profile for solde
-  const { data: profile } = await client
+  const { data: profile, error: profileError } = await client
     .from("profiles")
     .select("solde")
     .eq("id", user.id)
     .single();
 
+  if (profileError || !profile) {
+    return NextResponse.json(
+      { success: false, error: normalizeSupabaseAppError(profileError, getSupabaseSetupError()) },
+      { status: 500 }
+    );
+  }
+
   return NextResponse.json({
     success: true,
     bets: bets || [],
-    solde: profile?.solde ?? 1000,
+    solde: profile.solde ?? 1000,
   });
 }
 
@@ -53,10 +63,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: getSupabaseConfigError() }, { status: 500 });
   }
 
-  const { data: { user } } = await client.auth.getUser();
+  const {
+    data: { user },
+  } = await client.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ success: false, error: "Non connecté" }, { status: 401 });
+    return NextResponse.json({ success: false, error: "Non connecte" }, { status: 401 });
   }
 
   const body = await req.json();
@@ -73,9 +85,8 @@ export async function POST(req: NextRequest) {
     cote,
   } = body;
 
-  // Validate
   if (!date_str || !reunion || !course || !cheval_num || !cheval_nom || !type_pari || !mise || !cote) {
-    return NextResponse.json({ success: false, error: "Données manquantes" }, { status: 400 });
+    return NextResponse.json({ success: false, error: "Donnees manquantes" }, { status: 400 });
   }
 
   if (mise < 1 || mise > 50) {
@@ -86,20 +97,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Type de pari invalide" }, { status: 400 });
   }
 
-  // Check solde
-  const { data: profile } = await client
+  const { data: profile, error: profileError } = await client
     .from("profiles")
     .select("solde")
     .eq("id", user.id)
     .single();
 
-  const solde = profile?.solde ?? 1000;
+  if (profileError || !profile) {
+    return NextResponse.json(
+      { success: false, error: normalizeSupabaseAppError(profileError, getSupabaseSetupError()) },
+      { status: 500 }
+    );
+  }
+
+  const solde = profile.solde ?? 1000;
   if (solde < mise) {
     return NextResponse.json({ success: false, error: "Solde insuffisant" }, { status: 400 });
   }
 
-  // Check no duplicate bet on same race
-  const { data: existing } = await client
+  const { data: existing, error: existingError } = await client
     .from("bets")
     .select("id")
     .eq("user_id", user.id)
@@ -108,11 +124,14 @@ export async function POST(req: NextRequest) {
     .eq("course", course)
     .limit(1);
 
-  if (existing && existing.length > 0) {
-    return NextResponse.json({ success: false, error: "Vous avez déjà parié sur cette course" }, { status: 400 });
+  if (existingError) {
+    return NextResponse.json({ success: false, error: normalizeSupabaseAppError(existingError) }, { status: 500 });
   }
 
-  // Insert bet
+  if (existing && existing.length > 0) {
+    return NextResponse.json({ success: false, error: "Vous avez deja parie sur cette course" }, { status: 400 });
+  }
+
   const { error: betError } = await client.from("bets").insert({
     user_id: user.id,
     date_str,
@@ -130,14 +149,17 @@ export async function POST(req: NextRequest) {
   });
 
   if (betError) {
-    return NextResponse.json({ success: false, error: betError.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: normalizeSupabaseAppError(betError) }, { status: 500 });
   }
 
-  // Deduct mise from solde
-  await client
+  const { error: updateError } = await client
     .from("profiles")
     .update({ solde: solde - mise })
     .eq("id", user.id);
+
+  if (updateError) {
+    return NextResponse.json({ success: false, error: normalizeSupabaseAppError(updateError) }, { status: 500 });
+  }
 
   return NextResponse.json({
     success: true,

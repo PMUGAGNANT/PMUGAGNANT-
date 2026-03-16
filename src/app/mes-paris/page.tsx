@@ -37,6 +37,7 @@ export default function MesParisPage() {
   const [settling, setSettling] = useState(false);
   const [user, setUser] = useState<{ email?: string } | null>(null);
   const [error, setError] = useState("");
+  const setupNeeded = error.includes("supabase-setup.sql");
 
   const fetchBets = useCallback(async () => {
     if (!supabaseConfigured) {
@@ -62,13 +63,16 @@ export default function MesParisPage() {
       if (data.success) {
         setBets(data.bets);
         setSolde(data.solde);
+        setError("");
+      } else {
+        setError(data.error || "Impossible de charger vos paris.");
       }
     } catch {
-      // silent
+      setError("Impossible de charger vos paris pour le moment.");
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, supabaseConfigured]);
 
   useEffect(() => {
     fetchBets();
@@ -89,13 +93,18 @@ export default function MesParisPage() {
     }
 
     try {
-      await fetch("/api/bets/settle", {
+      const res = await fetch("/api/bets/settle", {
         method: "POST",
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
+      const data = await res.json();
+      if (!data.success) {
+        setError(data.error || "Impossible de verifier les resultats.");
+        return;
+      }
       await fetchBets();
     } catch {
-      // silent
+      setError("Impossible de verifier les resultats.");
     } finally {
       setSettling(false);
     }
@@ -186,18 +195,46 @@ export default function MesParisPage() {
       {loading ? (
         <div style={{ textAlign: "center", padding: 60, color: "#888" }}>Chargement...</div>
       ) : error ? (
-        <div
-          style={{
-            margin: "16px",
-            background: "#FFF3CD",
-            color: "#856404",
-            padding: "16px",
-            borderRadius: 12,
-            fontSize: 14,
-            fontWeight: 500,
-          }}
-        >
-          {error}
+        <div style={{ margin: "16px", display: "flex", flexDirection: "column", gap: 12 }}>
+          <div
+            style={{
+              background: "#FFF3CD",
+              color: "#856404",
+              padding: "16px",
+              borderRadius: 12,
+              fontSize: 14,
+              fontWeight: 500,
+            }}
+          >
+            {error}
+          </div>
+
+          {setupNeeded && (
+            <div
+              style={{
+                background: "#fff",
+                borderRadius: 12,
+                padding: "16px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                color: DARK,
+              }}
+            >
+              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>
+                Etapes a faire dans Supabase
+              </div>
+              <div style={{ fontSize: 13, color: "#666", lineHeight: 1.6 }}>
+                1. Ouvrez Supabase
+                <br />
+                2. Allez dans SQL Editor
+                <br />
+                3. Collez le fichier supabase-setup.sql
+                <br />
+                4. Executez le script
+                <br />
+                5. Revenez ici et rechargez la page
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <>
