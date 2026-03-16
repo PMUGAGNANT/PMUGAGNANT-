@@ -35,6 +35,9 @@ interface BilanData {
     totalPlayed: number;
     wins: number;
     places: number;
+    couplePlayed?: number;
+    coupleWins?: number;
+    couplePlaces?: number;
     losses: number;
   };
   results: BilanResult[];
@@ -203,6 +206,9 @@ export default function BilanPage() {
   const totalPlayed = data?.summary.totalPlayed ?? 0;
   const wins = data?.summary.wins ?? 0;
   const places = data?.summary.places ?? 0;
+  const couplePlayed = data?.summary.couplePlayed ?? 0;
+  const coupleWins = data?.summary.coupleWins ?? 0;
+  const couplePlaces = data?.summary.couplePlaces ?? 0;
 
   let roiText = "-";
   let roiColor = "#1A1A1A";
@@ -269,6 +275,9 @@ export default function BilanPage() {
                 { label: "Jouees", value: totalPlayed, color: "#1A1A1A" },
                 { label: "Gagnants", value: wins, color: "#00843D" },
                 { label: "Places", value: places, color: "#E67E22" },
+                { label: "Couples joues", value: couplePlayed, color: "#1A1A1A" },
+                { label: "Couples gagnants", value: coupleWins, color: "#00843D" },
+                { label: "Couples places", value: couplePlaces, color: "#E67E22" },
                 { label: "ROI", value: roiText, color: roiColor },
               ].map((card) => (
                 <div
