@@ -18,6 +18,7 @@ export interface RaceSummary {
 export interface Participant {
   numPmu: number;
   nom: string;
+  placeCorde: number | null;
   driver: string;
   entraineur: string;
   jockey: string;
@@ -94,6 +95,7 @@ export type BetRecommendationType =
 export interface BetRecommendationHorse {
   numPmu: number;
   nom: string;
+  placeCorde?: number | null;
 }
 
 export interface BetRecommendation {

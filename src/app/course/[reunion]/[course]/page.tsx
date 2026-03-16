@@ -27,6 +27,7 @@ interface MusicStats {
 interface ScoredParticipant {
   numPmu: number;
   nom: string;
+  placeCorde: number | null;
   driver: string;
   jockey: string;
   entraineur: string;
@@ -82,6 +83,7 @@ interface Recommendation {
 interface BetRecommendationHorse {
   numPmu: number;
   nom: string;
+  placeCorde?: number | null;
 }
 
 type BetRecommendationType =
@@ -197,6 +199,14 @@ function getBetTypeLabel(type: PlacedBetType): string {
     default:
       return type;
   }
+}
+
+function getStallLabel(placeCorde: number | null | undefined): string | null {
+  if (placeCorde == null || placeCorde <= 0) {
+    return null;
+  }
+
+  return `Stalle ${placeCorde}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -510,6 +520,11 @@ export default function CourseDetailPage() {
                     ? `J: ${favori.jockey || "N/A"}`
                     : `D: ${favori.driver || "N/A"}`}
                 </div>
+                {getStallLabel(favori.placeCorde) && (
+                  <div style={{ fontSize: "13px", color: GREEN, fontWeight: 600, marginTop: "4px" }}>
+                    {getStallLabel(favori.placeCorde)}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -589,7 +604,12 @@ export default function CourseDetailPage() {
                   </div>
 
                   <div style={{ fontSize: "17px", fontWeight: 700, color: DARK, marginBottom: "8px" }}>
-                    {pari.chevaux.map((cheval) => `N${cheval.numPmu} ${cheval.nom}`).join(" + ")}
+                    {pari.chevaux
+                      .map((cheval) => {
+                        const stall = getStallLabel(cheval.placeCorde);
+                        return `N${cheval.numPmu} ${cheval.nom}${stall ? ` (${stall})` : ""}`;
+                      })
+                      .join(" + ")}
                   </div>
 
                   <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "10px" }}>
@@ -735,7 +755,14 @@ export default function CourseDetailPage() {
                         <span style={{ fontSize: idx < 3 ? "18px" : "14px", fontWeight: 700, minWidth: "28px" }}>
                           {positionMedal(idx + 1)}
                         </span>
-                        <span style={{ fontWeight: 700, fontSize: "15px", color: DARK }}>{horse.nom}</span>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                          <span style={{ fontWeight: 700, fontSize: "15px", color: DARK }}>{horse.nom}</span>
+                          {getStallLabel(horse.placeCorde) && (
+                            <span style={{ fontSize: "11px", color: "#666", fontWeight: 600 }}>
+                              {getStallLabel(horse.placeCorde)}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <span style={{ fontWeight: 700, fontSize: "14px", color: DARK }}>{horse.scoreAlgo}</span>
                     </div>
@@ -1065,11 +1092,16 @@ export default function CourseDetailPage() {
               {betHorse.numPmu}
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 16, color: DARK }}>{betHorse.nom}</div>
-              <div style={{ fontSize: 13, color: "#888" }}>
-                {getBetTypeLabel(betType)} - Cote estimee: {cote}
+                <div style={{ fontWeight: 700, fontSize: 16, color: DARK }}>{betHorse.nom}</div>
+                <div style={{ fontSize: 13, color: "#888" }}>
+                  {getBetTypeLabel(betType)} - Cote estimee: {cote}
+                </div>
+                {getStallLabel(betHorse.placeCorde) && (
+                  <div style={{ fontSize: 12, color: GREEN, fontWeight: 600, marginTop: 4 }}>
+                    {getStallLabel(betHorse.placeCorde)}
+                  </div>
+                )}
               </div>
-            </div>
           </div>
 
           {isCoupleBet && (
@@ -1093,13 +1125,13 @@ export default function CourseDetailPage() {
                       cursor: "pointer",
                     }}
                   >
-                    N{runner.numPmu} {runner.nom}
+                    {`N${runner.numPmu} ${runner.nom}${getStallLabel(runner.placeCorde) ? ` - ${getStallLabel(runner.placeCorde)}` : ""}`}
                   </button>
                 ))}
               </div>
               <div style={{ marginTop: 10, fontSize: 12, color: betSecondHorse ? "#666" : "#C62828" }}>
                 {betSecondHorse
-                  ? `Selection: N${betHorse.numPmu} ${betHorse.nom} + N${betSecondHorse.numPmu} ${betSecondHorse.nom}`
+                  ? `Selection: N${betHorse.numPmu} ${betHorse.nom}${getStallLabel(betHorse.placeCorde) ? ` (${getStallLabel(betHorse.placeCorde)})` : ""} + N${betSecondHorse.numPmu} ${betSecondHorse.nom}${getStallLabel(betSecondHorse.placeCorde) ? ` (${getStallLabel(betSecondHorse.placeCorde)})` : ""}`
                   : "Selectionnez le deuxieme cheval du couple."}
               </div>
             </div>

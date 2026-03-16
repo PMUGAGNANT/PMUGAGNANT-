@@ -745,7 +745,11 @@ export function buildBetRecommendations(
       type: "SIMPLE_GAGNANT",
       label: "Simple gagnant",
       emoji: "SG",
-      chevaux: [{ numPmu: primarySingle.numPmu, nom: primarySingle.nom }],
+      chevaux: [{
+        numPmu: primarySingle.numPmu,
+        nom: primarySingle.nom,
+        placeCorde: primarySingle.placeCorde,
+      }],
       surete: round1(simpleSurete),
       sureteLabel: getSureteLabel(simpleSurete),
       miseConseillee: simpleSurete >= 8 ? 4 : simpleSurete >= 6.5 ? 3 : 2,
@@ -764,8 +768,16 @@ export function buildBetRecommendations(
       label: "Couple place",
       emoji: "CP",
       chevaux: [
-        { numPmu: primarySingle.numPmu, nom: primarySingle.nom },
-        { numPmu: safestPlaceHorse.numPmu, nom: safestPlaceHorse.nom },
+        {
+          numPmu: primarySingle.numPmu,
+          nom: primarySingle.nom,
+          placeCorde: primarySingle.placeCorde,
+        },
+        {
+          numPmu: safestPlaceHorse.numPmu,
+          nom: safestPlaceHorse.nom,
+          placeCorde: safestPlaceHorse.placeCorde,
+        },
       ],
       surete: round1(couplePlaceSurete),
       sureteLabel: getSureteLabel(couplePlaceSurete),
@@ -785,8 +797,16 @@ export function buildBetRecommendations(
       label: "Couple gagnant",
       emoji: "CG",
       chevaux: [
-        { numPmu: primarySingle.numPmu, nom: primarySingle.nom },
-        { numPmu: coupleWinnerHorse.numPmu, nom: coupleWinnerHorse.nom },
+        {
+          numPmu: primarySingle.numPmu,
+          nom: primarySingle.nom,
+          placeCorde: primarySingle.placeCorde,
+        },
+        {
+          numPmu: coupleWinnerHorse.numPmu,
+          nom: coupleWinnerHorse.nom,
+          placeCorde: coupleWinnerHorse.placeCorde,
+        },
       ],
       surete: round1(coupleGagnantSurete),
       sureteLabel: getSureteLabel(coupleGagnantSurete),

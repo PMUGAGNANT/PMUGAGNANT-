@@ -115,6 +115,7 @@ export async function getParticipants(
       return {
         numPmu: p.numPmu,
         nom: p.nom ?? '',
+        placeCorde: p.placeCorde ?? null,
         driver: p.driver ?? '',
         entraineur: p.entraineur ?? '',
         jockey: p.jockey ?? '',
