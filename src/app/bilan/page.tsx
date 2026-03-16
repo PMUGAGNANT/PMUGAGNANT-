@@ -421,11 +421,12 @@ export default function BilanPage() {
 
         {/* Live tab */}
         <div
+          onClick={() => router.push("/live")}
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            cursor: "default",
+            cursor: "pointer",
             gap: 2,
           }}
         >

@@ -330,8 +330,28 @@ export default function Home() {
           display: "flex",
           alignItems: "center",
           gap: 8,
+          flexWrap: "wrap",
         }}
       >
+        <button
+          onClick={() => router.push("/live")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "8px 14px",
+            borderRadius: 20,
+            border: "1px solid #111",
+            background: "#111",
+            color: "#fff",
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          <span style={{ fontSize: 14, lineHeight: 1 }}>⚡</span>
+          Live
+        </button>
         <button
           onClick={() => setShowFilter(!showFilter)}
           style={{
