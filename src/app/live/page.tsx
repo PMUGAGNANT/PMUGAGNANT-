@@ -20,37 +20,53 @@ interface RaceSummary {
   nombrePartants: number;
 }
 
-type LiveStatus = "upcoming" | "prono_available" | "live" | "finished";
+interface RaceAnalysisResponse {
+  success: boolean;
+  pronoAvailable: boolean;
+  isFinished: boolean;
+  analysis: {
+    favori?: { numPmu: number; nom: string } | null;
+    recommandation?: { decision: string; vautLeCoup: boolean } | null;
+    scoreConfiance?: { score: number } | null;
+  } | null;
+}
+
+type LiveStatus = "upcoming" | "watch_now" | "live" | "finished";
 
 const GREEN = "#00843D";
 const DARK = "#1A1A1A";
+const LIVE_RED = "#E53935";
+const RECENT_GREY = "#757575";
+const WATCH_WINDOW_MINUTES = 5;
+const LIVE_WINDOW_AFTER_START = -20;
+const RECENT_RESULT_WINDOW = -90;
+
+function getParisNow() {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Paris" }));
+}
 
 function getMinutesUntilStart(heureDepart: string) {
   const [hours, minutes] = heureDepart.split(":").map(Number);
-  const now = new Date();
-  const parisNow = new Date(
-    now.toLocaleString("en-US", { timeZone: "Europe/Paris" })
-  );
+  const parisNow = getParisNow();
   const parisTarget = new Date(parisNow);
   parisTarget.setHours(hours, minutes, 0, 0);
+
   return Math.round((parisTarget.getTime() - parisNow.getTime()) / 60000);
 }
 
 function getSecondsUntilStart(heureDepart: string) {
   const [hours, minutes] = heureDepart.split(":").map(Number);
-  const now = new Date();
-  const parisNow = new Date(
-    now.toLocaleString("en-US", { timeZone: "Europe/Paris" })
-  );
+  const parisNow = getParisNow();
   const parisTarget = new Date(parisNow);
   parisTarget.setHours(hours, minutes, 0, 0);
+
   return Math.round((parisTarget.getTime() - parisNow.getTime()) / 1000);
 }
 
 function getRaceStatus(heureDepart: string): { status: LiveStatus; minutesUntil: number } {
   const minutesUntil = getMinutesUntilStart(heureDepart);
 
-  if (minutesUntil < -15) {
+  if (minutesUntil < LIVE_WINDOW_AFTER_START) {
     return { status: "finished", minutesUntil };
   }
 
@@ -58,8 +74,12 @@ function getRaceStatus(heureDepart: string): { status: LiveStatus; minutesUntil:
     return { status: "live", minutesUntil };
   }
 
+  if (minutesUntil <= WATCH_WINDOW_MINUTES) {
+    return { status: "live", minutesUntil };
+  }
+
   if (minutesUntil <= 30) {
-    return { status: "prono_available", minutesUntil };
+    return { status: "watch_now", minutesUntil };
   }
 
   return { status: "upcoming", minutesUntil };
@@ -90,13 +110,28 @@ function formatDiscipline(discipline: string) {
   return discipline;
 }
 
+function formatLastUpdated(date: Date | null) {
+  if (!date) return "--:--:--";
+
+  return date.toLocaleTimeString("fr-FR", {
+    timeZone: "Europe/Paris",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
 function getLiveLabel(status: LiveStatus, minutesUntil: number, secondsUntil: number) {
   if (status === "live") {
+    if (minutesUntil > 0) {
+      return `Depart dans ${formatCountdown(secondsUntil).replace("Dans ", "")}`;
+    }
+
     const minutesRunning = Math.abs(minutesUntil);
     return minutesRunning <= 1 ? "Depart en cours" : `Partie il y a ${minutesRunning} min`;
   }
 
-  if (status === "prono_available") {
+  if (status === "watch_now") {
     return formatCountdown(secondsUntil);
   }
 
@@ -122,46 +157,11 @@ export default function LivePage() {
   const router = useRouter();
   const [races, setRaces] = useState<RaceSummary[]>([]);
   const [scores, setScores] = useState<Record<string, number>>({});
+  const [featuredAnalysis, setFeaturedAnalysis] = useState<RaceAnalysisResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [, setTick] = useState(0);
-
-  const fetchData = useCallback(async () => {
-    try {
-      const [racesRes, scoresRes] = await Promise.all([
-        fetch("/api/races", { cache: "no-store" }),
-        fetch("/api/races/scores", { cache: "no-store" }),
-      ]);
-
-      const racesJson = await racesRes.json();
-      const scoresJson = await scoresRes.json();
-
-      if (racesJson.success && racesJson.races) {
-        setRaces(racesJson.races);
-      } else {
-        setError(true);
-      }
-
-      if (scoresJson.success && scoresJson.scores) {
-        setScores(scoresJson.scores);
-      }
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-    const refreshInterval = setInterval(fetchData, 30000);
-    const tickInterval = setInterval(() => setTick((value) => value + 1), 1000);
-
-    return () => {
-      clearInterval(refreshInterval);
-      clearInterval(tickInterval);
-    };
-  }, [fetchData]);
 
   const sortedRaces = useMemo(() => {
     return [...races].sort((a, b) => {
@@ -172,16 +172,92 @@ export default function LivePage() {
   }, [races]);
 
   const liveRaces = sortedRaces.filter((race) => getRaceStatus(race.heureDepart).status === "live");
-  const readyRaces = sortedRaces.filter((race) => getRaceStatus(race.heureDepart).status === "prono_available");
+  const actualLiveRaces = liveRaces.filter((race) => getRaceStatus(race.heureDepart).minutesUntil <= 0);
+  const imminentRaces = liveRaces.filter((race) => getRaceStatus(race.heureDepart).minutesUntil > 0);
+  const watchNowRaces = sortedRaces.filter((race) => getRaceStatus(race.heureDepart).status === "watch_now");
   const recentResults = sortedRaces.filter((race) => {
     const { status, minutesUntil } = getRaceStatus(race.heureDepart);
-    return status === "finished" && minutesUntil >= -90;
+    return status === "finished" && minutesUntil >= RECENT_RESULT_WINDOW;
   });
 
-  const nextRace = sortedRaces.find((race) => {
-    const { status } = getRaceStatus(race.heureDepart);
-    return status === "live" || status === "prono_available";
-  });
+  const featuredRace = liveRaces[0] ?? watchNowRaces[0] ?? null;
+
+  const fetchFeaturedAnalysis = useCallback(async (race: RaceSummary | null) => {
+    if (!race) {
+      setFeaturedAnalysis(null);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/race/${race.reunion}/${race.course}`, { cache: "no-store" });
+      const json = (await res.json()) as RaceAnalysisResponse;
+      if (json.success) {
+        setFeaturedAnalysis(json);
+      } else {
+        setFeaturedAnalysis(null);
+      }
+    } catch {
+      setFeaturedAnalysis(null);
+    }
+  }, []);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setError(false);
+
+      const [racesRes, scoresRes] = await Promise.all([
+        fetch("/api/races", { cache: "no-store" }),
+        fetch("/api/races/scores", { cache: "no-store" }),
+      ]);
+
+      const racesJson = await racesRes.json();
+      const scoresJson = await scoresRes.json();
+
+      if (racesJson.success && racesJson.races) {
+        const fetchedRaces = racesJson.races as RaceSummary[];
+        setRaces(fetchedRaces);
+
+        const featured =
+          fetchedRaces
+            .sort((a, b) => {
+              const [ah, am] = a.heureDepart.split(":").map(Number);
+              const [bh, bm] = b.heureDepart.split(":").map(Number);
+              return ah * 60 + am - (bh * 60 + bm);
+            })
+            .find((race) => {
+              const { status } = getRaceStatus(race.heureDepart);
+              return status === "live" || status === "watch_now";
+            }) ?? null;
+
+        void fetchFeaturedAnalysis(featured);
+      } else {
+        setError(true);
+      }
+
+      if (scoresJson.success && scoresJson.scores) {
+        setScores(scoresJson.scores);
+      }
+
+      setLastUpdated(new Date());
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchFeaturedAnalysis]);
+
+  useEffect(() => {
+    void fetchData();
+    const refreshInterval = setInterval(() => {
+      void fetchData();
+    }, 30000);
+    const tickInterval = setInterval(() => setTick((value) => value + 1), 1000);
+
+    return () => {
+      clearInterval(refreshInterval);
+      clearInterval(tickInterval);
+    };
+  }, [fetchData]);
 
   const handleOpenRace = (race: RaceSummary) => {
     router.push(`/course/${race.reunion}/${race.course}`);
@@ -364,14 +440,42 @@ export default function LivePage() {
       >
         <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 4 }}>Temps reel</div>
         <div style={{ fontSize: 28, fontWeight: 700, marginBottom: 6 }}>
-          {liveRaces.length} en direct
+          {actualLiveRaces.length} en direct
         </div>
         <div style={{ fontSize: 14, opacity: 0.9 }}>
-          {readyRaces.length} a suivre maintenant
+          {imminentRaces.length} departs imminents - {watchNowRaces.length} a suivre
         </div>
-        {nextRace && (
-          <div style={{ marginTop: 12, fontSize: 13, color: "#9FE3B9" }}>
-            Prochaine course chaude : R{nextRace.reunion}C{nextRace.course} a {nextRace.heureDepart}
+        <div style={{ marginTop: 10, fontSize: 12, color: "#B7B7B7" }}>
+          Derniere mise a jour : {formatLastUpdated(lastUpdated)}
+        </div>
+        {featuredRace && (
+          <div
+            style={{
+              marginTop: 14,
+              background: "rgba(255,255,255,0.06)",
+              borderRadius: 14,
+              padding: 14,
+            }}
+          >
+            <div style={{ fontSize: 11, letterSpacing: 1, textTransform: "uppercase", color: "#9FE3B9" }}>
+              Course chaude
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 700, marginTop: 6 }}>
+              R{featuredRace.reunion}C{featuredRace.course} - {featuredRace.nomCourse}
+            </div>
+            <div style={{ fontSize: 13, color: "#D0D0D0", marginTop: 6 }}>
+              {featuredRace.hippodrome} - depart {featuredRace.heureDepart}
+            </div>
+            {featuredAnalysis?.analysis?.favori && (
+              <div style={{ fontSize: 13, marginTop: 10, color: "#fff" }}>
+                Favori IA : N{featuredAnalysis.analysis.favori.numPmu} {featuredAnalysis.analysis.favori.nom}
+              </div>
+            )}
+            {featuredAnalysis?.analysis?.recommandation?.decision && (
+              <div style={{ fontSize: 12, marginTop: 6, color: featuredAnalysis.analysis.recommandation.vautLeCoup ? "#9FE3B9" : "#FFD28A" }}>
+                {featuredAnalysis.analysis.recommandation.decision}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -386,13 +490,13 @@ export default function LivePage() {
         <>
           <SectionTitle
             title="En direct"
-            subtitle="Courses parties depuis moins de 15 minutes"
+            subtitle="Courses parties ou sur le point de partir"
           />
           {liveRaces.length > 0 ? (
-            liveRaces.map((race) => renderRaceCard(race, "#E53935"))
+            liveRaces.map((race) => renderRaceCard(race, LIVE_RED))
           ) : (
             <div style={{ margin: "0 16px", background: "#fff", borderRadius: 16, padding: 20, color: "#888" }}>
-              Aucune course en direct pour le moment.
+              Aucune course chaude pour le moment.
             </div>
           )}
 
@@ -400,8 +504,8 @@ export default function LivePage() {
             title="A suivre"
             subtitle="Pronostics disponibles dans les 30 prochaines minutes"
           />
-          {readyRaces.length > 0 ? (
-            readyRaces.map((race) => renderRaceCard(race, GREEN))
+          {watchNowRaces.length > 0 ? (
+            watchNowRaces.map((race) => renderRaceCard(race, GREEN))
           ) : (
             <div style={{ margin: "0 16px", background: "#fff", borderRadius: 16, padding: 20, color: "#888" }}>
               Rien a jouer tout de suite. Reviens dans quelques minutes.
@@ -413,7 +517,7 @@ export default function LivePage() {
             subtitle="Courses finies recemment, ouvre-les pour voir le detail"
           />
           {recentResults.length > 0 ? (
-            recentResults.map((race) => renderRaceCard(race, "#757575"))
+            recentResults.map((race) => renderRaceCard(race, RECENT_GREY))
           ) : (
             <div style={{ margin: "0 16px", background: "#fff", borderRadius: 16, padding: 20, color: "#888" }}>
               Pas encore de resultat recent.
