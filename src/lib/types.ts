@@ -123,6 +123,14 @@ export interface StrategicProfiles {
   lisibilite: 'LISIBLE' | 'COMPLEXE' | 'LOTERIE';
 }
 
+export interface AlgorithmHealth {
+  score: number;
+  status: 'SAIN' | 'SURVEILLANCE' | 'FRAGILE';
+  strengths: string[];
+  weaknesses: string[];
+  notes: string[];
+}
+
 export interface RaceAnalysis {
   courseInfo: RaceSummary;
   participants: number;
@@ -135,6 +143,7 @@ export interface RaceAnalysis {
   predictionsCotes: Record<number, PredictedOdds>;
   profils: StrategicProfiles;
   valueTop5: Record<number, ValueAnalysis>;
+  algorithmHealth: AlgorithmHealth | null;
 }
 
 export interface SelectionResult {

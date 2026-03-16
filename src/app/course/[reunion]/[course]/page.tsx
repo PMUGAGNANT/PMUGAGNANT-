@@ -116,6 +116,14 @@ interface StrategicProfiles {
   lisibilite: "LISIBLE" | "COMPLEXE" | "LOTERIE";
 }
 
+interface AlgorithmHealth {
+  score: number;
+  status: "SAIN" | "SURVEILLANCE" | "FRAGILE";
+  strengths: string[];
+  weaknesses: string[];
+  notes: string[];
+}
+
 interface CourseInfo {
   reunion: number;
   course: number;
@@ -143,6 +151,7 @@ interface RaceAnalysis {
   predictionsCotes: Record<number, PredictedOdds>;
   profils: StrategicProfiles;
   valueTop5: Record<number, ValueAnalysis>;
+  algorithmHealth: AlgorithmHealth | null;
 }
 
 interface APIResponse {
@@ -490,6 +499,7 @@ export default function CourseDetailPage() {
     const confiance = a.scoreConfiance;
     const profils = a.profils;
     const parisRecommandes = a.parisRecommandes || [];
+    const algoHealth = a.algorithmHealth;
 
     return (
       <>
@@ -569,6 +579,70 @@ export default function CourseDetailPage() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {algoHealth && (
+          <div style={cardStyle}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+              <div style={{ fontWeight: 700, fontSize: "16px" }}>
+                Bilan sante IA
+              </div>
+              <span
+                style={{
+                  ...pillStyle,
+                  background: algoHealth.status === "SAIN" ? "#E8F5E9" : algoHealth.status === "SURVEILLANCE" ? "#FFF3CD" : "#FDECEA",
+                  color: algoHealth.status === "SAIN" ? GREEN : algoHealth.status === "SURVEILLANCE" ? "#B26A00" : "#C62828",
+                }}
+              >
+                {algoHealth.status} - {algoHealth.score}/10
+              </span>
+            </div>
+
+            {algoHealth.strengths.length > 0 && (
+              <div style={{ marginBottom: algoHealth.weaknesses.length > 0 || algoHealth.notes.length > 0 ? "12px" : 0 }}>
+                <div style={{ fontSize: "12px", fontWeight: 700, color: GREEN, marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.4px" }}>
+                  Ce qui tient
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {algoHealth.strengths.map((item, index) => (
+                    <div key={index} style={{ fontSize: "13px", color: "#2E7D32", lineHeight: 1.45 }}>
+                      + {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {algoHealth.weaknesses.length > 0 && (
+              <div style={{ marginBottom: algoHealth.notes.length > 0 ? "12px" : 0 }}>
+                <div style={{ fontSize: "12px", fontWeight: 700, color: "#C62828", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.4px" }}>
+                  Ce qui reste fragile
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {algoHealth.weaknesses.map((item, index) => (
+                    <div key={index} style={{ fontSize: "13px", color: "#C62828", lineHeight: 1.45 }}>
+                      - {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {algoHealth.notes.length > 0 && (
+              <div>
+                <div style={{ fontSize: "12px", fontWeight: 700, color: "#666", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.4px" }}>
+                  Lecture medecin
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {algoHealth.notes.map((item, index) => (
+                    <div key={index} style={{ fontSize: "13px", color: "#666", lineHeight: 1.45 }}>
+                      - {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

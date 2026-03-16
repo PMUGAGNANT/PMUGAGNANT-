@@ -10,6 +10,7 @@ import type {
   BetRecommendation,
   ConfidenceScore,
   StrategicProfiles,
+  AlgorithmHealth,
   RaceAnalysis,
   RaceStatus,
 } from './types';
@@ -32,6 +33,24 @@ const ELITE_JOCKEYS_FLAT: Record<string, number> = {
   guyon: 9,
   barzalona: 9,
   pasquier: 9,
+};
+
+const ELITE_TRAINERS_TROT: Record<string, number> = {
+  bazire: 8,
+  abrivard: 7,
+  duvaldestin: 8,
+  allaire: 8,
+  locqueneux: 7,
+  guilloux: 6,
+};
+
+const ELITE_TRAINERS_FLAT: Record<string, number> = {
+  fabre: 8,
+  graffard: 8,
+  rouget: 8,
+  ferland: 7,
+  head: 6,
+  brandt: 6,
 };
 
 // ---------------------------------------------------------------------------
@@ -210,6 +229,16 @@ export function scoreRunner(
     }
   }
 
+  // Trainer quality (max 8)
+  let trainerScore = 0;
+  const trainerKey = (participant.entraineur || '').toLowerCase().trim();
+  const trainerMap = estPlat ? ELITE_TRAINERS_FLAT : ELITE_TRAINERS_TROT;
+  for (const [name, score] of Object.entries(trainerMap)) {
+    if (trainerKey.includes(name)) {
+      trainerScore = Math.max(trainerScore, score);
+    }
+  }
+
   // Win rate (max 2)
   const winRate =
     participant.nombreCourses > 0
@@ -226,6 +255,23 @@ export function scoreRunner(
     if (participant.age >= 5 && participant.age <= 8) ageBonus = 5;
     else if (participant.age === 4 || participant.age === 9) ageBonus = 3;
   }
+
+  // Experience and earnings bonus (max 8)
+  const placeRate =
+    participant.nombreCourses > 0
+      ? participant.nombrePlaces / participant.nombreCourses
+      : 0;
+  let experienceBonus = 0;
+  if (participant.nombreCourses >= 18) experienceBonus += 2;
+  else if (participant.nombreCourses >= 10) experienceBonus += 1;
+
+  if (placeRate >= 0.55) experienceBonus += 3;
+  else if (placeRate >= 0.4) experienceBonus += 2;
+  else if (placeRate >= 0.28) experienceBonus += 1;
+
+  if (participant.gainCarriere >= 300000) experienceBonus += 3;
+  else if (participant.gainCarriere >= 150000) experienceBonus += 2;
+  else if (participant.gainCarriere >= 60000) experienceBonus += 1;
 
   // Draw / stall bonus
   let drawBonus = 0;
@@ -250,8 +296,10 @@ export function scoreRunner(
     recentVictory +
     formProgression +
     eliteScore +
+    trainerScore +
     winRateBonus +
     ageBonus +
+    experienceBonus +
     drawBonus;
 
   // Tocard detection
@@ -1022,6 +1070,111 @@ export function buildBetRecommendations(
   return recommendations;
 }
 
+function buildAlgorithmHealth(
+  solidite: FavoriteSolidity,
+  confiance: ConfidenceScore,
+  profils: StrategicProfiles,
+  parisRecommandes: BetRecommendation[],
+  top5: ScoredParticipant[],
+  valueTop5: Record<number, ValueAnalysis>
+): AlgorithmHealth {
+  const strengths: string[] = [];
+  const weaknesses: string[] = [];
+  const notes: string[] = [];
+  let score = 5.5;
+
+  if (solidite.score >= 72) {
+    score += 1.6;
+    strengths.push(`Favori solide (${solidite.score}/100)`);
+  } else if (solidite.score >= 58) {
+    score += 0.8;
+    strengths.push(`Base correcte sur le favori (${solidite.score}/100)`);
+  } else {
+    score -= 1.2;
+    weaknesses.push(`Favori fragile (${solidite.score}/100)`);
+  }
+
+  if (confiance.score >= 7.5) {
+    score += 1.3;
+    strengths.push(`Confiance elevee sur la course (${confiance.score}/10)`);
+  } else if (confiance.score >= 6) {
+    score += 0.6;
+    notes.push(`Confiance moyenne mais exploitable (${confiance.score}/10)`);
+  } else {
+    score -= 1.1;
+    weaknesses.push(`Lecture de course delicate (${confiance.score}/10)`);
+  }
+
+  if (profils.lisibilite === 'LISIBLE') {
+    score += 0.9;
+    strengths.push('Course lisible pour l IA');
+  } else if (profils.lisibilite === 'COMPLEXE') {
+    notes.push('Course plus technique, les paris demandent de la prudence');
+  } else {
+    score -= 0.8;
+    weaknesses.push('Course de type loterie');
+  }
+
+  const topGap =
+    top5.length > 1 ? top5[0].scoreAlgo - top5[1].scoreAlgo : top5[0]?.scoreAlgo ?? 0;
+  if (topGap >= 12) {
+    score += 0.7;
+    strengths.push(`Ecarts nets en tete (${topGap} pts)`);
+  } else if (topGap <= 4) {
+    score -= 0.7;
+    weaknesses.push(`Top serre (${topGap} pts entre les deux premiers)`);
+  }
+
+  const strongValues = top5.filter((runner) => (valueTop5[runner.numPmu]?.valueIndex ?? 0) >= 1.4);
+  if (strongValues.length >= 2) {
+    score += 0.5;
+    strengths.push('Plusieurs chevaux gardent une vraie value');
+  } else if (strongValues.length === 0) {
+    notes.push('Peu de value pure, l IA joue surtout la force sportive');
+  }
+
+  const averageSurete =
+    parisRecommandes.length > 0
+      ? parisRecommandes.reduce((sum, pari) => sum + pari.surete, 0) / parisRecommandes.length
+      : 0;
+
+  if (averageSurete >= 7) {
+    score += 0.8;
+    strengths.push(`Plans de paris coherents (${round1(averageSurete)}/10)`);
+  } else if (averageSurete < 5.5) {
+    score -= 0.8;
+    weaknesses.push(`Plans de paris encore fragiles (${round1(averageSurete)}/10)`);
+  }
+
+  if (solidite.alertes.length > 0) {
+    score -= Math.min(1.2, solidite.alertes.length * 0.35);
+    weaknesses.push(...solidite.alertes.slice(0, 2));
+  }
+
+  score = round1(clamp(score, 0, 10));
+
+  const status =
+    score >= 7.5 ? 'SAIN' : score >= 5.5 ? 'SURVEILLANCE' : 'FRAGILE';
+
+  if (notes.length === 0) {
+    notes.push(
+      status === 'SAIN'
+        ? 'L algo lit bien cette course.'
+        : status === 'SURVEILLANCE'
+          ? 'La lecture est jouable mais doit etre suivie.'
+          : 'Mieux vaut rester prudent sur cette course.'
+    );
+  }
+
+  return {
+    score,
+    status,
+    strengths: strengths.slice(0, 4),
+    weaknesses: weaknesses.slice(0, 4),
+    notes: notes.slice(0, 3),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // 10. analyzeRace
 // ---------------------------------------------------------------------------
@@ -1054,6 +1207,7 @@ export function analyzeRace(
     sniper: null,
     lisibilite: 'LOTERIE',
   };
+  let algorithmHealth: AlgorithmHealth | null = null;
 
   if (favori) {
     // 5. Analyze favorite solidity
@@ -1094,6 +1248,15 @@ export function analyzeRace(
       predictionsCotes,
       valueTop5
     );
+
+    algorithmHealth = buildAlgorithmHealth(
+      soliditeFavori,
+      scoreConfiance,
+      profils,
+      parisRecommandes,
+      top5,
+      valueTop5
+    );
   }
 
   // 11. Return complete analysis
@@ -1109,6 +1272,7 @@ export function analyzeRace(
     predictionsCotes,
     profils,
     valueTop5,
+    algorithmHealth,
   };
 }
 
