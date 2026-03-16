@@ -86,6 +86,28 @@ export interface Recommendation {
   raisonnement: string[];
 }
 
+export type BetRecommendationType =
+  | 'SIMPLE_GAGNANT'
+  | 'COUPLE_PLACE'
+  | 'COUPLE_GAGNANT';
+
+export interface BetRecommendationHorse {
+  numPmu: number;
+  nom: string;
+}
+
+export interface BetRecommendation {
+  type: BetRecommendationType;
+  label: string;
+  emoji: string;
+  chevaux: BetRecommendationHorse[];
+  surete: number;
+  sureteLabel: string;
+  miseConseillee: number;
+  coteEstimee: number | null;
+  pourquoi: string[];
+}
+
 export interface ConfidenceScore {
   score: number;
   niveau: { label: string; emoji: string };
@@ -106,6 +128,7 @@ export interface RaceAnalysis {
   favori: ScoredParticipant | null;
   soliditeFavori: FavoriteSolidity | null;
   recommandation: Recommendation | null;
+  parisRecommandes: BetRecommendation[];
   scoreConfiance: ConfidenceScore | null;
   predictionsCotes: Record<number, PredictedOdds>;
   profils: StrategicProfiles;

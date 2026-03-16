@@ -13,6 +13,10 @@ function getSupabaseClient(req: NextRequest) {
   return createSupabaseRequestClient(token);
 }
 
+function round2(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
 // POST /api/bets/settle - Settle pending bets by checking results
 export async function POST(req: NextRequest) {
   const client = getSupabaseClient(req);
@@ -55,10 +59,13 @@ export async function POST(req: NextRequest) {
       const participants = data.participants || [];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const horse = participants.find((p: any) => p.numPmu === bet.cheval_num);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const horse2 = bet.cheval_num_2 ? participants.find((p: any) => p.numPmu === bet.cheval_num_2) : null;
 
       if (!horse || !horse.ordreArrivee) continue;
 
-      const position = horse.ordreArrivee;
+      const position = Number(horse.ordreArrivee);
+      const position2 = horse2?.ordreArrivee ? Number(horse2.ordreArrivee) : null;
       let statut: string;
       let gain: number;
 
@@ -70,9 +77,25 @@ export async function POST(req: NextRequest) {
           statut = "PERDU";
           gain = -bet.mise;
         }
+      } else if (bet.type_pari === "COUPLE_GAGNANT") {
+        if (position2 && position <= 2 && position2 <= 2) {
+          statut = "GAGNE";
+          gain = round2(bet.mise * bet.cote - bet.mise);
+        } else {
+          statut = "PERDU";
+          gain = -bet.mise;
+        }
+      } else if (bet.type_pari === "COUPLE_PLACE") {
+        if (position2 && position <= 3 && position2 <= 3) {
+          statut = "PLACE";
+          gain = round2(Math.max(0, bet.mise * bet.cote - bet.mise));
+        } else {
+          statut = "PERDU";
+          gain = -bet.mise;
+        }
       } else if (position <= 3) {
         statut = "PLACE";
-        gain = Math.round((bet.mise * (bet.cote * 0.3) - bet.mise) * 100) / 100;
+        gain = round2(Math.round((bet.mise * (bet.cote * 0.3) - bet.mise) * 100) / 100);
         if (gain < 0) gain = 0;
       } else {
         statut = "PERDU";

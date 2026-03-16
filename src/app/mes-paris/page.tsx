@@ -20,12 +20,37 @@ interface Bet {
   heure_depart: string;
   cheval_num: number;
   cheval_nom: string;
+  cheval_num_2?: number | null;
+  cheval_nom_2?: string | null;
   type_pari: string;
   mise: number;
   cote: number;
   statut: string;
   gain: number | null;
   created_at: string;
+}
+
+function getBetTypeLabel(type: string) {
+  switch (type) {
+    case "GAGNANT":
+      return "Simple gagnant";
+    case "PLACE":
+      return "Simple place";
+    case "COUPLE_GAGNANT":
+      return "Couple gagnant";
+    case "COUPLE_PLACE":
+      return "Couple place";
+    default:
+      return type;
+  }
+}
+
+function getBetSelectionLabel(bet: Bet) {
+  if (bet.cheval_num_2 && bet.cheval_nom_2) {
+    return `N${bet.cheval_num} ${bet.cheval_nom} + N${bet.cheval_num_2} ${bet.cheval_nom_2}`;
+  }
+
+  return `N${bet.cheval_num} ${bet.cheval_nom}`;
 }
 
 export default function MesParisPage() {
@@ -399,10 +424,10 @@ export default function MesParisPage() {
                       </div>
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 15, color: DARK }}>
-                          {bet.cheval_nom}
+                          {getBetSelectionLabel(bet)}
                         </div>
                         <div style={{ fontSize: 12, color: "#888" }}>
-                          {bet.type_pari} · Cote {bet.cote} · Mise {bet.mise}€
+                          {getBetTypeLabel(bet.type_pari)} · Cote {bet.cote} · Mise {bet.mise}€
                         </div>
                       </div>
                     </div>

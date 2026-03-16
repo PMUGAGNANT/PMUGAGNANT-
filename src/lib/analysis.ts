@@ -7,6 +7,7 @@ import type {
   ValueAnalysis,
   FavoriteSolidity,
   Recommendation,
+  BetRecommendation,
   ConfidenceScore,
   StrategicProfiles,
   RaceAnalysis,
@@ -650,7 +651,160 @@ export function identifyProfiles(
 }
 
 // ---------------------------------------------------------------------------
-// 9. analyzeRace
+// 9. buildBetRecommendations
+// ---------------------------------------------------------------------------
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function round1(value: number) {
+  return Math.round(value * 10) / 10;
+}
+
+function getSureteLabel(score: number) {
+  if (score >= 8.5) return "Tres forte";
+  if (score >= 7) return "Forte";
+  if (score >= 5.5) return "Moyenne";
+  return "Speculative";
+}
+
+function getRunnerReliability(runner: ScoredParticipant, topScore: number) {
+  const stats = runner.musicStats;
+  const scoreRatio = topScore > 0 ? runner.scoreAlgo / topScore : 0;
+  const fiabilite = stats?.fiabilite ?? 0.5;
+  const ratioForme = stats?.ratioForme ?? 0.4;
+  const podiumRate = runner.nombreCourses > 0 ? runner.nombrePlaces / runner.nombreCourses : 0;
+
+  return clamp(scoreRatio * 4 + fiabilite * 3 + ratioForme * 2 + podiumRate, 0, 10);
+}
+
+function getEstimatedBetOdds(
+  type: BetRecommendation["type"],
+  primary: ScoredParticipant,
+  secondary: ScoredParticipant | null,
+  predictionsCotes: Record<number, PredictedOdds>
+) {
+  const primaryOdds = predictionsCotes[primary.numPmu]?.coteEstimee ?? primary.cote ?? 2;
+
+  if (!secondary) {
+    return round1(primaryOdds);
+  }
+
+  const secondaryOdds = predictionsCotes[secondary.numPmu]?.coteEstimee ?? secondary.cote ?? 2.5;
+  const combined = primaryOdds + secondaryOdds;
+
+  if (type === "COUPLE_GAGNANT") {
+    return round1(Math.max(2.5, combined * 0.9));
+  }
+
+  return round1(Math.max(1.4, combined * 0.35));
+}
+
+export function buildBetRecommendations(
+  top5: ScoredParticipant[],
+  favori: ScoredParticipant,
+  solidite: FavoriteSolidity,
+  confiance: ConfidenceScore,
+  profils: StrategicProfiles,
+  predictionsCotes: Record<number, PredictedOdds>,
+  valueTop5: Record<number, ValueAnalysis>
+): BetRecommendation[] {
+  if (top5.length === 0) return [];
+
+  const topScore = top5[0].scoreAlgo || favori.scoreAlgo || 1;
+  const primarySingle = profils.beton || favori;
+  const alternativePairHorse =
+    top5.find((runner) => runner.numPmu !== primarySingle.numPmu && !runner.estTocard) || top5[1] || null;
+
+  const safestPlaceHorse =
+    top5
+      .filter((runner) => runner.numPmu !== primarySingle.numPmu)
+      .sort((a, b) => getRunnerReliability(b, topScore) - getRunnerReliability(a, topScore))[0] || null;
+
+  const coupleWinnerHorse =
+    top5
+      .filter((runner) => runner.numPmu !== primarySingle.numPmu)
+      .sort((a, b) => {
+        const aValue = valueTop5[a.numPmu]?.valueIndex ?? 1;
+        const bValue = valueTop5[b.numPmu]?.valueIndex ?? 1;
+        return b.scoreAlgo + bValue * 10 - (a.scoreAlgo + aValue * 10);
+      })[0] || alternativePairHorse;
+
+  const simpleSurete = clamp(confiance.score * 0.55 + solidite.score / 22, 0, 10);
+  const couplePlaceBase = safestPlaceHorse
+    ? (getRunnerReliability(primarySingle, topScore) + getRunnerReliability(safestPlaceHorse, topScore)) / 2
+    : 0;
+  const couplePlaceSurete = clamp(couplePlaceBase + (profils.lisibilite === "LISIBLE" ? 0.8 : 0.2), 0, 10);
+  const coupleGagnantBase = coupleWinnerHorse
+    ? (getRunnerReliability(primarySingle, topScore) * 0.55 + getRunnerReliability(coupleWinnerHorse, topScore) * 0.45)
+    : 0;
+  const coupleGagnantSurete = clamp(coupleGagnantBase + solidite.ecartScore / 20 - 0.6, 0, 10);
+
+  const recommendations: BetRecommendation[] = [
+    {
+      type: "SIMPLE_GAGNANT",
+      label: "Simple gagnant",
+      emoji: "SG",
+      chevaux: [{ numPmu: primarySingle.numPmu, nom: primarySingle.nom }],
+      surete: round1(simpleSurete),
+      sureteLabel: getSureteLabel(simpleSurete),
+      miseConseillee: simpleSurete >= 8 ? 4 : simpleSurete >= 6.5 ? 3 : 2,
+      coteEstimee: getEstimatedBetOdds("SIMPLE_GAGNANT", primarySingle, null, predictionsCotes),
+      pourquoi: [
+        `Base principale: ${primarySingle.nom}`,
+        `Confiance course ${confiance.score}/10`,
+        solidite.score >= 65 ? "Favori globalement solide" : "A jouer avec prudence",
+      ],
+    },
+  ];
+
+  if (safestPlaceHorse) {
+    recommendations.push({
+      type: "COUPLE_PLACE",
+      label: "Couple place",
+      emoji: "CP",
+      chevaux: [
+        { numPmu: primarySingle.numPmu, nom: primarySingle.nom },
+        { numPmu: safestPlaceHorse.numPmu, nom: safestPlaceHorse.nom },
+      ],
+      surete: round1(couplePlaceSurete),
+      sureteLabel: getSureteLabel(couplePlaceSurete),
+      miseConseillee: couplePlaceSurete >= 8 ? 3 : couplePlaceSurete >= 6 ? 2 : 1,
+      coteEstimee: getEstimatedBetOdds("COUPLE_PLACE", primarySingle, safestPlaceHorse, predictionsCotes),
+      pourquoi: [
+        "Pair la plus reguliere du top 5",
+        profils.lisibilite === "LISIBLE" ? "Course lisible pour un couple place" : "Option defensive sur course moins nette",
+        `Deux chevaux avec un profil de securite combine`,
+      ],
+    });
+  }
+
+  if (coupleWinnerHorse) {
+    recommendations.push({
+      type: "COUPLE_GAGNANT",
+      label: "Couple gagnant",
+      emoji: "CG",
+      chevaux: [
+        { numPmu: primarySingle.numPmu, nom: primarySingle.nom },
+        { numPmu: coupleWinnerHorse.numPmu, nom: coupleWinnerHorse.nom },
+      ],
+      surete: round1(coupleGagnantSurete),
+      sureteLabel: getSureteLabel(coupleGagnantSurete),
+      miseConseillee: coupleGagnantSurete >= 7.5 ? 2 : 1,
+      coteEstimee: getEstimatedBetOdds("COUPLE_GAGNANT", primarySingle, coupleWinnerHorse, predictionsCotes),
+      pourquoi: [
+        "Duo avec le meilleur potentiel de victoire combine",
+        solidite.ecartScore >= 10 ? "Le favori garde un vrai avantage au score" : "Pair plus speculative",
+        `Alternative appuyee par la value du top 5`,
+      ],
+    });
+  }
+
+  return recommendations;
+}
+
+// ---------------------------------------------------------------------------
+// 10. analyzeRace
 // ---------------------------------------------------------------------------
 export function analyzeRace(
   courseInfo: RaceSummary,
@@ -672,6 +826,7 @@ export function analyzeRace(
   let soliditeFavori: FavoriteSolidity | null = null;
   let recommandation: Recommendation | null = null;
   let scoreConfiance: ConfidenceScore | null = null;
+  let parisRecommandes: BetRecommendation[] = [];
   const predictionsCotes: Record<number, PredictedOdds> = {};
   const valueTop5: Record<number, ValueAnalysis> = {};
   let profils: StrategicProfiles = {
@@ -709,6 +864,16 @@ export function analyzeRace(
       scoreConfiance,
       valueTop5
     );
+
+    parisRecommandes = buildBetRecommendations(
+      top5,
+      favori,
+      soliditeFavori,
+      scoreConfiance,
+      profils,
+      predictionsCotes,
+      valueTop5
+    );
   }
 
   // 11. Return complete analysis
@@ -719,6 +884,7 @@ export function analyzeRace(
     favori,
     soliditeFavori,
     recommandation,
+    parisRecommandes,
     scoreConfiance,
     predictionsCotes,
     profils,
@@ -727,7 +893,7 @@ export function analyzeRace(
 }
 
 // ---------------------------------------------------------------------------
-// 10. getMinutesUntilStart
+// 11. getMinutesUntilStart
 // ---------------------------------------------------------------------------
 export function getMinutesUntilStart(heureDepart: string): number {
   const [hours, minutes] = heureDepart.split(':').map(Number);
@@ -749,7 +915,7 @@ export function getMinutesUntilStart(heureDepart: string): number {
 }
 
 // ---------------------------------------------------------------------------
-// 11. getRaceStatus
+// 12. getRaceStatus
 // ---------------------------------------------------------------------------
 export function getRaceStatus(heureDepart: string): {
   status: RaceStatus;

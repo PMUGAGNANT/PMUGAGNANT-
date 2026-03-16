@@ -22,13 +22,30 @@ CREATE TABLE IF NOT EXISTS bets (
   heure_depart TEXT DEFAULT '',
   cheval_num INTEGER NOT NULL,
   cheval_nom TEXT NOT NULL,
-  type_pari TEXT NOT NULL CHECK (type_pari IN ('GAGNANT', 'PLACE')),
+  cheval_num_2 INTEGER,
+  cheval_nom_2 TEXT,
+  type_pari TEXT NOT NULL CHECK (type_pari IN ('GAGNANT', 'PLACE', 'COUPLE_GAGNANT', 'COUPLE_PLACE')),
   mise INTEGER NOT NULL CHECK (mise >= 1 AND mise <= 50),
   cote NUMERIC NOT NULL,
   statut TEXT DEFAULT 'EN_ATTENTE' CHECK (statut IN ('EN_ATTENTE', 'GAGNE', 'PLACE', 'PERDU')),
   gain NUMERIC,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE bets ADD COLUMN IF NOT EXISTS cheval_num_2 INTEGER;
+ALTER TABLE bets ADD COLUMN IF NOT EXISTS cheval_nom_2 TEXT;
+
+ALTER TABLE bets DROP CONSTRAINT IF EXISTS bets_type_pari_check;
+ALTER TABLE bets ADD CONSTRAINT bets_type_pari_check
+  CHECK (type_pari IN ('GAGNANT', 'PLACE', 'COUPLE_GAGNANT', 'COUPLE_PLACE'));
+
+ALTER TABLE bets DROP CONSTRAINT IF EXISTS bets_couple_fields_check;
+ALTER TABLE bets ADD CONSTRAINT bets_couple_fields_check
+  CHECK (
+    (type_pari IN ('GAGNANT', 'PLACE') AND cheval_num_2 IS NULL AND cheval_nom_2 IS NULL)
+    OR
+    (type_pari IN ('COUPLE_GAGNANT', 'COUPLE_PLACE') AND cheval_num_2 IS NOT NULL AND cheval_nom_2 IS NOT NULL)
+  );
 
 -- 3. Trigger: creer automatiquement un profil quand un user s'inscrit
 CREATE OR REPLACE FUNCTION public.handle_new_user()

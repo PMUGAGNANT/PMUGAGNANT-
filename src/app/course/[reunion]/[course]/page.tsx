@@ -79,6 +79,28 @@ interface Recommendation {
   raisonnement: string[];
 }
 
+interface BetRecommendationHorse {
+  numPmu: number;
+  nom: string;
+}
+
+type BetRecommendationType =
+  | "SIMPLE_GAGNANT"
+  | "COUPLE_PLACE"
+  | "COUPLE_GAGNANT";
+
+interface BetRecommendation {
+  type: BetRecommendationType;
+  label: string;
+  emoji: string;
+  chevaux: BetRecommendationHorse[];
+  surete: number;
+  sureteLabel: string;
+  miseConseillee: number;
+  coteEstimee: number | null;
+  pourquoi: string[];
+}
+
 interface ConfidenceScore {
   score: number;
   niveau: { label: string; emoji: string };
@@ -114,6 +136,7 @@ interface RaceAnalysis {
   favori: ScoredParticipant | null;
   soliditeFavori: FavoriteSolidity | null;
   recommandation: Recommendation | null;
+  parisRecommandes: BetRecommendation[];
   scoreConfiance: ConfidenceScore | null;
   predictionsCotes: Record<number, PredictedOdds>;
   profils: StrategicProfiles;
@@ -130,6 +153,12 @@ interface APIResponse {
   analysis: RaceAnalysis | null;
   error?: string;
 }
+
+type PlacedBetType =
+  | "GAGNANT"
+  | "PLACE"
+  | "COUPLE_GAGNANT"
+  | "COUPLE_PLACE";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -153,6 +182,21 @@ function positionMedal(pos: number): string {
   if (pos === 2) return "\uD83E\uDD48";
   if (pos === 3) return "\uD83E\uDD49";
   return `${pos}.`;
+}
+
+function getBetTypeLabel(type: PlacedBetType): string {
+  switch (type) {
+    case "GAGNANT":
+      return "Simple gagnant";
+    case "PLACE":
+      return "Simple place";
+    case "COUPLE_GAGNANT":
+      return "Couple gagnant";
+    case "COUPLE_PLACE":
+      return "Couple place";
+    default:
+      return type;
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -258,11 +302,11 @@ export default function CourseDetailPage() {
   // Betting state
   const [showBetPanel, setShowBetPanel] = useState(false);
   const [betHorse, setBetHorse] = useState<ScoredParticipant | null>(null);
-  const [betType, setBetType] = useState<"GAGNANT" | "PLACE">("PLACE");
+  const [betSecondHorse, setBetSecondHorse] = useState<ScoredParticipant | null>(null);
+  const [betType, setBetType] = useState<PlacedBetType>("PLACE");
   const [betMise, setBetMise] = useState(2);
   const [betLoading, setBetLoading] = useState(false);
   const [betMessage, setBetMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [alreadyBet, setAlreadyBet] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -435,6 +479,7 @@ export default function CourseDetailPage() {
     const reco = a.recommandation;
     const confiance = a.scoreConfiance;
     const profils = a.profils;
+    const parisRecommandes = a.parisRecommandes || [];
 
     return (
       <>
@@ -506,6 +551,79 @@ export default function CourseDetailPage() {
               {reco.raisonnement.map((r, i) => (
                 <div key={i} style={{ fontSize: "13px", lineHeight: 1.5, opacity: reco.vautLeCoup ? 0.92 : 1 }}>
                   &bull; {r}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {parisRecommandes.length > 0 && (
+          <div style={cardStyle}>
+            <div style={{ fontWeight: 700, fontSize: "16px", marginBottom: "16px" }}>
+              Plans de paris IA
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {parisRecommandes.map((pari) => (
+                <div
+                  key={pari.type}
+                  style={{
+                    borderRadius: "14px",
+                    padding: "14px",
+                    background: "#FAFAFA",
+                    border: "1px solid #EAEAEA",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                    <div style={{ fontWeight: 700, fontSize: "15px", color: DARK }}>
+                      {pari.emoji} {pari.label}
+                    </div>
+                    <span
+                      style={{
+                        ...pillStyle,
+                        background: pari.surete >= 8 ? "#E8F5E9" : pari.surete >= 6 ? "#FFF3CD" : "#FFEBEE",
+                        color: pari.surete >= 8 ? GREEN : pari.surete >= 6 ? "#B26A00" : "#C62828",
+                      }}
+                    >
+                      Surete {pari.surete}/10
+                    </span>
+                  </div>
+
+                  <div style={{ fontSize: "17px", fontWeight: 700, color: DARK, marginBottom: "8px" }}>
+                    {pari.chevaux.map((cheval) => `N${cheval.numPmu} ${cheval.nom}`).join(" + ")}
+                  </div>
+
+                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "10px" }}>
+                    <span style={{ fontSize: "12px", color: "#666" }}>Niveau: {pari.sureteLabel}</span>
+                    <span style={{ fontSize: "12px", color: "#666" }}>Mise: {pari.miseConseillee}EUR</span>
+                    <span style={{ fontSize: "12px", color: "#666" }}>
+                      Cote estimee: {pari.coteEstimee ?? "N/A"}
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginBottom: "12px" }}>
+                    {pari.pourquoi.map((reason, index) => (
+                      <div key={index} style={{ fontSize: "12px", color: "#777", lineHeight: 1.45 }}>
+                        - {reason}
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => openBetPanelFromRecommendation(pari)}
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      borderRadius: "12px",
+                      border: "none",
+                      background: DARK,
+                      color: "#fff",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Jouer ce pari
+                  </button>
                 </div>
               ))}
             </div>
@@ -686,7 +804,7 @@ export default function CourseDetailPage() {
         )}
 
         {/* H. BET BUTTON */}
-        {!data.isFinished && favori && !alreadyBet && (
+        {!data.isFinished && favori && (
           <div style={{ margin: "0 16px 16px" }}>
             <button
               onClick={() => openBetPanel(favori)}
@@ -719,7 +837,7 @@ export default function CourseDetailPage() {
         )}
 
         {/* Bet success message */}
-        {alreadyBet && (
+        {false && (
           <div style={{
             margin: "0 16px 16px", padding: "16px", borderRadius: "14px",
             background: "#E8F5E9", textAlign: "center",
@@ -782,6 +900,41 @@ export default function CourseDetailPage() {
     );
   }
 
+  function findRunnerByNum(numPmu: number) {
+    return data?.analysis?.top5.find((runner) => runner.numPmu === numPmu) || null;
+  }
+
+  function openBetPanel(
+    horse: ScoredParticipant,
+    type: PlacedBetType = "PLACE",
+    secondHorse: ScoredParticipant | null = null,
+    mise = 2
+  ) {
+    setBetHorse(horse);
+    setBetSecondHorse(secondHorse);
+    setBetType(type);
+    setBetMise(mise);
+    setBetMessage(null);
+    setShowBetPanel(true);
+  }
+
+  function openBetPanelFromRecommendation(pari: BetRecommendation) {
+    if (!pari.chevaux.length) return;
+
+    const firstHorse = findRunnerByNum(pari.chevaux[0].numPmu);
+    const secondHorse = pari.chevaux[1] ? findRunnerByNum(pari.chevaux[1].numPmu) : null;
+
+    if (!firstHorse) return;
+
+    const typeMap: Record<BetRecommendationType, PlacedBetType> = {
+      SIMPLE_GAGNANT: "GAGNANT",
+      COUPLE_PLACE: "COUPLE_PLACE",
+      COUPLE_GAGNANT: "COUPLE_GAGNANT",
+    };
+
+    openBetPanel(firstHorse, typeMap[pari.type], secondHorse, pari.miseConseillee || 2);
+  }
+
   /* ---------- Bet handler ---------- */
   async function handlePlaceBet() {
     if (!betHorse || !data) return;
@@ -802,7 +955,22 @@ export default function CourseDetailPage() {
       return;
     }
 
-    const cote = betHorse.cote || data.analysis?.predictionsCotes[betHorse.numPmu]?.coteEstimee || 2;
+    const isCoupleBet = betType === "COUPLE_GAGNANT" || betType === "COUPLE_PLACE";
+    if (isCoupleBet && !betSecondHorse) {
+      setBetLoading(false);
+      setBetMessage({ type: "error", text: "Choisissez le deuxieme cheval du couple." });
+      return;
+    }
+
+    const primaryOdds = betHorse.cote || data.analysis?.predictionsCotes[betHorse.numPmu]?.coteEstimee || 2;
+    const secondaryOdds = betSecondHorse
+      ? betSecondHorse.cote || data.analysis?.predictionsCotes[betSecondHorse.numPmu]?.coteEstimee || 2.5
+      : null;
+    const cote = isCoupleBet
+      ? betType === "COUPLE_GAGNANT"
+        ? Math.round(Math.max(2.5, ((primaryOdds + (secondaryOdds || 0)) * 0.9)) * 10) / 10
+        : Math.round(Math.max(1.4, ((primaryOdds + (secondaryOdds || 0)) * 0.35)) * 10) / 10
+      : primaryOdds;
     const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Paris" }));
     const dateStr = `${String(now.getDate()).padStart(2, "0")}${String(now.getMonth() + 1).padStart(2, "0")}${now.getFullYear()}`;
 
@@ -821,6 +989,8 @@ export default function CourseDetailPage() {
           heure_depart: data.courseInfo.heureDepart,
           cheval_num: betHorse.numPmu,
           cheval_nom: betHorse.nom,
+          cheval_num_2: isCoupleBet ? betSecondHorse?.numPmu : null,
+          cheval_nom_2: isCoupleBet ? betSecondHorse?.nom : null,
           type_pari: betType,
           mise: betMise,
           cote,
@@ -829,7 +999,6 @@ export default function CourseDetailPage() {
       const result = await res.json();
       if (result.success) {
         setBetMessage({ type: "success", text: `Pari placé ! Solde: ${result.solde}€` });
-        setAlreadyBet(true);
         setShowBetPanel(false);
       } else {
         setBetMessage({ type: "error", text: result.error || "Erreur" });
@@ -841,21 +1010,32 @@ export default function CourseDetailPage() {
     }
   }
 
-  function openBetPanel(horse: ScoredParticipant) {
-    setBetHorse(horse);
-    setBetType("PLACE");
-    setBetMise(2);
-    setBetMessage(null);
-    setShowBetPanel(true);
-  }
-
   /* ---------- Bet Panel Overlay ---------- */
   function BetPanel() {
     if (!showBetPanel || !betHorse || !data) return null;
-    const cote = betHorse.cote || data.analysis?.predictionsCotes[betHorse.numPmu]?.coteEstimee || 2;
+    const isCoupleBet = betType === "COUPLE_GAGNANT" || betType === "COUPLE_PLACE";
+    const betTypeOptions: Array<{ value: PlacedBetType; label: string; helper: string }> = [
+      { value: "PLACE", label: "Simple place", helper: "Le cheval finit dans les 3." },
+      { value: "GAGNANT", label: "Simple gagnant", helper: "Le cheval doit gagner." },
+      { value: "COUPLE_PLACE", label: "Couple place", helper: "Les 2 chevaux doivent finir dans les 3." },
+      { value: "COUPLE_GAGNANT", label: "Couple gagnant", helper: "Les 2 chevaux doivent finir dans les 2." },
+    ];
+    const primaryOdds = betHorse.cote || data.analysis?.predictionsCotes[betHorse.numPmu]?.coteEstimee || 2;
+    const secondaryOdds = betSecondHorse
+      ? betSecondHorse.cote || data.analysis?.predictionsCotes[betSecondHorse.numPmu]?.coteEstimee || 2.5
+      : null;
+    const cote = isCoupleBet
+      ? betType === "COUPLE_GAGNANT"
+        ? Math.round(Math.max(2.5, ((primaryOdds + (secondaryOdds || 0)) * 0.9)) * 10) / 10
+        : Math.round(Math.max(1.4, ((primaryOdds + (secondaryOdds || 0)) * 0.35)) * 10) / 10
+      : primaryOdds;
     const gainPotentiel = betType === "GAGNANT"
       ? Math.round((betMise * cote - betMise) * 100) / 100
-      : Math.round((betMise * cote * 0.3 - betMise) * 100) / 100;
+      : betType === "PLACE"
+        ? Math.round((betMise * cote * 0.3 - betMise) * 100) / 100
+      : Math.round((betMise * cote - betMise) * 100) / 100;
+    const coupleCandidates = data.analysis?.top5.filter((runner) => runner.numPmu !== betHorse.numPmu) || [];
+    const selectedType = betTypeOptions.find((option) => option.value === betType);
 
     return (
       <div style={{
@@ -886,30 +1066,79 @@ export default function CourseDetailPage() {
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16, color: DARK }}>{betHorse.nom}</div>
-              <div style={{ fontSize: 13, color: "#888" }}>Cote: {cote}</div>
+              <div style={{ fontSize: 13, color: "#888" }}>
+                {getBetTypeLabel(betType)} - Cote estimee: {cote}
+              </div>
             </div>
           </div>
+
+          {isCoupleBet && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#555", marginBottom: 8 }}>
+                Deuxieme cheval du couple
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {coupleCandidates.map((runner) => (
+                  <button
+                    key={runner.numPmu}
+                    onClick={() => setBetSecondHorse(runner)}
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: 12,
+                      border: `2px solid ${betSecondHorse?.numPmu === runner.numPmu ? GREEN : "#E0E0E0"}`,
+                      background: betSecondHorse?.numPmu === runner.numPmu ? "#E8F5E9" : "#fff",
+                      color: betSecondHorse?.numPmu === runner.numPmu ? GREEN : "#555",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    N{runner.numPmu} {runner.nom}
+                  </button>
+                ))}
+              </div>
+              <div style={{ marginTop: 10, fontSize: 12, color: betSecondHorse ? "#666" : "#C62828" }}>
+                {betSecondHorse
+                  ? `Selection: N${betHorse.numPmu} ${betHorse.nom} + N${betSecondHorse.numPmu} ${betSecondHorse.nom}`
+                  : "Selectionnez le deuxieme cheval du couple."}
+              </div>
+            </div>
+          )}
 
           {/* Type pari */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: "#555", marginBottom: 8 }}>Type de pari</div>
-            <div style={{ display: "flex", gap: 8 }}>
-              {(["PLACE", "GAGNANT"] as const).map((t) => (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {betTypeOptions.map((option) => (
                 <button
-                  key={t}
-                  onClick={() => setBetType(t)}
+                  key={option.value}
+                  onClick={() => {
+                    setBetType(option.value);
+                    if (option.value === "COUPLE_GAGNANT" || option.value === "COUPLE_PLACE") {
+                      setBetSecondHorse((current) => current || coupleCandidates[0] || null);
+                    } else {
+                      setBetSecondHorse(null);
+                    }
+                  }}
                   style={{
-                    flex: 1, padding: "12px", borderRadius: 12,
-                    border: `2px solid ${betType === t ? GREEN : "#E0E0E0"}`,
-                    background: betType === t ? "#E8F5E9" : "#fff",
-                    color: betType === t ? GREEN : "#888",
-                    fontWeight: 700, fontSize: 14, cursor: "pointer",
+                    padding: "12px", borderRadius: 12,
+                    border: `2px solid ${betType === option.value ? GREEN : "#E0E0E0"}`,
+                    background: betType === option.value ? "#E8F5E9" : "#fff",
+                    color: betType === option.value ? GREEN : "#888",
+                    fontWeight: 700, fontSize: 14, cursor: "pointer", textAlign: "left",
                   }}
                 >
-                  {t === "PLACE" ? "Placé (Top 3)" : "Gagnant (1er)"}
+                  <div>{option.label}</div>
+                  <div style={{ fontSize: 11, fontWeight: 500, marginTop: 4, opacity: 0.8 }}>
+                    {option.helper}
+                  </div>
                 </button>
               ))}
             </div>
+          </div>
+
+          <div style={{ marginBottom: 16, fontSize: 12, color: "#666", lineHeight: 1.5 }}>
+            {selectedType?.helper}
           </div>
 
           {/* Mise */}
@@ -954,11 +1183,11 @@ export default function CourseDetailPage() {
           {/* Submit */}
           <button
             onClick={handlePlaceBet}
-            disabled={betLoading}
+            disabled={betLoading || (isCoupleBet && !betSecondHorse)}
             style={{
               width: "100%", padding: 16, borderRadius: 12,
-              border: "none", background: betLoading ? "#999" : GREEN,
-              color: "#fff", fontSize: 16, fontWeight: 700, cursor: betLoading ? "not-allowed" : "pointer",
+              border: "none", background: betLoading || (isCoupleBet && !betSecondHorse) ? "#999" : GREEN,
+              color: "#fff", fontSize: 16, fontWeight: 700, cursor: betLoading || (isCoupleBet && !betSecondHorse) ? "not-allowed" : "pointer",
             }}
           >
             {betLoading ? "Envoi..." : "Confirmer le pari"}

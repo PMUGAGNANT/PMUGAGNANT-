@@ -11,6 +11,23 @@ function getSupabaseClient(req: NextRequest) {
   return createSupabaseRequestClient(token);
 }
 
+type ExistingBet = {
+  cheval_num: number;
+  cheval_num_2?: number | null;
+};
+
+function buildBetSelectionKey(
+  typePari: string,
+  chevalNum: number,
+  chevalNum2?: number | null
+) {
+  if (typePari === "COUPLE_GAGNANT" || typePari === "COUPLE_PLACE") {
+    return [chevalNum, chevalNum2].filter(Boolean).sort((a, b) => Number(a) - Number(b)).join("-");
+  }
+
+  return String(chevalNum);
+}
+
 // GET /api/bets - List user bets
 export async function GET(req: NextRequest) {
   const client = getSupabaseClient(req);
@@ -80,6 +97,8 @@ export async function POST(req: NextRequest) {
     heure_depart,
     cheval_num,
     cheval_nom,
+    cheval_num_2,
+    cheval_nom_2,
     type_pari,
     mise,
     cote,
@@ -93,8 +112,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Mise entre 1 et 50" }, { status: 400 });
   }
 
-  if (!["GAGNANT", "PLACE"].includes(type_pari)) {
+  if (!["GAGNANT", "PLACE", "COUPLE_GAGNANT", "COUPLE_PLACE"].includes(type_pari)) {
     return NextResponse.json({ success: false, error: "Type de pari invalide" }, { status: 400 });
+  }
+
+  const isCoupleBet = type_pari === "COUPLE_GAGNANT" || type_pari === "COUPLE_PLACE";
+  if (isCoupleBet && (!cheval_num_2 || !cheval_nom_2)) {
+    return NextResponse.json({ success: false, error: "Le deuxieme cheval du couple est obligatoire" }, { status: 400 });
+  }
+
+  if (isCoupleBet && Number(cheval_num_2) === Number(cheval_num)) {
+    return NextResponse.json({ success: false, error: "Le couple doit contenir deux chevaux differents" }, { status: 400 });
   }
 
   const { data: profile, error: profileError } = await client
@@ -117,19 +145,24 @@ export async function POST(req: NextRequest) {
 
   const { data: existing, error: existingError } = await client
     .from("bets")
-    .select("id")
+    .select("cheval_num, cheval_num_2")
     .eq("user_id", user.id)
     .eq("date_str", date_str)
     .eq("reunion", reunion)
     .eq("course", course)
-    .limit(1);
+    .eq("type_pari", type_pari);
 
   if (existingError) {
     return NextResponse.json({ success: false, error: normalizeSupabaseAppError(existingError) }, { status: 500 });
   }
 
-  if (existing && existing.length > 0) {
-    return NextResponse.json({ success: false, error: "Vous avez deja parie sur cette course" }, { status: 400 });
+  const newSelectionKey = buildBetSelectionKey(type_pari, Number(cheval_num), cheval_num_2 ? Number(cheval_num_2) : null);
+  const duplicateExists = (existing as ExistingBet[] | null)?.some((bet) => {
+    return buildBetSelectionKey(type_pari, Number(bet.cheval_num), bet.cheval_num_2 ? Number(bet.cheval_num_2) : null) === newSelectionKey;
+  });
+
+  if (duplicateExists) {
+    return NextResponse.json({ success: false, error: "Vous avez deja place ce pari sur cette course" }, { status: 400 });
   }
 
   const { error: betError } = await client.from("bets").insert({
@@ -141,6 +174,8 @@ export async function POST(req: NextRequest) {
     heure_depart: heure_depart || "",
     cheval_num,
     cheval_nom,
+    cheval_num_2: isCoupleBet ? cheval_num_2 : null,
+    cheval_nom_2: isCoupleBet ? cheval_nom_2 : null,
     type_pari,
     mise,
     cote,
