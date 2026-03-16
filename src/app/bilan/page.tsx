@@ -38,6 +38,7 @@ interface BilanData {
     couplePlayed?: number;
     coupleWins?: number;
     couplePlaces?: number;
+    coupleSuccess?: number;
     losses: number;
   };
   results: BilanResult[];
@@ -209,6 +210,7 @@ export default function BilanPage() {
   const couplePlayed = data?.summary.couplePlayed ?? 0;
   const coupleWins = data?.summary.coupleWins ?? 0;
   const couplePlaces = data?.summary.couplePlaces ?? 0;
+  const coupleSuccess = data?.summary.coupleSuccess ?? 0;
 
   let roiText = "-";
   let roiColor = "#1A1A1A";
@@ -276,6 +278,7 @@ export default function BilanPage() {
                 { label: "Gagnants", value: wins, color: "#00843D" },
                 { label: "Places", value: places, color: "#E67E22" },
                 { label: "Couples joues", value: couplePlayed, color: "#1A1A1A" },
+                { label: "Couples reussis", value: coupleSuccess, color: "#00843D" },
                 { label: "Couples gagnants", value: coupleWins, color: "#00843D" },
                 { label: "Couples places", value: couplePlaces, color: "#E67E22" },
                 { label: "ROI", value: roiText, color: roiColor },

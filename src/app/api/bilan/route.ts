@@ -116,6 +116,7 @@ export async function GET(request: Request) {
     const couplePlayed = results.filter((r) => (r.typePari || "").toLowerCase().includes("couple") && r.resultat !== "INCONNU").length;
     const coupleWins = results.filter((r) => (r.typePari || "").toLowerCase().includes("couple") && r.resultat === "GAGNANT").length;
     const couplePlaces = results.filter((r) => (r.typePari || "").toLowerCase().includes("couple") && r.resultat === "PLACE").length;
+    const coupleSuccess = coupleWins + couplePlaces;
 
     return NextResponse.json({
       success: true,
@@ -128,6 +129,7 @@ export async function GET(request: Request) {
         couplePlayed,
         coupleWins,
         couplePlaces,
+        coupleSuccess,
         losses: totalPlayed - wins - places,
       },
       results,
