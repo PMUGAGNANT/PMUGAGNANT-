@@ -120,9 +120,9 @@ function getConfianceBadgeStyle(score: number): { bg: string; color: string } {
 
 function getRecommandationEmoji(text: string): string {
   const lower = text.toLowerCase();
-  if (lower.includes("gagnant")) return "SG";
   if (lower.includes("couple place")) return "CP";
   if (lower.includes("couple gagnant")) return "CG";
+  if (lower.includes("gagnant")) return "SG";
   if (lower.includes("jouer") || lower.includes("miser")) return "OK";
   if (lower.includes("prudence") || lower.includes("risqu")) return "!";
   if (lower.includes("eviter") || lower.includes("passer")) return "X";
@@ -301,6 +301,52 @@ export default function BilanPage() {
 
             <div style={{ fontWeight: 700, fontSize: 18, margin: "24px 16px 8px" }}>
               Resultats
+            </div>
+
+            <div
+              style={{
+                margin: "0 16px 12px",
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 8,
+              }}
+            >
+              <span
+                style={{
+                  background: "#E8F5E9",
+                  color: "#00843D",
+                  padding: "8px 12px",
+                  borderRadius: 999,
+                  fontSize: 12,
+                  fontWeight: 700,
+                }}
+              >
+                Couples reussis: {coupleSuccess}
+              </span>
+              <span
+                style={{
+                  background: "#FFF3CD",
+                  color: "#856404",
+                  padding: "8px 12px",
+                  borderRadius: 999,
+                  fontSize: 12,
+                  fontWeight: 700,
+                }}
+              >
+                Couples places: {couplePlaces}
+              </span>
+              <span
+                style={{
+                  background: "#E3F2FD",
+                  color: "#1565C0",
+                  padding: "8px 12px",
+                  borderRadius: 999,
+                  fontSize: 12,
+                  fontWeight: 700,
+                }}
+              >
+                Couples joues: {couplePlayed}
+              </span>
             </div>
 
             {data && data.results.length === 0 ? (
