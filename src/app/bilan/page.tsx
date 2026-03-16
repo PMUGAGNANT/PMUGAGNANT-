@@ -198,6 +198,19 @@ function getArrivalLabel(result: BilanResult): string | null {
   return parts.length ? `Arrivee: ${parts.join(" | ")}` : null;
 }
 
+function getResultPriority(resultat: BilanResult["resultat"]) {
+  switch (resultat) {
+    case "GAGNANT":
+      return 0;
+    case "PLACE":
+      return 1;
+    case "PERDU":
+      return 2;
+    default:
+      return 3;
+  }
+}
+
 export default function BilanPage() {
   const router = useRouter();
   const [data, setData] = useState<BilanData | null>(null);
@@ -221,9 +234,12 @@ export default function BilanPage() {
   const totalPlayed = data?.summary.totalPredictions ?? data?.summary.totalPlayed ?? 0;
   const wins = data?.summary.wins ?? 0;
   const places = data?.summary.places ?? 0;
+  const losses = data?.summary.losses ?? 0;
   const overallSuccess = data?.summary.overallSuccess ?? wins + places;
   const overallSuccessRate = data?.summary.overallSuccessRate ?? 0;
   const simplePlayed = data?.summary.simplePlayed ?? 0;
+  const simpleWins = data?.summary.simpleWins ?? 0;
+  const simplePlaces = data?.summary.simplePlaces ?? 0;
   const simpleSuccess = data?.summary.simpleSuccess ?? wins + places;
   const simpleSuccessRate = data?.summary.simpleSuccessRate ?? 0;
   const couplePlayed = data?.summary.couplePlayed ?? 0;
@@ -232,6 +248,16 @@ export default function BilanPage() {
   const coupleSuccess = data?.summary.coupleSuccess ?? 0;
   const coupleSuccessRate = data?.summary.coupleSuccessRate ?? 0;
   const bestType = data?.summary.bestType ?? null;
+  const sortedResults = [...(data?.results ?? [])].sort((a, b) => {
+    const priorityDiff = getResultPriority(a.resultat) - getResultPriority(b.resultat);
+    if (priorityDiff !== 0) return priorityDiff;
+    return `${a.courseInfo.reunion}-${a.courseInfo.course}`.localeCompare(
+      `${b.courseInfo.reunion}-${b.courseInfo.course}`
+    );
+  });
+  const winnerResults = sortedResults.filter((result) => result.resultat === "GAGNANT");
+  const placedResults = sortedResults.filter((result) => result.resultat === "PLACE");
+  const lostResults = sortedResults.filter((result) => result.resultat === "PERDU");
 
   let dayTone = {
     bg: "#FDECEA",
@@ -259,6 +285,19 @@ export default function BilanPage() {
   const bestTypeText = bestType
     ? `Type le plus fiable du jour: ${bestType}`
     : "Pas assez de recul pour designer un meilleur type.";
+
+  const summaryCards = [
+    { label: "Predictions IA", value: totalPlayed, color: "#1A1A1A" },
+    { label: "Gagnants nets", value: wins, color: "#00843D" },
+    { label: "Places", value: places, color: "#E67E22" },
+    { label: "Perdus", value: losses, color: "#E74C3C" },
+    { label: "Simples gagnants", value: simpleWins, color: "#00843D" },
+    { label: "Simples places", value: simplePlaces, color: "#E67E22" },
+    { label: "Couples gagnants", value: coupleWins, color: "#00843D" },
+    { label: "Couples places", value: couplePlaces, color: "#E67E22" },
+    { label: "Taux simples", value: `${simpleSuccessRate}%`, color: simpleSuccessRate >= 30 ? "#00843D" : "#E74C3C" },
+    { label: "Taux couples", value: `${coupleSuccessRate}%`, color: coupleSuccessRate >= 20 ? "#00843D" : "#E74C3C" },
+  ];
 
   return (
     <div
@@ -306,25 +345,38 @@ export default function BilanPage() {
           <>
             <div
               style={{
+                margin: "16px",
+                padding: "18px",
+                borderRadius: 18,
+                background: "linear-gradient(135deg, #1A1A1A, #2F2F2F)",
+                color: "#fff",
+              }}
+            >
+              <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 6, letterSpacing: 0.3 }}>
+                Lecture rapide
+              </div>
+              <div style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>
+                {wins} gagnant{wins > 1 ? "s" : ""} visible{wins > 1 ? "s" : ""}
+              </div>
+              <div style={{ fontSize: 14, opacity: 0.92, lineHeight: 1.5 }}>
+                {places} place{places > 1 ? "s" : ""}, {losses} perdu{losses > 1 ? "s" : ""}, meilleur type:
+                {" "}
+                <span style={{ color: "#7CFFB2", fontWeight: 700 }}>
+                  {bestType ?? "Aucun net"}
+                </span>
+              </div>
+            </div>
+
+            <div
+              style={{
                 display: "grid",
                 gridTemplateColumns: "1fr 1fr",
                 gap: 12,
                 padding: "0 16px",
-                marginTop: 16,
+                marginTop: 8,
               }}
             >
-              {[ 
-                { label: "Predictions IA", value: totalPlayed, color: "#1A1A1A" },
-                { label: "Taux global", value: `${overallSuccessRate}%`, color: overallSuccessRate >= 30 ? "#00843D" : "#E74C3C" },
-                { label: "Simples joues", value: simplePlayed, color: "#1A1A1A" },
-                { label: "Simples reussis", value: simpleSuccess, color: "#E67E22" },
-                { label: "Taux simples", value: `${simpleSuccessRate}%`, color: simpleSuccessRate >= 30 ? "#00843D" : "#E74C3C" },
-                { label: "Couples joues", value: couplePlayed, color: "#1A1A1A" },
-                { label: "Couples reussis", value: coupleSuccess, color: "#00843D" },
-                { label: "Taux couples", value: `${coupleSuccessRate}%`, color: coupleSuccessRate >= 20 ? "#00843D" : "#E74C3C" },
-                { label: "Couples gagnants", value: coupleWins, color: "#00843D" },
-                { label: "Couples places", value: couplePlaces, color: "#E67E22" },
-              ].map((card) => (
+              {summaryCards.map((card) => (
                 <div
                   key={card.label}
                   style={{
@@ -339,6 +391,53 @@ export default function BilanPage() {
                   <div style={{ fontSize: 28, fontWeight: 700, color: card.color }}>{card.value}</div>
                 </div>
               ))}
+            </div>
+
+            <div
+              style={{
+                margin: "16px",
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  background: "#E8F5E9",
+                  borderRadius: 16,
+                  padding: 16,
+                  border: "1px solid #CDEBD6",
+                }}
+              >
+                <div style={{ fontSize: 12, color: "#2E7D32", fontWeight: 700, marginBottom: 6 }}>
+                  Gagnants du jour
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: "#00843D", marginBottom: 4 }}>
+                  {winnerResults.length}
+                </div>
+                <div style={{ fontSize: 12, color: "#2E7D32", lineHeight: 1.4 }}>
+                  Les vrais gagnants sont mis en tete de liste juste en dessous.
+                </div>
+              </div>
+
+              <div
+                style={{
+                  background: "#FFF8E1",
+                  borderRadius: 16,
+                  padding: 16,
+                  border: "1px solid #F6E3A3",
+                }}
+              >
+                <div style={{ fontSize: 12, color: "#9A6A00", fontWeight: 700, marginBottom: 6 }}>
+                  Reussite globale
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 800, color: overallSuccessRate >= 30 ? "#00843D" : "#C05C00", marginBottom: 4 }}>
+                  {overallSuccessRate}%
+                </div>
+                <div style={{ fontSize: 12, color: "#9A6A00", lineHeight: 1.4 }}>
+                  {overallSuccess} prediction{overallSuccess > 1 ? "s" : ""} tenue{overallSuccess > 1 ? "s" : ""} sur {totalPlayed}
+                </div>
+              </div>
             </div>
 
             <div
@@ -405,6 +504,41 @@ export default function BilanPage() {
               </span>
             </div>
 
+            {winnerResults.length > 0 && (
+              <div style={{ margin: "0 16px 16px" }}>
+                <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 10, color: "#00843D" }}>
+                  Gagnants du jour
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {winnerResults.slice(0, 4).map((result, idx) => (
+                    <div
+                      key={`winner-${result.courseInfo.reunion}-${result.courseInfo.course}-${idx}`}
+                      style={{
+                        background: "#FFFFFF",
+                        borderRadius: 16,
+                        padding: 14,
+                        borderLeft: "5px solid #00843D",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginBottom: 6 }}>
+                        <div style={{ fontWeight: 700, color: "#1A1A1A" }}>
+                          R{result.courseInfo.reunion}C{result.courseInfo.course} · {result.courseInfo.hippodrome}
+                        </div>
+                        <div style={{ fontSize: 12, color: "#666" }}>{formatTime(result.courseInfo.heureDepart)}</div>
+                      </div>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: "#00843D", marginBottom: 4 }}>
+                        {getResultDisplayLabel(result)}
+                      </div>
+                      <div style={{ fontSize: 14, color: "#1A1A1A", fontWeight: 600 }}>
+                        {getSelectionLabel(result)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {data && data.results.length === 0 ? (
               <div style={{ textAlign: "center", padding: "48px 24px" }}>
                 <div style={{ fontSize: 64, marginBottom: 16 }}>Bilan</div>
@@ -416,7 +550,7 @@ export default function BilanPage() {
                 </div>
               </div>
             ) : (
-              data?.results.map((result, idx) => {
+              sortedResults.map((result, idx) => {
                 const borderColor = getResultBorderColor(result.resultat);
                 const badge = getResultBadgeStyle(result.resultat);
                 const confianceBadge = getConfianceBadgeStyle(result.confiance);
