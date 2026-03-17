@@ -473,8 +473,7 @@ export function buildRecommendation(
 // 5. computeConfidenceScore
 // ---------------------------------------------------------------------------
 export function computeConfidenceScore(
-  solidite: FavoriteSolidity,
-  top5: ScoredParticipant[]
+  solidite: FavoriteSolidity
 ): ConfidenceScore {
   const facteurs: string[] = [];
   let score = 5.0;
@@ -590,8 +589,7 @@ export function predictOdds(
 // 7. computeValue
 // ---------------------------------------------------------------------------
 export function computeValue(
-  participant: ScoredParticipant,
-  allScored: ScoredParticipant[]
+  participant: ScoredParticipant
 ): ValueAnalysis {
   const stats = participant.musicStats;
   let probabilite: number;
@@ -732,16 +730,6 @@ function getSureteLabel(score: number) {
   if (score >= 7) return "Forte";
   if (score >= 5.5) return "Moyenne";
   return "Speculative";
-}
-
-function getRunnerReliability(runner: ScoredParticipant, topScore: number) {
-  const stats = runner.musicStats;
-  const scoreRatio = topScore > 0 ? runner.scoreAlgo / topScore : 0;
-  const fiabilite = stats?.fiabilite ?? 0.5;
-  const ratioForme = stats?.ratioForme ?? 0.4;
-  const podiumRate = runner.nombreCourses > 0 ? runner.nombrePlaces / runner.nombreCourses : 0;
-
-  return clamp(scoreRatio * 4 + fiabilite * 3 + ratioForme * 2 + podiumRate, 0, 10);
 }
 
 function getDrawRating(
@@ -1217,7 +1205,7 @@ export function analyzeRace(
     recommandation = buildRecommendation(soliditeFavori, favori);
 
     // 7. Compute confidence
-    scoreConfiance = computeConfidenceScore(soliditeFavori, top5);
+    scoreConfiance = computeConfidenceScore(soliditeFavori);
 
     // 8. Predict odds for top 5
     const maxScore = top5[0].scoreAlgo;
@@ -1227,7 +1215,7 @@ export function analyzeRace(
 
     // 9. Compute value for top 5
     for (const runner of top5) {
-      valueTop5[runner.numPmu] = computeValue(runner, scored);
+      valueTop5[runner.numPmu] = computeValue(runner);
     }
 
     // 10. Identify profiles

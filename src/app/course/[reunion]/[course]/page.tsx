@@ -495,7 +495,7 @@ export default function CourseDetailPage() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", marginBottom: "4px" }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, color: "#64748B", marginBottom: 10, lineHeight: 1.5 }}>
-                  Lecture principale de l'algo sur cette course. Plus la note est haute, plus le favori ressort proprement.
+                  Lecture principale de l&apos;algo sur cette course. Plus la note est haute, plus le favori ressort proprement.
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                   <div style={{

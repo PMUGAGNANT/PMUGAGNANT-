@@ -2,6 +2,75 @@ import type { RaceSummary, Participant } from './types';
 
 const BASE_URL = 'https://online.turfinfo.api.pmu.fr/rest/client/1';
 
+type PmuProgrammeCourse = {
+  heureDepart: number;
+  discipline?: string;
+  grandPrixNationalTrot?: boolean;
+  categorieParticularite?: string;
+  numOrdre: number;
+  libelle?: string;
+  libelleCourt?: string;
+  montantTotalOffert?: number;
+  distance?: number;
+  nombreDeclaresPartants?: number;
+};
+
+type PmuProgrammeReunion = {
+  numOfficiel: number;
+  hippodrome?: { libelleCourt?: string };
+  pays?: { code?: string };
+  courses?: PmuProgrammeCourse[];
+};
+
+type PmuProgrammeResponse = {
+  programme?: {
+    reunions?: PmuProgrammeReunion[];
+  };
+};
+
+type PmuParticipant = {
+  statut?: string;
+  numPmu: number;
+  nom?: string;
+  placeCorde?: number | null;
+  driver?: string;
+  entraineur?: string;
+  jockey?: string;
+  age?: number;
+  sexe?: string;
+  coteDirect?: { cotePmu?: number | null };
+  dernierRapportDirect?: { rapport?: number | null };
+  musique?: string;
+  nombreCourses?: number;
+  nombreVictoires?: number;
+  nombrePlaces?: number;
+  gainsParticipant?: {
+    gainsCarriere?: number;
+    gainsAnneeEnCours?: number;
+  };
+  nombreIndicateursFavoris?: number;
+  ordreArrivee?: number | null;
+};
+
+type PmuParticipantsResponse = {
+  participants?: PmuParticipant[];
+};
+
+type PmuRapportCombinaison = {
+  numPmu?: number;
+  combinaison?: number[];
+  rapport?: number | null;
+};
+
+type PmuRapport = {
+  typePari?: string;
+  combinaisons?: PmuRapportCombinaison[];
+};
+
+type PmuRapportsResponse = {
+  rapports?: PmuRapport[];
+};
+
 /**
  * Returns today's date as DDMMYYYY format.
  */
@@ -26,8 +95,8 @@ export async function getAllRaces(dateStr?: string): Promise<RaceSummary[]> {
     throw new Error(`PMU API error: ${res.status} ${res.statusText}`);
   }
 
-  const data = await res.json();
-  const reunions: any[] = data?.programme?.reunions ?? [];
+  const data = (await res.json()) as PmuProgrammeResponse;
+  const reunions = data?.programme?.reunions ?? [];
 
   const races: RaceSummary[] = [];
 
@@ -35,7 +104,7 @@ export async function getAllRaces(dateStr?: string): Promise<RaceSummary[]> {
     const numOfficiel: number = reunion.numOfficiel;
     const hippodrome: string = reunion.hippodrome?.libelleCourt ?? '';
     const pays: string = reunion.pays?.code ?? '';
-    const courses: any[] = reunion.courses ?? [];
+    const courses = reunion.courses ?? [];
 
     for (const course of courses) {
       const heureDepartMs: number = course.heureDepart;
@@ -94,12 +163,12 @@ export async function getParticipants(
     throw new Error(`PMU API error: ${res.status} ${res.statusText}`);
   }
 
-  const data = await res.json();
-  const rawParticipants: any[] = data?.participants ?? [];
+  const data = (await res.json()) as PmuParticipantsResponse;
+  const rawParticipants = data?.participants ?? [];
 
   const participants: Participant[] = rawParticipants
-    .filter((p: any) => p.statut === 'PARTANT')
-    .map((p: any) => {
+    .filter((p) => p.statut === 'PARTANT')
+    .map((p) => {
       // Determine cote: prefer coteDirect.cotePmu, then dernierRapportDirect.rapport
       let cote: number | null = null;
       if (p.coteDirect?.cotePmu != null) {
@@ -129,7 +198,7 @@ export async function getParticipants(
         gainCarriere: gainsCarriere,
         nombreSuiveurs: p.nombreIndicateursFavoris ?? 0,
         ordreArrivee: p.ordreArrivee ?? null,
-        statut: p.statut,
+        statut: p.statut ?? 'PARTANT',
       };
     });
 
@@ -153,14 +222,14 @@ export async function getRealtimeOdds(
       return {};
     }
 
-    const data = await res.json();
+    const data = (await res.json()) as PmuRapportsResponse;
     const odds: Record<number, number> = {};
 
     // Extract simple gagnant odds from rapports
-    const rapports: any[] = data?.rapports ?? [];
+    const rapports = data?.rapports ?? [];
     for (const rapport of rapports) {
       if (rapport.typePari === 'E_SIMPLE_GAGNANT') {
-        const combinaisons: any[] = rapport.combinaisons ?? [];
+        const combinaisons = rapport.combinaisons ?? [];
         for (const combinaison of combinaisons) {
           const numPmu = combinaison.numPmu ?? combinaison.combinaison?.[0];
           const rapportValue = combinaison.rapport;

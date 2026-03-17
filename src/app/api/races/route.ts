@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   try {
     const races = await getAllRaces(date);
     return NextResponse.json({ success: true, date, races });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ success: false, error: 'Failed to fetch races' }, { status: 500 });
   }
 }

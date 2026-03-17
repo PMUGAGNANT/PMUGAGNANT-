@@ -68,7 +68,7 @@ export default function MesParisPage() {
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, supabaseConfigured]);
 
   useEffect(() => {
     fetchBets();
@@ -115,7 +115,6 @@ export default function MesParisPage() {
   const pendingCount = bets.filter((b) => b.statut === "EN_ATTENTE").length;
   const wonCount = bets.filter((b) => b.statut === "GAGNE").length;
   const placedCount = bets.filter((b) => b.statut === "PLACE").length;
-  const lostCount = bets.filter((b) => b.statut === "PERDU").length;
   const totalGain = bets
     .filter((b) => b.gain !== null)
     .reduce((sum, b) => sum + (b.gain || 0), 0);

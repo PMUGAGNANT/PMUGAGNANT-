@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getParticipants, getRealtimeOdds, getAllRaces, getTodayDateStr } from '@/lib/pmu-api';
+import { getParticipants, getAllRaces, getTodayDateStr } from '@/lib/pmu-api';
 import { analyzeRace, getMinutesUntilStart } from '@/lib/analysis';
 
 export const dynamic = 'force-dynamic';
