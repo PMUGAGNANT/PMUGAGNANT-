@@ -13,14 +13,19 @@ export async function GET() {
       string,
       {
         score: number;
-        stage: 'preview_1h' | 'final_30m' | 'finished';
+        stage: 'preview_2h' | 'preview_1h' | 'final_30m' | 'finished';
+        simpleReturn1Euro: number | null;
+        simpleHorse: {
+          numPmu: number;
+          nom: string;
+        } | null;
       }
     > = {};
 
-    // Compute scores from 60 minutes before departure, then keep updating
+    // Compute scores from 2 hours before departure, then keep updating
     const analyzableRaces = races.filter((r: { heureDepart: string }) => {
       const min = getMinutesUntilStart(r.heureDepart);
-      return min <= 60;
+      return min <= 120;
     });
 
     // Process in parallel batches of 5
@@ -36,14 +41,36 @@ export async function GET() {
           );
           const key = `${race.reunion}-${race.course}`;
           const minutesUntil = getMinutesUntilStart(race.heureDepart);
-          const stage: 'preview_1h' | 'final_30m' | 'finished' =
+          const stage: 'preview_2h' | 'preview_1h' | 'final_30m' | 'finished' =
             minutesUntil < -10
               ? 'finished'
               : minutesUntil <= 30
                 ? 'final_30m'
-                : 'preview_1h';
+                : minutesUntil <= 60
+                  ? 'preview_1h'
+                  : 'preview_2h';
 
-          return { key, score: analysis.scoreConfiance?.score ?? null, stage };
+          const simpleRecommendation = analysis.parisRecommandes.find(
+            (pari) => pari.type === 'SIMPLE_GAGNANT'
+          );
+
+          return {
+            key,
+            score: analysis.scoreConfiance?.score ?? null,
+            stage,
+            simpleReturn1Euro:
+              simpleRecommendation?.coteEstimee !== null &&
+              simpleRecommendation?.coteEstimee !== undefined
+                ? Number(simpleRecommendation.coteEstimee.toFixed(1))
+                : null,
+            simpleHorse:
+              simpleRecommendation?.chevaux?.[0]
+                ? {
+                    numPmu: simpleRecommendation.chevaux[0].numPmu,
+                    nom: simpleRecommendation.chevaux[0].nom,
+                  }
+                : null,
+          };
         })
       );
       for (const result of results) {
@@ -51,6 +78,8 @@ export async function GET() {
           scores[result.value.key] = {
             score: result.value.score,
             stage: result.value.stage,
+            simpleReturn1Euro: result.value.simpleReturn1Euro,
+            simpleHorse: result.value.simpleHorse,
           };
         }
       }

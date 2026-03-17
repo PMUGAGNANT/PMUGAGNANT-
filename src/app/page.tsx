@@ -27,6 +27,11 @@ type SortMode = "time" | "confidence" | "hot" | "allocation";
 interface RaceScoreMeta {
   score: number;
   stage: ScoreStage;
+  simpleReturn1Euro?: number | null;
+  simpleHorse?: {
+    numPmu: number;
+    nom: string;
+  } | null;
 }
 
 interface ScoreHistoryEntry {
@@ -120,6 +125,10 @@ function getEvolutionStyle(delta: number) {
 
 function formatSignedDelta(delta: number): string {
   return `${delta > 0 ? "+" : ""}${delta.toFixed(1)}`;
+}
+
+function formatEuroReturn(amount: number): string {
+  return `${amount.toFixed(1).replace(".", ",")}EUR`;
 }
 
 function getTimelineNodeColors(value?: number, active?: boolean) {
@@ -861,6 +870,8 @@ export default function Home() {
               const scoreMeta = scores[raceKey];
               const confScore = scoreMeta?.score;
               const scoreStage = scoreMeta?.stage;
+              const simpleReturn1Euro = scoreMeta?.simpleReturn1Euro;
+              const simpleHorse = scoreMeta?.simpleHorse;
               const historyKey = `${race.dateStr}-${raceKey}`;
               const historyEntry = scoreHistory[historyKey];
               const note2h =
@@ -1048,6 +1059,22 @@ export default function Home() {
                                 {getStageLabel(scoreStage)}
                               </span>
                             )}
+                            {simpleReturn1Euro !== undefined &&
+                              simpleReturn1Euro !== null && (
+                                <span
+                                  style={{
+                                    display: "inline-block",
+                                    fontSize: 11,
+                                    fontWeight: 800,
+                                    padding: "2px 8px",
+                                    borderRadius: 20,
+                                    background: "#EEF8FF",
+                                    color: "#0F5EA8",
+                                  }}
+                                >
+                                  1EUR -&gt; {formatEuroReturn(simpleReturn1Euro)}
+                                </span>
+                              )}
                             {scoreStage === "preview_1h" && (
                               <span
                                 style={{
@@ -1080,6 +1107,54 @@ export default function Home() {
                             )}
                           </div>
                         )}
+                        {confScore !== undefined &&
+                          simpleReturn1Euro !== undefined &&
+                          simpleReturn1Euro !== null &&
+                          simpleHorse && (
+                            <div
+                              style={{
+                                marginTop: 8,
+                                padding: "10px 12px",
+                                borderRadius: 14,
+                                background:
+                                  "linear-gradient(180deg, rgba(15,94,168,0.06) 0%, rgba(238,248,255,0.95) 100%)",
+                                border: "1px solid rgba(15,94,168,0.10)",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 800,
+                                  color: "#0F5EA8",
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.25px",
+                                  marginBottom: 4,
+                                }}
+                              >
+                                Gain estime simple gagnant
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 14,
+                                  fontWeight: 800,
+                                  color: "#16324F",
+                                  lineHeight: "18px",
+                                }}
+                              >
+                                N{simpleHorse.numPmu} {simpleHorse.nom}
+                              </div>
+                              <div
+                                style={{
+                                  marginTop: 2,
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  color: "#0F5EA8",
+                                }}
+                              >
+                                Si ca gagne: 1EUR -&gt; {formatEuroReturn(simpleReturn1Euro)}
+                              </div>
+                            </div>
+                          )}
                         {(note2h !== undefined ||
                           note1h !== undefined ||
                           note30m !== undefined) && (
