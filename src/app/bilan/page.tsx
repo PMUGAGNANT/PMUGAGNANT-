@@ -27,6 +27,7 @@ interface BilanResult {
   resultat: "GAGNANT" | "PLACE" | "PERDU" | "INCONNU";
   ordreArrivee?: number | null;
   gainPour1Euro: number | null;
+  beneficeNetPour1Euro: number | null;
 }
 
 interface BilanData {
@@ -420,6 +421,11 @@ export default function BilanPage() {
                             Retour 1EUR {formatEuroReturn(result.gainPour1Euro)}
                           </span>
                         )}
+                        {result.beneficeNetPour1Euro !== null && (
+                          <span style={{ background: "#ECFDF3", color: GREEN_DARK, padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 800 }}>
+                            Net +{formatEuroReturn(result.beneficeNetPour1Euro)}
+                          </span>
+                        )}
                         <span style={{ background: "#F3F4F6", color: "#555", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                           Confiance {result.confiance}/10
                         </span>
@@ -628,11 +634,31 @@ export default function BilanPage() {
                         </div>
                         {result.gainPour1Euro !== null && (
                           <div style={{ background: "#E8F5E9", borderRadius: 14, padding: 12 }}>
-                            <div style={{ fontSize: 11, color: "#5D7462", marginBottom: 4 }}>Retour 1EUR</div>
-                            <div style={{ fontSize: 18, fontWeight: 800, color: GREEN }}>{formatEuroReturn(result.gainPour1Euro)}</div>
-                          </div>
+                          <div style={{ fontSize: 11, color: "#5D7462", marginBottom: 4 }}>Retour 1EUR</div>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: GREEN }}>{formatEuroReturn(result.gainPour1Euro)}</div>
+                        </div>
                         )}
                       </div>
+                      {result.beneficeNetPour1Euro !== null && (
+                        <div
+                          style={{
+                            marginTop: 10,
+                            borderRadius: 14,
+                            padding: "10px 12px",
+                            background: "linear-gradient(135deg, #ECFDF3, #E8F5E9)",
+                            border: "1px solid #CFE9D5",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: 10,
+                          }}
+                        >
+                          <div style={{ fontSize: 12, color: "#4E6A54", fontWeight: 700 }}>Benefice net estime pour 1EUR</div>
+                          <div style={{ fontSize: 18, color: GREEN_DARK, fontWeight: 900 }}>
+                            +{formatEuroReturn(result.beneficeNetPour1Euro)}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

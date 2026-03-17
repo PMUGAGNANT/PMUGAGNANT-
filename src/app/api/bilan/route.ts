@@ -28,6 +28,7 @@ interface BilanResult {
   resultat: BilanResultat;
   ordreArrivee?: number | null;
   gainPour1Euro: number | null;
+  beneficeNetPour1Euro: number | null;
 }
 
 interface AggregateStats {
@@ -62,6 +63,12 @@ function getGainPour1Euro(resultat: BilanResultat, cotePmu: number | null): numb
   return cotePmu;
 }
 
+function getBeneficeNetPour1Euro(gainPour1Euro: number | null): number | null {
+  if (gainPour1Euro === null) return null;
+  const benefice = gainPour1Euro - 1;
+  return benefice > 0 ? benefice : 0;
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const date = searchParams.get("date") || getTodayDateStr();
@@ -93,6 +100,7 @@ export async function GET(request: Request) {
                 ? "PERDU"
                 : "INCONNU";
         const cotePmu = favoriResult?.cote ?? analysis.favori.cote ?? null;
+        const gainPour1Euro = getGainPour1Euro(resultat, cotePmu);
 
         results.push({
           courseInfo: {
@@ -116,7 +124,8 @@ export async function GET(request: Request) {
           confiance: analysis.scoreConfiance?.score ?? 0,
           resultat,
           ordreArrivee,
-          gainPour1Euro: getGainPour1Euro(resultat, cotePmu),
+          gainPour1Euro,
+          beneficeNetPour1Euro: getBeneficeNetPour1Euro(gainPour1Euro),
         });
       } catch {
         // Skip failed race fetches so the bilan stays available.
