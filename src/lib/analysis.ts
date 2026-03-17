@@ -290,6 +290,16 @@ export function scoreRunner(
     }
   }
 
+  // Weight bonus / malus (mostly useful in flat races and handicaps)
+  let weightBonus = 0;
+  if (estPlat && participant.poids && participant.poids > 0) {
+    if (participant.poids <= 54) weightBonus = 2.5;
+    else if (participant.poids <= 56) weightBonus = 1.5;
+    else if (participant.poids <= 58) weightBonus = 0.5;
+    else if (participant.poids >= 61) weightBonus = -1.5;
+    else if (participant.poids >= 59.5) weightBonus = -0.5;
+  }
+
   const totalScore =
     formScore +
     serieBonus +
@@ -300,7 +310,8 @@ export function scoreRunner(
     winRateBonus +
     ageBonus +
     experienceBonus +
-    drawBonus;
+    drawBonus +
+    weightBonus;
 
   // Tocard detection
   let estTocard = false;
@@ -989,6 +1000,7 @@ export function buildBetRecommendations(
         numPmu: primarySingle.numPmu,
         nom: primarySingle.nom,
         placeCorde: primarySingle.placeCorde,
+        poids: primarySingle.poids,
       }],
       surete: round1(simpleSurete),
       sureteLabel: getSureteLabel(simpleSurete),
@@ -1014,11 +1026,13 @@ export function buildBetRecommendations(
           numPmu: firstRunner.numPmu,
           nom: firstRunner.nom,
           placeCorde: firstRunner.placeCorde,
+          poids: firstRunner.poids,
         },
         {
           numPmu: secondRunner.numPmu,
           nom: secondRunner.nom,
           placeCorde: secondRunner.placeCorde,
+          poids: secondRunner.poids,
         },
       ],
       surete: round1(bestPlacePair.placeSurete),
@@ -1040,11 +1054,13 @@ export function buildBetRecommendations(
           numPmu: firstRunner.numPmu,
           nom: firstRunner.nom,
           placeCorde: firstRunner.placeCorde,
+          poids: firstRunner.poids,
         },
         {
           numPmu: secondRunner.numPmu,
           nom: secondRunner.nom,
           placeCorde: secondRunner.placeCorde,
+          poids: secondRunner.poids,
         },
       ],
       surete: round1(bestWinPair.winSurete),

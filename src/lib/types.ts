@@ -19,6 +19,7 @@ export interface Participant {
   numPmu: number;
   nom: string;
   placeCorde: number | null;
+  poids: number | null;
   driver: string;
   entraineur: string;
   jockey: string;
@@ -96,6 +97,7 @@ export interface BetRecommendationHorse {
   numPmu: number;
   nom: string;
   placeCorde?: number | null;
+  poids?: number | null;
 }
 
 export interface BetRecommendation {

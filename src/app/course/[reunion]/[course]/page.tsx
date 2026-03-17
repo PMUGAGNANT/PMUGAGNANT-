@@ -27,6 +27,8 @@ interface MusicStats {
 interface ScoredParticipant {
   numPmu: number;
   nom: string;
+  placeCorde?: number | null;
+  poids?: number | null;
   driver: string;
   jockey: string;
   entraineur: string;
@@ -153,6 +155,11 @@ function positionMedal(pos: number): string {
   if (pos === 2) return "\uD83E\uDD48";
   if (pos === 3) return "\uD83E\uDD49";
   return `${pos}.`;
+}
+
+function formatWeight(poids?: number | null): string | null {
+  if (poids === null || poids === undefined || Number.isNaN(poids)) return null;
+  return `${poids.toFixed(1).replace(".", ",")} kg`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -488,6 +495,18 @@ export default function CourseDetailPage() {
                     ? `Jockey: ${favori.jockey || "N/A"}`
                     : `Driver: ${favori.driver || "N/A"}`}
                 </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: "8px" }}>
+                  {favori.placeCorde ? (
+                    <span style={{ ...pillStyle, background: "#F3F4F6", color: "#475569" }}>
+                      Stalle {favori.placeCorde}
+                    </span>
+                  ) : null}
+                  {formatWeight(favori.poids) ? (
+                    <span style={{ ...pillStyle, background: "#FFF8E1", color: "#A66B00" }}>
+                      Poids {formatWeight(favori.poids)}
+                    </span>
+                  ) : null}
+                </div>
               </div>
             </div>
 
@@ -651,7 +670,21 @@ export default function CourseDetailPage() {
                         <span style={{ fontSize: idx < 3 ? "18px" : "14px", fontWeight: 700, minWidth: "28px" }}>
                           {positionMedal(idx + 1)}
                         </span>
-                        <span style={{ fontWeight: 700, fontSize: "15px", color: DARK }}>{horse.nom}</span>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: "15px", color: DARK }}>{horse.nom}</div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+                            {horse.placeCorde ? (
+                              <span style={{ fontSize: "11px", color: "#64748B", fontWeight: 600 }}>
+                                Stalle {horse.placeCorde}
+                              </span>
+                            ) : null}
+                            {formatWeight(horse.poids) ? (
+                              <span style={{ fontSize: "11px", color: "#A66B00", fontWeight: 700 }}>
+                                Poids {formatWeight(horse.poids)}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
                       </div>
                       <span style={{ fontWeight: 700, fontSize: "14px", color: DARK }}>{horse.scoreAlgo}</span>
                     </div>
@@ -969,6 +1002,13 @@ export default function CourseDetailPage() {
             <div>
               <div style={{ fontWeight: 700, fontSize: 16, color: DARK }}>{betHorse.nom}</div>
               <div style={{ fontSize: 13, color: "#888" }}>Cote: {cote}</div>
+              {(betHorse.placeCorde || formatWeight(betHorse.poids)) && (
+                <div style={{ fontSize: 12, color: "#64748B", marginTop: 4 }}>
+                  {[betHorse.placeCorde ? `Stalle ${betHorse.placeCorde}` : null, formatWeight(betHorse.poids) ? `Poids ${formatWeight(betHorse.poids)}` : null]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </div>
+              )}
             </div>
           </div>
 

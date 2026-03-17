@@ -33,6 +33,11 @@ type PmuParticipant = {
   numPmu: number;
   nom?: string;
   placeCorde?: number | null;
+  poidsConditionMonte?: number | null;
+  handicapPoids?: number | null;
+  poids?: number | null;
+  poidsTotal?: number | null;
+  charge?: number | null;
   driver?: string;
   entraineur?: string;
   jockey?: string;
@@ -70,6 +75,27 @@ type PmuRapport = {
 type PmuRapportsResponse = {
   rapports?: PmuRapport[];
 };
+
+function getParticipantWeightKg(participant: PmuParticipant): number | null {
+  const rawWeight =
+    participant.poidsConditionMonte ??
+    participant.handicapPoids ??
+    participant.poids ??
+    participant.poidsTotal ??
+    participant.charge ??
+    null;
+
+  if (rawWeight === null || rawWeight === undefined || Number.isNaN(rawWeight)) {
+    return null;
+  }
+
+  // PMU payloads can expose either kilograms directly or decagrams/grams depending on feed.
+  if (rawWeight > 200) {
+    return Math.round((rawWeight / 10) * 10) / 10;
+  }
+
+  return Math.round(rawWeight * 10) / 10;
+}
 
 /**
  * Returns today's date as DDMMYYYY format.
@@ -185,6 +211,7 @@ export async function getParticipants(
         numPmu: p.numPmu,
         nom: p.nom ?? '',
         placeCorde: p.placeCorde ?? null,
+        poids: getParticipantWeightKg(p),
         driver: p.driver ?? '',
         entraineur: p.entraineur ?? '',
         jockey: p.jockey ?? '',
