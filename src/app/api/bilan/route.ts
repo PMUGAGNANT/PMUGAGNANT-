@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAllRaces, getParticipants, getTodayDateStr } from "@/lib/pmu-api";
+import { getAllRaces, getDefinitiveRapports, getParticipants, getTodayDateStr } from "@/lib/pmu-api";
 import { analyzeRace, getMinutesUntilStart } from "@/lib/analysis";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +69,22 @@ function getBeneficeNetPour1Euro(gainPour1Euro: number | null): number | null {
   return benefice > 0 ? benefice : 0;
 }
 
+function getSimpleRapportFinalPour1Euro(
+  resultat: BilanResultat,
+  numPmu: number,
+  definitiveRapports: Record<string, Record<string, number>>
+): number | null {
+  if (resultat === "GAGNANT") {
+    return definitiveRapports.SIMPLE_GAGNANT?.[String(numPmu)] ?? null;
+  }
+
+  if (resultat === "PLACE") {
+    return definitiveRapports.SIMPLE_PLACE?.[String(numPmu)] ?? null;
+  }
+
+  return null;
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const date = searchParams.get("date") || getTodayDateStr();
@@ -82,7 +98,10 @@ export async function GET(request: Request) {
       if (minutesUntil >= -10) continue;
 
       try {
-        const participants = await getParticipants(date, race.reunion, race.course);
+        const [participants, definitiveRapports] = await Promise.all([
+          getParticipants(date, race.reunion, race.course),
+          getDefinitiveRapports(date, race.reunion, race.course).catch(() => ({})),
+        ]);
         const analysis = analyzeRace(race, participants);
         if (!analysis.favori) continue;
 
@@ -100,7 +119,9 @@ export async function GET(request: Request) {
                 ? "PERDU"
                 : "INCONNU";
         const cotePmu = favoriResult?.cote ?? analysis.favori.cote ?? null;
-        const gainPour1Euro = getGainPour1Euro(resultat, cotePmu);
+        const gainPour1Euro =
+          getSimpleRapportFinalPour1Euro(resultat, analysis.favori.numPmu, definitiveRapports) ??
+          getGainPour1Euro(resultat, cotePmu);
 
         results.push({
           courseInfo: {

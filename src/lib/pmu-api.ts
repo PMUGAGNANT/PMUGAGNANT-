@@ -61,20 +61,38 @@ type PmuParticipantsResponse = {
   participants?: PmuParticipant[];
 };
 
-type PmuRapportCombinaison = {
+type PmuLegacyRapportCombinaison = {
   numPmu?: number;
   combinaison?: number[];
   rapport?: number | null;
 };
 
-type PmuRapport = {
+type PmuLegacyRapport = {
   typePari?: string;
-  combinaisons?: PmuRapportCombinaison[];
+  combinaisons?: PmuLegacyRapportCombinaison[];
 };
 
-type PmuRapportsResponse = {
-  rapports?: PmuRapport[];
+type PmuLegacyRapportsResponse = {
+  rapports?: PmuLegacyRapport[];
 };
+
+type PmuDefinitiveRapportEntry = {
+  combinaison?: string;
+  dividendePourUnEuro?: number | null;
+  dividendePourUneMiseDeBase?: number | null;
+  dividendeUnite?: string;
+};
+
+type PmuDefinitiveRapport = {
+  typePari?: string;
+  rapports?: PmuDefinitiveRapportEntry[];
+};
+
+type PmuDefinitiveRapportsResponse = {
+  value?: PmuDefinitiveRapport[];
+};
+
+export type DefinitiveRapportsMap = Record<string, Record<string, number>>;
 
 function getParticipantWeightKg(participant: PmuParticipant): number | null {
   const rawWeight =
@@ -242,29 +260,14 @@ export async function getRealtimeOdds(
   course: number
 ): Promise<Record<number, number>> {
   try {
-    const url = `${BASE_URL}/programme/${dateStr}/R${reunion}/C${course}/rapports-definitifs`;
-
-    const res = await fetch(url, { next: { revalidate: 60 } } as RequestInit);
-    if (!res.ok) {
-      return {};
-    }
-
-    const data = (await res.json()) as PmuRapportsResponse;
+    const data = await getDefinitiveRapports(dateStr, reunion, course);
     const odds: Record<number, number> = {};
 
-    // Extract simple gagnant odds from rapports
-    const rapports = data?.rapports ?? [];
-    for (const rapport of rapports) {
-      if (rapport.typePari === 'E_SIMPLE_GAGNANT') {
-        const combinaisons = rapport.combinaisons ?? [];
-        for (const combinaison of combinaisons) {
-          const numPmu = combinaison.numPmu ?? combinaison.combinaison?.[0];
-          const rapportValue = combinaison.rapport;
-          if (numPmu != null && rapportValue != null) {
-            odds[numPmu] = rapportValue / 100;
-          }
-        }
-        break;
+    const simpleGagnantRapports = data.SIMPLE_GAGNANT ?? {};
+    for (const [combinaison, rapport] of Object.entries(simpleGagnantRapports)) {
+      const numPmu = Number.parseInt(combinaison, 10);
+      if (Number.isFinite(numPmu)) {
+        odds[numPmu] = rapport;
       }
     }
 
@@ -272,4 +275,71 @@ export async function getRealtimeOdds(
   } catch {
     return {};
   }
+}
+
+function normalizeRapportType(typePari: string | undefined): string | null {
+  if (!typePari) return null;
+  return typePari.replace(/^E_/, '');
+}
+
+function normalizeCombinaisonKey(rawCombinaison: string): string {
+  return rawCombinaison
+    .split('-')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .sort((left, right) => Number(left) - Number(right))
+    .join('-');
+}
+
+export async function getDefinitiveRapports(
+  dateStr: string,
+  reunion: number,
+  course: number
+): Promise<DefinitiveRapportsMap> {
+  const url = `${BASE_URL}/programme/${dateStr}/R${reunion}/C${course}/rapports-definitifs`;
+
+  const res = await fetch(url, { next: { revalidate: 60 } } as RequestInit);
+  if (!res.ok) {
+    throw new Error(`PMU API error: ${res.status} ${res.statusText}`);
+  }
+
+  const raw = (await res.json()) as PmuDefinitiveRapportsResponse | PmuLegacyRapportsResponse;
+  const definitiveRapports = 'value' in raw ? raw.value ?? [] : [];
+  const legacyRapports = 'rapports' in raw ? raw.rapports ?? [] : [];
+  const rapportsMap: DefinitiveRapportsMap = {};
+
+  for (const rapport of definitiveRapports) {
+    const typePari = normalizeRapportType(rapport.typePari);
+    if (!typePari) continue;
+    if (!rapportsMap[typePari]) {
+      rapportsMap[typePari] = {};
+    }
+
+    for (const entry of rapport.rapports ?? []) {
+      if (!entry.combinaison) continue;
+      const rapportPour1Euro = entry.dividendePourUnEuro;
+      if (rapportPour1Euro == null || !Number.isFinite(rapportPour1Euro)) continue;
+      rapportsMap[typePari][normalizeCombinaisonKey(entry.combinaison)] = rapportPour1Euro / 100;
+    }
+  }
+
+  for (const rapport of legacyRapports) {
+    const typePari = normalizeRapportType(rapport.typePari);
+    if (!typePari) continue;
+    if (!rapportsMap[typePari]) {
+      rapportsMap[typePari] = {};
+    }
+
+    for (const entry of rapport.combinaisons ?? []) {
+      const combinaisonKey = entry.numPmu != null
+        ? String(entry.numPmu)
+        : entry.combinaison?.join('-');
+      if (!combinaisonKey) continue;
+      const rapportPour1Euro = entry.rapport;
+      if (rapportPour1Euro == null || !Number.isFinite(rapportPour1Euro)) continue;
+      rapportsMap[typePari][normalizeCombinaisonKey(combinaisonKey)] = rapportPour1Euro / 100;
+    }
+  }
+
+  return rapportsMap;
 }

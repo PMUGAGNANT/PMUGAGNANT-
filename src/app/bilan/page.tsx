@@ -418,7 +418,7 @@ export default function BilanPage() {
                         </span>
                         {result.gainPour1Euro !== null && (
                           <span style={{ background: "#E8F5E9", color: GREEN, padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 800 }}>
-                            Retour 1EUR {formatEuroReturn(result.gainPour1Euro)}
+                            Rapport final 1EUR {formatEuroReturn(result.gainPour1Euro)}
                           </span>
                         )}
                         {result.beneficeNetPour1Euro !== null && (
@@ -634,9 +634,9 @@ export default function BilanPage() {
                         </div>
                         {result.gainPour1Euro !== null && (
                           <div style={{ background: "#E8F5E9", borderRadius: 14, padding: 12 }}>
-                          <div style={{ fontSize: 11, color: "#5D7462", marginBottom: 4 }}>Retour 1EUR</div>
-                          <div style={{ fontSize: 18, fontWeight: 800, color: GREEN }}>{formatEuroReturn(result.gainPour1Euro)}</div>
-                        </div>
+                            <div style={{ fontSize: 11, color: "#5D7462", marginBottom: 4 }}>Rapport final 1EUR</div>
+                            <div style={{ fontSize: 18, fontWeight: 800, color: GREEN }}>{formatEuroReturn(result.gainPour1Euro)}</div>
+                          </div>
                         )}
                       </div>
                       {result.beneficeNetPour1Euro !== null && (
