@@ -821,6 +821,48 @@ export default function Home() {
         </button>
       </div>
 
+      <div style={{ margin: "0 16px 16px" }}>
+        <button
+          onClick={() => router.push("/apprentissage")}
+          style={{
+            width: "100%",
+            border: "none",
+            cursor: "pointer",
+            borderRadius: 22,
+            padding: "16px 18px",
+            background:
+              "linear-gradient(135deg, rgba(15,23,42,0.96) 0%, rgba(19,78,74,0.96) 100%)",
+            color: "#FFFFFF",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            boxShadow: "0 18px 34px rgba(15,23,42,0.16)",
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
+            <span style={{ fontSize: 11, opacity: 0.75, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              Apprentissage IA
+            </span>
+            <span style={{ fontSize: 16, fontWeight: 800, lineHeight: "20px", textAlign: "left" }}>
+              Voir comment le modele apprend et devient plus fort
+            </span>
+          </div>
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 800,
+              background: "rgba(255,255,255,0.12)",
+              padding: "8px 12px",
+              borderRadius: 999,
+              whiteSpace: "nowrap",
+            }}
+          >
+            Ouvrir IA
+          </span>
+        </button>
+      </div>
+
       {spotlightRace && (
         <div
           style={{
