@@ -27,7 +27,6 @@ interface MusicStats {
 interface ScoredParticipant {
   numPmu: number;
   nom: string;
-  placeCorde: number | null;
   driver: string;
   jockey: string;
   entraineur: string;
@@ -80,29 +79,6 @@ interface Recommendation {
   raisonnement: string[];
 }
 
-interface BetRecommendationHorse {
-  numPmu: number;
-  nom: string;
-  placeCorde?: number | null;
-}
-
-type BetRecommendationType =
-  | "SIMPLE_GAGNANT"
-  | "COUPLE_PLACE"
-  | "COUPLE_GAGNANT";
-
-interface BetRecommendation {
-  type: BetRecommendationType;
-  label: string;
-  emoji: string;
-  chevaux: BetRecommendationHorse[];
-  surete: number;
-  sureteLabel: string;
-  miseConseillee: number;
-  coteEstimee: number | null;
-  pourquoi: string[];
-}
-
 interface ConfidenceScore {
   score: number;
   niveau: { label: string; emoji: string };
@@ -114,14 +90,6 @@ interface StrategicProfiles {
   pepite: ScoredParticipant | null;
   sniper: ScoredParticipant | null;
   lisibilite: "LISIBLE" | "COMPLEXE" | "LOTERIE";
-}
-
-interface AlgorithmHealth {
-  score: number;
-  status: "SAIN" | "SURVEILLANCE" | "FRAGILE";
-  strengths: string[];
-  weaknesses: string[];
-  notes: string[];
 }
 
 interface CourseInfo {
@@ -146,12 +114,10 @@ interface RaceAnalysis {
   favori: ScoredParticipant | null;
   soliditeFavori: FavoriteSolidity | null;
   recommandation: Recommendation | null;
-  parisRecommandes: BetRecommendation[];
   scoreConfiance: ConfidenceScore | null;
   predictionsCotes: Record<number, PredictedOdds>;
   profils: StrategicProfiles;
   valueTop5: Record<number, ValueAnalysis>;
-  algorithmHealth: AlgorithmHealth | null;
 }
 
 interface APIResponse {
@@ -164,12 +130,6 @@ interface APIResponse {
   analysis: RaceAnalysis | null;
   error?: string;
 }
-
-type PlacedBetType =
-  | "GAGNANT"
-  | "PLACE"
-  | "COUPLE_GAGNANT"
-  | "COUPLE_PLACE";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -193,29 +153,6 @@ function positionMedal(pos: number): string {
   if (pos === 2) return "\uD83E\uDD48";
   if (pos === 3) return "\uD83E\uDD49";
   return `${pos}.`;
-}
-
-function getBetTypeLabel(type: PlacedBetType): string {
-  switch (type) {
-    case "GAGNANT":
-      return "Simple gagnant";
-    case "PLACE":
-      return "Simple place";
-    case "COUPLE_GAGNANT":
-      return "Couple gagnant";
-    case "COUPLE_PLACE":
-      return "Couple place";
-    default:
-      return type;
-  }
-}
-
-function getStallLabel(placeCorde: number | null | undefined): string | null {
-  if (placeCorde == null || placeCorde <= 0) {
-    return null;
-  }
-
-  return `Stalle ${placeCorde}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -321,11 +258,11 @@ export default function CourseDetailPage() {
   // Betting state
   const [showBetPanel, setShowBetPanel] = useState(false);
   const [betHorse, setBetHorse] = useState<ScoredParticipant | null>(null);
-  const [betSecondHorse, setBetSecondHorse] = useState<ScoredParticipant | null>(null);
-  const [betType, setBetType] = useState<PlacedBetType>("PLACE");
+  const [betType, setBetType] = useState<"GAGNANT" | "PLACE">("PLACE");
   const [betMise, setBetMise] = useState(2);
   const [betLoading, setBetLoading] = useState(false);
   const [betMessage, setBetMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [alreadyBet, setAlreadyBet] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -391,8 +328,8 @@ export default function CourseDetailPage() {
     maxWidth: "430px",
     margin: "0 auto",
     minHeight: "100vh",
-    background: "#F5F5F5",
-    fontFamily: "system-ui, -apple-system, sans-serif",
+    background:
+      "radial-gradient(circle at top, rgba(0,132,61,0.08), transparent 24%), linear-gradient(180deg, #F6F8F9 0%, #EEF2F3 100%)",
     paddingBottom: "80px",
     position: "relative",
   };
@@ -401,8 +338,10 @@ export default function CourseDetailPage() {
     position: "sticky",
     top: 0,
     zIndex: 100,
-    background: DARK,
-    height: "56px",
+    background: "rgba(18, 22, 26, 0.88)",
+    backdropFilter: "blur(18px)",
+    borderBottom: "1px solid rgba(255,255,255,0.06)",
+    height: "62px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -410,21 +349,24 @@ export default function CourseDetailPage() {
   };
 
   const cardStyle: React.CSSProperties = {
-    background: "#fff",
-    borderRadius: "16px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+    background: "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,251,1) 100%)",
+    borderRadius: "22px",
+    boxShadow: "0 18px 40px rgba(15,23,42,0.08)",
+    border: "1px solid rgba(15,23,42,0.06)",
     padding: "20px",
     margin: "0 16px 16px",
+    overflow: "hidden",
+    position: "relative",
   };
 
   const pillStyle: React.CSSProperties = {
     display: "inline-block",
-    padding: "4px 10px",
-    borderRadius: "20px",
+    padding: "6px 12px",
+    borderRadius: "999px",
     fontSize: "11px",
-    fontWeight: 600,
+    fontWeight: 700,
     textTransform: "uppercase" as const,
-    letterSpacing: "0.5px",
+    letterSpacing: "0.08em",
   };
 
   /* ---------------------------------------------------------------- */
@@ -441,9 +383,9 @@ export default function CourseDetailPage() {
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </div>
-        <div style={{ color: "#fff", fontWeight: 700, fontSize: "16px" }}>
+        <div style={{ color: "#fff", fontWeight: 800, fontSize: "17px", letterSpacing: "-0.3px" }}>
           R{reunion}C{course}
-          <span style={{ color: "#888", fontWeight: 400, marginLeft: "6px" }}>&middot; {hippo}</span>
+          <span style={{ color: "rgba(255,255,255,0.56)", fontWeight: 500, marginLeft: "6px" }}>&middot; {hippo}</span>
         </div>
       </div>
     );
@@ -453,20 +395,37 @@ export default function CourseDetailPage() {
     if (!data) return null;
     const ci = data.courseInfo;
     const bg = dark
-      ? { background: "linear-gradient(135deg, #1A1A1A, #2D2D2D)" }
-      : { background: "#fff" };
+      ? {
+          background:
+            "radial-gradient(circle at top right, rgba(16,185,129,0.18), transparent 30%), linear-gradient(135deg, #11181c, #1b2329)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          boxShadow: "0 26px 48px rgba(15,23,42,0.18)",
+        }
+      : { background: "linear-gradient(180deg, #FFFFFF 0%, #F8FBF9 100%)" };
     const textColor = dark ? "#fff" : DARK;
     return (
       <div style={{ ...cardStyle, ...bg, color: textColor }}>
-        <div style={{ fontWeight: 700, fontSize: "18px", marginBottom: "8px" }}>{ci.hippodrome}</div>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "8px" }}>
+        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: dark ? "#7ee7a8" : GREEN, marginBottom: 10 }}>
+          Course premium
+        </div>
+        <div style={{ fontWeight: 800, fontSize: "24px", lineHeight: "28px", marginBottom: "8px", letterSpacing: "-0.6px" }}>{ci.nomCourse}</div>
+        <div style={{ fontWeight: 700, fontSize: "15px", marginBottom: "12px", color: dark ? "rgba(255,255,255,0.76)" : "#475569" }}>{ci.hippodrome}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "12px" }}>
           <span style={{ ...pillStyle, background: dark ? "rgba(0,132,61,0.25)" : "#E8F5E9", color: GREEN }}>
             {disciplineLabel(ci.discipline)}
           </span>
-          <span style={{ fontSize: "13px", color: dark ? "#bbb" : "#666" }}>{ci.distance}m</span>
-          <span style={{ fontSize: "13px", color: dark ? "#bbb" : "#666" }}>&middot; {ci.nombrePartants} partants</span>
+          <span style={{ ...pillStyle, background: dark ? "rgba(255,255,255,0.08)" : "#F3F4F6", color: dark ? "#fff" : "#334155" }}>{ci.distance}m</span>
+          <span style={{ ...pillStyle, background: dark ? "rgba(255,255,255,0.08)" : "#F3F4F6", color: dark ? "#fff" : "#334155" }}>{ci.nombrePartants} partants</span>
+          {ci.allocation > 0 && (
+            <span style={{ ...pillStyle, background: dark ? "rgba(255,215,0,0.12)" : "#FFF8E1", color: dark ? "#FFD54F" : "#B27500" }}>
+              Allocation {ci.allocation.toLocaleString("fr-FR")} EUR
+            </span>
+          )}
         </div>
-        <div style={{ fontWeight: 700, color: GREEN, fontSize: "16px" }}>{ci.heureDepart}</div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+          <div style={{ fontWeight: 800, color: dark ? "#FFFFFF" : DARK, fontSize: "34px", lineHeight: "36px", letterSpacing: "-1px" }}>{ci.heureDepart}</div>
+          <div style={{ fontSize: "13px", color: dark ? "rgba(255,255,255,0.68)" : "#64748B" }}>depart officiel</div>
+        </div>
       </div>
     );
   }
@@ -474,15 +433,15 @@ export default function CourseDetailPage() {
   /* ---------- CASE 1: Prono locked ---------- */
   function LockedSection() {
     return (
-      <div style={{ textAlign: "center", marginTop: "60px", padding: "0 32px" }}>
-        <div style={{ fontSize: "64px", marginBottom: "16px" }}>&#x1F512;</div>
+      <div style={{ textAlign: "center", marginTop: "48px", padding: "0 24px" }}>
+        <div style={{ fontSize: "64px", marginBottom: "18px" }}>&#x1F512;</div>
         <div style={{ fontWeight: 700, fontSize: "20px", color: DARK, marginBottom: "16px" }}>
           Pronostic verrouill&eacute;
         </div>
-        <div style={{ fontWeight: 700, fontSize: "28px", color: GREEN, marginBottom: "12px", fontVariantNumeric: "tabular-nums" }}>
+        <div style={{ fontWeight: 800, fontSize: "32px", color: GREEN, marginBottom: "12px", fontVariantNumeric: "tabular-nums", letterSpacing: "-1px" }}>
           Disponible dans {countdown || "--:--"}
         </div>
-        <div style={{ fontSize: "14px", color: "#888", lineHeight: 1.5 }}>
+        <div style={{ fontSize: "14px", color: "#64748B", lineHeight: 1.6 }}>
           Le pronostic sera d&eacute;voil&eacute; 30 min avant le d&eacute;part
         </div>
       </div>
@@ -498,8 +457,6 @@ export default function CourseDetailPage() {
     const reco = a.recommandation;
     const confiance = a.scoreConfiance;
     const profils = a.profils;
-    const parisRecommandes = a.parisRecommandes || [];
-    const algoHealth = a.algorithmHealth;
 
     return (
       <>
@@ -511,49 +468,56 @@ export default function CourseDetailPage() {
 
         {/* B. Favori Section */}
         {favori && confiance && (
-          <div style={cardStyle}>
+          <div style={{ ...cardStyle, background: "radial-gradient(circle at top right, rgba(0,132,61,0.12), transparent 26%), linear-gradient(180deg, #FFFFFF 0%, #F7FBF8 100%)" }}>
             <div style={{ ...pillStyle, background: "#E8F5E9", color: GREEN, marginBottom: "16px", fontSize: "11px", letterSpacing: "1px" }}>
               &#x2B50; FAVORI
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "18px", marginBottom: "18px" }}>
               <div style={{
-                width: "48px", height: "48px", borderRadius: "50%", background: GREEN,
+                width: "58px", height: "58px", borderRadius: "18px", background: "linear-gradient(135deg, #00843D, #0D6B3A)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#fff", fontWeight: 700, fontSize: "20px", flexShrink: 0,
+                color: "#fff", fontWeight: 800, fontSize: "24px", flexShrink: 0,
+                boxShadow: "0 14px 24px rgba(0,132,61,0.22)",
               }}>
                 {favori.numPmu}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: "24px", color: DARK, lineHeight: 1.2 }}>{favori.nom}</div>
-                <div style={{ fontSize: "14px", color: "#888", marginTop: "2px" }}>
+                <div style={{ fontWeight: 800, fontSize: "28px", color: DARK, lineHeight: 1.05, letterSpacing: "-0.8px" }}>{favori.nom}</div>
+                <div style={{ fontSize: "14px", color: "#64748B", marginTop: "6px" }}>
                   {data.courseInfo.estPlat
-                    ? `J: ${favori.jockey || "N/A"}`
-                    : `D: ${favori.driver || "N/A"}`}
+                    ? `Jockey: ${favori.jockey || "N/A"}`
+                    : `Driver: ${favori.driver || "N/A"}`}
                 </div>
-                {getStallLabel(favori.placeCorde) && (
-                  <div style={{ fontSize: "13px", color: GREEN, fontWeight: 600, marginTop: "4px" }}>
-                    {getStallLabel(favori.placeCorde)}
-                  </div>
-                )}
               </div>
             </div>
 
             {/* Confidence Gauge */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "12px" }}>
-              <ConfidenceGauge score={confiance.score} />
-              <div style={{
-                marginTop: "8px",
-                ...pillStyle,
-                background: confiance.niveau.emoji === "\uD83D\uDFE2" ? "#E8F5E9"
-                  : confiance.niveau.emoji === "\uD83D\uDFE1" ? "#FFF8E1"
-                  : confiance.niveau.emoji === "\uD83D\uDFE0" ? "#FFF3E0"
-                  : "#FFEBEE",
-                color: confiance.niveau.emoji === "\uD83D\uDFE2" ? GREEN
-                  : confiance.niveau.emoji === "\uD83D\uDFE1" ? "#F57F17"
-                  : confiance.niveau.emoji === "\uD83D\uDFE0" ? "#E65100"
-                  : "#C62828",
-              }}>
-                {confiance.niveau.emoji} {confiance.niveau.label}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", marginBottom: "4px" }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, color: "#64748B", marginBottom: 10, lineHeight: 1.5 }}>
+                  Lecture principale de l'algo sur cette course. Plus la note est haute, plus le favori ressort proprement.
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  <div style={{
+                    ...pillStyle,
+                    background: confiance.niveau.emoji === "\uD83D\uDFE2" ? "#E8F5E9"
+                      : confiance.niveau.emoji === "\uD83D\uDFE1" ? "#FFF8E1"
+                      : confiance.niveau.emoji === "\uD83D\uDFE0" ? "#FFF3E0"
+                      : "#FFEBEE",
+                    color: confiance.niveau.emoji === "\uD83D\uDFE2" ? GREEN
+                      : confiance.niveau.emoji === "\uD83D\uDFE1" ? "#F57F17"
+                      : confiance.niveau.emoji === "\uD83D\uDFE0" ? "#E65100"
+                      : "#C62828",
+                  }}>
+                    {confiance.niveau.emoji} {confiance.niveau.label}
+                  </div>
+                  <div style={{ ...pillStyle, background: "#EEF2FF", color: "#4338CA" }}>
+                    Score {confiance.score}/10
+                  </div>
+                </div>
+              </div>
+              <div style={{ flexShrink: 0 }}>
+                <ConfidenceGauge score={confiance.score} />
               </div>
             </div>
           </div>
@@ -576,148 +540,6 @@ export default function CourseDetailPage() {
               {reco.raisonnement.map((r, i) => (
                 <div key={i} style={{ fontSize: "13px", lineHeight: 1.5, opacity: reco.vautLeCoup ? 0.92 : 1 }}>
                   &bull; {r}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {algoHealth && (
-          <div style={cardStyle}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
-              <div style={{ fontWeight: 700, fontSize: "16px" }}>
-                Bilan sante IA
-              </div>
-              <span
-                style={{
-                  ...pillStyle,
-                  background: algoHealth.status === "SAIN" ? "#E8F5E9" : algoHealth.status === "SURVEILLANCE" ? "#FFF3CD" : "#FDECEA",
-                  color: algoHealth.status === "SAIN" ? GREEN : algoHealth.status === "SURVEILLANCE" ? "#B26A00" : "#C62828",
-                }}
-              >
-                {algoHealth.status} - {algoHealth.score}/10
-              </span>
-            </div>
-
-            {algoHealth.strengths.length > 0 && (
-              <div style={{ marginBottom: algoHealth.weaknesses.length > 0 || algoHealth.notes.length > 0 ? "12px" : 0 }}>
-                <div style={{ fontSize: "12px", fontWeight: 700, color: GREEN, marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.4px" }}>
-                  Ce qui tient
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  {algoHealth.strengths.map((item, index) => (
-                    <div key={index} style={{ fontSize: "13px", color: "#2E7D32", lineHeight: 1.45 }}>
-                      + {item}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {algoHealth.weaknesses.length > 0 && (
-              <div style={{ marginBottom: algoHealth.notes.length > 0 ? "12px" : 0 }}>
-                <div style={{ fontSize: "12px", fontWeight: 700, color: "#C62828", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.4px" }}>
-                  Ce qui reste fragile
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  {algoHealth.weaknesses.map((item, index) => (
-                    <div key={index} style={{ fontSize: "13px", color: "#C62828", lineHeight: 1.45 }}>
-                      - {item}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {algoHealth.notes.length > 0 && (
-              <div>
-                <div style={{ fontSize: "12px", fontWeight: 700, color: "#666", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.4px" }}>
-                  Lecture medecin
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  {algoHealth.notes.map((item, index) => (
-                    <div key={index} style={{ fontSize: "13px", color: "#666", lineHeight: 1.45 }}>
-                      - {item}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {parisRecommandes.length > 0 && (
-          <div style={cardStyle}>
-            <div style={{ fontWeight: 700, fontSize: "16px", marginBottom: "16px" }}>
-              Plans de paris IA
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {parisRecommandes.map((pari) => (
-                <div
-                  key={pari.type}
-                  style={{
-                    borderRadius: "14px",
-                    padding: "14px",
-                    background: "#FAFAFA",
-                    border: "1px solid #EAEAEA",
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-                    <div style={{ fontWeight: 700, fontSize: "15px", color: DARK }}>
-                      {pari.emoji} {pari.label}
-                    </div>
-                    <span
-                      style={{
-                        ...pillStyle,
-                        background: pari.surete >= 8 ? "#E8F5E9" : pari.surete >= 6 ? "#FFF3CD" : "#FFEBEE",
-                        color: pari.surete >= 8 ? GREEN : pari.surete >= 6 ? "#B26A00" : "#C62828",
-                      }}
-                    >
-                      Surete {pari.surete}/10
-                    </span>
-                  </div>
-
-                  <div style={{ fontSize: "17px", fontWeight: 700, color: DARK, marginBottom: "8px" }}>
-                    {pari.chevaux
-                      .map((cheval) => {
-                        const stall = getStallLabel(cheval.placeCorde);
-                        return `N${cheval.numPmu} ${cheval.nom}${stall ? ` (${stall})` : ""}`;
-                      })
-                      .join(" + ")}
-                  </div>
-
-                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "10px" }}>
-                    <span style={{ fontSize: "12px", color: "#666" }}>Niveau: {pari.sureteLabel}</span>
-                    <span style={{ fontSize: "12px", color: "#666" }}>Mise: {pari.miseConseillee}EUR</span>
-                    <span style={{ fontSize: "12px", color: "#666" }}>
-                      Cote estimee: {pari.coteEstimee ?? "N/A"}
-                    </span>
-                  </div>
-
-                  <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginBottom: "12px" }}>
-                    {pari.pourquoi.map((reason, index) => (
-                      <div key={index} style={{ fontSize: "12px", color: "#777", lineHeight: 1.45 }}>
-                        - {reason}
-                      </div>
-                    ))}
-                  </div>
-
-                  <button
-                    onClick={() => openBetPanelFromRecommendation(pari)}
-                    style={{
-                      width: "100%",
-                      padding: "12px",
-                      borderRadius: "12px",
-                      border: "none",
-                      background: DARK,
-                      color: "#fff",
-                      fontSize: "14px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Jouer ce pari
-                  </button>
                 </div>
               ))}
             </div>
@@ -829,14 +651,7 @@ export default function CourseDetailPage() {
                         <span style={{ fontSize: idx < 3 ? "18px" : "14px", fontWeight: 700, minWidth: "28px" }}>
                           {positionMedal(idx + 1)}
                         </span>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                          <span style={{ fontWeight: 700, fontSize: "15px", color: DARK }}>{horse.nom}</span>
-                          {getStallLabel(horse.placeCorde) && (
-                            <span style={{ fontSize: "11px", color: "#666", fontWeight: 600 }}>
-                              {getStallLabel(horse.placeCorde)}
-                            </span>
-                          )}
-                        </div>
+                        <span style={{ fontWeight: 700, fontSize: "15px", color: DARK }}>{horse.nom}</span>
                       </div>
                       <span style={{ fontWeight: 700, fontSize: "14px", color: DARK }}>{horse.scoreAlgo}</span>
                     </div>
@@ -904,22 +719,70 @@ export default function CourseDetailPage() {
           </div>
         )}
 
-        {/* H. BET BUTTON */}
-        {!data.isFinished && favori && (
+        {/* H. Lecture Algo */}
+        {confiance && (
+          <div style={cardStyle}>
+            <div style={{ fontWeight: 700, fontSize: "16px", marginBottom: "16px" }}>
+              &#x1F9E0; Lecture de l&apos;algo
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "14px" }}>
+              <span style={{
+                ...pillStyle,
+                background: profils.lisibilite === "LISIBLE" ? "#E8F5E9"
+                  : profils.lisibilite === "COMPLEXE" ? "#FFF8E1"
+                  : "#FFEBEE",
+                color: profils.lisibilite === "LISIBLE" ? GREEN
+                  : profils.lisibilite === "COMPLEXE" ? "#F57F17"
+                  : "#C62828",
+              }}>
+                Lisibilite {profils.lisibilite}
+              </span>
+              <span style={{
+                ...pillStyle,
+                background: profils.beton ? "#E8F5E9" : profils.pepite ? "#E3F2FD" : profils.sniper ? "#FFF3E0" : "#F5F5F5",
+                color: profils.beton ? GREEN : profils.pepite ? "#1565C0" : profils.sniper ? "#E67E22" : "#666",
+              }}>
+                Profil {profils.beton ? "BETON" : profils.pepite ? "PEPITE" : profils.sniper ? "SNIPER" : "NEUTRE"}
+              </span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {confiance.facteurs.slice(0, 4).map((facteur, index) => (
+                <div
+                  key={index}
+                  style={{
+                    fontSize: "13px",
+                    color: "#555",
+                    lineHeight: 1.5,
+                    padding: "10px 12px",
+                    borderRadius: "10px",
+                    background: "#FAFAFA",
+                    border: "1px solid #EEEEEE",
+                  }}
+                >
+                  {facteur}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* I. BET BUTTON */}
+        {!data.isFinished && favori && !alreadyBet && (
           <div style={{ margin: "0 16px 16px" }}>
             <button
               onClick={() => openBetPanel(favori)}
               style={{
                 width: "100%",
-                padding: "16px",
-                borderRadius: "14px",
+                padding: "18px",
+                borderRadius: "18px",
                 border: "none",
                 background: `linear-gradient(135deg, ${GREEN}, ${GREEN_DARK})`,
                 color: "#fff",
                 fontSize: "16px",
-                fontWeight: 700,
+                fontWeight: 800,
                 cursor: "pointer",
-                boxShadow: "0 4px 16px rgba(0,132,61,0.3)",
+                boxShadow: "0 16px 30px rgba(0,132,61,0.26)",
+                letterSpacing: "-0.2px",
               }}
             >
               &#127922; Parier sur cette course
@@ -937,8 +800,8 @@ export default function CourseDetailPage() {
           </div>
         )}
 
-        {/* Legacy success box kept disabled; betMessage below is the active feedback path */}
-        {false && (
+        {/* Bet success message */}
+        {alreadyBet && (
           <div style={{
             margin: "0 16px 16px", padding: "16px", borderRadius: "14px",
             background: "#E8F5E9", textAlign: "center",
@@ -1001,41 +864,6 @@ export default function CourseDetailPage() {
     );
   }
 
-  function findRunnerByNum(numPmu: number) {
-    return data?.analysis?.top5.find((runner) => runner.numPmu === numPmu) || null;
-  }
-
-  function openBetPanel(
-    horse: ScoredParticipant,
-    type: PlacedBetType = "PLACE",
-    secondHorse: ScoredParticipant | null = null,
-    mise = 2
-  ) {
-    setBetHorse(horse);
-    setBetSecondHorse(secondHorse);
-    setBetType(type);
-    setBetMise(mise);
-    setBetMessage(null);
-    setShowBetPanel(true);
-  }
-
-  function openBetPanelFromRecommendation(pari: BetRecommendation) {
-    if (!pari.chevaux.length) return;
-
-    const firstHorse = findRunnerByNum(pari.chevaux[0].numPmu);
-    const secondHorse = pari.chevaux[1] ? findRunnerByNum(pari.chevaux[1].numPmu) : null;
-
-    if (!firstHorse) return;
-
-    const typeMap: Record<BetRecommendationType, PlacedBetType> = {
-      SIMPLE_GAGNANT: "GAGNANT",
-      COUPLE_PLACE: "COUPLE_PLACE",
-      COUPLE_GAGNANT: "COUPLE_GAGNANT",
-    };
-
-    openBetPanel(firstHorse, typeMap[pari.type], secondHorse, pari.miseConseillee || 2);
-  }
-
   /* ---------- Bet handler ---------- */
   async function handlePlaceBet() {
     if (!betHorse || !data) return;
@@ -1056,22 +884,7 @@ export default function CourseDetailPage() {
       return;
     }
 
-    const isCoupleBet = betType === "COUPLE_GAGNANT" || betType === "COUPLE_PLACE";
-    if (isCoupleBet && !betSecondHorse) {
-      setBetLoading(false);
-      setBetMessage({ type: "error", text: "Choisissez le deuxieme cheval du couple." });
-      return;
-    }
-
-    const primaryOdds = betHorse.cote || data.analysis?.predictionsCotes[betHorse.numPmu]?.coteEstimee || 2;
-    const secondaryOdds = betSecondHorse
-      ? betSecondHorse.cote || data.analysis?.predictionsCotes[betSecondHorse.numPmu]?.coteEstimee || 2.5
-      : null;
-    const cote = isCoupleBet
-      ? betType === "COUPLE_GAGNANT"
-        ? Math.round(Math.max(2.5, ((primaryOdds + (secondaryOdds || 0)) * 0.9)) * 10) / 10
-        : Math.round(Math.max(1.4, ((primaryOdds + (secondaryOdds || 0)) * 0.35)) * 10) / 10
-      : primaryOdds;
+    const cote = betHorse.cote || data.analysis?.predictionsCotes[betHorse.numPmu]?.coteEstimee || 2;
     const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Paris" }));
     const dateStr = `${String(now.getDate()).padStart(2, "0")}${String(now.getMonth() + 1).padStart(2, "0")}${now.getFullYear()}`;
 
@@ -1090,8 +903,6 @@ export default function CourseDetailPage() {
           heure_depart: data.courseInfo.heureDepart,
           cheval_num: betHorse.numPmu,
           cheval_nom: betHorse.nom,
-          cheval_num_2: isCoupleBet ? betSecondHorse?.numPmu : null,
-          cheval_nom_2: isCoupleBet ? betSecondHorse?.nom : null,
           type_pari: betType,
           mise: betMise,
           cote,
@@ -1100,6 +911,7 @@ export default function CourseDetailPage() {
       const result = await res.json();
       if (result.success) {
         setBetMessage({ type: "success", text: `Pari placé ! Solde: ${result.solde}€` });
+        setAlreadyBet(true);
         setShowBetPanel(false);
       } else {
         setBetMessage({ type: "error", text: result.error || "Erreur" });
@@ -1111,32 +923,21 @@ export default function CourseDetailPage() {
     }
   }
 
+  function openBetPanel(horse: ScoredParticipant) {
+    setBetHorse(horse);
+    setBetType("PLACE");
+    setBetMise(2);
+    setBetMessage(null);
+    setShowBetPanel(true);
+  }
+
   /* ---------- Bet Panel Overlay ---------- */
   function BetPanel() {
     if (!showBetPanel || !betHorse || !data) return null;
-    const isCoupleBet = betType === "COUPLE_GAGNANT" || betType === "COUPLE_PLACE";
-    const betTypeOptions: Array<{ value: PlacedBetType; label: string; helper: string }> = [
-      { value: "PLACE", label: "Simple place", helper: "Le cheval finit dans les 3." },
-      { value: "GAGNANT", label: "Simple gagnant", helper: "Le cheval doit gagner." },
-      { value: "COUPLE_PLACE", label: "Couple place", helper: "Les 2 chevaux doivent finir dans les 3." },
-      { value: "COUPLE_GAGNANT", label: "Couple gagnant", helper: "Les 2 chevaux doivent finir dans les 2." },
-    ];
-    const primaryOdds = betHorse.cote || data.analysis?.predictionsCotes[betHorse.numPmu]?.coteEstimee || 2;
-    const secondaryOdds = betSecondHorse
-      ? betSecondHorse.cote || data.analysis?.predictionsCotes[betSecondHorse.numPmu]?.coteEstimee || 2.5
-      : null;
-    const cote = isCoupleBet
-      ? betType === "COUPLE_GAGNANT"
-        ? Math.round(Math.max(2.5, ((primaryOdds + (secondaryOdds || 0)) * 0.9)) * 10) / 10
-        : Math.round(Math.max(1.4, ((primaryOdds + (secondaryOdds || 0)) * 0.35)) * 10) / 10
-      : primaryOdds;
+    const cote = betHorse.cote || data.analysis?.predictionsCotes[betHorse.numPmu]?.coteEstimee || 2;
     const gainPotentiel = betType === "GAGNANT"
       ? Math.round((betMise * cote - betMise) * 100) / 100
-      : betType === "PLACE"
-        ? Math.round((betMise * cote * 0.3 - betMise) * 100) / 100
-      : Math.round((betMise * cote - betMise) * 100) / 100;
-    const coupleCandidates = data.analysis?.top5.filter((runner) => runner.numPmu !== betHorse.numPmu) || [];
-    const selectedType = betTypeOptions.find((option) => option.value === betType);
+      : Math.round((betMise * cote * 0.3 - betMise) * 100) / 100;
 
     return (
       <div style={{
@@ -1166,85 +967,31 @@ export default function CourseDetailPage() {
               {betHorse.numPmu}
             </div>
             <div>
-                <div style={{ fontWeight: 700, fontSize: 16, color: DARK }}>{betHorse.nom}</div>
-                <div style={{ fontSize: 13, color: "#888" }}>
-                  {getBetTypeLabel(betType)} - Cote estimee: {cote}
-                </div>
-                {getStallLabel(betHorse.placeCorde) && (
-                  <div style={{ fontSize: 12, color: GREEN, fontWeight: 600, marginTop: 4 }}>
-                    {getStallLabel(betHorse.placeCorde)}
-                  </div>
-                )}
-              </div>
-          </div>
-
-          {isCoupleBet && (
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#555", marginBottom: 8 }}>
-                Deuxieme cheval du couple
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {coupleCandidates.map((runner) => (
-                  <button
-                    key={runner.numPmu}
-                    onClick={() => setBetSecondHorse(runner)}
-                    style={{
-                      padding: "10px 12px",
-                      borderRadius: 12,
-                      border: `2px solid ${betSecondHorse?.numPmu === runner.numPmu ? GREEN : "#E0E0E0"}`,
-                      background: betSecondHorse?.numPmu === runner.numPmu ? "#E8F5E9" : "#fff",
-                      color: betSecondHorse?.numPmu === runner.numPmu ? GREEN : "#555",
-                      fontSize: 13,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {`N${runner.numPmu} ${runner.nom}${getStallLabel(runner.placeCorde) ? ` - ${getStallLabel(runner.placeCorde)}` : ""}`}
-                  </button>
-                ))}
-              </div>
-              <div style={{ marginTop: 10, fontSize: 12, color: betSecondHorse ? "#666" : "#C62828" }}>
-                {betSecondHorse
-                  ? `Selection: N${betHorse.numPmu} ${betHorse.nom}${getStallLabel(betHorse.placeCorde) ? ` (${getStallLabel(betHorse.placeCorde)})` : ""} + N${betSecondHorse.numPmu} ${betSecondHorse.nom}${getStallLabel(betSecondHorse.placeCorde) ? ` (${getStallLabel(betSecondHorse.placeCorde)})` : ""}`
-                  : "Selectionnez le deuxieme cheval du couple."}
-              </div>
+              <div style={{ fontWeight: 700, fontSize: 16, color: DARK }}>{betHorse.nom}</div>
+              <div style={{ fontSize: 13, color: "#888" }}>Cote: {cote}</div>
             </div>
-          )}
+          </div>
 
           {/* Type pari */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: "#555", marginBottom: 8 }}>Type de pari</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              {betTypeOptions.map((option) => (
+            <div style={{ display: "flex", gap: 8 }}>
+              {(["PLACE", "GAGNANT"] as const).map((t) => (
                 <button
-                  key={option.value}
-                  onClick={() => {
-                    setBetType(option.value);
-                    if (option.value === "COUPLE_GAGNANT" || option.value === "COUPLE_PLACE") {
-                      setBetSecondHorse((current) => current || coupleCandidates[0] || null);
-                    } else {
-                      setBetSecondHorse(null);
-                    }
-                  }}
+                  key={t}
+                  onClick={() => setBetType(t)}
                   style={{
-                    padding: "12px", borderRadius: 12,
-                    border: `2px solid ${betType === option.value ? GREEN : "#E0E0E0"}`,
-                    background: betType === option.value ? "#E8F5E9" : "#fff",
-                    color: betType === option.value ? GREEN : "#888",
-                    fontWeight: 700, fontSize: 14, cursor: "pointer", textAlign: "left",
+                    flex: 1, padding: "12px", borderRadius: 12,
+                    border: `2px solid ${betType === t ? GREEN : "#E0E0E0"}`,
+                    background: betType === t ? "#E8F5E9" : "#fff",
+                    color: betType === t ? GREEN : "#888",
+                    fontWeight: 700, fontSize: 14, cursor: "pointer",
                   }}
                 >
-                  <div>{option.label}</div>
-                  <div style={{ fontSize: 11, fontWeight: 500, marginTop: 4, opacity: 0.8 }}>
-                    {option.helper}
-                  </div>
+                  {t === "PLACE" ? "Placé (Top 3)" : "Gagnant (1er)"}
                 </button>
               ))}
             </div>
-          </div>
-
-          <div style={{ marginBottom: 16, fontSize: 12, color: "#666", lineHeight: 1.5 }}>
-            {selectedType?.helper}
           </div>
 
           {/* Mise */}
@@ -1289,11 +1036,11 @@ export default function CourseDetailPage() {
           {/* Submit */}
           <button
             onClick={handlePlaceBet}
-            disabled={betLoading || (isCoupleBet && !betSecondHorse)}
+            disabled={betLoading}
             style={{
               width: "100%", padding: 16, borderRadius: 12,
-              border: "none", background: betLoading || (isCoupleBet && !betSecondHorse) ? "#999" : GREEN,
-              color: "#fff", fontSize: 16, fontWeight: 700, cursor: betLoading || (isCoupleBet && !betSecondHorse) ? "not-allowed" : "pointer",
+              border: "none", background: betLoading ? "#999" : GREEN,
+              color: "#fff", fontSize: 16, fontWeight: 700, cursor: betLoading ? "not-allowed" : "pointer",
             }}
           >
             {betLoading ? "Envoi..." : "Confirmer le pari"}
@@ -1329,9 +1076,11 @@ export default function CourseDetailPage() {
         transform: "translateX(-50%)",
         width: "100%",
         maxWidth: "430px",
-        height: "64px",
-        background: "#fff",
-        boxShadow: "0 -2px 12px rgba(0,0,0,0.08)",
+        height: "70px",
+        background: "rgba(255,255,255,0.92)",
+        backdropFilter: "blur(18px)",
+        borderTop: "1px solid rgba(15,23,42,0.08)",
+        boxShadow: "0 -14px 30px rgba(15,23,42,0.08)",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-around",
@@ -1347,11 +1096,11 @@ export default function CourseDetailPage() {
               alignItems: "center",
               gap: "2px",
               cursor: "pointer",
-              color: tab.active ? GREEN : "#888",
+              color: tab.active ? GREEN : "#64748B",
             }}
           >
             <span style={{ fontSize: "20px" }}>{tab.icon}</span>
-            <span style={{ fontSize: "11px", fontWeight: tab.active ? 700 : 400 }}>{tab.label}</span>
+            <span style={{ fontSize: "11px", fontWeight: tab.active ? 800 : 600 }}>{tab.label}</span>
           </div>
         ))}
       </div>

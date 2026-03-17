@@ -21,18 +21,22 @@ interface RaceSummary {
 }
 
 type RaceStatus = "upcoming" | "prono_available" | "finished";
-type HomeSortMode =
-  | "time_asc"
-  | "confidence_desc"
-  | "confidence_asc"
-  | "opportunity"
-  | "allocation_desc";
-type ScoreStage = "preview_1h" | "final_30m" | "finished";
+type ScoreStage = "preview_2h" | "preview_1h" | "final_30m" | "finished";
+type SortMode = "time" | "confidence" | "hot" | "allocation";
 
 interface RaceScoreMeta {
   score: number;
   stage: ScoreStage;
 }
+
+interface ScoreHistoryEntry {
+  preview2h?: number;
+  preview1h?: number;
+  final30m?: number;
+}
+
+const SCORE_HISTORY_STORAGE_KEY = "pmu_score_history_v2";
+const SORT_MODE_STORAGE_KEY = "pmu_sort_mode_v1";
 
 function getMinutesUntilStart(heureDepart: string): number {
   const [hours, minutes] = heureDepart.split(":").map(Number);
@@ -84,24 +88,100 @@ function formatDiscipline(d: string): string {
   return d;
 }
 
-function getSortLabel(mode: HomeSortMode): string {
-  switch (mode) {
-    case "confidence_desc":
-      return "Note forte";
-    case "confidence_asc":
-      return "Note faible";
-    case "opportunity":
-      return "Opportunites";
-    case "allocation_desc":
-      return "Allocation";
-    default:
-      return "Heure";
-  }
+function getStageLabel(stage: ScoreStage): string {
+  if (stage === "preview_2h") return "Note 2h";
+  if (stage === "preview_1h") return "Note 1h";
+  if (stage === "final_30m") return "Note 30 min";
+  return "Resultat";
 }
 
-function getRaceMinutes(heureDepart: string): number {
-  const [hours, minutes] = heureDepart.split(":").map(Number);
-  return hours * 60 + minutes;
+function getStageBadgeStyle(stage: ScoreStage) {
+  if (stage === "preview_2h") {
+    return { background: "#F3E8FF", color: "#7B1FA2" };
+  }
+  if (stage === "preview_1h") {
+    return { background: "#E3F2FD", color: "#1565C0" };
+  }
+  if (stage === "final_30m") {
+    return { background: "#E8F5E9", color: "#00843D" };
+  }
+  return { background: "#F5F5F5", color: "#666" };
+}
+
+function getEvolutionStyle(delta: number) {
+  if (delta > 0) {
+    return { background: "#E8F5E9", color: "#00843D" };
+  }
+  if (delta < 0) {
+    return { background: "#FDECEA", color: "#E74C3C" };
+  }
+  return { background: "#F5F5F5", color: "#666" };
+}
+
+function formatSignedDelta(delta: number): string {
+  return `${delta > 0 ? "+" : ""}${delta.toFixed(1)}`;
+}
+
+function getTimelineNodeColors(value?: number, active?: boolean) {
+  if (!active || value === undefined) {
+    return {
+      background: "#F1F1F1",
+      border: "#DDDDDD",
+      text: "#AAAAAA",
+      label: "#999999",
+    };
+  }
+
+  if (value >= 7.5) {
+    return {
+      background: "#E8F5E9",
+      border: "#00843D",
+      text: "#00843D",
+      label: "#2E7D32",
+    };
+  }
+
+  if (value >= 5.5) {
+    return {
+      background: "#FFF8E1",
+      border: "#D4A017",
+      text: "#A66B00",
+      label: "#A66B00",
+    };
+  }
+
+  return {
+    background: "#FDECEA",
+    border: "#E74C3C",
+    text: "#C0392B",
+    label: "#C0392B",
+  };
+}
+
+function getTrendSentence(
+  note2h?: number,
+  note1h?: number,
+  note30m?: number
+): string {
+  if (note2h !== undefined && note30m !== undefined) {
+    const delta = note30m - note2h;
+    if (delta >= 1) return `La course se renforce (${formatSignedDelta(delta)} depuis 2h)`;
+    if (delta <= -1) return `La course se degrade (${formatSignedDelta(delta)} depuis 2h)`;
+    return "La confiance reste stable entre 2h et 30 min";
+  }
+
+  if (note1h !== undefined && note30m !== undefined) {
+    const delta = note30m - note1h;
+    if (delta >= 1) return `La lecture devient meilleure (${formatSignedDelta(delta)} sur la derniere heure)`;
+    if (delta <= -1) return `La course devient plus piegeuse (${formatSignedDelta(delta)} sur la derniere heure)`;
+    return "Peu de variation sur la derniere heure";
+  }
+
+  if (note2h !== undefined || note1h !== undefined || note30m !== undefined) {
+    return "La frise se complete au fil de l'approche du depart";
+  }
+
+  return "";
 }
 
 function getFrenchDate(): string {
@@ -153,24 +233,26 @@ export default function Home() {
   const [minConfiance, setMinConfiance] = useState<number>(0);
   const [showFilter, setShowFilter] = useState(false);
   const [scores, setScores] = useState<Record<string, RaceScoreMeta>>({});
+  const [scoreHistory, setScoreHistory] = useState<
+    Record<string, ScoreHistoryEntry>
+  >({});
   const [scoresLoading, setScoresLoading] = useState(false);
-  const scoresLoaded = useRef(false);
-  const [sortMode, setSortMode] = useState<HomeSortMode>("time_asc");
+  const [sortMode, setSortMode] = useState<SortMode>("time");
 
   // Load saved filter from localStorage
   useEffect(() => {
     try {
       const saved = localStorage.getItem("pmu_min_confiance");
       if (saved) setMinConfiance(Number(saved));
-      const savedSort = localStorage.getItem("pmu_sort_mode");
-      if (
-        savedSort === "time_asc" ||
-        savedSort === "confidence_desc" ||
-        savedSort === "confidence_asc" ||
-        savedSort === "opportunity" ||
-        savedSort === "allocation_desc"
-      ) {
-        setSortMode(savedSort);
+      const savedHistory = localStorage.getItem(SCORE_HISTORY_STORAGE_KEY);
+      if (savedHistory) {
+        setScoreHistory(JSON.parse(savedHistory));
+      }
+      const savedSortMode = localStorage.getItem(
+        SORT_MODE_STORAGE_KEY
+      ) as SortMode | null;
+      if (savedSortMode) {
+        setSortMode(savedSortMode);
       }
     } catch { /* silent */ }
   }, []);
@@ -200,8 +282,6 @@ export default function Home() {
 
   // Fetch confidence scores (once)
   const fetchScores = useCallback(async () => {
-    if (scoresLoaded.current) return;
-    scoresLoaded.current = true;
     setScoresLoading(true);
     try {
       const res = await fetch("/api/races/scores");
@@ -216,14 +296,62 @@ export default function Home() {
   // Initial fetch + 60s interval
   useEffect(() => {
     fetchRaces();
-    const interval = setInterval(fetchRaces, 60000);
+    fetchScores();
+    const interval = setInterval(() => {
+      fetchRaces();
+      fetchScores();
+    }, 60000);
     return () => clearInterval(interval);
-  }, [fetchRaces]);
+  }, [fetchRaces, fetchScores]);
 
-  // Fetch scores when races load
+  // Keep local snapshots of the 2h / 1h / 30min notes for comparison on the cards.
   useEffect(() => {
-    if (races.length > 0) fetchScores();
-  }, [races, fetchScores]);
+    if (races.length === 0 || Object.keys(scores).length === 0) return;
+
+    let changed = false;
+    const nextHistory = { ...scoreHistory };
+
+    for (const race of races) {
+      const scoreKey = `${race.reunion}-${race.course}`;
+      const meta = scores[scoreKey];
+      if (!meta) continue;
+
+      const historyKey = `${race.dateStr}-${scoreKey}`;
+      const entry = nextHistory[historyKey] ?? {};
+
+      if (meta.stage === "preview_2h" && entry.preview2h === undefined) {
+        nextHistory[historyKey] = { ...entry, preview2h: meta.score };
+        changed = true;
+        continue;
+      }
+
+      if (meta.stage === "preview_1h" && entry.preview1h === undefined) {
+        nextHistory[historyKey] = { ...entry, preview1h: meta.score };
+        changed = true;
+        continue;
+      }
+
+      if (
+        (meta.stage === "final_30m" || meta.stage === "finished") &&
+        entry.final30m === undefined
+      ) {
+        nextHistory[historyKey] = { ...entry, final30m: meta.score };
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      setScoreHistory(nextHistory);
+      try {
+        localStorage.setItem(
+          SCORE_HISTORY_STORAGE_KEY,
+          JSON.stringify(nextHistory)
+        );
+      } catch {
+        // silent
+      }
+    }
+  }, [races, scores, scoreHistory]);
 
   // 1-second tick for countdowns
   useEffect(() => {
@@ -239,21 +367,25 @@ export default function Home() {
     } catch { /* silent */ }
   };
 
-  const handleSortChange = (mode: HomeSortMode) => {
+  const handleSortModeChange = (mode: SortMode) => {
     setSortMode(mode);
     try {
-      localStorage.setItem("pmu_sort_mode", mode);
-    } catch { /* silent */ }
+      localStorage.setItem(SORT_MODE_STORAGE_KEY, mode);
+    } catch {
+      // silent
+    }
   };
 
   // Sort races by departure time
-  const timeSortedRaces = [...races].sort(
-    (a, b) => getRaceMinutes(a.heureDepart) - getRaceMinutes(b.heureDepart)
-  );
+  const baseSortedRaces = [...races].sort((a, b) => {
+    const [ah, am] = a.heureDepart.split(":").map(Number);
+    const [bh, bm] = b.heureDepart.split(":").map(Number);
+    return ah * 60 + am - (bh * 60 + bm);
+  });
 
   // Apply confidence filter
-  const filteredRaces = minConfiance > 0
-    ? timeSortedRaces.filter((race) => {
+  const filteredBaseRaces = minConfiance > 0
+    ? baseSortedRaces.filter((race) => {
         const key = `${race.reunion}-${race.course}`;
         const score = scores[key]?.score;
         // Keep upcoming races (no score yet) + races matching filter
@@ -263,55 +395,35 @@ export default function Home() {
         }
         return score >= minConfiance;
       })
-    : timeSortedRaces;
+    : baseSortedRaces;
 
-  const sortedRaces = [...filteredRaces].sort((a, b) => {
+  const filteredRaces = [...filteredBaseRaces].sort((a, b) => {
     const aKey = `${a.reunion}-${a.course}`;
     const bKey = `${b.reunion}-${b.course}`;
-    const aScore = scores[aKey]?.score;
-    const bScore = scores[bKey]?.score;
-    const aMinutesUntil = getMinutesUntilStart(a.heureDepart);
-    const bMinutesUntil = getMinutesUntilStart(b.heureDepart);
-    const aStatus = getRaceStatus(a.heureDepart);
-    const bStatus = getRaceStatus(b.heureDepart);
+    const aScore = scores[aKey]?.score ?? -1;
+    const bScore = scores[bKey]?.score ?? -1;
+    const aMinutes = getMinutesUntilStart(a.heureDepart);
+    const bMinutes = getMinutesUntilStart(b.heureDepart);
 
-    if (sortMode === "confidence_desc") {
-      if (aScore === undefined && bScore === undefined) {
-        return getRaceMinutes(a.heureDepart) - getRaceMinutes(b.heureDepart);
-      }
-      if (aScore === undefined) return 1;
-      if (bScore === undefined) return -1;
+    if (sortMode === "confidence") {
       if (bScore !== aScore) return bScore - aScore;
-      return getRaceMinutes(a.heureDepart) - getRaceMinutes(b.heureDepart);
+      return aMinutes - bMinutes;
     }
 
-    if (sortMode === "confidence_asc") {
-      if (aScore === undefined && bScore === undefined) {
-        return getRaceMinutes(a.heureDepart) - getRaceMinutes(b.heureDepart);
-      }
-      if (aScore === undefined) return 1;
-      if (bScore === undefined) return -1;
-      if (aScore !== bScore) return aScore - bScore;
-      return getRaceMinutes(a.heureDepart) - getRaceMinutes(b.heureDepart);
+    if (sortMode === "hot") {
+      const aHot = aMinutes <= 60 && aMinutes >= -10 ? 1 : 0;
+      const bHot = bMinutes <= 60 && bMinutes >= -10 ? 1 : 0;
+      if (bHot !== aHot) return bHot - aHot;
+      if (aMinutes !== bMinutes) return aMinutes - bMinutes;
+      return bScore - aScore;
     }
 
-    if (sortMode === "opportunity") {
-      const aOpportunity =
-        (aStatus === "prono_available" ? 3 : aStatus === "upcoming" ? 2 : 1) +
-        ((aScore ?? 0) / 10);
-      const bOpportunity =
-        (bStatus === "prono_available" ? 3 : bStatus === "upcoming" ? 2 : 1) +
-        ((bScore ?? 0) / 10);
-      if (bOpportunity !== aOpportunity) return bOpportunity - aOpportunity;
-      return aMinutesUntil - bMinutesUntil;
-    }
-
-    if (sortMode === "allocation_desc") {
+    if (sortMode === "allocation") {
       if (b.allocation !== a.allocation) return b.allocation - a.allocation;
-      return getRaceMinutes(a.heureDepart) - getRaceMinutes(b.heureDepart);
+      return aMinutes - bMinutes;
     }
 
-    return getRaceMinutes(a.heureDepart) - getRaceMinutes(b.heureDepart);
+    return aMinutes - bMinutes;
   });
 
   const totalCourses = races.length;
@@ -320,6 +432,18 @@ export default function Home() {
   const pronoCount = races.filter(
     (r) => getRaceStatus(r.heureDepart) === "prono_available"
   ).length;
+  const analysedCount = Object.keys(scores).length;
+  const radarRace = [...filteredRaces]
+    .filter((race) => scores[`${race.reunion}-${race.course}`]?.score !== undefined)
+    .sort((a, b) => {
+      const aKey = `${a.reunion}-${a.course}`;
+      const bKey = `${b.reunion}-${b.course}`;
+      const aScore = scores[aKey]?.score ?? 0;
+      const bScore = scores[bKey]?.score ?? 0;
+      if (bScore !== aScore) return bScore - aScore;
+      return getMinutesUntilStart(a.heureDepart) - getMinutesUntilStart(b.heureDepart);
+    })[0];
+  const spotlightRace = radarRace ?? filteredRaces[0] ?? null;
 
   const handleCardClick = (race: RaceSummary) => {
     const status = getRaceStatus(race.heureDepart);
@@ -337,9 +461,8 @@ export default function Home() {
         maxWidth: 430,
         margin: "0 auto",
         minHeight: "100vh",
-        background: "#F5F5F5",
-        fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        background:
+          "linear-gradient(180deg, rgba(255,255,255,0.78) 0%, rgba(247,249,250,0.95) 100%)",
         position: "relative",
       }}
     >
@@ -349,8 +472,10 @@ export default function Home() {
           position: "sticky",
           top: 0,
           zIndex: 50,
-          background: "#1A1A1A",
-          height: 56,
+          background: "rgba(16, 18, 22, 0.88)",
+          backdropFilter: "blur(18px)",
+          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          height: 64,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -359,21 +484,25 @@ export default function Home() {
       >
         <div
           style={{
-            color: "#00843D",
-            fontWeight: 700,
-            fontSize: 22,
+            color: "#22c55e",
+            fontWeight: 800,
+            fontSize: 24,
             lineHeight: "24px",
-            letterSpacing: "-0.3px",
+            letterSpacing: "-0.6px",
+            textShadow: "0 6px 18px rgba(34,197,94,0.24)",
           }}
         >
           PMU AI
         </div>
         <div
           style={{
-            color: "#888",
-            fontSize: 11,
+            color: "rgba(255,255,255,0.6)",
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
             lineHeight: "14px",
-            marginTop: 1,
+            marginTop: 3,
           }}
         >
           Pronostics IA
@@ -383,47 +512,178 @@ export default function Home() {
       {/* GREEN BANNER */}
       <div
         style={{
-          background: "linear-gradient(135deg, #00843D, #006B31)",
-          borderRadius: 16,
-          margin: "12px 16px",
-          padding: 20,
+          background:
+            "radial-gradient(circle at top right, rgba(255,255,255,0.18), transparent 32%), linear-gradient(135deg, #0a8f4d 0%, #066737 100%)",
+          borderRadius: 28,
+          margin: "14px 16px 12px",
+          padding: 22,
           color: "#fff",
+          boxShadow: "0 24px 48px rgba(0, 132, 61, 0.24)",
+          border: "1px solid rgba(255,255,255,0.12)",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
+        <div
+          style={{
+            position: "absolute",
+            width: 180,
+            height: 180,
+            right: -70,
+            top: -90,
+            borderRadius: "50%",
+            background: "rgba(255,255,255,0.08)",
+          }}
+        />
         <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 4 }}>
           Aujourd&apos;hui
         </div>
         <div
           style={{
-            fontSize: 18,
-            fontWeight: 600,
-            marginBottom: 8,
-            lineHeight: "22px",
+            fontSize: 19,
+            fontWeight: 700,
+            marginBottom: 10,
+            lineHeight: "23px",
+            letterSpacing: "-0.2px",
           }}
         >
           {getFrenchDate()}
         </div>
         <div
           style={{
-            fontSize: 22,
-            fontWeight: 700,
-            marginBottom: 4,
-            lineHeight: "28px",
+            fontSize: 30,
+            fontWeight: 800,
+            marginBottom: 6,
+            lineHeight: "32px",
+            letterSpacing: "-1px",
           }}
         >
           {loading
             ? "Chargement..."
             : `${totalCourses} courses \u00B7 ${totalReunions} r\u00E9unions`}
         </div>
-        <div style={{ fontSize: 13, opacity: 0.9 }}>
+        <div style={{ fontSize: 14, opacity: 0.92, fontWeight: 600 }}>
           {loading ? "" : `${pronoCount} pronostics disponibles`}
         </div>
+        {!loading && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 18 }}>
+            <span
+              style={{
+                background: "rgba(255,255,255,0.14)",
+                border: "1px solid rgba(255,255,255,0.14)",
+                padding: "10px 12px",
+                borderRadius: 18,
+                fontSize: 12,
+                fontWeight: 700,
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+              }}
+            >
+              <span style={{ opacity: 0.72, fontSize: 11, fontWeight: 600 }}>Radar actif</span>
+              <span>{analysedCount} courses notees</span>
+            </span>
+            <span
+              style={{
+                background: "rgba(255,255,255,0.14)",
+                border: "1px solid rgba(255,255,255,0.14)",
+                padding: "10px 12px",
+                borderRadius: 18,
+                fontSize: 12,
+                fontWeight: 700,
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+              }}
+            >
+              <span style={{ opacity: 0.72, fontSize: 11, fontWeight: 600 }}>Tri moteur</span>
+              <span>{sortMode === "time" ? "Par heure" : sortMode === "confidence" ? "Note forte" : sortMode === "hot" ? "A suivre vite" : "Gros enjeux"}</span>
+            </span>
+          </div>
+        )}
       </div>
+
+      {spotlightRace && (
+        <div
+          style={{
+            margin: "0 16px 14px",
+            padding: 18,
+            borderRadius: 24,
+            background:
+              "radial-gradient(circle at top right, rgba(34,197,94,0.12), transparent 28%), linear-gradient(135deg, #12181b, #1b2329)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            boxShadow: "0 24px 46px rgba(15,23,42,0.16)",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 800,
+              color: "#7ee7a8",
+              marginBottom: 10,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+            }}
+          >
+            Radar du jour
+          </div>
+          <div
+            style={{
+              fontSize: 24,
+              fontWeight: 800,
+              color: "#FFFFFF",
+              lineHeight: "28px",
+              marginBottom: 8,
+              letterSpacing: "-0.6px",
+            }}
+          >
+            R{spotlightRace.reunion}C{spotlightRace.course} - {spotlightRace.nomCourse}
+          </div>
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", lineHeight: "18px", marginBottom: 14 }}>
+            {spotlightRace.hippodrome} · {spotlightRace.heureDepart} · {spotlightRace.nombrePartants} partants · {spotlightRace.distance}m
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+            <span
+              style={{
+                background: scores[`${spotlightRace.reunion}-${spotlightRace.course}`]?.score !== undefined ? "#E8F5E9" : "#F4F5F7",
+                color: scores[`${spotlightRace.reunion}-${spotlightRace.course}`]?.score !== undefined ? "#00843D" : "#555",
+                padding: "6px 10px",
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 800,
+              }}
+            >
+              {scores[`${spotlightRace.reunion}-${spotlightRace.course}`]?.score !== undefined
+                ? `Confiance ${scores[`${spotlightRace.reunion}-${spotlightRace.course}`]?.score}/10`
+                : "Note en attente"}
+            </span>
+            <span
+              style={{
+                background: "rgba(255,255,255,0.08)",
+                color: "#FFFFFF",
+                padding: "7px 11px",
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 700,
+              }}
+            >
+              {scores[`${spotlightRace.reunion}-${spotlightRace.course}`]?.stage
+                ? getStageLabel(scores[`${spotlightRace.reunion}-${spotlightRace.course}`]?.stage ?? "preview_2h")
+                : "Prochaine course"}
+            </span>
+          </div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.72)", lineHeight: "17px" }}>
+            {scores[`${spotlightRace.reunion}-${spotlightRace.course}`]?.score !== undefined
+              ? "Course a fort potentiel, a surveiller de pres."
+              : "Course encore en observation, la note se debloquera en approchant du depart."}
+          </div>
+        </div>
+      )}
 
       {/* FILTER BAR */}
       <div
         style={{
-          margin: "0 16px 8px",
+          margin: "0 16px 10px",
           display: "flex",
           alignItems: "center",
           gap: 8,
@@ -431,38 +691,20 @@ export default function Home() {
         }}
       >
         <button
-          onClick={() => router.push("/live")}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "8px 14px",
-            borderRadius: 20,
-            border: "1px solid #111",
-            background: "#111",
-            color: "#fff",
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          <span style={{ fontSize: 14, lineHeight: 1 }}>⚡</span>
-          Live
-        </button>
-        <button
           onClick={() => setShowFilter(!showFilter)}
           style={{
             display: "flex",
             alignItems: "center",
             gap: 6,
-            padding: "8px 14px",
-            borderRadius: 20,
-            border: minConfiance > 0 ? "2px solid #00843D" : "1px solid #ddd",
-            background: minConfiance > 0 ? "#E8F5E9" : "#fff",
-            color: minConfiance > 0 ? "#00843D" : "#555",
+            padding: "10px 16px",
+            borderRadius: 999,
+            border: minConfiance > 0 ? "2px solid #00843D" : "1px solid rgba(15,23,42,0.08)",
+            background: minConfiance > 0 ? "#E8F5E9" : "rgba(255,255,255,0.86)",
+            color: minConfiance > 0 ? "#00843D" : "#334155",
             fontSize: 13,
-            fontWeight: 600,
+            fontWeight: 700,
             cursor: "pointer",
+            boxShadow: "0 10px 22px rgba(15,23,42,0.06)",
           }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -470,25 +712,7 @@ export default function Home() {
             <line x1="8" y1="12" x2="16" y2="12" />
             <line x1="11" y1="18" x2="13" y2="18" />
           </svg>
-          {minConfiance > 0 ? `Confiance ≥ ${minConfiance}/10` : "Filtrer"}
-        </button>
-        <button
-          onClick={() => setShowFilter(!showFilter)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "8px 14px",
-            borderRadius: 20,
-            border: "1px solid #ddd",
-            background: "#fff",
-            color: "#555",
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
-          Tri: {getSortLabel(sortMode)}
+          {minConfiance > 0 ? `Confiance >= ${minConfiance}/10` : "Filtrer"}
         </button>
         {minConfiance > 0 && (
           <button
@@ -500,11 +724,11 @@ export default function Home() {
               background: "#FDECEA",
               color: "#E74C3C",
               fontSize: 12,
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: "pointer",
             }}
           >
-            ✕ Reset
+            Reset
           </button>
         )}
         {scoresLoading && (
@@ -522,28 +746,30 @@ export default function Home() {
           margin: "0 16px 12px",
           display: "flex",
           gap: 8,
-          flexWrap: "wrap",
+          overflowX: "auto",
+          paddingBottom: 4,
         }}
       >
         {[
-          { value: "time_asc", label: "Par heure" },
-          { value: "confidence_desc", label: "Meilleure note" },
-          { value: "confidence_asc", label: "Note faible" },
-          { value: "opportunity", label: "Opportunites" },
-          { value: "allocation_desc", label: "Allocation" },
+          { key: "time" as SortMode, label: "Par heure" },
+          { key: "confidence" as SortMode, label: "Meilleure note" },
+          { key: "hot" as SortMode, label: "A suivre vite" },
+          { key: "allocation" as SortMode, label: "Gros enjeux" },
         ].map((option) => (
           <button
-            key={option.value}
-            onClick={() => handleSortChange(option.value as HomeSortMode)}
+            key={option.key}
+            onClick={() => handleSortModeChange(option.key)}
             style={{
-              padding: "8px 12px",
-              borderRadius: 20,
-              border: sortMode === option.value ? "2px solid #111" : "1px solid #ddd",
-              background: sortMode === option.value ? "#111" : "#fff",
-              color: sortMode === option.value ? "#fff" : "#555",
+              border: sortMode === option.key ? "2px solid #00843D" : "1px solid #DDDDDD",
+              background: sortMode === option.key ? "linear-gradient(135deg, #0e1b14, #12251a)" : "rgba(255,255,255,0.9)",
+              color: sortMode === option.key ? "#FFFFFF" : "#334155",
+              padding: "10px 14px",
+              borderRadius: 999,
               fontSize: 12,
-              fontWeight: 700,
+              fontWeight: 800,
+              whiteSpace: "nowrap",
               cursor: "pointer",
+              boxShadow: sortMode === option.key ? "0 12px 28px rgba(16,24,22,0.18)" : "0 8px 18px rgba(15,23,42,0.05)",
             }}
           >
             {option.label}
@@ -585,12 +811,12 @@ export default function Home() {
                   minWidth: 60,
                 }}
               >
-                {val === 0 ? "Tout" : `≥ ${val}/10`}
+                {val === 0 ? "Tout" : `>= ${val}/10`}
               </button>
             ))}
           </div>
           <div style={{ fontSize: 12, color: "#888", marginTop: 10 }}>
-            Ce filtre est sauvegardé automatiquement
+            Ce filtre est sauvegarde automatiquement
           </div>
         </div>
       )}
@@ -616,6 +842,14 @@ export default function Home() {
           </div>
         ) : (
           <div>
+            <div style={{ padding: "0 16px", marginBottom: 10 }}>
+              <div style={{ fontSize: 24, fontWeight: 800, color: "#111827", marginBottom: 4, letterSpacing: "-0.6px" }}>
+                Courses a surveiller
+              </div>
+              <div style={{ fontSize: 13, color: "#64748B", lineHeight: "19px" }}>
+                Tri intelligent par heure, confiance, urgence ou allocation.
+              </div>
+            </div>
             {filteredRaces.map((race) => {
               const status = getRaceStatus(race.heureDepart);
               const secondsUntil = getSecondsUntilStart(race.heureDepart);
@@ -627,29 +861,74 @@ export default function Home() {
               const scoreMeta = scores[raceKey];
               const confScore = scoreMeta?.score;
               const scoreStage = scoreMeta?.stage;
+              const historyKey = `${race.dateStr}-${raceKey}`;
+              const historyEntry = scoreHistory[historyKey];
+              const note2h =
+                scoreStage === "preview_2h"
+                  ? confScore
+                  : historyEntry?.preview2h;
+              const note1h =
+                scoreStage === "preview_1h"
+                  ? confScore
+                  : historyEntry?.preview1h;
+              const note30m =
+                scoreStage === "final_30m" || scoreStage === "finished"
+                  ? confScore
+                  : historyEntry?.final30m;
+              const evolutionFrom2h =
+                note2h !== undefined &&
+                confScore !== undefined &&
+                scoreStage !== "preview_2h"
+                  ? Number((confScore - note2h).toFixed(1))
+                  : null;
+              const evolution1hTo30m =
+                note1h !== undefined && note30m !== undefined
+                  ? Number((note30m - note1h).toFixed(1))
+                  : null;
+              const trendSentence = getTrendSentence(note2h, note1h, note30m);
+              const stageBadgeStyle = scoreStage
+                ? getStageBadgeStyle(scoreStage)
+                : null;
 
               return (
                 <div
                       key={`${race.reunion}-${race.course}`}
                       onClick={() => handleCardClick(race)}
                       style={{
-                        background: "#fff",
-                        borderRadius: 16,
+                        background:
+                          "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,251,0.98) 100%)",
+                        borderRadius: 24,
                         margin: "8px 16px",
-                        padding: 16,
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-                        borderLeft: `4px solid ${isProno ? "#00843D" : isFinished ? "#888" : "#ddd"}`,
+                        padding: 18,
+                        boxShadow: isProno
+                          ? "0 20px 40px rgba(0,132,61,0.12)"
+                          : "0 16px 34px rgba(15,23,42,0.08)",
+                        border: "1px solid rgba(15,23,42,0.06)",
+                        borderLeft: `5px solid ${isProno ? "#00843D" : isFinished ? "#94A3B8" : "#D8DEE6"}`,
                         cursor: isClickable ? "pointer" : "default",
-                        transition: "transform 0.15s ease",
+                        transition: "transform 0.15s ease, box-shadow 0.15s ease",
                         position: "relative",
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "flex-start",
                         gap: 12,
+                        overflow: "hidden",
                       }}
                     >
+                      <div
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          background: isProno
+                            ? "radial-gradient(circle at top right, rgba(0,132,61,0.12), transparent 30%)"
+                            : isFinished
+                              ? "radial-gradient(circle at top right, rgba(148,163,184,0.12), transparent 28%)"
+                              : "radial-gradient(circle at top right, rgba(15,23,42,0.05), transparent 28%)",
+                          pointerEvents: "none",
+                        }}
+                      />
                       {/* Left content */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ flex: 1, minWidth: 0, position: "relative", zIndex: 1 }}>
                         {/* Top row: time + pills */}
                         <div
                           style={{
@@ -662,10 +941,11 @@ export default function Home() {
                         >
                           <span
                             style={{
-                              fontSize: 18,
-                              fontWeight: 700,
+                              fontSize: 28,
+                              fontWeight: 800,
                               color: isProno ? "#00843D" : "#333",
-                              lineHeight: "22px",
+                              lineHeight: "28px",
+                              letterSpacing: "-0.8px",
                             }}
                           >
                             {race.heureDepart}
@@ -705,14 +985,15 @@ export default function Home() {
                         {/* Course name */}
                         <div
                           style={{
-                            fontSize: 15,
-                            fontWeight: 700,
+                            fontSize: 19,
+                            fontWeight: 800,
                             color: "#1A1A1A",
-                            lineHeight: "20px",
-                            marginBottom: 4,
+                            lineHeight: "24px",
+                            marginBottom: 7,
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
+                            letterSpacing: "-0.4px",
                           }}
                         >
                           R{race.reunion}C{race.course} — {race.nomCourse}
@@ -722,15 +1003,23 @@ export default function Home() {
                         <div
                           style={{
                             fontSize: 13,
-                            color: "#888",
-                            lineHeight: "18px",
+                            color: "#64748B",
+                            lineHeight: "19px",
                           }}
                         >
                           {race.hippodrome} &middot; {race.nombrePartants} partants &middot;{" "}
                           {race.distance}m
                         </div>
                         {confScore !== undefined && (
-                          <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          <div
+                            style={{
+                              marginTop: 8,
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: 6,
+                              alignItems: "center",
+                            }}
+                          >
                             <span
                               style={{
                                 display: "inline-block",
@@ -744,33 +1033,217 @@ export default function Home() {
                             >
                               Confiance {confScore}/10
                             </span>
-                            <span
+                            {scoreStage && stageBadgeStyle && (
+                              <span
+                                style={{
+                                  display: "inline-block",
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  padding: "2px 8px",
+                                  borderRadius: 20,
+                                  background: stageBadgeStyle.background,
+                                  color: stageBadgeStyle.color,
+                                }}
+                              >
+                                {getStageLabel(scoreStage)}
+                              </span>
+                            )}
+                            {scoreStage === "preview_1h" && (
+                              <span
+                                style={{
+                                  display: "inline-block",
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  padding: "2px 8px",
+                                  borderRadius: 20,
+                                  background: "#FFF3CD",
+                                  color: "#856404",
+                                }}
+                              >
+                                Base 1h enregistree
+                              </span>
+                            )}
+                            {scoreStage === "preview_2h" && (
+                              <span
+                                style={{
+                                  display: "inline-block",
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  padding: "2px 8px",
+                                  borderRadius: 20,
+                                  background: "#F3E8FF",
+                                  color: "#7B1FA2",
+                                }}
+                              >
+                                Base 2h enregistree
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {(note2h !== undefined ||
+                          note1h !== undefined ||
+                          note30m !== undefined) && (
+                          <div
+                            style={{
+                              marginTop: 10,
+                              padding: 10,
+                              borderRadius: 12,
+                              background: "#FAFAFA",
+                              border: "1px solid #EEEEEE",
+                            }}
+                          >
+                            <div
                               style={{
-                                display: "inline-block",
                                 fontSize: 11,
                                 fontWeight: 700,
-                                padding: "2px 8px",
-                                borderRadius: 20,
-                                background:
-                                  scoreStage === "preview_1h"
-                                    ? "#E3F2FD"
-                                    : scoreStage === "final_30m"
-                                      ? "#E8F5E9"
-                                      : "#F5F5F5",
-                                color:
-                                  scoreStage === "preview_1h"
-                                    ? "#1565C0"
-                                    : scoreStage === "final_30m"
-                                      ? "#00843D"
-                                      : "#666",
+                                color: "#666",
+                                marginBottom: 8,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.3px",
                               }}
                             >
-                              {scoreStage === "preview_1h"
-                                ? "Note 1h"
-                                : scoreStage === "final_30m"
-                                  ? "Note 30 min"
-                                  : "Resultat"}
-                            </span>
+                              Evolution confiance
+                            </div>
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6,
+                              }}
+                            >
+                              {[
+                                { label: "2h", value: note2h, active: note2h !== undefined },
+                                { label: "1h", value: note1h, active: note1h !== undefined },
+                                { label: "30m", value: note30m, active: note30m !== undefined },
+                              ].map((step, index, arr) => {
+                                const colors = getTimelineNodeColors(
+                                  step.value,
+                                  step.active
+                                );
+
+                                return (
+                                  <div
+                                    key={step.label}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      flex: index === arr.length - 1 ? "0 1 auto" : 1,
+                                      minWidth: 0,
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        minWidth: 58,
+                                        padding: "8px 6px",
+                                        borderRadius: 12,
+                                        border: `1px solid ${colors.border}`,
+                                        background: colors.background,
+                                        textAlign: "center",
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          fontSize: 10,
+                                          fontWeight: 700,
+                                          color: colors.label,
+                                          marginBottom: 2,
+                                        }}
+                                      >
+                                        {step.label}
+                                      </div>
+                                      <div
+                                        style={{
+                                          fontSize: 13,
+                                          fontWeight: 800,
+                                          color: colors.text,
+                                          lineHeight: "16px",
+                                        }}
+                                      >
+                                        {step.value !== undefined
+                                          ? `${step.value}/10`
+                                          : "--"}
+                                      </div>
+                                    </div>
+                                    {index < arr.length - 1 && (
+                                      <div
+                                        style={{
+                                          flex: 1,
+                                          height: 2,
+                                          margin: "0 4px",
+                                          borderRadius: 999,
+                                          background:
+                                            arr[index + 1].active && step.active
+                                              ? "#CFCFCF"
+                                              : "#E8E8E8",
+                                          position: "relative",
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            position: "absolute",
+                                            right: -1,
+                                            top: -3,
+                                            fontSize: 10,
+                                            color: "#B0B0B0",
+                                          }}
+                                        >
+                                          &gt;
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <div
+                              style={{
+                                marginTop: 8,
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: 6,
+                                alignItems: "center",
+                              }}
+                            >
+                              {evolutionFrom2h !== null && (
+                                <span
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    padding: "2px 8px",
+                                    borderRadius: 20,
+                                    ...getEvolutionStyle(evolutionFrom2h),
+                                  }}
+                                >
+                                  Depuis 2h {formatSignedDelta(evolutionFrom2h)}
+                                </span>
+                              )}
+                              {evolution1hTo30m !== null && (
+                                <span
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    padding: "2px 8px",
+                                    borderRadius: 20,
+                                    ...getEvolutionStyle(evolution1hTo30m),
+                                  }}
+                                >
+                                  1h -&gt; 30m {formatSignedDelta(evolution1hTo30m)}
+                                </span>
+                              )}
+                            </div>
+                            {trendSentence && (
+                              <div
+                                style={{
+                                  marginTop: 8,
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  color: "#666",
+                                  lineHeight: "15px",
+                                }}
+                              >
+                                {trendSentence}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

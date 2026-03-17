@@ -1,52 +1,58 @@
 import { NextResponse } from "next/server";
-import { analyzeRace, getMinutesUntilStart } from "@/lib/analysis";
 import { getAllRaces, getParticipants, getTodayDateStr } from "@/lib/pmu-api";
+import { analyzeRace, getMinutesUntilStart } from "@/lib/analysis";
 
 export const dynamic = "force-dynamic";
 
-type BilanPariResultat = "GAGNANT" | "PLACE" | "PERDU" | "INCONNU";
+type BilanResultat = "GAGNANT" | "PLACE" | "PERDU" | "INCONNU";
 
-function getPariLabel(type: string) {
-  switch (type) {
-    case "SIMPLE_GAGNANT":
-      return "Simple gagnant";
-    case "COUPLE_PLACE":
-      return "Couple place";
-    case "COUPLE_GAGNANT":
-      return "Couple gagnant";
-    default:
-      return type;
-  }
+type ConfidenceBucketKey = "high" | "medium" | "low";
+
+interface BilanResult {
+  courseInfo: {
+    reunion: number;
+    course: number;
+    hippodrome: string;
+    heureDepart: string;
+    discipline: string;
+    nomCourse: string;
+  };
+  favori: {
+    numPmu: number;
+    nom: string;
+    cotePmu: number | null;
+    coteEstimee: number | null;
+  };
+  recommandation: string;
+  confiance: number;
+  resultat: BilanResultat;
+  ordreArrivee?: number | null;
 }
 
-function getPariResultat(
-  type: string,
-  ordreArrivee1?: number | null,
-  ordreArrivee2?: number | null
-): BilanPariResultat {
-  if (!ordreArrivee1) {
-    return "INCONNU";
-  }
+interface AggregateStats {
+  played: number;
+  success: number;
+}
 
-  if (type === "SIMPLE_GAGNANT") {
-    if (ordreArrivee1 === 1) return "GAGNANT";
-    if (ordreArrivee1 <= 3) return "PLACE";
-    return "PERDU";
-  }
+function createAggregate(): AggregateStats {
+  return { played: 0, success: 0 };
+}
 
-  if (!ordreArrivee2) {
-    return "INCONNU";
-  }
+function getConfidenceBucket(score: number): ConfidenceBucketKey {
+  if (score >= 7.5) return "high";
+  if (score >= 5.5) return "medium";
+  return "low";
+}
 
-  if (type === "COUPLE_PLACE") {
-    return ordreArrivee1 <= 3 && ordreArrivee2 <= 3 ? "PLACE" : "PERDU";
-  }
+function getConfidenceBucketLabel(bucket: ConfidenceBucketKey): string {
+  if (bucket === "high") return "Confiance elevee";
+  if (bucket === "medium") return "Confiance moyenne";
+  return "Confiance faible";
+}
 
-  if (type === "COUPLE_GAGNANT") {
-    return ordreArrivee1 <= 2 && ordreArrivee2 <= 2 ? "GAGNANT" : "PERDU";
-  }
-
-  return "INCONNU";
+function getSuccessRate(stats: AggregateStats): number {
+  if (stats.played === 0) return 0;
+  return Math.round((stats.success / stats.played) * 100);
 }
 
 export async function GET(request: Request) {
@@ -55,110 +61,172 @@ export async function GET(request: Request) {
 
   try {
     const races = await getAllRaces(date);
-    const results = [];
+    const results: BilanResult[] = [];
 
     for (const race of races) {
       const minutesUntil = getMinutesUntilStart(race.heureDepart);
+      if (minutesUntil >= -10) continue;
 
-      if (minutesUntil < -10) {
-        try {
-          const participants = await getParticipants(date, race.reunion, race.course);
-          const analysis = analyzeRace(race, participants);
+      try {
+        const participants = await getParticipants(date, race.reunion, race.course);
+        const analysis = analyzeRace(race, participants);
+        if (!analysis.favori) continue;
 
-          if (!analysis || !analysis.favori) {
-            continue;
-          }
+        const favoriResult = participants.find(
+          (participant) => participant.numPmu === analysis.favori?.numPmu
+        );
+        const predictedOdds = analysis.predictionsCotes[analysis.favori.numPmu];
+        const ordreArrivee = favoriResult?.ordreArrivee ?? null;
+        const resultat: BilanResultat =
+          ordreArrivee === 1
+            ? "GAGNANT"
+            : ordreArrivee !== null && ordreArrivee <= 3
+              ? "PLACE"
+              : ordreArrivee !== null
+                ? "PERDU"
+                : "INCONNU";
 
-          const paris = analysis.parisRecommandes?.length
-            ? analysis.parisRecommandes
-            : [
-                {
-                  type: "SIMPLE_GAGNANT",
-                  label: "Simple gagnant",
-                  chevaux: [{ numPmu: analysis.favori.numPmu, nom: analysis.favori.nom }],
-                  surete: analysis.scoreConfiance?.score ?? 0,
-                  coteEstimee: null,
-                },
-              ];
-
-          for (const pari of paris) {
-            const premierCheval = pari.chevaux[0];
-            const secondCheval = pari.chevaux[1] ?? null;
-            const premierResultat = participants.find((p) => p.numPmu === premierCheval?.numPmu);
-            const secondResultat = secondCheval
-              ? participants.find((p) => p.numPmu === secondCheval.numPmu)
-              : null;
-            const ordreArrivee = premierResultat?.ordreArrivee ?? null;
-            const ordreArriveeSecond = secondResultat?.ordreArrivee ?? null;
-
-            results.push({
-              courseInfo: race,
-              favori: { numPmu: premierCheval.numPmu, nom: premierCheval.nom },
-              secondCheval: secondCheval
-                ? { numPmu: secondCheval.numPmu, nom: secondCheval.nom }
-                : null,
-              typePari: getPariLabel(pari.type),
-              recommandation: pari.label || analysis.recommandation?.decision || "-",
-              confiance: pari.surete ?? analysis.scoreConfiance?.score ?? 0,
-              coteEstimee: pari.coteEstimee ?? null,
-              coteCheval: premierResultat?.cote ?? null,
-              coteSecondCheval: secondResultat?.cote ?? null,
-              resultat: getPariResultat(pari.type, ordreArrivee, ordreArriveeSecond),
-              ordreArrivee: ordreArrivee ?? undefined,
-              ordreArriveeSecond: ordreArriveeSecond ?? undefined,
-            });
-          }
-        } catch {
-          continue;
-        }
+        results.push({
+          courseInfo: {
+            reunion: race.reunion,
+            course: race.course,
+            hippodrome: race.hippodrome,
+            heureDepart: race.heureDepart,
+            discipline: race.discipline,
+            nomCourse: race.nomCourse,
+          },
+          favori: {
+            numPmu: analysis.favori.numPmu,
+            nom: analysis.favori.nom,
+            cotePmu: favoriResult?.cote ?? analysis.favori.cote ?? null,
+            coteEstimee:
+              predictedOdds?.coteEstimee ??
+              predictedOdds?.coteMatin ??
+              null,
+          },
+          recommandation: analysis.recommandation?.decision || "-",
+          confiance: analysis.scoreConfiance?.score ?? 0,
+          resultat,
+          ordreArrivee,
+        });
+      } catch {
+        // Skip failed race fetches so the bilan stays available.
       }
     }
 
-    const resolvedResults = results.filter((r) => r.resultat !== "INCONNU");
-    const totalPlayed = resolvedResults.length;
-    const wins = resolvedResults.filter((r) => r.resultat === "GAGNANT").length;
-    const places = resolvedResults.filter((r) => r.resultat === "PLACE").length;
+    results.sort((left, right) => {
+      const resultOrder: Record<BilanResultat, number> = {
+        GAGNANT: 0,
+        PLACE: 1,
+        PERDU: 2,
+        INCONNU: 3,
+      };
 
-    const simpleResults = resolvedResults.filter(
-      (r) => !(r.typePari || "").toLowerCase().includes("couple")
-    );
-    const coupleResults = resolvedResults.filter((r) =>
-      (r.typePari || "").toLowerCase().includes("couple")
-    );
-    const couplePlaceResults = resolvedResults.filter(
-      (r) => (r.typePari || "").toLowerCase() === "couple place"
-    );
-    const coupleGagnantResults = resolvedResults.filter(
-      (r) => (r.typePari || "").toLowerCase() === "couple gagnant"
-    );
+      if (resultOrder[left.resultat] !== resultOrder[right.resultat]) {
+        return resultOrder[left.resultat] - resultOrder[right.resultat];
+      }
 
-    const simplePlayed = simpleResults.length;
-    const simpleWins = simpleResults.filter((r) => r.resultat === "GAGNANT").length;
-    const simplePlaces = simpleResults.filter((r) => r.resultat === "PLACE").length;
-    const simpleSuccess = simpleWins + simplePlaces;
+      return right.confiance - left.confiance;
+    });
 
-    const couplePlayed = coupleResults.length;
-    const coupleWins = coupleResults.filter((r) => r.resultat === "GAGNANT").length;
-    const couplePlaces = coupleResults.filter((r) => r.resultat === "PLACE").length;
-    const coupleSuccess = coupleWins + couplePlaces;
+    const playedResults = results.filter((result) => result.resultat !== "INCONNU");
+    const wins = playedResults.filter((result) => result.resultat === "GAGNANT").length;
+    const places = playedResults.filter((result) => result.resultat === "PLACE").length;
+    const losses = playedResults.filter((result) => result.resultat === "PERDU").length;
 
-    const overallSuccessRate = totalPlayed > 0 ? Math.round((wins + places) / totalPlayed * 100) : 0;
-    const simpleSuccessRate = simplePlayed > 0 ? Math.round(simpleSuccess / simplePlayed * 100) : 0;
-    const coupleSuccessRate = couplePlayed > 0 ? Math.round(coupleSuccess / couplePlayed * 100) : 0;
-    const couplePlaceSuccessRate = couplePlaceResults.length > 0
-      ? Math.round(couplePlaceResults.filter((r) => r.resultat === "PLACE").length / couplePlaceResults.length * 100)
-      : 0;
-    const coupleGagnantSuccessRate = coupleGagnantResults.length > 0
-      ? Math.round(coupleGagnantResults.filter((r) => r.resultat === "GAGNANT").length / coupleGagnantResults.length * 100)
-      : 0;
+    const byDiscipline: Record<string, AggregateStats> = {};
+    const byConfidence: Record<ConfidenceBucketKey, AggregateStats> = {
+      high: createAggregate(),
+      medium: createAggregate(),
+      low: createAggregate(),
+    };
 
-    const typeRankings = [
-      { key: "Simple gagnant", played: simplePlayed, rate: simpleSuccessRate },
-      { key: "Couple place", played: couplePlaceResults.length, rate: couplePlaceSuccessRate },
-      { key: "Couple gagnant", played: coupleGagnantResults.length, rate: coupleGagnantSuccessRate },
-    ].filter((entry) => entry.played > 0);
+    for (const result of playedResults) {
+      const disciplineKey = result.courseInfo.discipline || "AUTRE";
+      if (!byDiscipline[disciplineKey]) {
+        byDiscipline[disciplineKey] = createAggregate();
+      }
 
-    const bestType = typeRankings.sort((a, b) => b.rate - a.rate)[0]?.key ?? null;
+      byDiscipline[disciplineKey].played += 1;
+      if (result.resultat === "GAGNANT" || result.resultat === "PLACE") {
+        byDiscipline[disciplineKey].success += 1;
+      }
+
+      const confidenceBucket = getConfidenceBucket(result.confiance);
+      byConfidence[confidenceBucket].played += 1;
+      if (result.resultat === "GAGNANT" || result.resultat === "PLACE") {
+        byConfidence[confidenceBucket].success += 1;
+      }
+    }
+
+    const disciplineEntries = Object.entries(byDiscipline)
+      .map(([discipline, stats]) => ({
+        discipline,
+        played: stats.played,
+        success: stats.success,
+        rate: getSuccessRate(stats),
+      }))
+      .sort((left, right) => {
+        if (right.rate !== left.rate) return right.rate - left.rate;
+        return right.played - left.played;
+      });
+
+    const confidenceEntries = (Object.keys(byConfidence) as ConfidenceBucketKey[])
+      .map((bucket) => ({
+        bucket,
+        label: getConfidenceBucketLabel(bucket),
+        played: byConfidence[bucket].played,
+        success: byConfidence[bucket].success,
+        rate: getSuccessRate(byConfidence[bucket]),
+      }))
+      .sort((left, right) => {
+        if (right.rate !== left.rate) return right.rate - left.rate;
+        return right.played - left.played;
+      });
+
+    const bestDiscipline = disciplineEntries.find((entry) => entry.played >= 2) ?? disciplineEntries[0] ?? null;
+    const worstDiscipline =
+      [...disciplineEntries]
+        .reverse()
+        .find((entry) => entry.played >= 2) ??
+      disciplineEntries[disciplineEntries.length - 1] ??
+      null;
+
+    const bestConfidenceBucket =
+      confidenceEntries.find((entry) => entry.played > 0) ?? null;
+    const worstConfidenceBucket =
+      [...confidenceEntries].reverse().find((entry) => entry.played > 0) ?? null;
+
+    const totalPlayed = playedResults.length;
+    const successRate = totalPlayed > 0 ? Math.round(((wins + places) / totalPlayed) * 100) : 0;
+
+    let healthLabel = "Journee neutre";
+    if (successRate >= 45) healthLabel = "Journee solide";
+    else if (successRate >= 30) healthLabel = "Journee correcte";
+    else if (successRate >= 20) healthLabel = "Journee fragile";
+    else healthLabel = "Journee difficile";
+
+    const insights: string[] = [];
+    if (bestDiscipline) {
+      insights.push(
+        `Le meilleur terrain du jour est ${bestDiscipline.discipline} (${bestDiscipline.rate}% de reussite sur ${bestDiscipline.played} courses).`
+      );
+    }
+    if (worstDiscipline && worstDiscipline !== bestDiscipline) {
+      insights.push(
+        `Le point faible est ${worstDiscipline.discipline} (${worstDiscipline.rate}% sur ${worstDiscipline.played} courses).`
+      );
+    }
+    if (bestConfidenceBucket) {
+      insights.push(
+        `${bestConfidenceBucket.label} est la zone la plus fiable (${bestConfidenceBucket.rate}% de reussite).`
+      );
+    }
+    if (worstConfidenceBucket && worstConfidenceBucket !== bestConfidenceBucket) {
+      insights.push(
+        `${worstConfidenceBucket.label} reste la zone la plus risquee (${worstConfidenceBucket.rate}% de reussite).`
+      );
+    }
 
     return NextResponse.json({
       success: true,
@@ -166,31 +234,27 @@ export async function GET(request: Request) {
       summary: {
         totalRaces: races.length,
         totalPlayed,
-        totalPredictions: totalPlayed,
         wins,
         places,
-        overallSuccess: wins + places,
-        overallSuccessRate,
-        simplePlayed,
-        simpleWins,
-        simplePlaces,
-        simpleSuccess,
-        simpleSuccessRate,
-        couplePlayed,
-        coupleWins,
-        couplePlaces,
-        coupleSuccess,
-        coupleSuccessRate,
-        couplePlacePlayed: couplePlaceResults.length,
-        couplePlaceSuccessRate,
-        coupleGagnantPlayed: coupleGagnantResults.length,
-        coupleGagnantSuccessRate,
-        bestType,
-        losses: totalPlayed - wins - places,
+        losses,
+        successRate,
+      },
+      expert: {
+        healthLabel,
+        bestDiscipline,
+        worstDiscipline,
+        bestConfidenceBucket,
+        worstConfidenceBucket,
+        confidenceBuckets: confidenceEntries,
+        disciplineBreakdown: disciplineEntries,
+        insights,
       },
       results,
     });
   } catch {
-    return NextResponse.json({ success: false, error: "Bilan failed" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Bilan failed" },
+      { status: 500 }
+    );
   }
 }

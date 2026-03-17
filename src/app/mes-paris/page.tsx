@@ -20,37 +20,12 @@ interface Bet {
   heure_depart: string;
   cheval_num: number;
   cheval_nom: string;
-  cheval_num_2?: number | null;
-  cheval_nom_2?: string | null;
   type_pari: string;
   mise: number;
   cote: number;
   statut: string;
   gain: number | null;
   created_at: string;
-}
-
-function getBetTypeLabel(type: string) {
-  switch (type) {
-    case "GAGNANT":
-      return "Simple gagnant";
-    case "PLACE":
-      return "Simple place";
-    case "COUPLE_GAGNANT":
-      return "Couple gagnant";
-    case "COUPLE_PLACE":
-      return "Couple place";
-    default:
-      return type;
-  }
-}
-
-function getBetSelectionLabel(bet: Bet) {
-  if (bet.cheval_num_2 && bet.cheval_nom_2) {
-    return `N${bet.cheval_num} ${bet.cheval_nom} + N${bet.cheval_num_2} ${bet.cheval_nom_2}`;
-  }
-
-  return `N${bet.cheval_num} ${bet.cheval_nom}`;
 }
 
 export default function MesParisPage() {
@@ -62,7 +37,6 @@ export default function MesParisPage() {
   const [settling, setSettling] = useState(false);
   const [user, setUser] = useState<{ email?: string } | null>(null);
   const [error, setError] = useState("");
-  const setupNeeded = error.includes("supabase-setup.sql");
 
   const fetchBets = useCallback(async () => {
     if (!supabaseConfigured) {
@@ -88,16 +62,13 @@ export default function MesParisPage() {
       if (data.success) {
         setBets(data.bets);
         setSolde(data.solde);
-        setError("");
-      } else {
-        setError(data.error || "Impossible de charger vos paris.");
       }
     } catch {
-      setError("Impossible de charger vos paris pour le moment.");
+      // silent
     } finally {
       setLoading(false);
     }
-  }, [router, supabaseConfigured]);
+  }, [router]);
 
   useEffect(() => {
     fetchBets();
@@ -118,18 +89,13 @@ export default function MesParisPage() {
     }
 
     try {
-      const res = await fetch("/api/bets/settle", {
+      await fetch("/api/bets/settle", {
         method: "POST",
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      const data = await res.json();
-      if (!data.success) {
-        setError(data.error || "Impossible de verifier les resultats.");
-        return;
-      }
       await fetchBets();
     } catch {
-      setError("Impossible de verifier les resultats.");
+      // silent
     } finally {
       setSettling(false);
     }
@@ -167,8 +133,8 @@ export default function MesParisPage() {
         maxWidth: 430,
         margin: "0 auto",
         minHeight: "100vh",
-        background: "#F5F5F5",
-        fontFamily: "system-ui, -apple-system, sans-serif",
+        background:
+          "radial-gradient(circle at top left, rgba(0,132,61,0.12), transparent 24%), linear-gradient(180deg, #F6F8F9 0%, #EDF2F3 100%)",
         paddingBottom: 80,
       }}
     >
@@ -178,8 +144,10 @@ export default function MesParisPage() {
           position: "sticky",
           top: 0,
           zIndex: 50,
-          background: DARK,
-          height: 56,
+          background: "rgba(18, 22, 26, 0.88)",
+          backdropFilter: "blur(18px)",
+          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          height: 62,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -202,15 +170,16 @@ export default function MesParisPage() {
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </div>
-        <div style={{ color: GREEN, fontWeight: 700, fontSize: 18 }}>Mes Paris</div>
+        <div style={{ color: "#22c55e", fontWeight: 800, fontSize: 19, letterSpacing: "-0.3px" }}>Mes Paris</div>
         <div
           onClick={handleLogout}
           style={{
             position: "absolute",
             right: 16,
-            color: "#888",
+            color: "rgba(255,255,255,0.58)",
             fontSize: 12,
             cursor: "pointer",
+            fontWeight: 700,
           }}
         >
           Déconnexion
@@ -220,66 +189,41 @@ export default function MesParisPage() {
       {loading ? (
         <div style={{ textAlign: "center", padding: 60, color: "#888" }}>Chargement...</div>
       ) : error ? (
-        <div style={{ margin: "16px", display: "flex", flexDirection: "column", gap: 12 }}>
-          <div
-            style={{
-              background: "#FFF3CD",
-              color: "#856404",
-              padding: "16px",
-              borderRadius: 12,
-              fontSize: 14,
-              fontWeight: 500,
-            }}
-          >
-            {error}
-          </div>
-
-          {setupNeeded && (
-            <div
-              style={{
-                background: "#fff",
-                borderRadius: 12,
-                padding: "16px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-                color: DARK,
-              }}
-            >
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>
-                Etapes a faire dans Supabase
-              </div>
-              <div style={{ fontSize: 13, color: "#666", lineHeight: 1.6 }}>
-                1. Ouvrez Supabase
-                <br />
-                2. Allez dans SQL Editor
-                <br />
-                3. Collez le fichier supabase-setup.sql
-                <br />
-                4. Executez le script
-                <br />
-                5. Revenez ici et rechargez la page
-              </div>
-            </div>
-          )}
+        <div
+          style={{
+            margin: "16px",
+            background: "#FFF3CD",
+            color: "#856404",
+            padding: "16px",
+            borderRadius: 12,
+            fontSize: 14,
+            fontWeight: 500,
+          }}
+        >
+          {error}
         </div>
       ) : (
         <>
           {/* Profile card */}
           <div
             style={{
-              background: "linear-gradient(135deg, #00843D, #006B31)",
-              borderRadius: 16,
-              margin: "12px 16px",
-              padding: 20,
+              background:
+                "radial-gradient(circle at top right, rgba(255,255,255,0.16), transparent 30%), linear-gradient(135deg, #0a8f4d, #066737)",
+              borderRadius: 28,
+              margin: "14px 16px",
+              padding: 22,
               color: "#fff",
+              boxShadow: "0 24px 48px rgba(0,132,61,0.24)",
+              border: "1px solid rgba(255,255,255,0.12)",
             }}
           >
             <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 4 }}>
               {user?.email}
             </div>
-            <div style={{ fontSize: 36, fontWeight: 700, marginBottom: 4 }}>
+            <div style={{ fontSize: 40, fontWeight: 800, marginBottom: 6, letterSpacing: "-1px" }}>
               {solde}€
             </div>
-            <div style={{ fontSize: 13, opacity: 0.9 }}>
+            <div style={{ fontSize: 14, opacity: 0.92, fontWeight: 600 }}>
               {bets.length} paris · {wonCount} gagnés · {placedCount} placés
             </div>
           </div>
@@ -303,13 +247,14 @@ export default function MesParisPage() {
                 key={s.label}
                 style={{
                   background: "#fff",
-                  borderRadius: 12,
-                  padding: "12px 8px",
+                  borderRadius: 18,
+                  padding: "14px 8px",
                   textAlign: "center",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                  boxShadow: "0 14px 28px rgba(15,23,42,0.07)",
+                  border: "1px solid rgba(15,23,42,0.05)",
                 }}
               >
-                <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.value}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: s.color, letterSpacing: "-0.4px" }}>{s.value}</div>
                 <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>{s.label}</div>
               </div>
             ))}
@@ -323,14 +268,15 @@ export default function MesParisPage() {
                 disabled={settling}
                 style={{
                   width: "100%",
-                  padding: "14px",
-                  borderRadius: 12,
+                  padding: "16px",
+                  borderRadius: 16,
                   border: "none",
                   background: settling ? "#999" : "#FF9800",
                   color: "#fff",
                   fontSize: 14,
-                  fontWeight: 700,
+                  fontWeight: 800,
                   cursor: settling ? "not-allowed" : "pointer",
+                  boxShadow: "0 16px 28px rgba(255,152,0,0.24)",
                 }}
               >
                 {settling ? "Vérification..." : `Vérifier les résultats (${pendingCount} en attente)`}
@@ -366,10 +312,11 @@ export default function MesParisPage() {
                     key={bet.id}
                     style={{
                       background: "#fff",
-                      borderRadius: 12,
+                      borderRadius: 18,
                       padding: 16,
                       marginBottom: 8,
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                      boxShadow: "0 14px 28px rgba(15,23,42,0.07)",
+                      border: "1px solid rgba(15,23,42,0.05)",
                     }}
                   >
                     <div
@@ -424,10 +371,10 @@ export default function MesParisPage() {
                       </div>
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 15, color: DARK }}>
-                          {getBetSelectionLabel(bet)}
+                          {bet.cheval_nom}
                         </div>
                         <div style={{ fontSize: 12, color: "#888" }}>
-                          {getBetTypeLabel(bet.type_pari)} · Cote {bet.cote} · Mise {bet.mise}€
+                          {bet.type_pari} · Cote {bet.cote} · Mise {bet.mise}€
                         </div>
                       </div>
                     </div>
@@ -463,9 +410,11 @@ export default function MesParisPage() {
           width: "100%",
           maxWidth: 430,
           zIndex: 50,
-          background: "#fff",
-          borderTop: "1px solid #eee",
-          height: 64,
+          background: "rgba(255,255,255,0.92)",
+          backdropFilter: "blur(18px)",
+          borderTop: "1px solid rgba(15,23,42,0.08)",
+          boxShadow: "0 -14px 30px rgba(15,23,42,0.08)",
+          height: 70,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-around",
