@@ -10,7 +10,8 @@
     "learn:backfill": "tsx scripts/backfill-learning.ts",
     "learn:train": "tsx scripts/retrain-weights.ts",
     "learn:month": "tsx scripts/backfill-learning.ts --days=30 && tsx scripts/retrain-weights.ts --days=30",
-    "learn:year": "tsx scripts/backfill-learning.ts --days=365 && tsx scripts/retrain-weights.ts --days=365"
+    "learn:year": "tsx scripts/backfill-learning.ts --days=365 && tsx scripts/retrain-weights.ts --days=365",
+    "learn:3years": "tsx scripts/backfill-learning.ts --days=1095 && tsx scripts/retrain-weights.ts --days=1095"
   },
   "dependencies": {
     "@supabase/ssr": "^0.9.0",

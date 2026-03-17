@@ -31,7 +31,7 @@ function parseDaysArg() {
   const fromEnv = process.env.LEARN_DAYS;
   const parsed = Number(fromInline ?? fromPair ?? fromEnv ?? 365);
   if (!Number.isFinite(parsed) || parsed <= 0) return 365;
-  return Math.min(parsed, 365);
+  return Math.min(parsed, 1095);
 }
 
 function getDateFloor(days: number) {
