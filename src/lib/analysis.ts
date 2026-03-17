@@ -761,6 +761,21 @@ function getDrawRating(
   return clamp(0.35 + normalized * 0.65, 0.2, 1);
 }
 
+function getMarketTrustRating(cote: number | null) {
+  if (cote === null || !Number.isFinite(cote) || cote <= 0) {
+    return 0.55;
+  }
+
+  if (cote <= 3.5) return 1;
+  if (cote <= 6) return 0.92;
+  if (cote <= 10) return 0.82;
+  if (cote <= 15) return 0.7;
+  if (cote <= 25) return 0.54;
+  if (cote <= 40) return 0.36;
+  if (cote <= 60) return 0.24;
+  return 0.14;
+}
+
 function getRunnerSignals(
   runner: ScoredParticipant,
   topScore: number,
@@ -777,36 +792,43 @@ function getRunnerSignals(
   const recentWinBoost = stats?.recentPositions?.slice(-3).includes(1) ? 1 : 0;
   const drawRating = getDrawRating(runner, estPlat, nombrePartants);
   const valueIndex = valueTop5[runner.numPmu]?.valueIndex ?? 1;
+  const marketTrust = getMarketTrustRating(runner.cote);
 
   const podiumChance = clamp(
     scoreRatio * 0.28 +
-      fiabilite * 0.22 +
-      ratioForme * 0.2 +
-      podiumRate * 0.18 +
-      drawRating * 0.12,
+      fiabilite * 0.2 +
+      ratioForme * 0.18 +
+      podiumRate * 0.15 +
+      drawRating * 0.1 +
+      marketTrust * 0.09,
     0.08,
     0.88
   );
 
   const winChance = clamp(
-    scoreRatio * 0.34 +
-      fiabilite * 0.12 +
-      ratioForme * 0.16 +
-      winRate * 0.16 +
+    scoreRatio * 0.3 +
+      fiabilite * 0.1 +
+      ratioForme * 0.15 +
+      winRate * 0.15 +
       recentWinBoost * 0.12 +
-      drawRating * 0.1,
+      drawRating * 0.08 +
+      marketTrust * 0.1,
     0.04,
     0.8
   );
 
   const safetyScore = clamp(
-    podiumChance * 5.8 + fiabilite * 1.7 + ratioForme * 1.5 + drawRating,
+    podiumChance * 5.5 + fiabilite * 1.6 + ratioForme * 1.3 + drawRating + marketTrust * 0.8,
     0,
     10
   );
 
   const attackScore = clamp(
-    winChance * 6.2 + scoreRatio * 2 + recentWinBoost * 0.8 + Math.min(valueIndex, 2.2) * 0.4,
+    winChance * 5.9 +
+      scoreRatio * 1.9 +
+      recentWinBoost * 0.8 +
+      Math.min(valueIndex, 2.2) * 0.25 +
+      marketTrust * 1.1,
     0,
     10
   );
@@ -817,6 +839,7 @@ function getRunnerSignals(
     fiabilite,
     ratioForme,
     drawRating,
+    marketTrust,
     valueIndex,
     safetyScore,
     attackScore,
@@ -949,8 +972,16 @@ export function buildBetRecommendations(
     runnerSignals
       .slice()
       .sort((a, b) => {
-        const aWeight = a.signals.winChance * 0.52 + a.signals.podiumChance * 0.22 + (a.runner.numPmu === favori.numPmu ? 0.08 : 0);
-        const bWeight = b.signals.winChance * 0.52 + b.signals.podiumChance * 0.22 + (b.runner.numPmu === favori.numPmu ? 0.08 : 0);
+        const aWeight =
+          a.signals.winChance * 0.44 +
+          a.signals.podiumChance * 0.2 +
+          a.signals.marketTrust * 0.22 +
+          (a.runner.numPmu === favori.numPmu ? 0.08 : 0);
+        const bWeight =
+          b.signals.winChance * 0.44 +
+          b.signals.podiumChance * 0.2 +
+          b.signals.marketTrust * 0.22 +
+          (b.runner.numPmu === favori.numPmu ? 0.08 : 0);
         return bWeight - aWeight;
       })[0]?.runner || profils.beton || favori;
 
