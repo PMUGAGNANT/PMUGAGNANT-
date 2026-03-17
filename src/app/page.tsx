@@ -33,6 +33,11 @@ interface RaceScoreMeta {
     numPmu: number;
     nom: string;
   } | null;
+  finishedInfo?: {
+    arrivalTop3: number[];
+    simpleOutcome: "GAGNANT" | "PLACE" | "PERDU";
+    recommendedArrival: number | null;
+  } | null;
 }
 
 interface ScoreHistoryEntry {
@@ -193,6 +198,30 @@ function getSimpleDisplayMeta(profile: SimpleDisplayProfile) {
     amountPrefix: "Rapport possible",
     note: "Rapport tres eleve: a lire comme un coup speculatif, pas comme une base normale.",
     noteColor: "#8A5A00",
+  };
+}
+
+function getOutcomeStyle(outcome: "GAGNANT" | "PLACE" | "PERDU") {
+  if (outcome === "GAGNANT") {
+    return {
+      background: "#E8F5E9",
+      color: "#0F7A3C",
+      border: "1px solid rgba(15,122,60,0.14)",
+    };
+  }
+
+  if (outcome === "PLACE") {
+    return {
+      background: "#FFF8E1",
+      color: "#A66B00",
+      border: "1px solid rgba(212,160,23,0.20)",
+    };
+  }
+
+  return {
+    background: "#FDECEA",
+    color: "#C0392B",
+    border: "1px solid rgba(231,76,60,0.16)",
   };
 }
 
@@ -937,6 +966,7 @@ export default function Home() {
               const scoreStage = scoreMeta?.stage;
               const simpleReturn1Euro = scoreMeta?.simpleReturn1Euro;
               const simpleHorse = scoreMeta?.simpleHorse;
+              const finishedInfo = scoreMeta?.finishedInfo;
               const simpleProfile = getSimpleDisplayProfile(
                 confScore,
                 simpleReturn1Euro
@@ -1254,7 +1284,91 @@ export default function Home() {
                               </div>
                             </div>
                           )}
-                        {(note2h !== undefined ||
+                        {isFinished && finishedInfo && simpleHorse ? (
+                          <div
+                            style={{
+                              marginTop: 10,
+                              padding: 12,
+                              borderRadius: 14,
+                              background: "#FAFAFA",
+                              border: "1px solid #EEEEEE",
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color: "#666",
+                                marginBottom: 8,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.3px",
+                              }}
+                            >
+                              Arrivee officielle
+                            </div>
+                            <div
+                              style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: 6,
+                                alignItems: "center",
+                                marginBottom: 8,
+                              }}
+                            >
+                              {finishedInfo.arrivalTop3.map((horseNumber, index) => (
+                                <span
+                                  key={`${raceKey}-arrival-${horseNumber}`}
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 5,
+                                    padding: "5px 9px",
+                                    borderRadius: 999,
+                                    background: index === 0 ? "#EEF8FF" : "#F5F5F5",
+                                    color: index === 0 ? "#0F5EA8" : "#555",
+                                    fontSize: 12,
+                                    fontWeight: 800,
+                                  }}
+                                >
+                                  <span>{index + 1}e</span>
+                                  <span>N{horseNumber}</span>
+                                </span>
+                              ))}
+                            </div>
+                            <div
+                              style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: 8,
+                                alignItems: "center",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  padding: "5px 10px",
+                                  borderRadius: 999,
+                                  fontSize: 11,
+                                  fontWeight: 800,
+                                  ...getOutcomeStyle(finishedInfo.simpleOutcome),
+                                }}
+                              >
+                                {finishedInfo.simpleOutcome}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: 12,
+                                  color: "#4B5563",
+                                  fontWeight: 700,
+                                }}
+                              >
+                                N{simpleHorse.numPmu} {simpleHorse.nom}
+                                {finishedInfo.recommendedArrival !== null
+                                  ? ` -> arrivee ${finishedInfo.recommendedArrival}e`
+                                  : " -> arrivee inconnue"}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (note2h !== undefined ||
                           note1h !== undefined ||
                           note30m !== undefined) && (
                           <div

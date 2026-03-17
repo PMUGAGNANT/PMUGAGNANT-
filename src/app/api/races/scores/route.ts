@@ -19,6 +19,11 @@ export async function GET() {
           numPmu: number;
           nom: string;
         } | null;
+        finishedInfo: {
+          arrivalTop3: number[];
+          simpleOutcome: 'GAGNANT' | 'PLACE' | 'PERDU';
+          recommendedArrival: number | null;
+        } | null;
       }
     > = {};
 
@@ -53,6 +58,24 @@ export async function GET() {
           const simpleRecommendation = analysis.parisRecommandes.find(
             (pari) => pari.type === 'SIMPLE_GAGNANT'
           );
+          const arrivalTop3 = participants
+            .filter((participant) => participant.ordreArrivee && participant.ordreArrivee > 0)
+            .sort((a, b) => (a.ordreArrivee ?? 99) - (b.ordreArrivee ?? 99))
+            .slice(0, 3)
+            .map((participant) => participant.numPmu);
+          const recommendedParticipant = simpleRecommendation?.chevaux?.[0]
+            ? participants.find(
+                (participant) =>
+                  participant.numPmu === simpleRecommendation.chevaux[0].numPmu
+              ) ?? null
+            : null;
+          const recommendedArrival = recommendedParticipant?.ordreArrivee ?? null;
+          const simpleOutcome: 'GAGNANT' | 'PLACE' | 'PERDU' =
+            recommendedArrival === 1
+              ? 'GAGNANT'
+              : recommendedArrival !== null && recommendedArrival <= 3
+                ? 'PLACE'
+                : 'PERDU';
 
           return {
             key,
@@ -70,6 +93,14 @@ export async function GET() {
                     nom: simpleRecommendation.chevaux[0].nom,
                   }
                 : null,
+            finishedInfo:
+              stage === 'finished' && simpleRecommendation?.chevaux?.[0]
+                ? {
+                    arrivalTop3,
+                    simpleOutcome,
+                    recommendedArrival,
+                  }
+                : null,
           };
         })
       );
@@ -80,6 +111,7 @@ export async function GET() {
             stage: result.value.stage,
             simpleReturn1Euro: result.value.simpleReturn1Euro,
             simpleHorse: result.value.simpleHorse,
+            finishedInfo: result.value.finishedInfo,
           };
         }
       }
