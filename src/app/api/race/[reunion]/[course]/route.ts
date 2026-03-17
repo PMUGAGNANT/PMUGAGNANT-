@@ -1,8 +1,29 @@
 import { NextResponse } from 'next/server';
 import { getParticipants, getAllRaces, getTodayDateStr } from '@/lib/pmu-api';
-import { analyzeRace, getMinutesUntilStart } from '@/lib/analysis';
+import { analyzeRace } from '@/lib/analysis';
 
 export const dynamic = 'force-dynamic';
+
+function getParisNow(): Date {
+  return new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Europe/Paris" })
+  );
+}
+
+function parseDateStr(dateStr: string): Date {
+  const day = Number(dateStr.slice(0, 2));
+  const month = Number(dateStr.slice(2, 4)) - 1;
+  const year = Number(dateStr.slice(4, 8));
+  return new Date(year, month, day);
+}
+
+function getMinutesUntilStartForDate(dateStr: string, heureDepart: string): number {
+  const [hours, minutes] = heureDepart.split(":").map(Number);
+  const parisNow = getParisNow();
+  const target = parseDateStr(dateStr);
+  target.setHours(hours, minutes, 0, 0);
+  return (target.getTime() - parisNow.getTime()) / 60000;
+}
 
 export async function GET(
   request: Request,
@@ -27,7 +48,7 @@ export async function GET(
     const participants = await getParticipants(date, rNum, cNum);
 
     // Check if pronostic should be revealed (30 min before start)
-    const minutesUntil = getMinutesUntilStart(courseInfo.heureDepart);
+    const minutesUntil = getMinutesUntilStartForDate(date, courseInfo.heureDepart);
     const isFinished = minutesUntil < -10; // Consider finished 10 min after start
     const pronoAvailable = minutesUntil <= 30;
 

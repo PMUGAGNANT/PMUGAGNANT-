@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
 import {
   getSupabaseBrowserClient,
@@ -162,6 +162,27 @@ function formatWeight(poids?: number | null): string | null {
   return `${poids.toFixed(1).replace(".", ",")} kg`;
 }
 
+function getParisNow(): Date {
+  return new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Europe/Paris" })
+  );
+}
+
+function getTodayDateStrClient(): string {
+  const now = getParisNow();
+  const day = String(now.getDate()).padStart(2, "0");
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const year = String(now.getFullYear());
+  return `${day}${month}${year}`;
+}
+
+function parseDateStr(dateStr: string): Date {
+  const day = Number(dateStr.slice(0, 2));
+  const month = Number(dateStr.slice(2, 4)) - 1;
+  const year = Number(dateStr.slice(4, 8));
+  return new Date(year, month, day);
+}
+
 /* ------------------------------------------------------------------ */
 /*  SVG Confidence Gauge                                               */
 /* ------------------------------------------------------------------ */
@@ -253,9 +274,11 @@ function Skeleton() {
 export default function CourseDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabaseConfigured = hasSupabaseConfig();
   const reunion = params.reunion as string;
   const course = params.course as string;
+  const selectedDate = searchParams.get("date") || getTodayDateStrClient();
 
   const [data, setData] = useState<APIResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -273,7 +296,7 @@ export default function CourseDetailPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await fetch(`/api/race/${reunion}/${course}`);
+      const res = await fetch(`/api/race/${reunion}/${course}?date=${selectedDate}`);
       const json: APIResponse = await res.json();
       setData(json);
     } catch {
@@ -281,7 +304,7 @@ export default function CourseDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [reunion, course]);
+  }, [reunion, course, selectedDate]);
 
   useEffect(() => {
     fetchData();
@@ -294,13 +317,12 @@ export default function CourseDetailPage() {
       return;
     }
 
-    const heureDepart = data.courseInfo.heureDepart;
-    const [h, m] = heureDepart.split(":").map(Number);
+    const courseInfo = data.courseInfo;
 
     function tick() {
-      const now = new Date();
-      const parisNow = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Paris" }));
-      const target = new Date(parisNow);
+      const parisNow = getParisNow();
+      const [h, m] = courseInfo.heureDepart.split(":").map(Number);
+      const target = parseDateStr(selectedDate);
       target.setHours(h, m, 0, 0);
       // Prono available 30 min before
       const unlockTime = new Date(target.getTime() - 30 * 60 * 1000);
@@ -326,7 +348,7 @@ export default function CourseDetailPage() {
     return () => {
       if (countdownRef.current) clearInterval(countdownRef.current);
     };
-  }, [data, fetchData]);
+  }, [data, fetchData, selectedDate]);
 
   /* ---------------------------------------------------------------- */
   /*  Shared styles                                                    */

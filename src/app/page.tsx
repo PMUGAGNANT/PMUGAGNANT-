@@ -48,33 +48,67 @@ interface ScoreHistoryEntry {
 
 const SCORE_HISTORY_STORAGE_KEY = "pmu_score_history_v2";
 const SORT_MODE_STORAGE_KEY = "pmu_sort_mode_v1";
+const DATE_STORAGE_KEY = "pmu_selected_date_v1";
 
-function getMinutesUntilStart(heureDepart: string): number {
-  const [hours, minutes] = heureDepart.split(":").map(Number);
-  const now = new Date();
-  const parisNow = new Date(
-    now.toLocaleString("en-US", { timeZone: "Europe/Paris" })
+function getParisNow(): Date {
+  return new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Europe/Paris" })
   );
-  const parisTarget = new Date(parisNow);
+}
+
+function parseDateStr(dateStr: string): Date {
+  const day = Number(dateStr.slice(0, 2));
+  const month = Number(dateStr.slice(2, 4)) - 1;
+  const year = Number(dateStr.slice(4, 8));
+  return new Date(year, month, day);
+}
+
+function formatDateStrToInput(dateStr: string): string {
+  return `${dateStr.slice(4, 8)}-${dateStr.slice(2, 4)}-${dateStr.slice(0, 2)}`;
+}
+
+function formatInputToDateStr(value: string): string {
+  const [year, month, day] = value.split("-");
+  return `${day}${month}${year}`;
+}
+
+function shiftDateStr(dateStr: string, days: number): string {
+  const date = parseDateStr(dateStr);
+  date.setDate(date.getDate() + days);
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = String(date.getFullYear());
+  return `${day}${month}${year}`;
+}
+
+function getTodayDateStrClient(): string {
+  const now = getParisNow();
+  const day = String(now.getDate()).padStart(2, "0");
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const year = String(now.getFullYear());
+  return `${day}${month}${year}`;
+}
+
+function getMinutesUntilStart(dateStr: string, heureDepart: string): number {
+  const [hours, minutes] = heureDepart.split(":").map(Number);
+  const parisNow = getParisNow();
+  const parisTarget = parseDateStr(dateStr);
   parisTarget.setHours(hours, minutes, 0, 0);
   const diffMs = parisTarget.getTime() - parisNow.getTime();
   return diffMs / 60000;
 }
 
-function getRaceStatus(heureDepart: string): RaceStatus {
-  const min = getMinutesUntilStart(heureDepart);
+function getRaceStatus(dateStr: string, heureDepart: string): RaceStatus {
+  const min = getMinutesUntilStart(dateStr, heureDepart);
   if (min < -10) return "finished";
   if (min <= 30) return "prono_available";
   return "upcoming";
 }
 
-function getSecondsUntilStart(heureDepart: string): number {
+function getSecondsUntilStart(dateStr: string, heureDepart: string): number {
   const [hours, minutes] = heureDepart.split(":").map(Number);
-  const now = new Date();
-  const parisNow = new Date(
-    now.toLocaleString("en-US", { timeZone: "Europe/Paris" })
-  );
-  const parisTarget = new Date(parisNow);
+  const parisNow = getParisNow();
+  const parisTarget = parseDateStr(dateStr);
   parisTarget.setHours(hours, minutes, 0, 0);
   return Math.round((parisTarget.getTime() - parisNow.getTime()) / 1000);
 }
@@ -287,7 +321,7 @@ function getTrendSentence(
   return "";
 }
 
-function getFrenchDate(): string {
+function getFrenchDate(dateStr?: string): string {
   const days = [
     "Dimanche",
     "Lundi",
@@ -311,9 +345,7 @@ function getFrenchDate(): string {
     "Novembre",
     "Décembre",
   ];
-  const now = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Europe/Paris" })
-  );
+  const now = dateStr ? parseDateStr(dateStr) : getParisNow();
   return `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]}`;
 }
 
@@ -341,6 +373,7 @@ export default function Home() {
   >({});
   const [scoresLoading, setScoresLoading] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>("time");
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayDateStrClient());
 
   // Load saved filter from localStorage
   useEffect(() => {
@@ -357,6 +390,10 @@ export default function Home() {
       if (savedSortMode) {
         setSortMode(savedSortMode);
       }
+      const savedDate = localStorage.getItem(DATE_STORAGE_KEY);
+      if (savedDate && /^\d{8}$/.test(savedDate)) {
+        setSelectedDate(savedDate);
+      }
     } catch { /* silent */ }
   }, []);
 
@@ -371,7 +408,7 @@ export default function Home() {
 
   const fetchRaces = useCallback(async () => {
     try {
-      const res = await fetch("/api/races");
+      const res = await fetch(`/api/races?date=${selectedDate}`);
       const data = await res.json();
       if (data.success && data.races) {
         setRaces(data.races);
@@ -381,20 +418,20 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedDate]);
 
   // Fetch confidence scores (once)
   const fetchScores = useCallback(async () => {
     setScoresLoading(true);
     try {
-      const res = await fetch("/api/races/scores");
+      const res = await fetch(`/api/races/scores?date=${selectedDate}`);
       const data = await res.json();
       if (data.success && data.scores) {
         setScores(data.scores);
       }
     } catch { /* silent */ }
     setScoresLoading(false);
-  }, []);
+  }, [selectedDate]);
 
   // Initial fetch + 60s interval
   useEffect(() => {
@@ -479,6 +516,16 @@ export default function Home() {
     }
   };
 
+  const handleDateChange = (nextDate: string) => {
+    setSelectedDate(nextDate);
+    setLoading(true);
+    try {
+      localStorage.setItem(DATE_STORAGE_KEY, nextDate);
+    } catch {
+      // silent
+    }
+  };
+
   // Sort races by departure time
   const baseSortedRaces = [...races].sort((a, b) => {
     const [ah, am] = a.heureDepart.split(":").map(Number);
@@ -493,7 +540,7 @@ export default function Home() {
         const score = scores[key]?.score;
         // Keep upcoming races (no score yet) + races matching filter
         if (score === undefined) {
-          const status = getRaceStatus(race.heureDepart);
+          const status = getRaceStatus(race.dateStr, race.heureDepart);
           return status === "upcoming"; // show upcoming, hide analyzed without score
         }
         return score >= minConfiance;
@@ -505,8 +552,8 @@ export default function Home() {
     const bKey = `${b.reunion}-${b.course}`;
     const aScore = scores[aKey]?.score ?? -1;
     const bScore = scores[bKey]?.score ?? -1;
-    const aMinutes = getMinutesUntilStart(a.heureDepart);
-    const bMinutes = getMinutesUntilStart(b.heureDepart);
+    const aMinutes = getMinutesUntilStart(a.dateStr, a.heureDepart);
+    const bMinutes = getMinutesUntilStart(b.dateStr, b.heureDepart);
 
     if (sortMode === "confidence") {
       if (bScore !== aScore) return bScore - aScore;
@@ -533,7 +580,7 @@ export default function Home() {
   const reunionSet = new Set(races.map((r) => r.reunion));
   const totalReunions = reunionSet.size;
   const pronoCount = races.filter(
-    (r) => getRaceStatus(r.heureDepart) === "prono_available"
+    (r) => getRaceStatus(r.dateStr, r.heureDepart) === "prono_available"
   ).length;
   const analysedCount = Object.keys(scores).length;
   const radarRace = [...filteredRaces]
@@ -544,14 +591,14 @@ export default function Home() {
       const aScore = scores[aKey]?.score ?? 0;
       const bScore = scores[bKey]?.score ?? 0;
       if (bScore !== aScore) return bScore - aScore;
-      return getMinutesUntilStart(a.heureDepart) - getMinutesUntilStart(b.heureDepart);
+      return getMinutesUntilStart(a.dateStr, a.heureDepart) - getMinutesUntilStart(b.dateStr, b.heureDepart);
     })[0];
   const spotlightRace = radarRace ?? filteredRaces[0] ?? null;
 
   const handleCardClick = (race: RaceSummary) => {
-    const status = getRaceStatus(race.heureDepart);
+    const status = getRaceStatus(race.dateStr, race.heureDepart);
     if (status === "prono_available" || status === "finished") {
-      router.push(`/course/${race.reunion}/${race.course}`);
+      router.push(`/course/${race.reunion}/${race.course}?date=${race.dateStr}`);
     }
   };
 
@@ -639,7 +686,7 @@ export default function Home() {
           }}
         />
         <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 4 }}>
-          Aujourd&apos;hui
+          {selectedDate === getTodayDateStrClient() ? "Aujourd&apos;hui" : "Jour analyse"}
         </div>
         <div
           style={{
@@ -650,7 +697,7 @@ export default function Home() {
             letterSpacing: "-0.2px",
           }}
         >
-          {getFrenchDate()}
+          {getFrenchDate(selectedDate)}
         </div>
         <div
           style={{
@@ -704,6 +751,74 @@ export default function Home() {
             </span>
           </div>
         )}
+      </div>
+
+      <div
+        style={{
+          margin: "0 16px 14px",
+          padding: 14,
+          borderRadius: 20,
+          background: "rgba(255,255,255,0.92)",
+          border: "1px solid rgba(15,23,42,0.06)",
+          boxShadow: "0 12px 26px rgba(15,23,42,0.06)",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          onClick={() => handleDateChange(shiftDateStr(selectedDate, -1))}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 14,
+            border: "1px solid rgba(15,23,42,0.08)",
+            background: "#FFFFFF",
+            fontSize: 18,
+            fontWeight: 800,
+            color: "#334155",
+            cursor: "pointer",
+          }}
+        >
+          ←
+        </button>
+        <div style={{ flex: 1, minWidth: 180 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.22px", marginBottom: 4 }}>
+            Calendrier algo
+          </div>
+          <input
+            type="date"
+            value={formatDateStrToInput(selectedDate)}
+            onChange={(event) => handleDateChange(formatInputToDateStr(event.target.value))}
+            style={{
+              width: "100%",
+              border: "1px solid rgba(15,23,42,0.08)",
+              borderRadius: 12,
+              padding: "10px 12px",
+              fontSize: 14,
+              fontWeight: 700,
+              color: "#111827",
+              background: "#FFFFFF",
+            }}
+          />
+        </div>
+        <button
+          onClick={() => handleDateChange(shiftDateStr(selectedDate, 1))}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 14,
+            border: "1px solid rgba(15,23,42,0.08)",
+            background: "#FFFFFF",
+            fontSize: 18,
+            fontWeight: 800,
+            color: "#334155",
+            cursor: "pointer",
+          }}
+        >
+          →
+        </button>
       </div>
 
       {spotlightRace && (
@@ -954,8 +1069,8 @@ export default function Home() {
               </div>
             </div>
             {filteredRaces.map((race) => {
-              const status = getRaceStatus(race.heureDepart);
-              const secondsUntil = getSecondsUntilStart(race.heureDepart);
+              const status = getRaceStatus(race.dateStr, race.heureDepart);
+              const secondsUntil = getSecondsUntilStart(race.dateStr, race.heureDepart);
               const isProno = status === "prono_available";
               const isFinished = status === "finished";
               const isUpcoming = status === "upcoming";
@@ -1250,11 +1365,13 @@ export default function Home() {
                             <div
                               style={{
                                 marginTop: 10,
-                                padding: 14,
-                                borderRadius: 18,
-                                background: simpleDisplayMeta.panelBackground,
+                                padding: 15,
+                                borderRadius: 20,
+                                background:
+                                  "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,251,253,0.98) 100%)",
                                 border: simpleDisplayMeta.panelBorder,
-                                boxShadow: "0 10px 24px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.55)",
+                                boxShadow:
+                                  "0 10px 22px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.78)",
                               }}
                             >
                               <div
@@ -1274,7 +1391,7 @@ export default function Home() {
                                       fontWeight: 800,
                                       color: simpleDisplayMeta.tagColor,
                                       textTransform: "uppercase",
-                                      letterSpacing: "0.25px",
+                                  letterSpacing: "0.25px",
                                     }}
                                   >
                                     {simpleDisplayMeta.title}
@@ -1293,13 +1410,13 @@ export default function Home() {
                                 </div>
                                 <span
                                   style={{
-                                    padding: "5px 9px",
+                                    padding: "6px 10px",
                                     borderRadius: 999,
                                     fontSize: 11,
                                     fontWeight: 800,
-                                    background: "rgba(255,255,255,0.78)",
+                                    background: simpleDisplayMeta.tagBackground,
                                     color: simpleDisplayMeta.tagColor,
-                                    border: "1px solid rgba(255,255,255,0.58)",
+                                    border: "1px solid rgba(15,23,42,0.06)",
                                   }}
                                 >
                                   1EUR -&gt; {formatEuroReturn(simpleReturn1Euro)}
@@ -1307,11 +1424,11 @@ export default function Home() {
                               </div>
                               <div
                                 style={{
-                                  fontSize: 16,
+                                  fontSize: 17,
                                   fontWeight: 800,
                                   color: "#16324F",
-                                  lineHeight: "20px",
-                                  letterSpacing: "-0.2px",
+                                  lineHeight: "22px",
+                                  letterSpacing: "-0.25px",
                                 }}
                               >
                                 N{simpleHorse.numPmu} {simpleHorse.nom}
@@ -1319,20 +1436,19 @@ export default function Home() {
                               <div
                                 style={{
                                   marginTop: 10,
-                                  paddingTop: 10,
-                                  borderTop: "1px solid rgba(15,23,42,0.06)",
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                  alignItems: "center",
+                                  padding: "10px 12px",
+                                  borderRadius: 14,
+                                  background: "rgba(15,23,42,0.03)",
+                                  display: "grid",
+                                  gridTemplateColumns: "1fr",
                                   gap: 10,
-                                  flexWrap: "wrap",
                                 }}
                               >
                                 <div
                                   style={{
                                     fontSize: 12,
                                     fontWeight: 800,
-                                    color: "#274C77",
+                                    color: simpleDisplayMeta.tagColor,
                                     lineHeight: "17px",
                                   }}
                                 >
@@ -1344,8 +1460,6 @@ export default function Home() {
                                     lineHeight: "16px",
                                     color: simpleDisplayMeta.noteColor,
                                     fontWeight: 700,
-                                    textAlign: "right",
-                                    maxWidth: 180,
                                   }}
                                 >
                                   {simpleDisplayMeta.note}
@@ -1357,12 +1471,13 @@ export default function Home() {
                           <div
                             style={{
                               marginTop: 10,
-                              padding: 14,
-                              borderRadius: 18,
+                              padding: 15,
+                              borderRadius: 20,
                               background:
                                 "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,251,0.98) 100%)",
                               border: "1px solid rgba(15,23,42,0.08)",
-                              boxShadow: "0 10px 24px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.6)",
+                              boxShadow:
+                                "0 10px 22px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.72)",
                             }}
                           >
                             <div
@@ -1440,8 +1555,9 @@ export default function Home() {
                             </div>
                             <div
                               style={{
-                                paddingTop: 10,
-                                borderTop: "1px solid rgba(15,23,42,0.06)",
+                                padding: "10px 12px",
+                                borderRadius: 14,
+                                background: "rgba(15,23,42,0.03)",
                                 fontSize: 12,
                                 color: "#4B5563",
                                 fontWeight: 700,
@@ -1462,11 +1578,13 @@ export default function Home() {
                           <div
                             style={{
                               marginTop: 10,
-                              padding: 14,
-                              borderRadius: 18,
-                              background: "#FAFAFA",
-                              border: "1px solid #EEEEEE",
-                              boxShadow: "0 10px 24px rgba(15,23,42,0.04)",
+                              padding: 15,
+                              borderRadius: 20,
+                              background:
+                                "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,251,0.98) 100%)",
+                              border: "1px solid rgba(15,23,42,0.08)",
+                              boxShadow:
+                                "0 10px 22px rgba(15,23,42,0.04), inset 0 1px 0 rgba(255,255,255,0.72)",
                             }}
                           >
                             <div style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 10 }}>
@@ -1622,6 +1740,9 @@ export default function Home() {
                               <div
                                 style={{
                                   marginTop: 10,
+                                  padding: "10px 12px",
+                                  borderRadius: 14,
+                                  background: "rgba(15,23,42,0.03)",
                                   fontSize: 11,
                                   fontWeight: 600,
                                   color: "#666",

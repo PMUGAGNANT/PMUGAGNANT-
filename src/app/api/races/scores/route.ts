@@ -1,11 +1,33 @@
 import { NextResponse } from 'next/server';
 import { getAllRaces, getParticipants, getTodayDateStr } from '@/lib/pmu-api';
-import { analyzeRace, getMinutesUntilStart } from '@/lib/analysis';
+import { analyzeRace } from '@/lib/analysis';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
-  const date = getTodayDateStr();
+function getParisNow(): Date {
+  return new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Europe/Paris" })
+  );
+}
+
+function parseDateStr(dateStr: string): Date {
+  const day = Number(dateStr.slice(0, 2));
+  const month = Number(dateStr.slice(2, 4)) - 1;
+  const year = Number(dateStr.slice(4, 8));
+  return new Date(year, month, day);
+}
+
+function getMinutesUntilStartForDate(dateStr: string, heureDepart: string): number {
+  const [hours, minutes] = heureDepart.split(":").map(Number);
+  const parisNow = getParisNow();
+  const parisTarget = parseDateStr(dateStr);
+  parisTarget.setHours(hours, minutes, 0, 0);
+  return (parisTarget.getTime() - parisNow.getTime()) / 60000;
+}
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const date = searchParams.get("date") || getTodayDateStr();
 
   try {
     const races = await getAllRaces(date);
@@ -29,7 +51,7 @@ export async function GET() {
 
     // Compute scores from 2 hours before departure, then keep updating
     const analyzableRaces = races.filter((r: { heureDepart: string }) => {
-      const min = getMinutesUntilStart(r.heureDepart);
+      const min = getMinutesUntilStartForDate(date, r.heureDepart);
       return min <= 120;
     });
 
@@ -45,7 +67,7 @@ export async function GET() {
             participants
           );
           const key = `${race.reunion}-${race.course}`;
-          const minutesUntil = getMinutesUntilStart(race.heureDepart);
+          const minutesUntil = getMinutesUntilStartForDate(date, race.heureDepart);
           const stage: 'preview_2h' | 'preview_1h' | 'final_30m' | 'finished' =
             minutesUntil < -10
               ? 'finished'

@@ -163,6 +163,45 @@ function formatChevaux(result: BilanResult): string {
   return result.chevaux.map((cheval) => `N${cheval.numPmu} ${cheval.nom}`).join(" + ");
 }
 
+function getParisNow(): Date {
+  return new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Europe/Paris" })
+  );
+}
+
+function getTodayDateStrClient(): string {
+  const now = getParisNow();
+  const day = String(now.getDate()).padStart(2, "0");
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const year = String(now.getFullYear());
+  return `${day}${month}${year}`;
+}
+
+function formatDateStrToInput(dateStr: string): string {
+  return `${dateStr.slice(4, 8)}-${dateStr.slice(2, 4)}-${dateStr.slice(0, 2)}`;
+}
+
+function formatInputToDateStr(value: string): string {
+  const [year, month, day] = value.split("-");
+  return `${day}${month}${year}`;
+}
+
+function parseDateStr(dateStr: string): Date {
+  const day = Number(dateStr.slice(0, 2));
+  const month = Number(dateStr.slice(2, 4)) - 1;
+  const year = Number(dateStr.slice(4, 8));
+  return new Date(year, month, day);
+}
+
+function shiftDateStr(dateStr: string, days: number): string {
+  const date = parseDateStr(dateStr);
+  date.setDate(date.getDate() + days);
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = String(date.getFullYear());
+  return `${day}${month}${year}`;
+}
+
 function formatArrivee(result: BilanResult): string {
   const entries = result.chevaux
     .filter((cheval) => cheval.ordreArrivee !== null)
@@ -233,20 +272,23 @@ export default function BilanPage() {
   const [data, setData] = useState<BilanData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayDateStrClient());
 
   useEffect(() => {
-    fetch("/api/bilan")
+    setLoading(true);
+    fetch(`/api/bilan?date=${selectedDate}`)
       .then((res) => res.json())
       .then((json) => {
         if (json.success) {
           setData(json);
+          setError(false);
         } else {
           setError(true);
         }
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, []);
+  }, [selectedDate]);
 
   const winners = useMemo(
     () => data?.results.filter((result) => result.resultat === "GAGNANT") ?? [],
@@ -297,6 +339,74 @@ export default function BilanPage() {
         }}
       >
         Bilan du jour
+      </div>
+
+      <div
+        style={{
+          margin: "16px 16px 0",
+          padding: 14,
+          borderRadius: 20,
+          background: "rgba(255,255,255,0.92)",
+          border: "1px solid rgba(15,23,42,0.06)",
+          boxShadow: "0 12px 26px rgba(15,23,42,0.06)",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          onClick={() => setSelectedDate(shiftDateStr(selectedDate, -1))}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 14,
+            border: "1px solid rgba(15,23,42,0.08)",
+            background: "#FFFFFF",
+            fontSize: 18,
+            fontWeight: 800,
+            color: "#334155",
+            cursor: "pointer",
+          }}
+        >
+          ←
+        </button>
+        <div style={{ flex: 1, minWidth: 180 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.22px", marginBottom: 4 }}>
+            Calendrier bilan
+          </div>
+          <input
+            type="date"
+            value={formatDateStrToInput(selectedDate)}
+            onChange={(event) => setSelectedDate(formatInputToDateStr(event.target.value))}
+            style={{
+              width: "100%",
+              border: "1px solid rgba(15,23,42,0.08)",
+              borderRadius: 12,
+              padding: "10px 12px",
+              fontSize: 14,
+              fontWeight: 700,
+              color: "#111827",
+              background: "#FFFFFF",
+            }}
+          />
+        </div>
+        <button
+          onClick={() => setSelectedDate(shiftDateStr(selectedDate, 1))}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 14,
+            border: "1px solid rgba(15,23,42,0.08)",
+            background: "#FFFFFF",
+            fontSize: 18,
+            fontWeight: 800,
+            color: "#334155",
+            cursor: "pointer",
+          }}
+        >
+          →
+        </button>
       </div>
 
       <div style={{ paddingBottom: 92 }}>
