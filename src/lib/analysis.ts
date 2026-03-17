@@ -972,16 +972,36 @@ export function buildBetRecommendations(
     runnerSignals
       .slice()
       .sort((a, b) => {
+        const aSpeculativePenalty =
+          a.signals.marketTrust < 0.2
+            ? 0.16
+            : a.signals.marketTrust < 0.3
+              ? 0.1
+              : a.signals.marketTrust < 0.45
+                ? 0.04
+                : 0;
+        const bSpeculativePenalty =
+          b.signals.marketTrust < 0.2
+            ? 0.16
+            : b.signals.marketTrust < 0.3
+              ? 0.1
+              : b.signals.marketTrust < 0.45
+                ? 0.04
+                : 0;
         const aWeight =
-          a.signals.winChance * 0.44 +
+          a.signals.winChance * 0.38 +
           a.signals.podiumChance * 0.2 +
-          a.signals.marketTrust * 0.22 +
-          (a.runner.numPmu === favori.numPmu ? 0.08 : 0);
+          a.signals.marketTrust * 0.28 +
+          a.signals.safetyScore / 10 * 0.08 +
+          (a.runner.numPmu === favori.numPmu ? 0.06 : 0) -
+          aSpeculativePenalty;
         const bWeight =
-          b.signals.winChance * 0.44 +
+          b.signals.winChance * 0.38 +
           b.signals.podiumChance * 0.2 +
-          b.signals.marketTrust * 0.22 +
-          (b.runner.numPmu === favori.numPmu ? 0.08 : 0);
+          b.signals.marketTrust * 0.28 +
+          b.signals.safetyScore / 10 * 0.08 +
+          (b.runner.numPmu === favori.numPmu ? 0.06 : 0) -
+          bSpeculativePenalty;
         return bWeight - aWeight;
       })[0]?.runner || profils.beton || favori;
 

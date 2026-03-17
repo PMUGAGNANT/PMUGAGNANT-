@@ -23,6 +23,7 @@ interface RaceSummary {
 type RaceStatus = "upcoming" | "prono_available" | "finished";
 type ScoreStage = "preview_2h" | "preview_1h" | "final_30m" | "finished";
 type SortMode = "time" | "confidence" | "hot" | "allocation";
+type SimpleDisplayProfile = "base" | "value" | "outsider";
 
 interface RaceScoreMeta {
   score: number;
@@ -129,6 +130,70 @@ function formatSignedDelta(delta: number): string {
 
 function formatEuroReturn(amount: number): string {
   return `${amount.toFixed(1).replace(".", ",")}EUR`;
+}
+
+function getSimpleDisplayProfile(
+  score?: number,
+  simpleReturn1Euro?: number | null
+): SimpleDisplayProfile | null {
+  if (score === undefined || simpleReturn1Euro === undefined || simpleReturn1Euro === null) {
+    return null;
+  }
+
+  if (simpleReturn1Euro >= 25 || score < 4.8) {
+    return "outsider";
+  }
+
+  if (simpleReturn1Euro >= 12 || score < 6.2) {
+    return "value";
+  }
+
+  return "base";
+}
+
+function getSimpleDisplayMeta(profile: SimpleDisplayProfile) {
+  if (profile === "base") {
+    return {
+      label: "Base solide",
+      tagBackground: "#E8F5E9",
+      tagColor: "#0F7A3C",
+      panelBackground:
+        "linear-gradient(180deg, rgba(0,132,61,0.07) 0%, rgba(232,245,233,0.96) 100%)",
+      panelBorder: "1px solid rgba(0,132,61,0.12)",
+      title: "Base simple gagnant",
+      amountPrefix: "Si ca gagne",
+      note: "Lecture marche coherente avec le profil du cheval.",
+      noteColor: "#1F5131",
+    };
+  }
+
+  if (profile === "value") {
+    return {
+      label: "Value jouable",
+      tagBackground: "#EEF8FF",
+      tagColor: "#0F5EA8",
+      panelBackground:
+        "linear-gradient(180deg, rgba(15,94,168,0.06) 0%, rgba(238,248,255,0.95) 100%)",
+      panelBorder: "1px solid rgba(15,94,168,0.10)",
+      title: "Value simple gagnant",
+      amountPrefix: "Si ca gagne",
+      note: "Rapport interessant, mais ticket plus nerveux qu'une base.",
+      noteColor: "#0F5EA8",
+    };
+  }
+
+  return {
+    label: "Outsider",
+    tagBackground: "#FFF3CD",
+    tagColor: "#A66B00",
+    panelBackground:
+      "linear-gradient(180deg, rgba(212,160,23,0.08) 0%, rgba(255,248,225,0.96) 100%)",
+    panelBorder: "1px solid rgba(212,160,23,0.18)",
+    title: "Outsider speculatif",
+    amountPrefix: "Rapport possible",
+    note: "Rapport tres eleve: a lire comme un coup speculatif, pas comme une base normale.",
+    noteColor: "#8A5A00",
+  };
 }
 
 function getTimelineNodeColors(value?: number, active?: boolean) {
@@ -872,6 +937,13 @@ export default function Home() {
               const scoreStage = scoreMeta?.stage;
               const simpleReturn1Euro = scoreMeta?.simpleReturn1Euro;
               const simpleHorse = scoreMeta?.simpleHorse;
+              const simpleProfile = getSimpleDisplayProfile(
+                confScore,
+                simpleReturn1Euro
+              );
+              const simpleDisplayMeta = simpleProfile
+                ? getSimpleDisplayMeta(simpleProfile)
+                : null;
               const historyKey = `${race.dateStr}-${raceKey}`;
               const historyEntry = scoreHistory[historyKey];
               const note2h =
@@ -1059,8 +1131,24 @@ export default function Home() {
                                 {getStageLabel(scoreStage)}
                               </span>
                             )}
+                            {simpleProfile && simpleDisplayMeta && (
+                              <span
+                                style={{
+                                  display: "inline-block",
+                                  fontSize: 11,
+                                  fontWeight: 800,
+                                  padding: "2px 8px",
+                                  borderRadius: 20,
+                                  background: simpleDisplayMeta.tagBackground,
+                                  color: simpleDisplayMeta.tagColor,
+                                }}
+                              >
+                                {simpleDisplayMeta.label}
+                              </span>
+                            )}
                             {simpleReturn1Euro !== undefined &&
-                              simpleReturn1Euro !== null && (
+                              simpleReturn1Euro !== null &&
+                              simpleProfile !== "outsider" && (
                                 <span
                                   style={{
                                     display: "inline-block",
@@ -1110,28 +1198,28 @@ export default function Home() {
                         {confScore !== undefined &&
                           simpleReturn1Euro !== undefined &&
                           simpleReturn1Euro !== null &&
-                          simpleHorse && (
+                          simpleHorse &&
+                          simpleDisplayMeta && (
                             <div
                               style={{
                                 marginTop: 8,
                                 padding: "10px 12px",
                                 borderRadius: 14,
-                                background:
-                                  "linear-gradient(180deg, rgba(15,94,168,0.06) 0%, rgba(238,248,255,0.95) 100%)",
-                                border: "1px solid rgba(15,94,168,0.10)",
+                                background: simpleDisplayMeta.panelBackground,
+                                border: simpleDisplayMeta.panelBorder,
                               }}
                             >
                               <div
                                 style={{
                                   fontSize: 11,
                                   fontWeight: 800,
-                                  color: "#0F5EA8",
+                                  color: simpleDisplayMeta.tagColor,
                                   textTransform: "uppercase",
                                   letterSpacing: "0.25px",
                                   marginBottom: 4,
                                 }}
                               >
-                                Gain estime simple gagnant
+                                {simpleDisplayMeta.title}
                               </div>
                               <div
                                 style={{
@@ -1148,10 +1236,21 @@ export default function Home() {
                                   marginTop: 2,
                                   fontSize: 12,
                                   fontWeight: 700,
-                                  color: "#0F5EA8",
+                                  color: simpleDisplayMeta.tagColor,
                                 }}
                               >
-                                Si ca gagne: 1EUR -&gt; {formatEuroReturn(simpleReturn1Euro)}
+                                {simpleDisplayMeta.amountPrefix}: 1EUR -&gt; {formatEuroReturn(simpleReturn1Euro)}
+                              </div>
+                              <div
+                                style={{
+                                  marginTop: 4,
+                                  fontSize: 11,
+                                  lineHeight: "16px",
+                                  color: simpleDisplayMeta.noteColor,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {simpleDisplayMeta.note}
                               </div>
                             </div>
                           )}
