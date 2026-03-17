@@ -26,6 +26,7 @@ interface BilanResult {
   confiance: number;
   resultat: "GAGNANT" | "PLACE" | "PERDU" | "INCONNU";
   ordreArrivee?: number | null;
+  gainPour1Euro: number | null;
 }
 
 interface BilanData {
@@ -132,6 +133,13 @@ function formatOdds(value: number | null): string {
   const normalized = Number(value);
   if (!Number.isFinite(normalized)) return "-";
   return normalized.toFixed(1);
+}
+
+function formatEuroReturn(value: number | null): string {
+  if (value === null || value === undefined) return "-";
+  const normalized = Number(value);
+  if (!Number.isFinite(normalized)) return "-";
+  return `${normalized.toFixed(2)} EUR`;
 }
 
 function SummaryCard({
@@ -407,6 +415,11 @@ export default function BilanPage() {
                         <span style={{ background: "#EAF4FF", color: "#1565C0", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                           Cote IA {formatOdds(result.favori.coteEstimee)}
                         </span>
+                        {result.gainPour1Euro !== null && (
+                          <span style={{ background: "#E8F5E9", color: GREEN, padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 800 }}>
+                            Retour 1EUR {formatEuroReturn(result.gainPour1Euro)}
+                          </span>
+                        )}
                         <span style={{ background: "#F3F4F6", color: "#555", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                           Confiance {result.confiance}/10
                         </span>
@@ -598,7 +611,13 @@ export default function BilanPage() {
                         {result.recommandation}
                       </div>
 
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: result.gainPour1Euro !== null ? "1fr 1fr 1fr" : "1fr 1fr",
+                          gap: 8,
+                        }}
+                      >
                         <div style={{ background: tone.soft, borderRadius: 14, padding: 12 }}>
                           <div style={{ fontSize: 11, color: "#777", marginBottom: 4 }}>Cote PMU</div>
                           <div style={{ fontSize: 18, fontWeight: 800, color: DARK }}>{formatOdds(result.favori.cotePmu)}</div>
@@ -607,6 +626,12 @@ export default function BilanPage() {
                           <div style={{ fontSize: 11, color: "#6A7480", marginBottom: 4 }}>Cote IA</div>
                           <div style={{ fontSize: 18, fontWeight: 800, color: "#1565C0" }}>{formatOdds(result.favori.coteEstimee)}</div>
                         </div>
+                        {result.gainPour1Euro !== null && (
+                          <div style={{ background: "#E8F5E9", borderRadius: 14, padding: 12 }}>
+                            <div style={{ fontSize: 11, color: "#5D7462", marginBottom: 4 }}>Retour 1EUR</div>
+                            <div style={{ fontSize: 18, fontWeight: 800, color: GREEN }}>{formatEuroReturn(result.gainPour1Euro)}</div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );

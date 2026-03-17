@@ -27,6 +27,7 @@ interface BilanResult {
   confiance: number;
   resultat: BilanResultat;
   ordreArrivee?: number | null;
+  gainPour1Euro: number | null;
 }
 
 interface AggregateStats {
@@ -53,6 +54,12 @@ function getConfidenceBucketLabel(bucket: ConfidenceBucketKey): string {
 function getSuccessRate(stats: AggregateStats): number {
   if (stats.played === 0) return 0;
   return Math.round((stats.success / stats.played) * 100);
+}
+
+function getGainPour1Euro(resultat: BilanResultat, cotePmu: number | null): number | null {
+  if (resultat !== "GAGNANT") return null;
+  if (cotePmu === null || !Number.isFinite(cotePmu) || cotePmu <= 0) return null;
+  return cotePmu;
 }
 
 export async function GET(request: Request) {
@@ -85,6 +92,7 @@ export async function GET(request: Request) {
               : ordreArrivee !== null
                 ? "PERDU"
                 : "INCONNU";
+        const cotePmu = favoriResult?.cote ?? analysis.favori.cote ?? null;
 
         results.push({
           courseInfo: {
@@ -98,7 +106,7 @@ export async function GET(request: Request) {
           favori: {
             numPmu: analysis.favori.numPmu,
             nom: analysis.favori.nom,
-            cotePmu: favoriResult?.cote ?? analysis.favori.cote ?? null,
+            cotePmu,
             coteEstimee:
               predictedOdds?.coteEstimee ??
               predictedOdds?.coteMatin ??
@@ -108,6 +116,7 @@ export async function GET(request: Request) {
           confiance: analysis.scoreConfiance?.score ?? 0,
           resultat,
           ordreArrivee,
+          gainPour1Euro: getGainPour1Euro(resultat, cotePmu),
         });
       } catch {
         // Skip failed race fetches so the bilan stays available.
