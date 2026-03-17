@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import type { BetRecommendationType } from "@/lib/types";
+
 interface CourseInfo {
   reunion: number;
   course: number;
@@ -17,15 +19,17 @@ interface PickInfo {
   nom: string;
   cotePmu: number | null;
   coteEstimee: number | null;
+  ordreArrivee: number | null;
 }
 
 interface BilanResult {
   courseInfo: CourseInfo;
-  favori: PickInfo;
+  pariType: BetRecommendationType;
+  pariLabel: string;
+  chevaux: PickInfo[];
   recommandation: string;
   confiance: number;
   resultat: "GAGNANT" | "PLACE" | "PERDU" | "INCONNU";
-  ordreArrivee?: number | null;
   gainPour1Euro: number | null;
   beneficeNetPour1Euro: number | null;
 }
@@ -75,6 +79,18 @@ function resultLabel(resultat: BilanResult["resultat"]): string {
   if (resultat === "PLACE") return "Simple place";
   if (resultat === "PERDU") return "Perdu";
   return "En attente";
+}
+
+function ticketLabel(result: BilanResult): string {
+  if (result.pariType === "COUPLE_PLACE") {
+    return result.resultat === "GAGNANT" ? "Couple place" : "Couple place perdu";
+  }
+
+  if (result.pariType === "COUPLE_GAGNANT") {
+    return result.resultat === "GAGNANT" ? "Couple gagnant" : "Couple gagnant perdu";
+  }
+
+  return resultLabel(result.resultat);
 }
 
 function getResultStyle(resultat: BilanResult["resultat"]) {
@@ -141,6 +157,22 @@ function formatEuroReturn(value: number | null): string {
   const normalized = Number(value);
   if (!Number.isFinite(normalized)) return "-";
   return `${normalized.toFixed(2)} EUR`;
+}
+
+function formatChevaux(result: BilanResult): string {
+  return result.chevaux.map((cheval) => `N${cheval.numPmu} ${cheval.nom}`).join(" + ");
+}
+
+function formatArrivee(result: BilanResult): string {
+  const entries = result.chevaux
+    .filter((cheval) => cheval.ordreArrivee !== null)
+    .map((cheval) => `N${cheval.numPmu} -> ${cheval.ordreArrivee}`);
+
+  return entries.length > 0 ? entries.join(" | ") : "-";
+}
+
+function getPrimaryHorse(result: BilanResult): PickInfo | null {
+  return result.chevaux[0] ?? null;
 }
 
 function SummaryCard({
@@ -386,10 +418,10 @@ export default function BilanPage() {
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
                         <div>
                           <div style={{ fontSize: 13, fontWeight: 700, color: GREEN, marginBottom: 8 }}>
-                            SIMPLE GAGNANT
+                            {result.pariType === "SIMPLE_GAGNANT" ? "SIMPLE GAGNANT" : result.pariType === "COUPLE_PLACE" ? "COUPLE PLACE" : "COUPLE GAGNANT"}
                           </div>
                           <div style={{ fontSize: 20, fontWeight: 800, color: DARK, lineHeight: "24px", marginBottom: 4 }}>
-                            N{result.favori.numPmu} {result.favori.nom}
+                            {formatChevaux(result)}
                           </div>
                           <div style={{ fontSize: 13, color: "#666", lineHeight: "18px" }}>
                             R{result.courseInfo.reunion}C{result.courseInfo.course} - {result.courseInfo.hippodrome}
@@ -411,10 +443,10 @@ export default function BilanPage() {
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
                         <span style={{ background: "#F6F7F8", color: "#444", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
-                          PMU {formatOdds(result.favori.cotePmu)}
+                          PMU {formatOdds(getPrimaryHorse(result)?.cotePmu ?? null)}
                         </span>
                         <span style={{ background: "#EAF4FF", color: "#1565C0", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
-                          Cote IA {formatOdds(result.favori.coteEstimee)}
+                          Cote IA {formatOdds(getPrimaryHorse(result)?.coteEstimee ?? null)}
                         </span>
                         {result.gainPour1Euro !== null && (
                           <span style={{ background: "#E8F5E9", color: GREEN, padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 800 }}>
@@ -569,7 +601,7 @@ export default function BilanPage() {
                       </div>
 
                       <div style={{ fontSize: 24, fontWeight: 800, color: DARK, marginBottom: 6 }}>
-                        N{result.favori.numPmu} {result.favori.nom}
+                        {formatChevaux(result)}
                       </div>
 
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
@@ -583,7 +615,7 @@ export default function BilanPage() {
                             fontWeight: 800,
                           }}
                         >
-                          {resultLabel(result.resultat)}
+                          {ticketLabel(result)}
                         </span>
                         <span
                           style={{
@@ -597,7 +629,7 @@ export default function BilanPage() {
                         >
                           Confiance {result.confiance}/10
                         </span>
-                        {result.ordreArrivee && (
+                        {result.chevaux.some((cheval) => cheval.ordreArrivee !== null) && (
                           <span
                             style={{
                               background: "#F3F4F6",
@@ -608,7 +640,7 @@ export default function BilanPage() {
                               fontWeight: 800,
                             }}
                           >
-                            Arrivee {result.ordreArrivee}e
+                            Arrivee {formatArrivee(result)}
                           </span>
                         )}
                       </div>
@@ -626,11 +658,11 @@ export default function BilanPage() {
                       >
                         <div style={{ background: tone.soft, borderRadius: 14, padding: 12 }}>
                           <div style={{ fontSize: 11, color: "#777", marginBottom: 4 }}>Cote PMU</div>
-                          <div style={{ fontSize: 18, fontWeight: 800, color: DARK }}>{formatOdds(result.favori.cotePmu)}</div>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: DARK }}>{formatOdds(getPrimaryHorse(result)?.cotePmu ?? null)}</div>
                         </div>
                         <div style={{ background: "#EEF5FF", borderRadius: 14, padding: 12 }}>
                           <div style={{ fontSize: 11, color: "#6A7480", marginBottom: 4 }}>Cote IA</div>
-                          <div style={{ fontSize: 18, fontWeight: 800, color: "#1565C0" }}>{formatOdds(result.favori.coteEstimee)}</div>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: "#1565C0" }}>{formatOdds(getPrimaryHorse(result)?.coteEstimee ?? null)}</div>
                         </div>
                         {result.gainPour1Euro !== null && (
                           <div style={{ background: "#E8F5E9", borderRadius: 14, padding: 12 }}>
