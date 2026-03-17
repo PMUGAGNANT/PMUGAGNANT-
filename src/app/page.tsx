@@ -1002,6 +1002,23 @@ export default function Home() {
               const stageBadgeStyle = scoreStage
                 ? getStageBadgeStyle(scoreStage)
                 : null;
+              const hasSimpleInsight =
+                confScore !== undefined &&
+                simpleReturn1Euro !== undefined &&
+                simpleReturn1Euro !== null &&
+                simpleHorse &&
+                simpleDisplayMeta;
+              const showFinishedPanel = Boolean(
+                isFinished && finishedInfo && simpleHorse
+              );
+              const showTimelinePanel = Boolean(
+                !showFinishedPanel &&
+                  (note2h !== undefined ||
+                    note1h !== undefined ||
+                    note30m !== undefined)
+              );
+              const hasInfoDeck =
+                hasSimpleInsight || showFinishedPanel || showTimelinePanel;
 
               return (
                 <div
@@ -1232,34 +1249,47 @@ export default function Home() {
                           simpleDisplayMeta && (
                             <div
                               style={{
-                                marginTop: 8,
+                                marginTop: 10,
                                 padding: 14,
-                                borderRadius: 16,
+                                borderRadius: 18,
                                 background: simpleDisplayMeta.panelBackground,
                                 border: simpleDisplayMeta.panelBorder,
-                                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.55)",
+                                boxShadow: "0 10px 24px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.55)",
                               }}
                             >
                               <div
                                 style={{
                                   display: "flex",
                                   justifyContent: "space-between",
-                                  alignItems: "center",
+                                  alignItems: "flex-start",
                                   gap: 10,
-                                  marginBottom: 8,
+                                  marginBottom: 10,
                                   flexWrap: "wrap",
                                 }}
                               >
-                                <div
-                                  style={{
-                                    fontSize: 11,
-                                    fontWeight: 800,
-                                    color: simpleDisplayMeta.tagColor,
-                                    textTransform: "uppercase",
-                                    letterSpacing: "0.25px",
-                                  }}
-                                >
-                                  {simpleDisplayMeta.title}
+                                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                  <div
+                                    style={{
+                                      fontSize: 11,
+                                      fontWeight: 800,
+                                      color: simpleDisplayMeta.tagColor,
+                                      textTransform: "uppercase",
+                                      letterSpacing: "0.25px",
+                                    }}
+                                  >
+                                    {simpleDisplayMeta.title}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: 10,
+                                      fontWeight: 700,
+                                      color: "#5A7AA2",
+                                      textTransform: "uppercase",
+                                      letterSpacing: "0.22px",
+                                    }}
+                                  >
+                                    Ticket recommande
+                                  </div>
                                 </div>
                                 <span
                                   style={{
@@ -1267,9 +1297,9 @@ export default function Home() {
                                     borderRadius: 999,
                                     fontSize: 11,
                                     fontWeight: 800,
-                                    background: "rgba(255,255,255,0.72)",
+                                    background: "rgba(255,255,255,0.78)",
                                     color: simpleDisplayMeta.tagColor,
-                                    border: "1px solid rgba(255,255,255,0.5)",
+                                    border: "1px solid rgba(255,255,255,0.58)",
                                   }}
                                 >
                                   1EUR -&gt; {formatEuroReturn(simpleReturn1Euro)}
@@ -1288,27 +1318,38 @@ export default function Home() {
                               </div>
                               <div
                                 style={{
-                                  marginTop: 8,
-                                  paddingTop: 8,
+                                  marginTop: 10,
+                                  paddingTop: 10,
                                   borderTop: "1px solid rgba(15,23,42,0.06)",
-                                  fontSize: 12,
-                                  fontWeight: 700,
-                                  color: "#274C77",
-                                  lineHeight: "17px",
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  gap: 10,
+                                  flexWrap: "wrap",
                                 }}
                               >
-                                {simpleDisplayMeta.amountPrefix}: {formatEuroReturn(simpleReturn1Euro)}
-                              </div>
-                              <div
-                                style={{
-                                  marginTop: 4,
-                                  fontSize: 11,
-                                  lineHeight: "16px",
-                                  color: simpleDisplayMeta.noteColor,
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {simpleDisplayMeta.note}
+                                <div
+                                  style={{
+                                    fontSize: 12,
+                                    fontWeight: 800,
+                                    color: "#274C77",
+                                    lineHeight: "17px",
+                                  }}
+                                >
+                                  {simpleDisplayMeta.amountPrefix}: {formatEuroReturn(simpleReturn1Euro)}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: 11,
+                                    lineHeight: "16px",
+                                    color: simpleDisplayMeta.noteColor,
+                                    fontWeight: 700,
+                                    textAlign: "right",
+                                    maxWidth: 180,
+                                  }}
+                                >
+                                  {simpleDisplayMeta.note}
+                                </div>
                               </div>
                             </div>
                           )}
@@ -1317,11 +1358,11 @@ export default function Home() {
                             style={{
                               marginTop: 10,
                               padding: 14,
-                              borderRadius: 16,
+                              borderRadius: 18,
                               background:
                                 "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,251,0.98) 100%)",
                               border: "1px solid rgba(15,23,42,0.08)",
-                              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6)",
+                              boxShadow: "0 10px 24px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.6)",
                             }}
                           >
                             <div
@@ -1334,16 +1375,27 @@ export default function Home() {
                                 flexWrap: "wrap",
                               }}
                             >
-                              <div
-                                style={{
-                                  fontSize: 11,
-                                  fontWeight: 800,
-                                  color: "#666",
-                                  textTransform: "uppercase",
-                                  letterSpacing: "0.3px",
-                                }}
-                              >
-                                Arrivee officielle
+                              <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                                <div
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: 800,
+                                    color: "#666",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.3px",
+                                  }}
+                                >
+                                  Arrivee officielle
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: 12,
+                                    color: "#64748B",
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  Lecture finale du ticket
+                                </div>
                               </div>
                               <span
                                 style={{
@@ -1363,7 +1415,7 @@ export default function Home() {
                                 flexWrap: "wrap",
                                 gap: 6,
                                 alignItems: "center",
-                                marginBottom: 10,
+                                marginBottom: 12,
                               }}
                             >
                               {finishedInfo.arrivalTop3.map((horseNumber, index) => (
@@ -1373,7 +1425,7 @@ export default function Home() {
                                     display: "inline-flex",
                                     alignItems: "center",
                                     gap: 5,
-                                    padding: "5px 9px",
+                                    padding: "6px 10px",
                                     borderRadius: 999,
                                     background: index === 0 ? "#EEF8FF" : "#F5F5F5",
                                     color: index === 0 ? "#0F5EA8" : "#555",
@@ -1388,7 +1440,7 @@ export default function Home() {
                             </div>
                             <div
                               style={{
-                                paddingTop: 9,
+                                paddingTop: 10,
                                 borderTop: "1px solid rgba(15,23,42,0.06)",
                                 fontSize: 12,
                                 color: "#4B5563",
@@ -1410,23 +1462,34 @@ export default function Home() {
                           <div
                             style={{
                               marginTop: 10,
-                              padding: 10,
-                              borderRadius: 12,
+                              padding: 14,
+                              borderRadius: 18,
                               background: "#FAFAFA",
                               border: "1px solid #EEEEEE",
+                              boxShadow: "0 10px 24px rgba(15,23,42,0.04)",
                             }}
                           >
-                            <div
-                              style={{
-                                fontSize: 11,
-                                fontWeight: 700,
-                                color: "#666",
-                                marginBottom: 8,
-                                textTransform: "uppercase",
-                                letterSpacing: "0.3px",
-                              }}
-                            >
-                              Evolution confiance
+                            <div style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 10 }}>
+                              <div
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 800,
+                                  color: "#666",
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.3px",
+                                }}
+                              >
+                                Evolution confiance
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  color: "#64748B",
+                                  fontWeight: 700,
+                                }}
+                              >
+                                Suivi du ticket avant depart
+                              </div>
                             </div>
                             <div
                               style={{
@@ -1455,15 +1518,15 @@ export default function Home() {
                                       minWidth: 0,
                                     }}
                                   >
-                                    <div
-                                      style={{
-                                        minWidth: 58,
-                                        padding: "8px 6px",
-                                        borderRadius: 12,
-                                        border: `1px solid ${colors.border}`,
-                                        background: colors.background,
-                                        textAlign: "center",
-                                      }}
+                                      <div
+                                        style={{
+                                          minWidth: 58,
+                                          padding: "9px 6px",
+                                          borderRadius: 12,
+                                          border: `1px solid ${colors.border}`,
+                                          background: colors.background,
+                                          textAlign: "center",
+                                        }}
                                     >
                                       <div
                                         style={{
@@ -1558,7 +1621,7 @@ export default function Home() {
                             {trendSentence && (
                               <div
                                 style={{
-                                  marginTop: 8,
+                                  marginTop: 10,
                                   fontSize: 11,
                                   fontWeight: 600,
                                   color: "#666",
