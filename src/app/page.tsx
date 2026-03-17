@@ -1233,43 +1233,71 @@ export default function Home() {
                             <div
                               style={{
                                 marginTop: 8,
-                                padding: "10px 12px",
-                                borderRadius: 14,
+                                padding: 14,
+                                borderRadius: 16,
                                 background: simpleDisplayMeta.panelBackground,
                                 border: simpleDisplayMeta.panelBorder,
+                                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.55)",
                               }}
                             >
                               <div
                                 style={{
-                                  fontSize: 11,
-                                  fontWeight: 800,
-                                  color: simpleDisplayMeta.tagColor,
-                                  textTransform: "uppercase",
-                                  letterSpacing: "0.25px",
-                                  marginBottom: 4,
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  gap: 10,
+                                  marginBottom: 8,
+                                  flexWrap: "wrap",
                                 }}
                               >
-                                {simpleDisplayMeta.title}
+                                <div
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: 800,
+                                    color: simpleDisplayMeta.tagColor,
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.25px",
+                                  }}
+                                >
+                                  {simpleDisplayMeta.title}
+                                </div>
+                                <span
+                                  style={{
+                                    padding: "5px 9px",
+                                    borderRadius: 999,
+                                    fontSize: 11,
+                                    fontWeight: 800,
+                                    background: "rgba(255,255,255,0.72)",
+                                    color: simpleDisplayMeta.tagColor,
+                                    border: "1px solid rgba(255,255,255,0.5)",
+                                  }}
+                                >
+                                  1EUR -&gt; {formatEuroReturn(simpleReturn1Euro)}
+                                </span>
                               </div>
                               <div
                                 style={{
-                                  fontSize: 14,
+                                  fontSize: 16,
                                   fontWeight: 800,
                                   color: "#16324F",
-                                  lineHeight: "18px",
+                                  lineHeight: "20px",
+                                  letterSpacing: "-0.2px",
                                 }}
                               >
                                 N{simpleHorse.numPmu} {simpleHorse.nom}
                               </div>
                               <div
                                 style={{
-                                  marginTop: 2,
+                                  marginTop: 8,
+                                  paddingTop: 8,
+                                  borderTop: "1px solid rgba(15,23,42,0.06)",
                                   fontSize: 12,
                                   fontWeight: 700,
-                                  color: simpleDisplayMeta.tagColor,
+                                  color: "#274C77",
+                                  lineHeight: "17px",
                                 }}
                               >
-                                {simpleDisplayMeta.amountPrefix}: 1EUR -&gt; {formatEuroReturn(simpleReturn1Euro)}
+                                {simpleDisplayMeta.amountPrefix}: {formatEuroReturn(simpleReturn1Euro)}
                               </div>
                               <div
                                 style={{
@@ -1288,23 +1316,46 @@ export default function Home() {
                           <div
                             style={{
                               marginTop: 10,
-                              padding: 12,
-                              borderRadius: 14,
-                              background: "#FAFAFA",
-                              border: "1px solid #EEEEEE",
+                              padding: 14,
+                              borderRadius: 16,
+                              background:
+                                "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,251,0.98) 100%)",
+                              border: "1px solid rgba(15,23,42,0.08)",
+                              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.6)",
                             }}
                           >
                             <div
                               style={{
-                                fontSize: 11,
-                                fontWeight: 700,
-                                color: "#666",
-                                marginBottom: 8,
-                                textTransform: "uppercase",
-                                letterSpacing: "0.3px",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                gap: 10,
+                                marginBottom: 10,
+                                flexWrap: "wrap",
                               }}
                             >
-                              Arrivee officielle
+                              <div
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 800,
+                                  color: "#666",
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.3px",
+                                }}
+                              >
+                                Arrivee officielle
+                              </div>
+                              <span
+                                style={{
+                                  padding: "5px 10px",
+                                  borderRadius: 999,
+                                  fontSize: 11,
+                                  fontWeight: 800,
+                                  ...getOutcomeStyle(finishedInfo.simpleOutcome),
+                                }}
+                              >
+                                {finishedInfo.simpleOutcome}
+                              </span>
                             </div>
                             <div
                               style={{
@@ -1312,7 +1363,7 @@ export default function Home() {
                                 flexWrap: "wrap",
                                 gap: 6,
                                 alignItems: "center",
-                                marginBottom: 8,
+                                marginBottom: 10,
                               }}
                             >
                               {finishedInfo.arrivalTop3.map((horseNumber, index) => (
@@ -1337,35 +1388,20 @@ export default function Home() {
                             </div>
                             <div
                               style={{
-                                display: "flex",
-                                flexWrap: "wrap",
-                                gap: 8,
-                                alignItems: "center",
+                                paddingTop: 9,
+                                borderTop: "1px solid rgba(15,23,42,0.06)",
+                                fontSize: 12,
+                                color: "#4B5563",
+                                fontWeight: 700,
+                                lineHeight: "18px",
                               }}
                             >
-                              <span
-                                style={{
-                                  padding: "5px 10px",
-                                  borderRadius: 999,
-                                  fontSize: 11,
-                                  fontWeight: 800,
-                                  ...getOutcomeStyle(finishedInfo.simpleOutcome),
-                                }}
-                              >
-                                {finishedInfo.simpleOutcome}
-                              </span>
-                              <span
-                                style={{
-                                  fontSize: 12,
-                                  color: "#4B5563",
-                                  fontWeight: 700,
-                                }}
-                              >
+                              <span style={{ color: "#111827", fontWeight: 800 }}>
                                 N{simpleHorse.numPmu} {simpleHorse.nom}
-                                {finishedInfo.recommendedArrival !== null
-                                  ? ` -> arrivee ${finishedInfo.recommendedArrival}e`
-                                  : " -> arrivee inconnue"}
                               </span>
+                              {finishedInfo.recommendedArrival !== null
+                                ? ` -> arrivee ${finishedInfo.recommendedArrival}e`
+                                : " -> arrivee inconnue"}
                             </div>
                           </div>
                         ) : (note2h !== undefined ||
