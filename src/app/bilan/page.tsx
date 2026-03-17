@@ -274,8 +274,12 @@ export default function BilanPage() {
   const [error, setError] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(getTodayDateStrClient());
 
-  useEffect(() => {
+  function updateSelectedDate(nextDate: string) {
     setLoading(true);
+    setSelectedDate(nextDate);
+  }
+
+  useEffect(() => {
     fetch(`/api/bilan?date=${selectedDate}`)
       .then((res) => res.json())
       .then((json) => {
@@ -356,7 +360,7 @@ export default function BilanPage() {
         }}
       >
         <button
-          onClick={() => setSelectedDate(shiftDateStr(selectedDate, -1))}
+          onClick={() => updateSelectedDate(shiftDateStr(selectedDate, -1))}
           style={{
             width: 40,
             height: 40,
@@ -378,7 +382,7 @@ export default function BilanPage() {
           <input
             type="date"
             value={formatDateStrToInput(selectedDate)}
-            onChange={(event) => setSelectedDate(formatInputToDateStr(event.target.value))}
+            onChange={(event) => updateSelectedDate(formatInputToDateStr(event.target.value))}
             style={{
               width: "100%",
               border: "1px solid rgba(15,23,42,0.08)",
@@ -392,7 +396,7 @@ export default function BilanPage() {
           />
         </div>
         <button
-          onClick={() => setSelectedDate(shiftDateStr(selectedDate, 1))}
+          onClick={() => updateSelectedDate(shiftDateStr(selectedDate, 1))}
           style={{
             width: 40,
             height: 40,

@@ -54,6 +54,97 @@ export interface ScoredParticipant extends Participant {
   scoreAlgo: number;
   estTocard: boolean;
   musicStats: MusicStats | null;
+  scoreComponents?: RunnerScoreComponents;
+  featureSnapshot?: RunnerFeatureSnapshot;
+}
+
+export interface RunnerScoreComponents {
+  formScore: number;
+  serieBonus: number;
+  recentVictory: number;
+  formProgression: number;
+  eliteScore: number;
+  trainerScore: number;
+  winRateBonus: number;
+  ageBonus: number;
+  experienceBonus: number;
+  drawBonus: number;
+  weightBonus: number;
+  marketTrustBonus: number;
+  totalScore: number;
+}
+
+export type LearnedWeightKey =
+  | 'formScore'
+  | 'serieBonus'
+  | 'recentVictory'
+  | 'formProgression'
+  | 'eliteScore'
+  | 'trainerScore'
+  | 'winRateBonus'
+  | 'ageBonus'
+  | 'experienceBonus'
+  | 'drawBonus'
+  | 'weightBonus'
+  | 'marketTrustBonus';
+
+export type LearnedWeightMap = Record<LearnedWeightKey, number>;
+
+export type ModelWeightScope = 'GLOBAL' | 'PLAT' | 'TROT';
+
+export interface ModelWeightProfile {
+  version: string;
+  scope: ModelWeightScope;
+  active: boolean;
+  weights: LearnedWeightMap;
+  metrics?: Record<string, number | string | boolean | null>;
+  createdAt?: string | null;
+}
+
+export interface RunnerFeatureSnapshot {
+  numPmu: number;
+  nom: string;
+  cote: number | null;
+  placeCorde: number | null;
+  poids: number | null;
+  age: number;
+  nombreCourses: number;
+  nombreVictoires: number;
+  nombrePlaces: number;
+  gainCarriere: number;
+  nombreSuiveurs: number;
+  musique: string;
+  fiabilite: number;
+  ratioForme: number;
+  averagePosition: number;
+  serie: number;
+  trend: number;
+  estPlat: boolean;
+  scoreComponents: RunnerScoreComponents;
+}
+
+export interface PredictionHistoryRecord {
+  id?: string;
+  dateStr: string;
+  dateSortKey?: string;
+  reunion: number;
+  course: number;
+  hippodrome: string;
+  discipline: string;
+  pariType: BetRecommendationType;
+  recommendationRank: number;
+  recommendedHorse1Num: number;
+  recommendedHorse1Nom: string;
+  recommendedHorse2Num?: number | null;
+  recommendedHorse2Nom?: string | null;
+  confiance: number;
+  surete: number;
+  coteEstimee: number | null;
+  cotePmu: number | null;
+  resultStatus: 'GAGNANT' | 'PLACE' | 'PERDU' | 'INCONNU';
+  gainForOneEuro: number | null;
+  featureSnapshot: RunnerFeatureSnapshot;
+  createdAt?: string;
 }
 
 export interface PredictedOdds {

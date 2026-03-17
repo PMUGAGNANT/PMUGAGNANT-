@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const SUPABASE_SETUP_ERROR =
   "Supabase est connecte, mais la base PMU AI n'est pas initialisee. Ouvrez Supabase > SQL Editor puis executez le fichier supabase-setup.sql.";
 
@@ -72,6 +73,23 @@ export function createSupabaseRequestClient(accessToken?: string) {
   return createClient(supabaseUrl!, supabaseAnonKey!, {
     global: {
       headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+    },
+  });
+}
+
+export function hasSupabaseAdminConfig() {
+  return Boolean(supabaseUrl && supabaseServiceRoleKey);
+}
+
+export function createSupabaseAdminClient() {
+  if (!hasSupabaseAdminConfig()) {
+    return null;
+  }
+
+  return createClient(supabaseUrl!, supabaseServiceRoleKey!, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
     },
   });
 }

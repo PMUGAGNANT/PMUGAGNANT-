@@ -32,6 +32,71 @@ CREATE TABLE IF NOT EXISTS bets (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 2b. Historique des predictions IA pour apprentissage
+CREATE TABLE IF NOT EXISTS prediction_history (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  date_str TEXT NOT NULL,
+  date_sort_key TEXT NOT NULL,
+  reunion INTEGER NOT NULL,
+  course INTEGER NOT NULL,
+  hippodrome TEXT DEFAULT '',
+  discipline TEXT DEFAULT '',
+  pari_type TEXT NOT NULL CHECK (pari_type IN ('SIMPLE_GAGNANT', 'COUPLE_GAGNANT', 'COUPLE_PLACE')),
+  recommendation_rank INTEGER NOT NULL DEFAULT 1,
+  recommended_horse_1_num INTEGER NOT NULL,
+  recommended_horse_1_nom TEXT NOT NULL,
+  recommended_horse_2_num INTEGER,
+  recommended_horse_2_nom TEXT,
+  confiance NUMERIC NOT NULL DEFAULT 0,
+  surete NUMERIC NOT NULL DEFAULT 0,
+  cote_estimee NUMERIC,
+  cote_pmu NUMERIC,
+  result_status TEXT NOT NULL CHECK (result_status IN ('GAGNANT', 'PLACE', 'PERDU', 'INCONNU')),
+  gain_for_one_euro NUMERIC,
+  feature_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE prediction_history
+  ADD COLUMN IF NOT EXISTS date_sort_key TEXT;
+
+UPDATE prediction_history
+SET date_sort_key = SUBSTRING(date_str FROM 5 FOR 4) || SUBSTRING(date_str FROM 3 FOR 2) || SUBSTRING(date_str FROM 1 FOR 2)
+WHERE (date_sort_key IS NULL OR date_sort_key = '')
+  AND LENGTH(date_str) = 8;
+
+ALTER TABLE prediction_history
+  ALTER COLUMN date_sort_key SET NOT NULL;
+
+ALTER TABLE prediction_history
+  DROP CONSTRAINT IF EXISTS prediction_history_unique_reco;
+
+ALTER TABLE prediction_history
+  ADD CONSTRAINT prediction_history_unique_reco UNIQUE (
+    date_str,
+    reunion,
+    course,
+    pari_type,
+    recommendation_rank,
+    recommended_horse_1_num,
+    recommended_horse_2_num
+  );
+
+-- 2c. Profils de poids du modele
+CREATE TABLE IF NOT EXISTS model_weights (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  version TEXT NOT NULL,
+  scope TEXT NOT NULL CHECK (scope IN ('GLOBAL', 'PLAT', 'TROT')),
+  active BOOLEAN NOT NULL DEFAULT FALSE,
+  weights JSONB NOT NULL DEFAULT '{}'::jsonb,
+  metrics JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_model_weights_active_scope
+  ON model_weights(scope)
+  WHERE active = TRUE;
+
 ALTER TABLE bets ADD COLUMN IF NOT EXISTS cheval_num_2 INTEGER;
 ALTER TABLE bets ADD COLUMN IF NOT EXISTS cheval_nom_2 TEXT;
 
@@ -66,6 +131,8 @@ CREATE TRIGGER on_auth_user_created
 -- 4. RLS (Row Level Security) - chaque user voit seulement ses donnees
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE prediction_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE model_weights ENABLE ROW LEVEL SECURITY;
 
 -- Profiles: un user peut lire/modifier uniquement son profil
 CREATE POLICY "Users can view own profile"
@@ -89,7 +156,24 @@ CREATE POLICY "Users can update own bets"
   ON bets FOR UPDATE
   USING (auth.uid() = user_id);
 
+-- Tables IA: pas d acces public direct, uniquement service role / backend admin
+DROP POLICY IF EXISTS "No public access to prediction history" ON prediction_history;
+CREATE POLICY "No public access to prediction history"
+  ON prediction_history FOR ALL
+  USING (FALSE)
+  WITH CHECK (FALSE);
+
+DROP POLICY IF EXISTS "No public access to model weights" ON model_weights;
+CREATE POLICY "No public access to model weights"
+  ON model_weights FOR ALL
+  USING (FALSE)
+  WITH CHECK (FALSE);
+
 -- 5. Index pour performance
 CREATE INDEX IF NOT EXISTS idx_bets_user_id ON bets(user_id);
 CREATE INDEX IF NOT EXISTS idx_bets_statut ON bets(statut);
 CREATE INDEX IF NOT EXISTS idx_bets_date ON bets(date_str);
+CREATE INDEX IF NOT EXISTS idx_prediction_history_date ON prediction_history(date_str);
+CREATE INDEX IF NOT EXISTS idx_prediction_history_date_sort_key ON prediction_history(date_sort_key);
+CREATE INDEX IF NOT EXISTS idx_prediction_history_pari_type ON prediction_history(pari_type);
+CREATE INDEX IF NOT EXISTS idx_prediction_history_result_status ON prediction_history(result_status);

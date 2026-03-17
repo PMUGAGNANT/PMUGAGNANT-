@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
-import { getAllRaces, getParticipants, getTodayDateStr } from '@/lib/pmu-api';
+import { getAllRaces, getDefinitiveRapports, getParticipants, getTodayDateStr } from '@/lib/pmu-api';
 import { analyzeRace } from '@/lib/analysis';
+import {
+  buildPredictionHistoryRecords,
+  getActiveModelWeightProfile,
+  storePredictionHistory,
+} from '@/lib/learning';
+import { hasSupabaseAdminConfig } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,9 +34,14 @@ function getMinutesUntilStartForDate(dateStr: string, heureDepart: string): numb
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const date = searchParams.get("date") || getTodayDateStr();
+  const canStoreLearning = hasSupabaseAdminConfig();
 
   try {
     const races = await getAllRaces(date);
+    const [flatWeights, trotWeights] = await Promise.all([
+      getActiveModelWeightProfile('PLAT'),
+      getActiveModelWeightProfile('TROT'),
+    ]);
     const scores: Record<
       string,
       {
@@ -50,7 +61,7 @@ export async function GET(request: Request) {
     > = {};
 
     // Compute scores from 2 hours before departure, then keep updating
-    const analyzableRaces = races.filter((r: { heureDepart: string }) => {
+    const analyzableRaces = races.filter((r) => {
       const min = getMinutesUntilStartForDate(date, r.heureDepart);
       return min <= 120;
     });
@@ -60,11 +71,15 @@ export async function GET(request: Request) {
     for (let i = 0; i < analyzableRaces.length; i += batchSize) {
       const batch = analyzableRaces.slice(i, i + batchSize);
       const results = await Promise.allSettled(
-        batch.map(async (race: { reunion: number; course: number; heureDepart: string }) => {
-          const participants = await getParticipants(date, race.reunion, race.course);
+        batch.map(async (race) => {
+          const [participants, definitiveRapports] = await Promise.all([
+            getParticipants(date, race.reunion, race.course),
+            getDefinitiveRapports(date, race.reunion, race.course).catch(() => ({})),
+          ]);
           const analysis = analyzeRace(
             race as Parameters<typeof analyzeRace>[0],
-            participants
+            participants,
+            race.estPlat ? flatWeights : trotWeights
           );
           const key = `${race.reunion}-${race.course}`;
           const minutesUntil = getMinutesUntilStartForDate(date, race.heureDepart);
@@ -73,9 +88,15 @@ export async function GET(request: Request) {
               ? 'finished'
               : minutesUntil <= 30
                 ? 'final_30m'
-                : minutesUntil <= 60
+              : minutesUntil <= 60
                   ? 'preview_1h'
                   : 'preview_2h';
+
+          if (canStoreLearning && stage === 'finished' && analysis.parisRecommandes.length > 0) {
+            await storePredictionHistory(
+              buildPredictionHistoryRecords(date, race, participants, analysis, definitiveRapports)
+            ).catch(() => undefined);
+          }
 
           const simpleRecommendation = analysis.parisRecommandes.find(
             (pari) => pari.type === 'SIMPLE_GAGNANT'

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAllRaces, getDefinitiveRapports, getParticipants, getTodayDateStr } from "@/lib/pmu-api";
 import { analyzeRace, getMinutesUntilStart } from "@/lib/analysis";
+import { getActiveModelWeightProfile } from "@/lib/learning";
 import type { BetRecommendationType } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -162,6 +163,10 @@ export async function GET(request: Request) {
 
   try {
     const races = await getAllRaces(date);
+    const [flatWeights, trotWeights] = await Promise.all([
+      getActiveModelWeightProfile("PLAT"),
+      getActiveModelWeightProfile("TROT"),
+    ]);
     const results: BilanResult[] = [];
 
     for (const race of races) {
@@ -173,7 +178,11 @@ export async function GET(request: Request) {
           getParticipants(date, race.reunion, race.course),
           getDefinitiveRapports(date, race.reunion, race.course).catch(() => ({})),
         ]);
-        const analysis = analyzeRace(race, participants);
+        const analysis = analyzeRace(
+          race,
+          participants,
+          race.estPlat ? flatWeights : trotWeights
+        );
         if (analysis.parisRecommandes.length === 0) continue;
 
         for (const pari of analysis.parisRecommandes) {

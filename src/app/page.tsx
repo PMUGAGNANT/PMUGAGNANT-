@@ -1117,23 +1117,6 @@ export default function Home() {
               const stageBadgeStyle = scoreStage
                 ? getStageBadgeStyle(scoreStage)
                 : null;
-              const hasSimpleInsight =
-                confScore !== undefined &&
-                simpleReturn1Euro !== undefined &&
-                simpleReturn1Euro !== null &&
-                simpleHorse &&
-                simpleDisplayMeta;
-              const showFinishedPanel = Boolean(
-                isFinished && finishedInfo && simpleHorse
-              );
-              const showTimelinePanel = Boolean(
-                !showFinishedPanel &&
-                  (note2h !== undefined ||
-                    note1h !== undefined ||
-                    note30m !== undefined)
-              );
-              const hasInfoDeck =
-                hasSimpleInsight || showFinishedPanel || showTimelinePanel;
 
               return (
                 <div

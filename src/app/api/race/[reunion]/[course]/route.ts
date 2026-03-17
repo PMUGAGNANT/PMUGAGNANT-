@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getParticipants, getAllRaces, getTodayDateStr } from '@/lib/pmu-api';
 import { analyzeRace } from '@/lib/analysis';
+import { getActiveModelWeightProfile } from '@/lib/learning';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,7 +55,10 @@ export async function GET(
 
     let analysis = null;
     if (pronoAvailable && participants.length > 0) {
-      analysis = analyzeRace(courseInfo, participants);
+      const weightProfile = await getActiveModelWeightProfile(
+        courseInfo.estPlat ? 'PLAT' : 'TROT'
+      );
+      analysis = analyzeRace(courseInfo, participants, weightProfile);
     }
 
     return NextResponse.json({

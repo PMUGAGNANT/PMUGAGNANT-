@@ -13,7 +13,15 @@ import type {
   AlgorithmHealth,
   RaceAnalysis,
   RaceStatus,
+  ModelWeightProfile,
+  RunnerScoreComponents,
 } from './types';
+import {
+  extractRunnerFeatureSnapshot,
+  getMarketTrustBonus,
+  getMarketTrustRating,
+  resolveWeightProfile,
+} from './learning';
 
 // ---------------------------------------------------------------------------
 // Elite personnel lists
@@ -177,15 +185,14 @@ export function parseMusic(music: string): MusicStats {
 // ---------------------------------------------------------------------------
 // 2. scoreRunner
 // ---------------------------------------------------------------------------
-export function scoreRunner(
+function buildRunnerScoreComponents(
   participant: Participant,
-  estPlat: boolean
-): ScoredParticipant {
+  estPlat: boolean,
+  weights: ReturnType<typeof resolveWeightProfile>
+): { musicStats: MusicStats; scoreComponents: RunnerScoreComponents } {
   const musicStats = parseMusic(participant.musique);
-  const { averagePosition, serie, recentPositions, trend, fiabilite } =
-    musicStats;
+  const { averagePosition, serie, recentPositions, trend } = musicStats;
 
-  // Form score (max 10)
   let formScore: number;
   if (averagePosition < 2) formScore = 10;
   else if (averagePosition < 3) formScore = 8;
@@ -193,26 +200,19 @@ export function scoreRunner(
   else if (averagePosition < 5) formScore = 4;
   else formScore = 2;
 
-  // Serie bonus (max 18)
   const serieBonus = Math.min(serie * 3, 18);
-
-  // Recent victory (15): if won in last 3 races
   const last3 = recentPositions.slice(-3);
   const recentVictory = last3.includes(1) ? 15 : 0;
 
-  // Form progression (max 12): negative trend = improving
   let formProgression = 0;
   if (trend < -3) formProgression = 12;
   else if (trend < -2) formProgression = 10;
   else if (trend < -1) formProgression = 8;
   else if (trend < 0) formProgression = 5;
   else if (trend === 0) formProgression = 2;
-  else formProgression = 0;
 
-  // Elite personnel (max 10)
   let eliteScore = 0;
   if (estPlat) {
-    // Flat: check jockey
     const jockeyKey = (participant.jockey || '').toLowerCase().trim();
     for (const [name, score] of Object.entries(ELITE_JOCKEYS_FLAT)) {
       if (jockeyKey.includes(name)) {
@@ -220,7 +220,6 @@ export function scoreRunner(
       }
     }
   } else {
-    // Trot: check driver
     const driverKey = (participant.driver || '').toLowerCase().trim();
     for (const [name, score] of Object.entries(ELITE_DRIVERS_TROT)) {
       if (driverKey.includes(name)) {
@@ -229,7 +228,6 @@ export function scoreRunner(
     }
   }
 
-  // Trainer quality (max 8)
   let trainerScore = 0;
   const trainerKey = (participant.entraineur || '').toLowerCase().trim();
   const trainerMap = estPlat ? ELITE_TRAINERS_FLAT : ELITE_TRAINERS_TROT;
@@ -239,14 +237,12 @@ export function scoreRunner(
     }
   }
 
-  // Win rate (max 2)
   const winRate =
     participant.nombreCourses > 0
       ? participant.nombreVictoires / participant.nombreCourses
       : 0;
   const winRateBonus = winRate > 0.2 ? 2 : 0;
 
-  // Age bonus (max 5)
   let ageBonus = 0;
   if (estPlat) {
     if (participant.age >= 3 && participant.age <= 5) ageBonus = 5;
@@ -256,7 +252,6 @@ export function scoreRunner(
     else if (participant.age === 4 || participant.age === 9) ageBonus = 3;
   }
 
-  // Experience and earnings bonus (max 8)
   const placeRate =
     participant.nombreCourses > 0
       ? participant.nombrePlaces / participant.nombreCourses
@@ -273,7 +268,6 @@ export function scoreRunner(
   else if (participant.gainCarriere >= 150000) experienceBonus += 2;
   else if (participant.gainCarriere >= 60000) experienceBonus += 1;
 
-  // Draw / stall bonus
   let drawBonus = 0;
   if (participant.placeCorde && participant.placeCorde > 0) {
     if (estPlat) {
@@ -290,7 +284,6 @@ export function scoreRunner(
     }
   }
 
-  // Weight bonus / malus (mostly useful in flat races and handicaps)
   let weightBonus = 0;
   if (estPlat && participant.poids && participant.poids > 0) {
     if (participant.poids <= 54) weightBonus = 2.5;
@@ -300,20 +293,56 @@ export function scoreRunner(
     else if (participant.poids >= 59.5) weightBonus = -0.5;
   }
 
-  const totalScore =
-    formScore +
-    serieBonus +
-    recentVictory +
-    formProgression +
-    eliteScore +
-    trainerScore +
-    winRateBonus +
-    ageBonus +
-    experienceBonus +
-    drawBonus +
-    weightBonus;
+  const marketTrustBonus = getMarketTrustBonus(participant.cote);
 
-  // Tocard detection
+  const totalScore =
+    formScore * weights.formScore +
+    serieBonus * weights.serieBonus +
+    recentVictory * weights.recentVictory +
+    formProgression * weights.formProgression +
+    eliteScore * weights.eliteScore +
+    trainerScore * weights.trainerScore +
+    winRateBonus * weights.winRateBonus +
+    ageBonus * weights.ageBonus +
+    experienceBonus * weights.experienceBonus +
+    drawBonus * weights.drawBonus +
+    weightBonus * weights.weightBonus +
+    marketTrustBonus * weights.marketTrustBonus;
+
+  return {
+    musicStats,
+    scoreComponents: {
+      formScore,
+      serieBonus,
+      recentVictory,
+      formProgression,
+      eliteScore,
+      trainerScore,
+      winRateBonus,
+      ageBonus,
+      experienceBonus,
+      drawBonus,
+      weightBonus,
+      marketTrustBonus,
+      totalScore: Math.round(totalScore * 100) / 100,
+    },
+  };
+}
+
+export function scoreRunner(
+  participant: Participant,
+  estPlat: boolean,
+  weightProfile?: ModelWeightProfile | null
+): ScoredParticipant {
+  const weights = resolveWeightProfile(estPlat, weightProfile);
+  const { musicStats, scoreComponents } = buildRunnerScoreComponents(
+    participant,
+    estPlat,
+    weights
+  );
+  const { averagePosition, fiabilite } = musicStats;
+  const totalScore = scoreComponents.totalScore;
+
   let estTocard = false;
   if (participant.nombreCourses >= 4) {
     if (fiabilite < 0.5) estTocard = true;
@@ -326,6 +355,13 @@ export function scoreRunner(
     scoreAlgo: totalScore,
     estTocard,
     musicStats,
+    scoreComponents,
+    featureSnapshot: extractRunnerFeatureSnapshot(
+      participant,
+      musicStats,
+      scoreComponents,
+      estPlat
+    ),
   };
 }
 
@@ -759,21 +795,6 @@ function getDrawRating(
   }
 
   return clamp(0.35 + normalized * 0.65, 0.2, 1);
-}
-
-function getMarketTrustRating(cote: number | null) {
-  if (cote === null || !Number.isFinite(cote) || cote <= 0) {
-    return 0.55;
-  }
-
-  if (cote <= 3.5) return 1;
-  if (cote <= 6) return 0.92;
-  if (cote <= 10) return 0.82;
-  if (cote <= 15) return 0.7;
-  if (cote <= 25) return 0.54;
-  if (cote <= 40) return 0.36;
-  if (cote <= 60) return 0.24;
-  return 0.14;
 }
 
 function getRunnerSignals(
@@ -1235,10 +1256,13 @@ function buildAlgorithmHealth(
 // ---------------------------------------------------------------------------
 export function analyzeRace(
   courseInfo: RaceSummary,
-  participants: Participant[]
+  participants: Participant[],
+  weightProfile?: ModelWeightProfile | null
 ): RaceAnalysis {
   // 1. Score all participants
-  const scored = participants.map((p) => scoreRunner(p, courseInfo.estPlat));
+  const scored = participants.map((p) =>
+    scoreRunner(p, courseInfo.estPlat, weightProfile)
+  );
 
   // 2. Sort by scoreAlgo descending
   scored.sort((a, b) => b.scoreAlgo - a.scoreAlgo);
