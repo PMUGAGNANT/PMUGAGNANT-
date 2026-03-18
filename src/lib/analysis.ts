@@ -604,7 +604,7 @@ export function buildRecommendation(
   let emoji: string;
   let vautLeCoup: boolean;
 
-  if (solidite.score >= 75 && solidite.alertes.length === 0) {
+  if (solidite.score >= 80 && solidite.alertes.length === 0) {
     decision = 'JOUEZ LE FAVORI';
     emoji = '🟢';
     vautLeCoup = true;
@@ -612,10 +612,20 @@ export function buildRecommendation(
       `Le favori ${favori.nom} affiche une solidité de ${solidite.score}/100`
     );
     raisonnement.push('Aucune alerte détectée');
+  } else if (solidite.score >= 72 && solidite.alertes.length <= 1) {
+    decision = 'FAVORI JOUABLE AVEC PRUDENCE';
+    emoji = '\uD83D\uDFE1';
+    vautLeCoup = true;
+    raisonnement.push(
+      `Le favori ${favori.nom} reste solide (${solidite.score}/100)`
+    );
+    if (solidite.alertes.length === 1) {
+      raisonnement.push(`Attention : ${solidite.alertes[0]}`);
+    }
   } else if (
     solidite.score >= 55 &&
-    solidite.score < 75 &&
-    solidite.alertes.length <= 1
+    solidite.score < 72 &&
+    solidite.alertes.length <= 2
   ) {
     decision = 'FAVORI JOUABLE AVEC PRUDENCE';
     emoji = '🟡';
@@ -626,7 +636,7 @@ export function buildRecommendation(
     if (solidite.alertes.length === 1) {
       raisonnement.push(`Attention : ${solidite.alertes[0]}`);
     }
-  } else if (solidite.score >= 35 && solidite.score < 55) {
+  } else if (solidite.score >= 35) {
     decision = 'COURSE COMPLEXE';
     emoji = '🟠';
     vautLeCoup = false;

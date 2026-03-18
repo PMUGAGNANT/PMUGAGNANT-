@@ -81,6 +81,25 @@ interface Recommendation {
   raisonnement: string[];
 }
 
+interface BetRecommendationHorse {
+  numPmu: number;
+  nom: string;
+  placeCorde?: number | null;
+  poids?: number | null;
+}
+
+interface BetRecommendation {
+  type: "SIMPLE_GAGNANT" | "COUPLE_PLACE" | "COUPLE_GAGNANT";
+  label: string;
+  emoji: string;
+  chevaux: BetRecommendationHorse[];
+  surete: number;
+  sureteLabel: string;
+  miseConseillee: number;
+  coteEstimee: number | null;
+  pourquoi: string[];
+}
+
 interface ConfidenceScore {
   score: number;
   niveau: { label: string; emoji: string };
@@ -116,6 +135,7 @@ interface RaceAnalysis {
   favori: ScoredParticipant | null;
   soliditeFavori: FavoriteSolidity | null;
   recommandation: Recommendation | null;
+  parisRecommandes: BetRecommendation[];
   scoreConfiance: ConfidenceScore | null;
   predictionsCotes: Record<number, PredictedOdds>;
   profils: StrategicProfiles;
@@ -484,13 +504,31 @@ export default function CourseDetailPage() {
     const favori = a.favori;
     const solidite = a.soliditeFavori;
     const reco = a.recommandation;
+    const primarySimpleRecommendation =
+      a.parisRecommandes?.find((pari) => pari.type === "SIMPLE_GAGNANT") ?? null;
+    const primarySimpleHorse = primarySimpleRecommendation?.chevaux?.[0]
+      ? a.top5.find(
+        (horse) => horse.numPmu === primarySimpleRecommendation.chevaux[0].numPmu
+      ) ?? null
+      : null;
+    const highlightedHorse = primarySimpleHorse ?? favori;
+    const ticketSimpleDiffers = Boolean(
+      favori &&
+      primarySimpleHorse &&
+      favori.numPmu !== primarySimpleHorse.numPmu
+    );
     const confiance = a.scoreConfiance;
     const profils = a.profils;
 
     return (
       <>
         {/* Result banner for finished races */}
-        {data.isFinished && favori && <ResultBanner favori={favori} />}
+        {data.isFinished && highlightedHorse && (
+          <ResultBanner
+            horse={highlightedHorse}
+            label={ticketSimpleDiffers ? "Ticket simple" : "Favori"}
+          />
+        )}
 
         {/* A. Race Header Card */}
         <RaceInfoCard dark />
@@ -499,7 +537,7 @@ export default function CourseDetailPage() {
         {favori && confiance && (
           <div style={{ ...cardStyle, background: "radial-gradient(circle at top right, rgba(0,132,61,0.12), transparent 26%), linear-gradient(180deg, #FFFFFF 0%, #F7FBF8 100%)" }}>
             <div style={{ ...pillStyle, background: "#E8F5E9", color: GREEN, marginBottom: "16px", fontSize: "11px", letterSpacing: "1px" }}>
-              &#x2B50; FAVORI
+              &#x2B50; {ticketSimpleDiffers ? "FAVORI TECHNIQUE" : "FAVORI"}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "18px", marginBottom: "18px" }}>
               <div style={{
@@ -514,8 +552,8 @@ export default function CourseDetailPage() {
                 <div style={{ fontWeight: 800, fontSize: "28px", color: DARK, lineHeight: 1.05, letterSpacing: "-0.8px" }}>{favori.nom}</div>
                 <div style={{ fontSize: "14px", color: "#64748B", marginTop: "6px" }}>
                   {data.courseInfo.estPlat
-                    ? `Jockey: ${favori.jockey || "N/A"}`
-                    : `Driver: ${favori.driver || "N/A"}`}
+                    ? `Jockey: ${favori.jockey || favori.driver || "N/A"}`
+                    : `Driver: ${favori.driver || favori.jockey || "N/A"}`}
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: "8px" }}>
                   {favori.placeCorde ? (
@@ -529,6 +567,20 @@ export default function CourseDetailPage() {
                     </span>
                   ) : null}
                 </div>
+                {ticketSimpleDiffers && primarySimpleHorse ? (
+                  <div style={{
+                    marginTop: "12px",
+                    padding: "10px 12px",
+                    borderRadius: "12px",
+                    background: "#EEF8F1",
+                    color: GREEN_DARK,
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    lineHeight: 1.45,
+                  }}>
+                    Ticket simple conseille : N{primarySimpleHorse.numPmu} {primarySimpleHorse.nom}
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -822,10 +874,10 @@ export default function CourseDetailPage() {
         )}
 
         {/* I. BET BUTTON */}
-        {!data.isFinished && favori && !alreadyBet && (
+        {!data.isFinished && highlightedHorse && !alreadyBet && (
           <div style={{ margin: "0 16px 16px" }}>
             <button
-              onClick={() => openBetPanel(favori)}
+              onClick={() => openBetPanel(highlightedHorse)}
               style={{
                 width: "100%",
                 padding: "18px",
@@ -840,9 +892,9 @@ export default function CourseDetailPage() {
                 letterSpacing: "-0.2px",
               }}
             >
-              &#127922; Parier sur cette course
+              &#127922; {ticketSimpleDiffers ? "Parier le ticket simple conseille" : "Parier sur cette course"}
             </button>
-            {a.top5.length > 1 && (
+            {a.top5.length > 1 && favori && (
               <div style={{ textAlign: "center", marginTop: "8px" }}>
                 <span
                   onClick={() => openBetPanel(a.top5[1])}
@@ -887,20 +939,26 @@ export default function CourseDetailPage() {
   }
 
   /* Result Banner for finished races */
-  function ResultBanner({ favori }: { favori: ScoredParticipant }) {
-    const ordre = favori.ordreArrivee;
+  function ResultBanner({
+    horse,
+    label,
+  }: {
+    horse: ScoredParticipant;
+    label: string;
+  }) {
+    const ordre = horse.ordreArrivee;
     let bg: string;
     let text: string;
 
     if (ordre === 1) {
       bg = GREEN;
-      text = "\uD83C\uDFC6 GAGNANT !";
+      text = `\uD83C\uDFC6 ${label} gagnant`;
     } else if (ordre !== null && ordre <= 3) {
       bg = "#FFD600";
-      text = `\u2705 PLAC\u00c9 (${ordre}e)`;
+      text = `\u2705 ${label} place (${ordre}e)`;
     } else {
       bg = "#D32F2F";
-      text = "\u274C Non plac\u00e9";
+      text = `\u274C ${label} non place`;
     }
 
     return (
