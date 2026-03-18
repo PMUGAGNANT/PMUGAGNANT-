@@ -71,6 +71,10 @@ export interface RunnerScoreComponents {
   drawBonus: number;
   weightBonus: number;
   marketTrustBonus: number;
+  reliabilityScore: number;
+  placePotential: number;
+  winPotential: number;
+  riskPenalty: number;
   totalScore: number;
 }
 

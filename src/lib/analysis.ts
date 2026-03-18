@@ -191,7 +191,16 @@ function buildRunnerScoreComponents(
   weights: ReturnType<typeof resolveWeightProfile>
 ): { musicStats: MusicStats; scoreComponents: RunnerScoreComponents } {
   const musicStats = parseMusic(participant.musique);
-  const { averagePosition, serie, recentPositions, trend } = musicStats;
+  const {
+    averagePosition,
+    serie,
+    recentPositions,
+    trend,
+    fiabilite,
+    ratioForme,
+    nbDQ,
+    nbAbandons,
+  } = musicStats;
 
   let formScore: number;
   if (averagePosition < 2) formScore = 10;
@@ -294,6 +303,90 @@ function buildRunnerScoreComponents(
   }
 
   const marketTrustBonus = getMarketTrustBonus(participant.cote);
+  const marketTrustRating = getMarketTrustRating(participant.cote);
+  const normalizedAveragePosition = clamp(
+    1 - (Math.min(averagePosition, 10) - 1) / 9,
+    0,
+    1
+  );
+  const experienceTrust = clamp(
+    participant.nombreCourses / (estPlat ? 16 : 20),
+    0.15,
+    1
+  );
+  const drawSignal = clamp(
+    0.5 + drawBonus / (estPlat ? 6 : 4),
+    0,
+    1
+  );
+  const weightSignal = clamp(0.5 + weightBonus / 4, 0, 1);
+  const recentWinSignal = recentVictory > 0 ? 1 : 0;
+  const trendSignal =
+    trend < -2 ? 1 : trend < -1 ? 0.8 : trend < 0 ? 0.55 : trend > 1.5 ? 0 : 0.25;
+
+  const reliabilityScore = clamp(
+    fiabilite * 3.6 +
+      ratioForme * 2.2 +
+      placeRate * 1.8 +
+      normalizedAveragePosition * 1.1 +
+      experienceTrust * 0.8 +
+      drawSignal * 0.4 +
+      weightSignal * 0.25 -
+      nbDQ * 0.55 -
+      nbAbandons * 0.45,
+    0,
+    10
+  );
+
+  const riskPenalty = clamp(
+    nbDQ * 1.2 +
+      nbAbandons * 0.9 +
+      (fiabilite < 0.55 ? (0.55 - fiabilite) * 9 : 0) +
+      (averagePosition > 5 ? (averagePosition - 5) * 0.65 : 0) +
+      (participant.nombreCourses < 4 ? 1.4 : participant.nombreCourses < 7 ? 0.6 : 0) +
+      (marketTrustRating < 0.2
+        ? 1.8
+        : marketTrustRating < 0.3
+          ? 1.0
+          : marketTrustRating < 0.4
+            ? 0.4
+            : 0),
+    0,
+    10
+  );
+
+  const placePotential = clamp(
+    fiabilite * 2.9 +
+      ratioForme * 2.3 +
+      placeRate * 15 +
+      normalizedAveragePosition * 0.8 +
+      eliteScore * 0.08 +
+      trainerScore * 0.11 +
+      ageBonus * 0.09 +
+      Math.max(drawBonus, 0) * 0.18 +
+      Math.max(weightBonus, 0) * 0.14 +
+      marketTrustRating * 0.9 -
+      riskPenalty * 0.48,
+    0,
+    10
+  );
+
+  const winPotential = clamp(
+    ratioForme * 2.1 +
+      winRate * 18 +
+      recentWinSignal * 1.3 +
+      trendSignal * 1.1 +
+      eliteScore * 0.18 +
+      trainerScore * 0.14 +
+      ageBonus * 0.14 +
+      Math.max(drawBonus, 0) * 0.16 +
+      Math.max(weightBonus, 0) * 0.16 +
+      marketTrustRating * 1.25 +
+      reliabilityScore * 0.08 -
+      riskPenalty * 0.62,
+    0,
+    10
+  );
 
   const totalScore =
     formScore * weights.formScore +
@@ -307,7 +400,11 @@ function buildRunnerScoreComponents(
     experienceBonus * weights.experienceBonus +
     drawBonus * weights.drawBonus +
     weightBonus * weights.weightBonus +
-    marketTrustBonus * weights.marketTrustBonus;
+    marketTrustBonus * weights.marketTrustBonus +
+    reliabilityScore * 0.9 +
+    placePotential * 0.7 +
+    winPotential * 0.9 -
+    riskPenalty * 1.1;
 
   return {
     musicStats,
@@ -324,6 +421,10 @@ function buildRunnerScoreComponents(
       drawBonus,
       weightBonus,
       marketTrustBonus,
+      reliabilityScore: round1(reliabilityScore),
+      placePotential: round1(placePotential),
+      winPotential: round1(winPotential),
+      riskPenalty: round1(riskPenalty),
       totalScore: Math.round(totalScore * 100) / 100,
     },
   };
@@ -347,6 +448,12 @@ export function scoreRunner(
   if (participant.nombreCourses >= 4) {
     if (fiabilite < 0.5) estTocard = true;
     if (averagePosition > 9) estTocard = true;
+  }
+  if (scoreComponents.riskPenalty >= 6.5) {
+    estTocard = true;
+  }
+  if (scoreComponents.placePotential <= 2 && scoreComponents.winPotential <= 2.5) {
+    estTocard = true;
   }
 
   return {
@@ -373,6 +480,7 @@ export function analyzeFavoriteSolidity(
   all: ScoredParticipant[]
 ): FavoriteSolidity {
   const stats = favori.musicStats;
+  const components = favori.scoreComponents;
   const alertes: string[] = [];
   const pointsPositifs: string[] = [];
 
@@ -403,6 +511,30 @@ export function analyzeFavoriteSolidity(
   if (stats && stats.ratioForme >= 0.7) {
     score += 8;
     pointsPositifs.push(`Ratio de forme excellent (${stats.ratioForme})`);
+  }
+
+  if (components && components.reliabilityScore >= 7) {
+    score += 10;
+    pointsPositifs.push(`Profil fiable (${components.reliabilityScore}/10)`);
+  } else if (components && components.reliabilityScore <= 4.6) {
+    score -= 9;
+    alertes.push(`Fiabilite limitee (${components.reliabilityScore}/10)`);
+  }
+
+  if (components && components.placePotential >= 7) {
+    score += 8;
+    pointsPositifs.push(`Base place solide (${components.placePotential}/10)`);
+  } else if (components && components.placePotential <= 4.8) {
+    score -= 7;
+    alertes.push(`Base place fragile (${components.placePotential}/10)`);
+  }
+
+  if (components && components.winPotential >= 7) {
+    score += 10;
+    pointsPositifs.push(`Potentiel de victoire net (${components.winPotential}/10)`);
+  } else if (components && components.winPotential <= 4.5) {
+    score -= 8;
+    alertes.push(`Victoire moins lisible (${components.winPotential}/10)`);
   }
 
   // Ecart score: favori vs second
@@ -436,6 +568,14 @@ export function analyzeFavoriteSolidity(
   if (stats && stats.nbAbandons >= 2) {
     score -= 10;
     alertes.push(`${stats.nbAbandons} abandons récents - fiabilité douteuse`);
+  }
+
+  if (components && components.riskPenalty >= 5) {
+    score -= 15;
+    alertes.push(`Beaucoup de drapeaux rouges (${components.riskPenalty}/10)`);
+  } else if (components && components.riskPenalty >= 3.5) {
+    score -= 8;
+    alertes.push(`Risque a surveiller (${components.riskPenalty}/10)`);
   }
 
   // Clamp 0-100
@@ -520,10 +660,13 @@ export function buildRecommendation(
 // 5. computeConfidenceScore
 // ---------------------------------------------------------------------------
 export function computeConfidenceScore(
-  solidite: FavoriteSolidity
+  solidite: FavoriteSolidity,
+  favori: ScoredParticipant,
+  top5: ScoredParticipant[]
 ): ConfidenceScore {
   const facteurs: string[] = [];
   let score = 5.0;
+  const components = favori.scoreComponents;
 
   // Solidity factor
   if (solidite.score >= 80) {
@@ -558,6 +701,64 @@ export function computeConfidenceScore(
   } else if (solidite.ecartScore < 5) {
     score -= 0.4;
     facteurs.push('Écart de score faible (-0.4)');
+  }
+
+  if (components && components.placePotential >= 7) {
+    score += 0.8;
+    facteurs.push(`Base place solide (${components.placePotential}/10) (+0.8)`);
+  } else if (components && components.placePotential <= 4.8) {
+    score -= 0.8;
+    facteurs.push(`Base place fragile (${components.placePotential}/10) (-0.8)`);
+  }
+
+  if (components && components.winPotential >= 7) {
+    score += 0.7;
+    facteurs.push(`Potentiel de victoire net (${components.winPotential}/10) (+0.7)`);
+  } else if (components && components.winPotential <= 4.5) {
+    score -= 0.7;
+    facteurs.push(`Victoire moins lisible (${components.winPotential}/10) (-0.7)`);
+  }
+
+  if (components && components.riskPenalty >= 4.5) {
+    score -= 0.9;
+    facteurs.push(`Risque eleve (${components.riskPenalty}/10) (-0.9)`);
+  } else if (components && components.riskPenalty <= 2) {
+    score += 0.3;
+    facteurs.push(`Peu de drapeaux rouges (${components.riskPenalty}/10) (+0.3)`);
+  }
+
+  const second = top5[1];
+  if (components && second?.scoreComponents) {
+    const winGap = components.winPotential - second.scoreComponents.winPotential;
+    const placeGap =
+      components.placePotential - second.scoreComponents.placePotential;
+
+    if (winGap >= 1.2) {
+      score += 0.5;
+      facteurs.push('Le favori domine le 2e sur le potentiel victoire (+0.5)');
+    } else if (winGap <= 0.35) {
+      score -= 0.5;
+      facteurs.push('Le 2e reste tres proche du favori pour la gagne (-0.5)');
+    }
+
+    if (placeGap >= 1) {
+      score += 0.3;
+      facteurs.push('Base place superieure au 2e (+0.3)');
+    } else if (placeGap <= 0.2) {
+      score -= 0.2;
+      facteurs.push('Peu d ecart place avec le 2e (-0.2)');
+    }
+  }
+
+  const averageRiskTop3 =
+    top5.slice(0, 3).reduce((sum, runner) => sum + (runner.scoreComponents?.riskPenalty ?? 4), 0) /
+    Math.max(1, Math.min(3, top5.length));
+  if (averageRiskTop3 >= 4) {
+    score -= 0.6;
+    facteurs.push(`Top 3 globalement nerveux (${round1(averageRiskTop3)}/10) (-0.6)`);
+  } else if (averageRiskTop3 <= 2.2) {
+    score += 0.3;
+    facteurs.push(`Top 3 plutot propre (${round1(averageRiskTop3)}/10) (+0.3)`);
   }
 
   // Clamp 0-10
@@ -718,31 +919,53 @@ export function identifyProfiles(
   let pepite: ScoredParticipant | null = null;
   let sniper: ScoredParticipant | null = null;
 
-  // Beton: top5[0] if solidite >= 65 AND confiance >= 7.0
-  if (
-    top5.length > 0 &&
-    solidite.score >= 65 &&
-    confiance.score >= 7.0
-  ) {
-    beton = top5[0];
+  if (top5.length > 0) {
+    const candidate = top5[0];
+    const components = candidate.scoreComponents;
+    if (
+      components &&
+      solidite.score >= 62 &&
+      confiance.score >= 6.8 &&
+      components.placePotential >= 6.8 &&
+      components.riskPenalty <= 3.8
+    ) {
+      beton = candidate;
+    }
   }
 
-  // Pepite: first in top5 (not beton) with valueIndex >= 1.95 AND confiance >= 7.5
   for (const runner of top5) {
     if (beton && runner.numPmu === beton.numPmu) continue;
     const value = valueTop5[runner.numPmu];
-    if (value && value.valueIndex >= 1.95 && confiance.score >= 7.5) {
+    const components = runner.scoreComponents;
+    if (
+      value &&
+      components &&
+      value.valueIndex >= 1.7 &&
+      confiance.score >= 6.8 &&
+      components.winPotential >= 5.8 &&
+      components.placePotential >= 5.4 &&
+      components.riskPenalty <= 4.2 &&
+      getMarketTrustRating(runner.cote) >= 0.22
+    ) {
       pepite = runner;
       break;
     }
   }
 
-  // Sniper: first in top5 (not beton, not pepite) with valueIndex >= 1.45 AND confiance >= 7.8
   for (const runner of top5) {
     if (beton && runner.numPmu === beton.numPmu) continue;
     if (pepite && runner.numPmu === pepite.numPmu) continue;
     const value = valueTop5[runner.numPmu];
-    if (value && value.valueIndex >= 1.45 && confiance.score >= 7.8) {
+    const components = runner.scoreComponents;
+    if (
+      value &&
+      components &&
+      value.valueIndex >= 1.35 &&
+      confiance.score >= 7.1 &&
+      components.winPotential >= 5.2 &&
+      components.riskPenalty <= 3.8 &&
+      getMarketTrustRating(runner.cote) >= 0.3
+    ) {
       sniper = runner;
       break;
     }
@@ -805,6 +1028,7 @@ function getRunnerSignals(
   valueTop5: Record<number, ValueAnalysis>
 ) {
   const stats = runner.musicStats;
+  const components = runner.scoreComponents;
   const scoreRatio = topScore > 0 ? runner.scoreAlgo / topScore : 0;
   const podiumRate = runner.nombreCourses > 0 ? runner.nombrePlaces / runner.nombreCourses : 0;
   const winRate = runner.nombreCourses > 0 ? runner.nombreVictoires / runner.nombreCourses : 0;
@@ -814,42 +1038,62 @@ function getRunnerSignals(
   const drawRating = getDrawRating(runner, estPlat, nombrePartants);
   const valueIndex = valueTop5[runner.numPmu]?.valueIndex ?? 1;
   const marketTrust = getMarketTrustRating(runner.cote);
+  const reliability = (components?.reliabilityScore ?? 5) / 10;
+  const placePotential = (components?.placePotential ?? 5) / 10;
+  const winPotential = (components?.winPotential ?? 5) / 10;
+  const riskPenalty = (components?.riskPenalty ?? 4) / 10;
 
   const podiumChance = clamp(
-    scoreRatio * 0.28 +
-      fiabilite * 0.2 +
-      ratioForme * 0.18 +
-      podiumRate * 0.15 +
-      drawRating * 0.1 +
-      marketTrust * 0.09,
+    scoreRatio * 0.22 +
+      fiabilite * 0.14 +
+      ratioForme * 0.13 +
+      podiumRate * 0.12 +
+      drawRating * 0.07 +
+      marketTrust * 0.08 +
+      reliability * 0.12 +
+      placePotential * 0.12 -
+      riskPenalty * 0.08,
     0.08,
     0.88
   );
 
   const winChance = clamp(
-    scoreRatio * 0.3 +
-      fiabilite * 0.1 +
-      ratioForme * 0.15 +
-      winRate * 0.15 +
-      recentWinBoost * 0.12 +
-      drawRating * 0.08 +
-      marketTrust * 0.1,
+    scoreRatio * 0.2 +
+      fiabilite * 0.08 +
+      ratioForme * 0.1 +
+      winRate * 0.12 +
+      recentWinBoost * 0.09 +
+      drawRating * 0.05 +
+      marketTrust * 0.16 +
+      reliability * 0.07 +
+      winPotential * 0.2 -
+      riskPenalty * 0.07,
     0.04,
     0.8
   );
 
   const safetyScore = clamp(
-    podiumChance * 5.5 + fiabilite * 1.6 + ratioForme * 1.3 + drawRating + marketTrust * 0.8,
+    podiumChance * 4.8 +
+      fiabilite * 0.9 +
+      ratioForme * 0.8 +
+      drawRating * 0.4 +
+      marketTrust * 0.5 +
+      reliability * 1.4 +
+      placePotential * 1.1 -
+      riskPenalty * 0.8,
     0,
     10
   );
 
   const attackScore = clamp(
-    winChance * 5.9 +
-      scoreRatio * 1.9 +
-      recentWinBoost * 0.8 +
-      Math.min(valueIndex, 2.2) * 0.25 +
-      marketTrust * 1.1,
+    winChance * 4.8 +
+      scoreRatio * 0.9 +
+      recentWinBoost * 0.4 +
+      Math.min(valueIndex, 1.8) * 0.12 +
+      marketTrust * 0.8 +
+      reliability * 0.6 +
+      winPotential * 2.2 -
+      riskPenalty * 0.7,
     0,
     10
   );
@@ -862,6 +1106,10 @@ function getRunnerSignals(
     drawRating,
     marketTrust,
     valueIndex,
+    reliability,
+    placePotential,
+    winPotential,
+    riskPenalty,
     safetyScore,
     attackScore,
   };
@@ -897,11 +1145,28 @@ function buildPairEvaluations(
       const pairAttackAverage = (firstSignals.winChance + secondSignals.winChance) / 2;
       const combinedDraw = (firstSignals.drawRating + secondSignals.drawRating) / 2;
       const combinedValue = (firstSignals.valueIndex + secondSignals.valueIndex) / 2;
+      const combinedReliability =
+        (firstSignals.reliability + secondSignals.reliability) / 2;
+      const combinedRisk =
+        (firstSignals.riskPenalty + secondSignals.riskPenalty) / 2;
       const complementarity =
         1 - Math.min(Math.abs(firstSignals.attackScore - secondSignals.attackScore), 5) / 10;
 
-      const placeScore = pairSafetyFloor * 0.5 + pairSafetyAverage * 0.32 + complementarity * 0.1 + combinedDraw * 0.08;
-      const winScore = pairAttackFloor * 0.48 + pairAttackAverage * 0.28 + complementarity * 0.08 + combinedDraw * 0.06 + Math.min(combinedValue, 1.8) * 0.1;
+      const placeScore =
+        pairSafetyFloor * 0.42 +
+        pairSafetyAverage * 0.24 +
+        combinedReliability * 0.12 +
+        complementarity * 0.08 +
+        combinedDraw * 0.06 -
+        combinedRisk * 0.08;
+      const winScore =
+        pairAttackFloor * 0.34 +
+        pairAttackAverage * 0.18 +
+        combinedReliability * 0.08 +
+        complementarity * 0.05 +
+        combinedDraw * 0.04 +
+        Math.min(combinedValue, 1.5) * 0.04 -
+        combinedRisk * 0.07;
 
       const placeSurete = clamp(
         placeScore * 9.4 +
@@ -919,13 +1184,21 @@ function buildPairEvaluations(
       const placeReasons = [
         `Base podium: ${Math.round(pairSafetyFloor * 100)}% / ${Math.round(pairSafetyAverage * 100)}%`,
         combinedDraw >= 0.62 ? "Positions de depart favorables pour le duo" : "Duo solide meme sans avantage net a la corde",
-        complementarity >= 0.7 ? "Deux profils qui se completent bien" : "Duo plus direct, axe sur la regularite",
+        combinedRisk <= 0.28
+          ? "Duo propre avec peu de drapeaux rouges"
+          : complementarity >= 0.7
+            ? "Deux profils qui se completent bien"
+            : "Duo plus direct, axe sur la regularite",
       ];
 
       const winReasons = [
         `Potentiel de victoire combine: ${Math.round(pairAttackAverage * 100)}%`,
         pairAttackFloor >= 0.22 ? "Les deux chevaux gardent une vraie chance de finir tres haut" : "Pari offensif avec un cheval d'appui fort",
-        combinedValue >= 1.15 ? "La paire garde un peu de value" : "Pari principalement base sur la force pure du duo",
+        combinedRisk <= 0.3
+          ? "La paire reste assez saine pour un ticket offensif"
+          : combinedValue >= 1.15
+            ? "La paire garde un peu de value"
+            : "Pari principalement base sur la force pure du duo",
       ];
 
       pairs.push({
@@ -994,34 +1267,42 @@ export function buildBetRecommendations(
       .slice()
       .sort((a, b) => {
         const aSpeculativePenalty =
-          a.signals.marketTrust < 0.2
-            ? 0.16
-            : a.signals.marketTrust < 0.3
-              ? 0.1
-              : a.signals.marketTrust < 0.45
-                ? 0.04
+          a.signals.marketTrust < 0.18
+            ? 0.34
+            : a.signals.marketTrust < 0.28
+              ? 0.22
+              : a.signals.marketTrust < 0.4
+                ? 0.1
                 : 0;
         const bSpeculativePenalty =
-          b.signals.marketTrust < 0.2
-            ? 0.16
-            : b.signals.marketTrust < 0.3
-              ? 0.1
-              : b.signals.marketTrust < 0.45
-                ? 0.04
+          b.signals.marketTrust < 0.18
+            ? 0.34
+            : b.signals.marketTrust < 0.28
+              ? 0.22
+              : b.signals.marketTrust < 0.4
+                ? 0.1
                 : 0;
         const aWeight =
-          a.signals.winChance * 0.38 +
-          a.signals.podiumChance * 0.2 +
-          a.signals.marketTrust * 0.28 +
+          a.signals.winChance * 0.23 +
+          a.signals.podiumChance * 0.15 +
+          a.signals.marketTrust * 0.25 +
+          a.signals.reliability * 0.14 +
+          a.signals.placePotential * 0.09 +
+          a.signals.winPotential * 0.12 +
           a.signals.safetyScore / 10 * 0.08 +
-          (a.runner.numPmu === favori.numPmu ? 0.06 : 0) -
+          (a.runner.numPmu === favori.numPmu ? 0.04 : 0) -
+          a.signals.riskPenalty * 0.12 -
           aSpeculativePenalty;
         const bWeight =
-          b.signals.winChance * 0.38 +
-          b.signals.podiumChance * 0.2 +
-          b.signals.marketTrust * 0.28 +
+          b.signals.winChance * 0.23 +
+          b.signals.podiumChance * 0.15 +
+          b.signals.marketTrust * 0.25 +
+          b.signals.reliability * 0.14 +
+          b.signals.placePotential * 0.09 +
+          b.signals.winPotential * 0.12 +
           b.signals.safetyScore / 10 * 0.08 +
-          (b.runner.numPmu === favori.numPmu ? 0.06 : 0) -
+          (b.runner.numPmu === favori.numPmu ? 0.04 : 0) -
+          b.signals.riskPenalty * 0.12 -
           bSpeculativePenalty;
         return bWeight - aWeight;
       })[0]?.runner || profils.beton || favori;
@@ -1227,6 +1508,17 @@ function buildAlgorithmHealth(
     weaknesses.push(...solidite.alertes.slice(0, 2));
   }
 
+  const averageRiskTop3 =
+    top5.slice(0, 3).reduce((sum, runner) => sum + (runner.scoreComponents?.riskPenalty ?? 4), 0) /
+    Math.max(1, Math.min(3, top5.length));
+  if (averageRiskTop3 <= 2.4) {
+    score += 0.4;
+    strengths.push(`Top 3 plutot sain (${round1(averageRiskTop3)}/10 de risque)`);
+  } else if (averageRiskTop3 >= 4.2) {
+    score -= 0.5;
+    weaknesses.push(`Top 3 encore nerveux (${round1(averageRiskTop3)}/10 de risque)`);
+  }
+
   score = round1(clamp(score, 0, 10));
 
   const status =
@@ -1296,7 +1588,7 @@ export function analyzeRace(
     recommandation = buildRecommendation(soliditeFavori, favori);
 
     // 7. Compute confidence
-    scoreConfiance = computeConfidenceScore(soliditeFavori);
+    scoreConfiance = computeConfidenceScore(soliditeFavori, favori, top5);
 
     // 8. Predict odds for top 5
     const maxScore = top5[0].scoreAlgo;
