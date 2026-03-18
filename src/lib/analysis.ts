@@ -604,7 +604,7 @@ export function analyzeFavoriteSolidity(
     estFragile,
     alertes,
     pointsPositifs,
-    ecartScore,
+    ecartScore: round1(ecartScore),
   };
 }
 

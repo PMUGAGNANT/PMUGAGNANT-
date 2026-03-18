@@ -1009,14 +1009,6 @@ export default function CourseDetailPage() {
 
     const riderLabel = data.courseInfo.estPlat ? "Jockey" : "Driver";
 
-    const profileLabel = profils.beton
-      ? "Beton"
-      : profils.pepite
-        ? "Pepite"
-        : profils.sniper
-          ? "Sniper"
-          : "Neutre";
-
     const lisibiliteLabel =
       profils.lisibilite === "LISIBLE"
         ? "Course lisible"
@@ -1024,8 +1016,8 @@ export default function CourseDetailPage() {
           ? "Course complexe"
           : "Course ouverte";
 
-    const normalizedDecision = (() => {
-      if (!solidite) return reco?.decision ?? "Lecture en attente";
+    const normalizedDecision = reco?.decision ?? (() => {
+      if (!solidite) return "Lecture en attente";
 
       if (solidite.score >= 82 && solidite.alertes.length === 0) {
         return "JOUEZ LE FAVORI";
@@ -1113,13 +1105,6 @@ export default function CourseDetailPage() {
             ? tonePalette.info
             : tonePalette.danger;
 
-    const algoTone =
-      algoHealth?.status === "SAIN"
-        ? tonePalette.positive
-        : algoHealth?.status === "SURVEILLANCE"
-          ? tonePalette.warning
-          : tonePalette.danger;
-
     const lisibiliteTone =
       profils.lisibilite === "LISIBLE"
         ? tonePalette.positive
@@ -1127,13 +1112,13 @@ export default function CourseDetailPage() {
           ? tonePalette.warning
           : tonePalette.danger;
 
-    const profileTone = profils.beton
-      ? tonePalette.positive
-      : profils.pepite
-        ? tonePalette.info
-        : profils.sniper
+    const soliditeTone = !solidite
+      ? tonePalette.info
+      : solidite.score >= 82
+        ? tonePalette.positive
+        : solidite.score >= 65
           ? tonePalette.warning
-          : tonePalette.neutral;
+          : tonePalette.danger;
 
     const displayedOdds =
       primarySimpleRecommendation?.coteEstimee ??
@@ -1156,8 +1141,8 @@ export default function CourseDetailPage() {
           : tonePalette.positive;
 
     const summaryNote = cleanNarrative(
-      algoHealth?.notes?.[0] ??
-        reco?.raisonnement?.[0] ??
+      reco?.raisonnement?.[0] ??
+        algoHealth?.notes?.[0] ??
         (normalizedDecision === "JOUEZ LE FAVORI"
           ? "Le favori ressort nettement et la course reste lisible."
           : normalizedDecision === "FAVORI JOUABLE AVEC PRUDENCE"
@@ -1169,7 +1154,7 @@ export default function CourseDetailPage() {
 
     const splitReading =
       ticketSimpleDiffers && simpleHorse && favori
-        ? `Le ticket simple conseille pointe N${simpleHorse.numPmu} ${simpleHorse.nom}, alors que le favori technique brut reste N${favori.numPmu} ${favori.nom}.`
+        ? `Le moteur garde N${favori.numPmu} ${favori.nom} comme favori technique, mais prefere jouer N${simpleHorse.numPmu} ${simpleHorse.nom} en simple.`
         : null;
 
     const focusStrengths = dedupeStrings(
@@ -1199,6 +1184,11 @@ export default function CourseDetailPage() {
 
       4,
     );
+
+    const watchTitle =
+      focusWatchouts.length > 0
+        ? "Ce qui rend la course nerveuse"
+        : "Lecture assez stable";
 
     const metricCardStyle: React.CSSProperties = {
       borderRadius: "16px",
@@ -1599,17 +1589,7 @@ export default function CourseDetailPage() {
                   color: decisionTone.accent,
                 }}
               >
-                {normalizedDecision}
-              </span>
-
-              <span
-                style={{
-                  ...pillStyle,
-                  background: algoTone.background,
-                  color: algoTone.accent,
-                }}
-              >
-                Algo {algoHealth?.status ?? "SURVEILLANCE"}
+                Ticket {ticketLabel}
               </span>
 
               <span
@@ -1625,11 +1605,11 @@ export default function CourseDetailPage() {
               <span
                 style={{
                   ...pillStyle,
-                  background: profileTone.background,
-                  color: profileTone.accent,
+                  background: soliditeTone.background,
+                  color: soliditeTone.accent,
                 }}
               >
-                Profil {profileLabel}
+                Solidite {solidite.score}/100
               </span>
             </div>
 
@@ -1670,120 +1650,138 @@ export default function CourseDetailPage() {
             >
               {renderMetricCard(
                 "Confiance course",
-
                 `${formatRounded(confiance.score)}/10`,
-
                 confiance.niveau.label,
-
                 decisionTone,
               )}
 
               {renderMetricCard(
-                "Solidite favori",
-
-                `${solidite.score}/100`,
-
-                `Ecart ${formatRounded(solidite.ecartScore)} pts`,
-
-                algoTone,
-              )}
-
-              {renderMetricCard(
-                "Ticket simple",
-
-                ticketLabel,
-
-                primarySimpleRecommendation?.label ??
-                  "Lecture du simple gagnant",
-
-                ticketTone,
+                "Ecart top 2",
+                `${formatRounded(solidite.ecartScore)} pts`,
+                solidite.alertes.length > 0
+                  ? `${solidite.alertes.length} alerte(s)`
+                  : "Alerte majeure absente",
+                soliditeTone,
               )}
 
               {renderMetricCard(
                 "Projection 1 EUR",
-
                 formatReturnForOneEuro(displayedOdds) ?? "N/A",
-
-                highlightedValue?.label ?? "Lecture marche",
-
+                highlightedValue?.label ?? ticketLabel,
                 highlightedOdds?.tendance === "HAUSSE"
                   ? tonePalette.warning
-                  : tonePalette.info,
+                  : ticketTone,
               )}
             </div>
 
-            <div style={{ display: "grid", gap: "12px" }}>
-              <div style={{ ...metricCardStyle, background: "#F7FBF8" }}>
+            <div style={{ ...metricCardStyle, background: "#FCFDFC" }}>
+              {splitReading ? (
                 <div
                   style={{
-                    fontSize: "13px",
-                    fontWeight: 800,
-                    color: GREEN_DARK,
                     marginBottom: "12px",
-                  }}
-                >
-                  Ce qui appuie la lecture
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "8px",
-                  }}
-                >
-                  {(focusStrengths.length > 0
-                    ? focusStrengths
-                    : ["Lecture globalement propre pour le ticket simple."]
-                  ).map((item, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        fontSize: "13px",
-                        color: "#475569",
-                        lineHeight: 1.55,
-                      }}
-                    >
-                      OK - {item}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ ...metricCardStyle, background: "#FFFBF2" }}>
-                <div
-                  style={{
+                    padding: "12px 14px",
+                    borderRadius: "14px",
+                    background: "#F8FAFC",
+                    color: "#475569",
                     fontSize: "13px",
-                    fontWeight: 800,
-                    color: "#9A6700",
-                    marginBottom: "12px",
+                    lineHeight: 1.55,
                   }}
                 >
-                  Points a surveiller
+                  {splitReading}
+                </div>
+              ) : null}
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                  gap: "12px",
+                }}
+              >
+                <div
+                  style={{
+                    borderRadius: "14px",
+                    padding: "14px",
+                    background: "#F7FBF8",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: 800,
+                      color: GREEN_DARK,
+                      marginBottom: "12px",
+                    }}
+                  >
+                    Pourquoi le ticket ressort
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                    }}
+                  >
+                    {(focusStrengths.length > 0
+                      ? focusStrengths
+                      : ["Lecture globalement propre pour le ticket simple."]
+                    ).map((item, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          fontSize: "13px",
+                          color: "#475569",
+                          lineHeight: 1.55,
+                        }}
+                      >
+                        OK - {item}
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <div
                   style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "8px",
+                    borderRadius: "14px",
+                    padding: "14px",
+                    background: "#FFFBF2",
                   }}
                 >
-                  {(focusWatchouts.length > 0
-                    ? focusWatchouts
-                    : ["Pas de drapeau rouge majeur sur cette lecture."]
-                  ).map((item, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        fontSize: "13px",
-                        color: "#6B7280",
-                        lineHeight: 1.55,
-                      }}
-                    >
-                      {focusWatchouts.length > 0 ? "Alerte -" : "Note -"} {item}
-                    </div>
-                  ))}
+                  <div
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: 800,
+                      color: "#9A6700",
+                      marginBottom: "12px",
+                    }}
+                  >
+                    {watchTitle}
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                    }}
+                  >
+                    {(focusWatchouts.length > 0
+                      ? focusWatchouts
+                      : ["Pas de drapeau rouge majeur sur cette lecture."]
+                    ).map((item, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          fontSize: "13px",
+                          color: "#6B7280",
+                          lineHeight: 1.55,
+                        }}
+                      >
+                        {focusWatchouts.length > 0 ? "Alerte -" : "Note -"} {item}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

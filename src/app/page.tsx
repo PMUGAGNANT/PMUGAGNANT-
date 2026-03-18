@@ -1159,6 +1159,75 @@ export default function Home() {
               const stageBadgeStyle = scoreStage
                 ? getStageBadgeStyle(scoreStage)
                 : null;
+              const showTicketInsight =
+                confScore !== undefined &&
+                simpleReturn1Euro !== undefined &&
+                simpleReturn1Euro !== null &&
+                Boolean(simpleHorse && simpleDisplayMeta);
+              const showTimelineInsight =
+                !isFinished &&
+                (note2h !== undefined ||
+                  note1h !== undefined ||
+                  note30m !== undefined);
+              const insightCardStyle: React.CSSProperties = {
+                marginTop: 10,
+                padding: 15,
+                borderRadius: 20,
+                background:
+                  "linear-gradient(180deg, rgba(255,255,255,0.97) 0%, rgba(248,250,251,0.99) 100%)",
+                border: "1px solid rgba(15,23,42,0.08)",
+                boxShadow:
+                  "0 10px 22px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.78)",
+              };
+              const insightInsetStyle: React.CSSProperties = {
+                padding: "11px 12px",
+                borderRadius: 14,
+                background: "rgba(15,23,42,0.04)",
+                border: "1px solid rgba(15,23,42,0.04)",
+              };
+              const ticketSummaryTitle =
+                simpleProfile === "outsider"
+                  ? "Coup speculatif"
+                  : simpleProfile === "value"
+                    ? "Ticket offensif"
+                    : "Ticket principal";
+              const outcomeSentence =
+                finishedInfo?.simpleOutcome === "GAGNANT"
+                  ? "Le ticket simple est rentre."
+                  : finishedInfo?.simpleOutcome === "PLACE"
+                    ? "Le cheval a pris une place, sans gagner."
+                    : "Le ticket simple est passe a cote.";
+              const arrivalSummary =
+                finishedInfo && simpleHorse
+                  ? finishedInfo.recommendedArrival !== null
+                    ? `N${simpleHorse.numPmu} ${simpleHorse.nom} - arrivee ${finishedInfo.recommendedArrival}e`
+                    : `N${simpleHorse.numPmu} ${simpleHorse.nom} - arrivee inconnue`
+                  : null;
+              const timelineSteps = [
+                { label: "2h", value: note2h, active: note2h !== undefined },
+                { label: "1h", value: note1h, active: note1h !== undefined },
+                { label: "30m", value: note30m, active: note30m !== undefined },
+              ];
+              const finishedReadTitle =
+                finishedInfo?.simpleOutcome === "GAGNANT"
+                  ? "Ticket valide"
+                  : finishedInfo?.simpleOutcome === "PLACE"
+                    ? "Ticket place"
+                    : "Ticket manque";
+              const finishedReadTone =
+                finishedInfo?.simpleOutcome === "GAGNANT"
+                  ? { background: "#E8F5E9", color: "#0F7A3C" }
+                  : finishedInfo?.simpleOutcome === "PLACE"
+                    ? { background: "#FFF8E1", color: "#A66B00" }
+                    : { background: "#FDECEA", color: "#C0392B" };
+              const timelineSummary = [
+                evolutionFrom2h !== null
+                  ? `Depuis 2h ${formatSignedDelta(evolutionFrom2h)}`
+                  : null,
+                evolution1hTo30m !== null
+                  ? `1h -> 30m ${formatSignedDelta(evolution1hTo30m)}`
+                  : null,
+              ].filter(Boolean) as string[];
 
               return (
                 <div
@@ -1382,21 +1451,12 @@ export default function Home() {
                             )}
                           </div>
                         )}
-                        {confScore !== undefined &&
-                          simpleReturn1Euro !== undefined &&
-                          simpleReturn1Euro !== null &&
-                          simpleHorse &&
-                          simpleDisplayMeta && (
+                        {showTicketInsight && simpleHorse && simpleDisplayMeta && (
                             <div
                               style={{
-                                marginTop: 10,
-                                padding: 15,
-                                borderRadius: 20,
-                                background:
-                                  "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,251,253,0.98) 100%)",
+                                ...insightCardStyle,
+                                background: simpleDisplayMeta.panelBackground,
                                 border: simpleDisplayMeta.panelBorder,
-                                boxShadow:
-                                  "0 10px 22px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.78)",
                               }}
                             >
                               <div
@@ -1404,90 +1464,173 @@ export default function Home() {
                                   display: "flex",
                                   justifyContent: "space-between",
                                   alignItems: "flex-start",
-                                  gap: 10,
-                                  marginBottom: 10,
+                                  gap: 12,
                                   flexWrap: "wrap",
                                 }}
                               >
-                                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                <div style={{ flex: 1, minWidth: 0 }}>
                                   <div
                                     style={{
-                                      fontSize: 11,
-                                      fontWeight: 800,
-                                      color: simpleDisplayMeta.tagColor,
-                                      textTransform: "uppercase",
-                                  letterSpacing: "0.25px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 8,
+                                      flexWrap: "wrap",
+                                      marginBottom: 8,
                                     }}
                                   >
-                                    {simpleDisplayMeta.title}
+                                    <span
+                                      style={{
+                                        padding: "5px 10px",
+                                        borderRadius: 999,
+                                        fontSize: 11,
+                                        fontWeight: 800,
+                                        background: "rgba(255,255,255,0.8)",
+                                        color: simpleDisplayMeta.tagColor,
+                                        border: "1px solid rgba(15,23,42,0.06)",
+                                        textTransform: "uppercase",
+                                        letterSpacing: "0.02em",
+                                      }}
+                                    >
+                                      Ticket IA
+                                    </span>
+                                    <span
+                                      style={{
+                                        padding: "5px 10px",
+                                        borderRadius: 999,
+                                        fontSize: 11,
+                                        fontWeight: 800,
+                                        background: simpleDisplayMeta.tagBackground,
+                                        color: simpleDisplayMeta.tagColor,
+                                        border: "1px solid rgba(15,23,42,0.06)",
+                                      }}
+                                    >
+                                      {simpleDisplayMeta.label}
+                                    </span>
                                   </div>
+                                  <div
+                                    style={{
+                                      fontSize: 18,
+                                      fontWeight: 800,
+                                      color: "#16324F",
+                                      lineHeight: "23px",
+                                      letterSpacing: "-0.28px",
+                                    }}
+                                  >
+                                    N{simpleHorse.numPmu} {simpleHorse.nom}
+                                  </div>
+                                  <div
+                                    style={{
+                                      marginTop: 6,
+                                      fontSize: 12,
+                                      lineHeight: "18px",
+                                      color: simpleDisplayMeta.noteColor,
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    {simpleDisplayMeta.note}
+                                  </div>
+                                </div>
+
+                                <div
+                                  style={{
+                                    minWidth: 110,
+                                    textAlign: "right",
+                                    alignSelf: "stretch",
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 4,
+                                  }}
+                                >
                                   <div
                                     style={{
                                       fontSize: 10,
                                       fontWeight: 700,
-                                      color: "#5A7AA2",
+                                      color: "#64748B",
                                       textTransform: "uppercase",
-                                      letterSpacing: "0.22px",
+                                      letterSpacing: "0.06em",
                                     }}
                                   >
-                                    Ticket recommande
+                                    Retour 1EUR
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: 22,
+                                      lineHeight: "24px",
+                                      fontWeight: 800,
+                                      color: simpleDisplayMeta.tagColor,
+                                      letterSpacing: "-0.5px",
+                                    }}
+                                  >
+                                    {formatEuroReturn(simpleReturn1Euro)}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: 11,
+                                      color: "#64748B",
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    {ticketSummaryTitle}
                                   </div>
                                 </div>
-                                <span
-                                  style={{
-                                    padding: "6px 10px",
-                                    borderRadius: 999,
-                                    fontSize: 11,
-                                    fontWeight: 800,
-                                    background: simpleDisplayMeta.tagBackground,
-                                    color: simpleDisplayMeta.tagColor,
-                                    border: "1px solid rgba(15,23,42,0.06)",
-                                  }}
-                                >
-                                  1EUR -&gt; {formatEuroReturn(simpleReturn1Euro)}
-                                </span>
                               </div>
-                              <div
-                                style={{
-                                  fontSize: 17,
-                                  fontWeight: 800,
-                                  color: "#16324F",
-                                  lineHeight: "22px",
-                                  letterSpacing: "-0.25px",
-                                }}
-                              >
-                                N{simpleHorse.numPmu} {simpleHorse.nom}
-                              </div>
+
                               <div
                                 style={{
                                   marginTop: 10,
-                                  padding: "10px 12px",
-                                  borderRadius: 14,
-                                  background: "rgba(15,23,42,0.03)",
                                   display: "grid",
-                                  gridTemplateColumns: "1fr",
-                                  gap: 10,
+                                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                                  gap: 8,
                                 }}
                               >
-                                <div
-                                  style={{
-                                    fontSize: 12,
-                                    fontWeight: 800,
-                                    color: simpleDisplayMeta.tagColor,
-                                    lineHeight: "17px",
-                                  }}
-                                >
-                                  {simpleDisplayMeta.amountPrefix}: {formatEuroReturn(simpleReturn1Euro)}
+                                <div style={insightInsetStyle}>
+                                  <div
+                                    style={{
+                                      fontSize: 10,
+                                      fontWeight: 700,
+                                      color: "#64748B",
+                                      textTransform: "uppercase",
+                                      letterSpacing: "0.06em",
+                                      marginBottom: 5,
+                                    }}
+                                  >
+                                    Lecture
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: 13,
+                                      fontWeight: 800,
+                                      color: simpleDisplayMeta.tagColor,
+                                      lineHeight: "17px",
+                                    }}
+                                  >
+                                    {simpleDisplayMeta.title}
+                                  </div>
                                 </div>
-                                <div
-                                  style={{
-                                    fontSize: 11,
-                                    lineHeight: "16px",
-                                    color: simpleDisplayMeta.noteColor,
-                                    fontWeight: 700,
-                                  }}
-                                >
-                                  {simpleDisplayMeta.note}
+
+                                <div style={insightInsetStyle}>
+                                  <div
+                                    style={{
+                                      fontSize: 10,
+                                      fontWeight: 700,
+                                      color: "#64748B",
+                                      textTransform: "uppercase",
+                                      letterSpacing: "0.06em",
+                                      marginBottom: 5,
+                                    }}
+                                  >
+                                    Projection
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: 13,
+                                      fontWeight: 800,
+                                      color: "#111827",
+                                      lineHeight: "17px",
+                                    }}
+                                  >
+                                    {simpleDisplayMeta.amountPrefix}: {formatEuroReturn(simpleReturn1Euro)}
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -1495,14 +1638,9 @@ export default function Home() {
                         {isFinished && finishedInfo && simpleHorse ? (
                           <div
                             style={{
-                              marginTop: 10,
-                              padding: 15,
-                              borderRadius: 20,
+                              ...insightCardStyle,
                               background:
-                                "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,251,0.98) 100%)",
-                              border: "1px solid rgba(15,23,42,0.08)",
-                              boxShadow:
-                                "0 10px 22px rgba(15,23,42,0.05), inset 0 1px 0 rgba(255,255,255,0.72)",
+                                "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(246,250,248,0.99) 100%)",
                             }}
                           >
                             <div
@@ -1515,7 +1653,7 @@ export default function Home() {
                                 flexWrap: "wrap",
                               }}
                             >
-                              <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                                 <div
                                   style={{
                                     fontSize: 11,
@@ -1534,20 +1672,33 @@ export default function Home() {
                                     fontWeight: 700,
                                   }}
                                 >
-                                  Lecture finale du ticket
+                                  Lecture finale du ticket simple
                                 </div>
                               </div>
-                              <span
-                                style={{
-                                  padding: "5px 10px",
-                                  borderRadius: 999,
-                                  fontSize: 11,
-                                  fontWeight: 800,
-                                  ...getOutcomeStyle(finishedInfo.simpleOutcome),
-                                }}
-                              >
-                                {finishedInfo.simpleOutcome}
-                              </span>
+                              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                <span
+                                  style={{
+                                    padding: "5px 10px",
+                                    borderRadius: 999,
+                                    fontSize: 11,
+                                    fontWeight: 800,
+                                    ...finishedReadTone,
+                                  }}
+                                >
+                                  {finishedReadTitle}
+                                </span>
+                                <span
+                                  style={{
+                                    padding: "5px 10px",
+                                    borderRadius: 999,
+                                    fontSize: 11,
+                                    fontWeight: 800,
+                                    ...getOutcomeStyle(finishedInfo.simpleOutcome),
+                                  }}
+                                >
+                                  {finishedInfo.simpleOutcome}
+                                </span>
+                              </div>
                             </div>
                             <div
                               style={{
@@ -1580,59 +1731,142 @@ export default function Home() {
                             </div>
                             <div
                               style={{
-                                padding: "10px 12px",
-                                borderRadius: 14,
-                                background: "rgba(15,23,42,0.03)",
-                                fontSize: 12,
-                                color: "#4B5563",
-                                fontWeight: 700,
-                                lineHeight: "18px",
+                                display: "grid",
+                                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                                gap: 8,
                               }}
                             >
-                              <span style={{ color: "#111827", fontWeight: 800 }}>
-                                N{simpleHorse.numPmu} {simpleHorse.nom}
-                              </span>
-                              {finishedInfo.recommendedArrival !== null
-                                ? ` -> arrivee ${finishedInfo.recommendedArrival}e`
-                                : " -> arrivee inconnue"}
+                              <div style={insightInsetStyle}>
+                                <div
+                                  style={{
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    color: "#64748B",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.06em",
+                                    marginBottom: 5,
+                                  }}
+                                >
+                                  Ticket IA
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: 13,
+                                    fontWeight: 800,
+                                    color: "#111827",
+                                    lineHeight: "17px",
+                                  }}
+                                >
+                                  N{simpleHorse.numPmu} {simpleHorse.nom}
+                                </div>
+                                {simpleReturn1Euro !== undefined &&
+                                simpleReturn1Euro !== null ? (
+                                  <div
+                                    style={{
+                                      marginTop: 6,
+                                      fontSize: 12,
+                                      color: "#0F5EA8",
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    Projection 1EUR: {formatEuroReturn(simpleReturn1Euro)}
+                                  </div>
+                                ) : null}
+                              </div>
+
+                              <div style={insightInsetStyle}>
+                                <div
+                                  style={{
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    color: "#64748B",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.06em",
+                                    marginBottom: 5,
+                                  }}
+                                >
+                                  Lecture finale
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: 13,
+                                    fontWeight: 800,
+                                    color: "#111827",
+                                    lineHeight: "17px",
+                                  }}
+                                >
+                                  {outcomeSentence}
+                                </div>
+                                {arrivalSummary ? (
+                                  <div
+                                    style={{
+                                      marginTop: 6,
+                                      fontSize: 12,
+                                      color: "#64748B",
+                                      fontWeight: 700,
+                                      lineHeight: "17px",
+                                    }}
+                                  >
+                                    {arrivalSummary}
+                                  </div>
+                                ) : null}
+                              </div>
                             </div>
                           </div>
-                        ) : (note2h !== undefined ||
-                          note1h !== undefined ||
-                          note30m !== undefined) && (
+                        ) : showTimelineInsight && (
                           <div
                             style={{
-                              marginTop: 10,
-                              padding: 15,
-                              borderRadius: 20,
+                              ...insightCardStyle,
                               background:
-                                "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(248,250,251,0.98) 100%)",
-                              border: "1px solid rgba(15,23,42,0.08)",
-                              boxShadow:
-                                "0 10px 22px rgba(15,23,42,0.04), inset 0 1px 0 rgba(255,255,255,0.72)",
+                                "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(249,251,255,0.99) 100%)",
                             }}
                           >
-                            <div style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 10 }}>
-                              <div
-                                style={{
-                                  fontSize: 11,
-                                  fontWeight: 800,
-                                  color: "#666",
-                                  textTransform: "uppercase",
-                                  letterSpacing: "0.3px",
-                                }}
-                              >
-                                Evolution confiance
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                gap: 10,
+                                flexWrap: "wrap",
+                                marginBottom: 10,
+                              }}
+                            >
+                              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                <div
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: 800,
+                                    color: "#666",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.3px",
+                                  }}
+                                >
+                                  Suivi confiance
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: 12,
+                                    color: "#64748B",
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  Lecture du ticket avant depart
+                                </div>
                               </div>
-                              <div
-                                style={{
-                                  fontSize: 12,
-                                  color: "#64748B",
-                                  fontWeight: 700,
-                                }}
-                              >
-                                Suivi du ticket avant depart
-                              </div>
+                              {scoreStage && stageBadgeStyle ? (
+                                <span
+                                  style={{
+                                    padding: "5px 10px",
+                                    borderRadius: 999,
+                                    fontSize: 11,
+                                    fontWeight: 800,
+                                    background: stageBadgeStyle.background,
+                                    color: stageBadgeStyle.color,
+                                  }}
+                                >
+                                  {getStageLabel(scoreStage)}
+                                </span>
+                              ) : null}
                             </div>
                             <div
                               style={{
@@ -1641,11 +1875,7 @@ export default function Home() {
                                 gap: 6,
                               }}
                             >
-                              {[
-                                { label: "2h", value: note2h, active: note2h !== undefined },
-                                { label: "1h", value: note1h, active: note1h !== undefined },
-                                { label: "30m", value: note30m, active: note30m !== undefined },
-                              ].map((step, index, arr) => {
+                              {timelineSteps.map((step, index, arr) => {
                                 const colors = getTimelineNodeColors(
                                   step.value,
                                   step.active
@@ -1727,56 +1957,113 @@ export default function Home() {
                             </div>
                             <div
                               style={{
-                                marginTop: 8,
-                                display: "flex",
-                                flexWrap: "wrap",
-                                gap: 6,
-                                alignItems: "center",
+                                marginTop: 10,
+                                display: "grid",
+                                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                                gap: 8,
                               }}
                             >
-                              {evolutionFrom2h !== null && (
-                                <span
+                              <div style={insightInsetStyle}>
+                                <div
                                   style={{
-                                    fontSize: 11,
+                                    fontSize: 10,
                                     fontWeight: 700,
-                                    padding: "2px 8px",
-                                    borderRadius: 20,
-                                    ...getEvolutionStyle(evolutionFrom2h),
+                                    color: "#64748B",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.06em",
+                                    marginBottom: 5,
                                   }}
                                 >
-                                  Depuis 2h {formatSignedDelta(evolutionFrom2h)}
-                                </span>
-                              )}
-                              {evolution1hTo30m !== null && (
-                                <span
+                                  Depuis 2h
+                                </div>
+                                <div
                                   style={{
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    padding: "2px 8px",
-                                    borderRadius: 20,
-                                    ...getEvolutionStyle(evolution1hTo30m),
+                                    fontSize: 13,
+                                    fontWeight: 800,
+                                    color:
+                                      evolutionFrom2h !== null
+                                        ? getEvolutionStyle(evolutionFrom2h).color
+                                        : "#111827",
+                                    lineHeight: "17px",
                                   }}
                                 >
-                                  1h -&gt; 30m {formatSignedDelta(evolution1hTo30m)}
-                                </span>
-                              )}
-                            </div>
-                            {trendSentence && (
-                              <div
-                                style={{
-                                  marginTop: 10,
-                                  padding: "10px 12px",
-                                  borderRadius: 14,
-                                  background: "rgba(15,23,42,0.03)",
-                                  fontSize: 11,
-                                  fontWeight: 600,
-                                  color: "#666",
-                                  lineHeight: "15px",
-                                }}
-                              >
-                                {trendSentence}
+                                  {evolutionFrom2h !== null
+                                    ? formatSignedDelta(evolutionFrom2h)
+                                    : "En attente"}
+                                </div>
                               </div>
-                            )}
+
+                              <div style={insightInsetStyle}>
+                                <div
+                                  style={{
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    color: "#64748B",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.06em",
+                                    marginBottom: 5,
+                                  }}
+                                >
+                                  1h -&gt; 30m
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: 13,
+                                    fontWeight: 800,
+                                    color:
+                                      evolution1hTo30m !== null
+                                        ? getEvolutionStyle(evolution1hTo30m).color
+                                        : "#111827",
+                                    lineHeight: "17px",
+                                  }}
+                                >
+                                  {evolution1hTo30m !== null
+                                    ? formatSignedDelta(evolution1hTo30m)
+                                    : "En attente"}
+                                </div>
+                              </div>
+                            </div>
+                            <div
+                              style={{
+                                marginTop: 10,
+                                ...insightInsetStyle,
+                              }}
+                            >
+                                <div
+                                  style={{
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    color: "#64748B",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.06em",
+                                    marginBottom: 5,
+                                  }}
+                                >
+                                  Lecture dynamique
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    color: "#334155",
+                                    lineHeight: "17px",
+                                  }}
+                                >
+                                  {trendSentence || "La confiance se complete au fil du depart."}
+                                </div>
+                                {timelineSummary.length > 0 ? (
+                                  <div
+                                    style={{
+                                      marginTop: 6,
+                                      fontSize: 11,
+                                      color: "#64748B",
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    {timelineSummary.join(" · ")}
+                                  </div>
+                                ) : null}
+                              </div>
                           </div>
                         )}
                       </div>
