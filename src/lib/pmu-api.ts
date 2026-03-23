@@ -335,11 +335,3 @@ export async function getFinalReports(
 
   return result;
 }
-
-export async function getDefinitiveRapports(
-  dateStr: string,
-  reunion: number,
-  course: number
-) {
-  return getFinalReports(dateStr, reunion, course);
-}

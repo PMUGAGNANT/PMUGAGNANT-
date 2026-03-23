@@ -63,7 +63,3 @@ export function getSupabaseAdminClient() {
 
   return adminClient;
 }
-
-export function createSupabaseAdminClient() {
-  return getSupabaseAdminClient();
-}
