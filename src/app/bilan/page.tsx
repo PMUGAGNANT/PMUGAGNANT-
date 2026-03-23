@@ -1,11 +1,17 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-
-import type { BetRecommendationType } from "@/lib/types";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  formatDateToPmu,
+  fromIsoDate,
+  getTodayDateStr,
+  parsePmuDate,
+  toIsoDate,
+} from "@/lib/date-utils";
 
 interface CourseInfo {
+  dateStr: string;
   reunion: number;
   course: number;
   hippodrome: string;
@@ -19,19 +25,15 @@ interface PickInfo {
   nom: string;
   cotePmu: number | null;
   coteEstimee: number | null;
-  ordreArrivee: number | null;
 }
 
 interface BilanResult {
   courseInfo: CourseInfo;
-  pariType: BetRecommendationType;
-  pariLabel: string;
-  chevaux: PickInfo[];
+  favori: PickInfo;
   recommandation: string;
   confiance: number;
   resultat: "GAGNANT" | "PLACE" | "PERDU" | "INCONNU";
-  gainPour1Euro: number | null;
-  beneficeNetPour1Euro: number | null;
+  ordreArrivee?: number | null;
 }
 
 interface BilanData {
@@ -64,6 +66,31 @@ const GOLD = "#D4A017";
 const RED = "#D64545";
 const DARK = "#161616";
 
+function formatDisplayDate(dateStr: string) {
+  return new Intl.DateTimeFormat("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(parsePmuDate(dateStr));
+}
+
+function formatRelativeDay(dateStr: string) {
+  const today = parsePmuDate(getTodayDateStr());
+  const target = parsePmuDate(dateStr);
+  const diff = Math.round((target.getTime() - today.getTime()) / 86400000);
+
+  if (diff === 0) return "Aujourd'hui";
+  if (diff === -1) return "Hier";
+  if (diff === 1) return "Demain";
+  return "Selection";
+}
+
+function shiftDate(dateStr: string, delta: number) {
+  const date = parsePmuDate(dateStr);
+  date.setDate(date.getDate() + delta);
+  return formatDateToPmu(date);
+}
+
 function disciplineLabel(discipline: string): string {
   if (discipline.includes("TROT_ATTELE")) return "Trot Attele";
   if (discipline.includes("TROT_MONTE")) return "Trot Monte";
@@ -75,22 +102,10 @@ function disciplineLabel(discipline: string): string {
 }
 
 function resultLabel(resultat: BilanResult["resultat"]): string {
-  if (resultat === "GAGNANT") return "Simple gagnant";
-  if (resultat === "PLACE") return "Simple place";
+  if (resultat === "GAGNANT") return "Ticket gagnant";
+  if (resultat === "PLACE") return "Ticket place";
   if (resultat === "PERDU") return "Perdu";
   return "En attente";
-}
-
-function ticketLabel(result: BilanResult): string {
-  if (result.pariType === "COUPLE_PLACE") {
-    return result.resultat === "GAGNANT" ? "Couple place" : "Couple place perdu";
-  }
-
-  if (result.pariType === "COUPLE_GAGNANT") {
-    return result.resultat === "GAGNANT" ? "Couple gagnant" : "Couple gagnant perdu";
-  }
-
-  return resultLabel(result.resultat);
 }
 
 function getResultStyle(resultat: BilanResult["resultat"]) {
@@ -152,66 +167,106 @@ function formatOdds(value: number | null): string {
   return normalized.toFixed(1);
 }
 
-function formatEuroReturn(value: number | null): string {
-  if (value === null || value === undefined) return "-";
-  const normalized = Number(value);
-  if (!Number.isFinite(normalized)) return "-";
-  return `${normalized.toFixed(2)} EUR`;
-}
+function DateNavigator({
+  dateStr,
+  onChange,
+}: {
+  dateStr: string;
+  onChange: (nextDate: string) => void;
+}) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "44px 1fr 44px",
+        gap: 10,
+        alignItems: "center",
+        margin: "16px 16px 0",
+      }}
+    >
+      <button
+        onClick={() => onChange(shiftDate(dateStr, -1))}
+        style={{
+          height: 44,
+          borderRadius: 16,
+          border: "1px solid rgba(15,23,42,0.08)",
+          background: "#fff",
+          color: DARK,
+          fontSize: 18,
+          fontWeight: 800,
+          cursor: "pointer",
+        }}
+      >
+        {"<"}
+      </button>
 
-function formatChevaux(result: BilanResult): string {
-  return result.chevaux.map((cheval) => `N${cheval.numPmu} ${cheval.nom}`).join(" + ");
-}
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: 20,
+          border: "1px solid rgba(15,23,42,0.06)",
+          boxShadow: "0 16px 32px rgba(15,23,42,0.06)",
+          padding: 12,
+          display: "grid",
+          gap: 8,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "#7A8A9A", textTransform: "uppercase", letterSpacing: 0.4 }}>
+              {formatRelativeDay(dateStr)}
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: DARK }}>{formatDisplayDate(dateStr)}</div>
+          </div>
+          <button
+            onClick={() => onChange(getTodayDateStr())}
+            style={{
+              border: "none",
+              borderRadius: 999,
+              background: "#E7F8EE",
+              color: GREEN,
+              padding: "8px 12px",
+              fontSize: 12,
+              fontWeight: 800,
+              cursor: "pointer",
+            }}
+          >
+            Aujourd&apos;hui
+          </button>
+        </div>
+        <input
+          type="date"
+          value={toIsoDate(dateStr)}
+          onChange={(event) => onChange(fromIsoDate(event.target.value))}
+          style={{
+            width: "100%",
+            borderRadius: 14,
+            border: "1px solid rgba(15,23,42,0.08)",
+            padding: "10px 12px",
+            fontSize: 14,
+            fontWeight: 700,
+            color: DARK,
+          }}
+        />
+      </div>
 
-function getParisNow(): Date {
-  return new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Europe/Paris" })
+      <button
+        onClick={() => onChange(shiftDate(dateStr, 1))}
+        style={{
+          height: 44,
+          borderRadius: 16,
+          border: "1px solid rgba(15,23,42,0.08)",
+          background: "#fff",
+          color: DARK,
+          fontSize: 18,
+          fontWeight: 800,
+          cursor: "pointer",
+        }}
+      >
+        {">"}
+      </button>
+    </div>
   );
-}
-
-function getTodayDateStrClient(): string {
-  const now = getParisNow();
-  const day = String(now.getDate()).padStart(2, "0");
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const year = String(now.getFullYear());
-  return `${day}${month}${year}`;
-}
-
-function formatDateStrToInput(dateStr: string): string {
-  return `${dateStr.slice(4, 8)}-${dateStr.slice(2, 4)}-${dateStr.slice(0, 2)}`;
-}
-
-function formatInputToDateStr(value: string): string {
-  const [year, month, day] = value.split("-");
-  return `${day}${month}${year}`;
-}
-
-function parseDateStr(dateStr: string): Date {
-  const day = Number(dateStr.slice(0, 2));
-  const month = Number(dateStr.slice(2, 4)) - 1;
-  const year = Number(dateStr.slice(4, 8));
-  return new Date(year, month, day);
-}
-
-function shiftDateStr(dateStr: string, days: number): string {
-  const date = parseDateStr(dateStr);
-  date.setDate(date.getDate() + days);
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = String(date.getFullYear());
-  return `${day}${month}${year}`;
-}
-
-function formatArrivee(result: BilanResult): string {
-  const entries = result.chevaux
-    .filter((cheval) => cheval.ordreArrivee !== null)
-    .map((cheval) => `N${cheval.numPmu} -> ${cheval.ordreArrivee}`);
-
-  return entries.length > 0 ? entries.join(" | ") : "-";
-}
-
-function getPrimaryHorse(result: BilanResult): PickInfo | null {
-  return result.chevaux[0] ?? null;
 }
 
 function SummaryCard({
@@ -267,25 +322,28 @@ function SkeletonCards() {
   );
 }
 
-export default function BilanPage() {
+function BilanPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlDate = searchParams.get("date") || getTodayDateStr();
+  const [selectedDate, setSelectedDate] = useState(urlDate);
   const [data, setData] = useState<BilanData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<string>(getTodayDateStrClient());
-
-  function updateSelectedDate(nextDate: string) {
-    setLoading(true);
-    setSelectedDate(nextDate);
-  }
 
   useEffect(() => {
-    fetch(`/api/bilan?date=${selectedDate}`)
+    setSelectedDate(urlDate);
+  }, [urlDate]);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(false);
+
+    fetch(`/api/bilan?date=${selectedDate}`, { cache: "no-store" })
       .then((res) => res.json())
       .then((json) => {
         if (json.success) {
           setData(json);
-          setError(false);
         } else {
           setError(true);
         }
@@ -302,9 +360,23 @@ export default function BilanPage() {
     () => data?.results.filter((result) => result.resultat === "PLACE") ?? [],
     [data]
   );
+  const misses = useMemo(
+    () => data?.results.filter((result) => result.resultat === "PERDU") ?? [],
+    [data]
+  );
 
   const successRate = data?.summary.successRate ?? 0;
   const healthTone = getHealthTone(successRate);
+
+  function updateDate(nextDate: string) {
+    router.replace(`/bilan?date=${nextDate}`, { scroll: false });
+  }
+
+  function openCourse(result: BilanResult) {
+    router.push(
+      `/course/${result.courseInfo.reunion}/${result.courseInfo.course}?date=${result.courseInfo.dateStr}`
+    );
+  }
 
   return (
     <div
@@ -332,130 +404,28 @@ export default function BilanPage() {
           background: "rgba(18, 22, 26, 0.88)",
           backdropFilter: "blur(18px)",
           borderBottom: "1px solid rgba(255,255,255,0.06)",
-          height: 64,
+          minHeight: 72,
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           color: "#FFFFFF",
           fontWeight: 800,
           fontSize: 19,
           letterSpacing: "-0.4px",
+          gap: 2,
+          padding: "10px 0 8px",
         }}
       >
-        Bilan du jour
-      </div>
-
-      <div
-        style={{
-          margin: "16px 16px 0",
-          padding: 14,
-          borderRadius: 20,
-          background: "rgba(255,255,255,0.92)",
-          border: "1px solid rgba(15,23,42,0.06)",
-          boxShadow: "0 12px 26px rgba(15,23,42,0.06)",
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          flexWrap: "wrap",
-        }}
-      >
-        <button
-          onClick={() => updateSelectedDate(shiftDateStr(selectedDate, -1))}
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 14,
-            border: "1px solid rgba(15,23,42,0.08)",
-            background: "#FFFFFF",
-            fontSize: 18,
-            fontWeight: 800,
-            color: "#334155",
-            cursor: "pointer",
-          }}
-        >
-          ←
-        </button>
-        <div style={{ flex: 1, minWidth: 180 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.22px", marginBottom: 4 }}>
-            Calendrier bilan
-          </div>
-          <input
-            type="date"
-            value={formatDateStrToInput(selectedDate)}
-            onChange={(event) => updateSelectedDate(formatInputToDateStr(event.target.value))}
-            style={{
-              width: "100%",
-              border: "1px solid rgba(15,23,42,0.08)",
-              borderRadius: 12,
-              padding: "10px 12px",
-              fontSize: 14,
-              fontWeight: 700,
-              color: "#111827",
-              background: "#FFFFFF",
-            }}
-          />
+        <div>Bilan</div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.72)", letterSpacing: 0 }}>
+          {formatRelativeDay(selectedDate)} - {formatDisplayDate(selectedDate)}
         </div>
-        <button
-          onClick={() => updateSelectedDate(shiftDateStr(selectedDate, 1))}
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 14,
-            border: "1px solid rgba(15,23,42,0.08)",
-            background: "#FFFFFF",
-            fontSize: 18,
-            fontWeight: 800,
-            color: "#334155",
-            cursor: "pointer",
-          }}
-        >
-          →
-        </button>
-      </div>
-
-      <div style={{ margin: "12px 16px 0" }}>
-        <button
-          onClick={() => router.push("/apprentissage")}
-          style={{
-            width: "100%",
-            border: "none",
-            cursor: "pointer",
-            borderRadius: 22,
-            padding: "16px 18px",
-            background:
-              "linear-gradient(135deg, rgba(15,23,42,0.96) 0%, rgba(0,132,61,0.92) 100%)",
-            color: "#FFFFFF",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-            boxShadow: "0 18px 34px rgba(15,23,42,0.14)",
-          }}
-        >
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
-            <span style={{ fontSize: 11, opacity: 0.76, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-              Evolution du modele
-            </span>
-            <span style={{ fontSize: 16, fontWeight: 800, lineHeight: "20px", textAlign: "left" }}>
-              Ouvrir l&apos;apprentissage IA et lire les signaux forts / faibles
-            </span>
-          </div>
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 800,
-              background: "rgba(255,255,255,0.12)",
-              padding: "8px 12px",
-              borderRadius: 999,
-              whiteSpace: "nowrap",
-            }}
-          >
-            Ouvrir IA
-          </span>
-        </button>
       </div>
 
       <div style={{ paddingBottom: 92 }}>
+        <DateNavigator dateStr={selectedDate} onChange={updateDate} />
+
         {loading ? (
           <SkeletonCards />
         ) : error || !data ? (
@@ -475,12 +445,12 @@ export default function BilanPage() {
                 border: "1px solid rgba(255,255,255,0.12)",
               }}
             >
-              <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 8 }}>Lecture de la journee</div>
+              <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 8 }}>Lecture de la seance</div>
               <div style={{ fontSize: 28, lineHeight: "30px", fontWeight: 800, marginBottom: 10 }}>
                 {data.expert.healthLabel}
               </div>
               <div style={{ fontSize: 14, lineHeight: "20px", opacity: 0.92, marginBottom: 14 }}>
-                {successRate}% de reussite sur {data.summary.totalPlayed} predictions analysees aujourd&apos;hui.
+                {successRate}% de reussite sur {data.summary.totalPlayed} predictions analysees pour cette date.
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {data.expert.bestDiscipline && (
@@ -520,17 +490,17 @@ export default function BilanPage() {
                 padding: "16px",
               }}
             >
-              <SummaryCard label="Predictions IA" value={data.summary.totalPlayed} />
+              <SummaryCard label="Tickets lus" value={data.summary.totalPlayed} />
               <SummaryCard label="Taux global" value={`${successRate}%`} tone={successRate >= 40 ? "good" : successRate >= 25 ? "warn" : "bad"} />
-              <SummaryCard label="Gagnants nets" value={data.summary.wins} tone="good" />
-              <SummaryCard label="Places" value={data.summary.places} tone="warn" />
-              <SummaryCard label="Perdus" value={data.summary.losses} tone={data.summary.losses > data.summary.wins + data.summary.places ? "bad" : "default"} />
+              <SummaryCard label="Tickets gagnants" value={data.summary.wins} tone="good" />
+              <SummaryCard label="Tickets places" value={data.summary.places} tone="warn" />
+              <SummaryCard label="Tickets perdus" value={data.summary.losses} tone={data.summary.losses > data.summary.wins + data.summary.places ? "bad" : "default"} />
               <SummaryCard label="Courses finies" value={data.results.length} />
             </div>
 
             <div style={{ margin: "0 16px 18px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: GREEN_DARK }}>Gagnants du jour</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: GREEN_DARK }}>Coups gagnants</div>
                 <span
                   style={{
                     fontSize: 12,
@@ -555,29 +525,33 @@ export default function BilanPage() {
                     border: "1px solid rgba(0,0,0,0.05)",
                   }}
                 >
-                  Aucun simple gagnant valide pour le moment. Les places reussies restent visibles plus bas.
+                  Aucun ticket gagnant propre pour le moment. Les tickets places utiles restent visibles plus bas.
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {winners.slice(0, 3).map((result, index) => (
-                    <div
+                    <button
                       key={`${result.courseInfo.reunion}-${result.courseInfo.course}-${index}`}
+                      onClick={() => openCourse(result)}
                       style={{
+                        width: "100%",
+                        textAlign: "left",
+                        border: "1px solid rgba(15,23,42,0.05)",
                         background: "#FFFFFF",
                         borderRadius: 22,
                         padding: 18,
                         borderLeft: `5px solid ${GREEN}`,
                         boxShadow: "0 18px 36px rgba(15,23,42,0.08)",
-                        border: "1px solid rgba(15,23,42,0.05)",
+                        cursor: "pointer",
                       }}
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
                         <div>
                           <div style={{ fontSize: 13, fontWeight: 700, color: GREEN, marginBottom: 8 }}>
-                            {result.pariType === "SIMPLE_GAGNANT" ? "SIMPLE GAGNANT" : result.pariType === "COUPLE_PLACE" ? "COUPLE PLACE" : "COUPLE GAGNANT"}
+                            SIMPLE GAGNANT
                           </div>
                           <div style={{ fontSize: 20, fontWeight: 800, color: DARK, lineHeight: "24px", marginBottom: 4 }}>
-                            {formatChevaux(result)}
+                            N{result.favori.numPmu} {result.favori.nom}
                           </div>
                           <div style={{ fontSize: 13, color: "#666", lineHeight: "18px" }}>
                             R{result.courseInfo.reunion}C{result.courseInfo.course} - {result.courseInfo.hippodrome}
@@ -599,30 +573,98 @@ export default function BilanPage() {
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
                         <span style={{ background: "#F6F7F8", color: "#444", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
-                          PMU {formatOdds(getPrimaryHorse(result)?.cotePmu ?? null)}
+                          PMU {formatOdds(result.favori.cotePmu)}
                         </span>
                         <span style={{ background: "#EAF4FF", color: "#1565C0", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
-                          Cote IA {formatOdds(getPrimaryHorse(result)?.coteEstimee ?? null)}
+                          Cote IA {formatOdds(result.favori.coteEstimee)}
                         </span>
-                        {result.gainPour1Euro !== null && (
-                          <span style={{ background: "#E8F5E9", color: GREEN, padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 800 }}>
-                            Rapport final 1EUR {formatEuroReturn(result.gainPour1Euro)}
-                          </span>
-                        )}
-                        {result.beneficeNetPour1Euro !== null && (
-                          <span style={{ background: "#ECFDF3", color: GREEN_DARK, padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 800 }}>
-                            Net +{formatEuroReturn(result.beneficeNetPour1Euro)}
-                          </span>
-                        )}
                         <span style={{ background: "#F3F4F6", color: "#555", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                           Confiance {result.confiance}/10
                         </span>
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}
             </div>
+
+            {placed.length > 0 ? (
+              <div style={{ margin: "0 16px 18px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: "#A06A00" }}>Places utiles</div>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "#8A5A00",
+                      background: "#FFF3CD",
+                      padding: "6px 10px",
+                      borderRadius: 999,
+                    }}
+                  >
+                    {placed.length} place{placed.length > 1 ? "s" : ""}
+                  </span>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {placed.slice(0, 3).map((result, index) => (
+                    <button
+                      key={`${result.courseInfo.reunion}-${result.courseInfo.course}-place-${index}`}
+                      onClick={() => openCourse(result)}
+                      style={{
+                        width: "100%",
+                        textAlign: "left",
+                        border: "1px solid rgba(15,23,42,0.05)",
+                        background: "#FFFFFF",
+                        borderRadius: 22,
+                        padding: 18,
+                        borderLeft: "5px solid #D4A017",
+                        boxShadow: "0 18px 36px rgba(15,23,42,0.08)",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "#A06A00", marginBottom: 8 }}>
+                            TICKET PLACE
+                          </div>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: DARK, lineHeight: "24px", marginBottom: 4 }}>
+                            N{result.favori.numPmu} {result.favori.nom}
+                          </div>
+                          <div style={{ fontSize: 13, color: "#666", lineHeight: "18px" }}>
+                            R{result.courseInfo.reunion}C{result.courseInfo.course} - {result.courseInfo.hippodrome}
+                          </div>
+                        </div>
+                        <span
+                          style={{
+                            background: "#FFF3CD",
+                            color: "#8A5A00",
+                            padding: "6px 10px",
+                            borderRadius: 999,
+                            fontSize: 12,
+                            fontWeight: 800,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          Place
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+                        <span style={{ background: "#F6F7F8", color: "#444", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+                          PMU {formatOdds(result.favori.cotePmu)}
+                        </span>
+                        <span style={{ background: "#EAF4FF", color: "#1565C0", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+                          Cote IA {formatOdds(result.favori.coteEstimee)}
+                        </span>
+                        <span style={{ background: "#F3F4F6", color: "#555", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+                          Confiance {result.confiance}/10
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             <div
               style={{
@@ -707,7 +749,7 @@ export default function BilanPage() {
 
             <div style={{ padding: "0 16px", marginBottom: 8 }}>
               <div style={{ fontSize: 22, fontWeight: 800, color: DARK, marginBottom: 10 }}>
-                Resultats des predictions
+                Lecture complete des tickets
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 <span style={{ background: "#E8F5E9", color: GREEN, padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
@@ -715,6 +757,9 @@ export default function BilanPage() {
                 </span>
                 <span style={{ background: "#FFF3CD", color: "#8A5A00", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                   Places: {placed.length}
+                </span>
+                <span style={{ background: "#FDECEA", color: RED, padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+                  Perdus: {misses.length}
                 </span>
                 <span style={{ background: "#F3F4F6", color: "#555", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                   Courses finies: {data.results.length}
@@ -724,7 +769,7 @@ export default function BilanPage() {
 
             {data.results.length === 0 ? (
               <div style={{ textAlign: "center", padding: "40px 24px", color: "#666" }}>
-                Pas encore de resultats termines pour aujourd&apos;hui.
+                Pas encore de resultats termines pour cette date.
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "0 16px" }}>
@@ -733,15 +778,19 @@ export default function BilanPage() {
                   const confianceTone = getConfianceStyle(result.confiance);
 
                   return (
-                    <div
+                    <button
                       key={`${result.courseInfo.reunion}-${result.courseInfo.course}-${index}`}
+                      onClick={() => openCourse(result)}
                       style={{
+                        width: "100%",
+                        textAlign: "left",
+                        border: "1px solid rgba(15,23,42,0.05)",
                         background: "#FFFFFF",
                         borderRadius: 22,
                         padding: 18,
                         borderLeft: `5px solid ${tone.border}`,
                         boxShadow: "0 18px 36px rgba(15,23,42,0.08)",
-                        border: "1px solid rgba(15,23,42,0.05)",
+                        cursor: "pointer",
                       }}
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start", marginBottom: 10 }}>
@@ -757,7 +806,7 @@ export default function BilanPage() {
                       </div>
 
                       <div style={{ fontSize: 24, fontWeight: 800, color: DARK, marginBottom: 6 }}>
-                        {formatChevaux(result)}
+                        N{result.favori.numPmu} {result.favori.nom}
                       </div>
 
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
@@ -771,7 +820,7 @@ export default function BilanPage() {
                             fontWeight: 800,
                           }}
                         >
-                          {ticketLabel(result)}
+                          {resultLabel(result.resultat)}
                         </span>
                         <span
                           style={{
@@ -785,7 +834,7 @@ export default function BilanPage() {
                         >
                           Confiance {result.confiance}/10
                         </span>
-                        {result.chevaux.some((cheval) => cheval.ordreArrivee !== null) && (
+                        {result.ordreArrivee && (
                           <span
                             style={{
                               background: "#F3F4F6",
@@ -796,7 +845,7 @@ export default function BilanPage() {
                               fontWeight: 800,
                             }}
                           >
-                            Arrivee {formatArrivee(result)}
+                            Arrivee {result.ordreArrivee}e
                           </span>
                         )}
                       </div>
@@ -805,49 +854,17 @@ export default function BilanPage() {
                         {result.recommandation}
                       </div>
 
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: result.gainPour1Euro !== null ? "1fr 1fr 1fr" : "1fr 1fr",
-                          gap: 8,
-                        }}
-                      >
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                         <div style={{ background: tone.soft, borderRadius: 14, padding: 12 }}>
                           <div style={{ fontSize: 11, color: "#777", marginBottom: 4 }}>Cote PMU</div>
-                          <div style={{ fontSize: 18, fontWeight: 800, color: DARK }}>{formatOdds(getPrimaryHorse(result)?.cotePmu ?? null)}</div>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: DARK }}>{formatOdds(result.favori.cotePmu)}</div>
                         </div>
                         <div style={{ background: "#EEF5FF", borderRadius: 14, padding: 12 }}>
                           <div style={{ fontSize: 11, color: "#6A7480", marginBottom: 4 }}>Cote IA</div>
-                          <div style={{ fontSize: 18, fontWeight: 800, color: "#1565C0" }}>{formatOdds(getPrimaryHorse(result)?.coteEstimee ?? null)}</div>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: "#1565C0" }}>{formatOdds(result.favori.coteEstimee)}</div>
                         </div>
-                        {result.gainPour1Euro !== null && (
-                          <div style={{ background: "#E8F5E9", borderRadius: 14, padding: 12 }}>
-                            <div style={{ fontSize: 11, color: "#5D7462", marginBottom: 4 }}>Rapport final 1EUR</div>
-                            <div style={{ fontSize: 18, fontWeight: 800, color: GREEN }}>{formatEuroReturn(result.gainPour1Euro)}</div>
-                          </div>
-                        )}
                       </div>
-                      {result.beneficeNetPour1Euro !== null && (
-                        <div
-                          style={{
-                            marginTop: 10,
-                            borderRadius: 14,
-                            padding: "10px 12px",
-                            background: "linear-gradient(135deg, #ECFDF3, #E8F5E9)",
-                            border: "1px solid #CFE9D5",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            gap: 10,
-                          }}
-                        >
-                          <div style={{ fontSize: 12, color: "#4E6A54", fontWeight: 700 }}>Benefice net estime pour 1EUR</div>
-                          <div style={{ fontSize: 18, color: GREEN_DARK, fontWeight: 900 }}>
-                            +{formatEuroReturn(result.beneficeNetPour1Euro)}
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -864,72 +881,44 @@ export default function BilanPage() {
           transform: "translateX(-50%)",
           width: "100%",
           maxWidth: 430,
-          height: 68,
-          background: "rgba(255,255,255,0.92)",
+          background: "rgba(255,255,255,0.94)",
           backdropFilter: "blur(18px)",
-          borderTop: "1px solid rgba(0,0,0,0.06)",
-          boxShadow: "0 -14px 30px rgba(15,23,42,0.08)",
-          display: "flex",
-          justifyContent: "space-around",
-          alignItems: "center",
+          borderTop: "1px solid rgba(15,23,42,0.08)",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr",
           zIndex: 200,
         }}
       >
-        <div
-          onClick={() => router.push("/")}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            cursor: "pointer",
-            gap: 2,
-            color: "#888",
-          }}
-        >
-          <span style={{ fontSize: 22 }}>🏇</span>
-          <span style={{ fontSize: 11, fontWeight: 600 }}>Courses</span>
-        </div>
-
-        <div
-          onClick={() => router.push("/mes-paris")}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            cursor: "pointer",
-            gap: 2,
-            color: "#888",
-          }}
-        >
-          <span style={{ fontSize: 22 }}>💰</span>
-          <span style={{ fontSize: 11, fontWeight: 600 }}>Mes Paris</span>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            cursor: "default",
-            gap: 2,
-            color: GREEN,
-            position: "relative",
-          }}
-        >
-          <span style={{ fontSize: 22 }}>📊</span>
-          <span style={{ fontSize: 11, fontWeight: 800 }}>Bilan</span>
-          <div
+        {[
+          { label: "Courses", active: false, href: `/?date=${selectedDate}` },
+          { label: "Mes Paris", active: false, href: "/mes-paris" },
+          { label: "Bilan", active: true, href: `/bilan?date=${selectedDate}` },
+        ].map((item) => (
+          <button
+            key={item.label}
+            onClick={() => !item.active && router.push(item.href)}
             style={{
-              width: 5,
-              height: 5,
-              borderRadius: "50%",
-              background: GREEN,
-              position: "absolute",
-              bottom: -4,
+              border: "none",
+              background: "transparent",
+              padding: "14px 10px 16px",
+              fontWeight: item.active ? 900 : 700,
+              color: item.active ? GREEN : "#5B6472",
+              cursor: item.active ? "default" : "pointer",
             }}
-          />
-        </div>
+          >
+            {item.label}
+          </button>
+        ))}
       </div>
     </div>
   );
 }
+
+export default function BilanPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#F6F7F8" }} />}>
+      <BilanPageContent />
+    </Suspense>
+  );
+}
+

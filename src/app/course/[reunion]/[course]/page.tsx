@@ -1,2783 +1,1402 @@
 "use client";
 
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { type ReactNode, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { fromIsoDate, getTodayDateStr, parsePmuDate } from "@/lib/date-utils";
+import type { RaceAnalysis, RaceSummary, ScoredParticipant } from "@/lib/types";
 
-import { useEffect, useState, useCallback, useRef } from "react";
-
-import {
-  getSupabaseBrowserClient,
-  getSupabaseConfigError,
-  hasSupabaseConfig,
-} from "@/lib/supabase";
-
-/* ------------------------------------------------------------------ */
-
-/*  Types (mirroring API response)                                     */
-
-/* ------------------------------------------------------------------ */
-
-interface MusicStats {
-  recentPositions: number[];
-
-  nbVictoires: number;
-
-  nbPodiums: number;
-
-  nbDQ: number;
-
-  nbAbandons: number;
-
-  fiabilite: number;
-
-  averagePosition: number;
-
-  serie: number;
-
-  trend: number;
-
-  ratioForme: number;
-}
-
-interface ScoreComponents {
-  reliabilityScore?: number;
-
-  placePotential?: number;
-
-  winPotential?: number;
-
-  riskPenalty?: number;
-
-  totalScore?: number;
-}
-
-interface ScoredParticipant {
+interface ArrivalRow {
+  position: number | null;
   numPmu: number;
-
   nom: string;
-
-  placeCorde?: number | null;
-
-  poids?: number | null;
-
-  driver: string;
-
-  jockey: string;
-
-  entraineur: string;
-
-  age: number;
-
-  sexe: string;
-
-  cote: number | null;
-
-  musique: string;
-
-  nombreCourses: number;
-
-  nombreVictoires: number;
-
-  nombrePlaces: number;
-
-  gainCarriere: number;
-
-  nombreSuiveurs: number;
-
-  ordreArrivee: number | null;
-
-  statut: string;
-
-  score: number;
-
-  scoreAlgo: number;
-
-  estTocard: boolean;
-
-  musicStats: MusicStats | null;
-
-  scoreComponents?: ScoreComponents | null;
+  jockey: string | null;
+  entraineur: string | null;
 }
 
-interface PredictedOdds {
-  coteMatin: number | null;
-
-  coteEstimee: number | null;
-
-  variation: string;
-
-  tendance: "BAISSE_FORTE" | "BAISSE" | "HAUSSE" | "STABLE";
-}
-
-interface ValueAnalysis {
-  probabilite: number;
-
-  coteJuste: number;
-
-  cotePMU: number;
-
-  valueIndex: number;
-
-  label: string;
-
-  emoji: string;
-
-  miseConseillee: number;
-}
-
-interface FavoriteSolidity {
-  score: number;
-
-  estFragile: boolean;
-
-  alertes: string[];
-
-  pointsPositifs: string[];
-
-  ecartScore: number;
-}
-
-interface Recommendation {
-  decision: string;
-
-  emoji: string;
-
-  vautLeCoup: boolean;
-
-  raisonnement: string[];
-}
-
-interface BetRecommendationHorse {
-  numPmu: number;
-
-  nom: string;
-
-  placeCorde?: number | null;
-
-  poids?: number | null;
-}
-
-interface BetRecommendation {
-  type: "SIMPLE_GAGNANT" | "COUPLE_PLACE" | "COUPLE_GAGNANT";
-
-  label: string;
-
-  emoji: string;
-
-  chevaux: BetRecommendationHorse[];
-
-  surete: number;
-
-  sureteLabel: string;
-
-  miseConseillee: number;
-
-  coteEstimee: number | null;
-
-  pourquoi: string[];
-}
-
-interface ConfidenceScore {
-  score: number;
-
-  niveau: { label: string; emoji: string };
-
-  facteurs: string[];
-}
-
-interface StrategicProfiles {
-  beton: ScoredParticipant | null;
-
-  pepite: ScoredParticipant | null;
-
-  sniper: ScoredParticipant | null;
-
-  lisibilite: "LISIBLE" | "COMPLEXE" | "LOTERIE";
-}
-
-interface AlgorithmHealth {
-  score: number;
-
-  status: "SAIN" | "SURVEILLANCE" | "FRAGILE";
-
-  strengths: string[];
-
-  weaknesses: string[];
-
-  notes: string[];
-}
-
-interface CourseInfo {
-  reunion: number;
-
-  course: number;
-
-  hippodrome: string;
-
-  nomCourse: string;
-
-  heureDepart: string;
-
-  discipline: string;
-
-  estTrot: boolean;
-
-  estPlat: boolean;
-
-  estQuinte: boolean;
-
-  allocation: number;
-
-  distance: number;
-
-  nombrePartants: number;
-}
-
-interface RaceAnalysis {
-  courseInfo: CourseInfo;
-
-  participants: number;
-
-  top5: ScoredParticipant[];
-
-  favori: ScoredParticipant | null;
-
-  soliditeFavori: FavoriteSolidity | null;
-
-  recommandation: Recommendation | null;
-
-  parisRecommandes: BetRecommendation[];
-
-  scoreConfiance: ConfidenceScore | null;
-
-  predictionsCotes: Record<number, PredictedOdds>;
-
-  profils: StrategicProfiles;
-
-  valueTop5: Record<number, ValueAnalysis>;
-
-  algorithmHealth: AlgorithmHealth | null;
-}
-
-interface APIResponse {
+interface RaceApiResponse {
   success: boolean;
-
-  courseInfo: CourseInfo;
-
-  participants: number;
-
+  courseInfo: RaceSummary;
+  officialArrival: ArrivalRow[];
   minutesUntilStart: number;
-
   pronoAvailable: boolean;
-
   isFinished: boolean;
-
   analysis: RaceAnalysis | null;
-
   error?: string;
 }
 
-/* ------------------------------------------------------------------ */
+const GREEN = "#0B8B4B";
+const GREEN_SOFT = "#E8F5ED";
+const DARK = "#121417";
+const GOLD_SOFT = "#FFF5D9";
+const RED = "#D84A4A";
+const RED_SOFT = "#FDECEC";
+const SLATE = "#5F6B76";
 
-/*  Helpers                                                            */
-
-/* ------------------------------------------------------------------ */
-
-const GREEN = "#00843D";
-
-const GREEN_DARK = "#006B31";
-
-const DARK = "#1A1A1A";
-
-function disciplineLabel(d: string): string {
-  switch (d) {
-    case "TROT_ATTELE":
-      return "Trot Attel\u00e9";
-
-    case "TROT_MONTE":
-      return "Trot Mont\u00e9";
-
-    case "PLAT":
-      return "Plat";
-
-    case "OBSTACLE":
-      return "Obstacle";
-
-    default:
-      return d;
-  }
+function round1(value: number) {
+  return Math.round(value * 10) / 10;
 }
 
-function formatWeight(poids?: number | null): string | null {
-  if (poids === null || poids === undefined || Number.isNaN(poids)) return null;
-
-  return `${poids.toFixed(1).replace(".", ",")} kg`;
+function normalizeSelectedDate(rawDate: string | null) {
+  if (!rawDate) return getTodayDateStr();
+  if (/^\d{8}$/.test(rawDate)) return rawDate;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) return fromIsoDate(rawDate);
+  return getTodayDateStr();
 }
 
-function formatRounded(value: number, digits = 1): string {
-  return value.toFixed(digits).replace(".", ",");
-}
-
-function formatReturnForOneEuro(cote?: number | null): string | null {
-  if (cote === null || cote === undefined || Number.isNaN(cote) || cote <= 0) {
-    return null;
-  }
-
-  return `1 EUR -> ${formatRounded(cote)} EUR`;
-}
-
-function cleanNarrative(text: string): string {
-  return text.replace(/(\d+\.\d{2,})/g, (raw) => {
-    const parsed = Number(raw);
-
-    return Number.isFinite(parsed) ? formatRounded(parsed) : raw;
+function formatDateLabel(dateStr: string) {
+  const date = parsePmuDate(dateStr);
+  return date.toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
   });
 }
 
-function dedupeStrings(
-  items: Array<string | null | undefined>,
-  limit = 3,
-): string[] {
-  const seen = new Set<string>();
-
-  const cleaned: string[] = [];
-
-  for (const item of items) {
-    if (!item) continue;
-
-    const key = item.trim();
-
-    if (!key || seen.has(key)) continue;
-
-    seen.add(key);
-
-    cleaned.push(key);
-
-    if (cleaned.length >= limit) break;
-  }
-
-  return cleaned;
+function formatCurrency(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return null;
+  return `${new Intl.NumberFormat("fr-FR").format(value)} EUR`;
 }
 
-function getParisNow(): Date {
-  return new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Europe/Paris" }),
+function formatOdds(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "-";
+  return Number(value).toFixed(1);
+}
+
+function formatCountdown(minutesUntilStart: number) {
+  if (minutesUntilStart <= 0) return "Depart imminent";
+  if (minutesUntilStart < 60) return `Dans ${Math.round(minutesUntilStart)} min`;
+  const hours = Math.floor(minutesUntilStart / 60);
+  const minutes = Math.round(minutesUntilStart % 60);
+  return `Dans ${hours}h${String(minutes).padStart(2, "0")}`;
+}
+
+function formatRevealTime(minutesUntilStart: number) {
+  const remaining = minutesUntilStart - 30;
+  if (remaining <= 0) return "Ouverture imminente";
+  return `Ouverture dans ${formatCountdown(remaining).replace(/^Dans /, "")}`;
+}
+
+function formatPosition(position: number | null | undefined) {
+  if (!position) return "n.c.";
+  return position === 1 ? "1er" : `${position}e`;
+}
+
+function getHumanLead(
+  participant: ScoredParticipant | null,
+  estPlat: boolean
+): { label: string; value: string } {
+  if (!participant) {
+    return { label: "Repere humain", value: "Info humaine indisponible" };
+  }
+
+  const orderedLeads = estPlat
+    ? [
+        { label: "Jockey", value: participant.jockey },
+        { label: "Driver", value: participant.driver },
+        { label: "Entraineur", value: participant.entraineur },
+      ]
+    : [
+        { label: "Driver", value: participant.driver },
+        { label: "Jockey", value: participant.jockey },
+        { label: "Entraineur", value: participant.entraineur },
+      ];
+
+  const match = orderedLeads.find((entry) => entry.value && entry.value.trim().length > 0);
+  return match
+    ? { label: match.label, value: match.value!.trim() }
+    : { label: "Repere humain", value: "Info humaine indisponible" };
+}
+
+function getHumanReference(participant: ScoredParticipant | null, estPlat: boolean) {
+  const lead = getHumanLead(participant, estPlat);
+  return `${lead.label}: ${lead.value}`;
+}
+
+function formatTicketType(type: string | null | undefined) {
+  if (!type) return "Lecture prudente";
+  switch (type) {
+    case "GAGNANT":
+      return "Simple gagnant";
+    case "PLACE":
+      return "Simple place";
+    case "COUPLE_GAGNANT":
+      return "Couple gagnant";
+    case "COUPLE_PLACE":
+      return "Couple place";
+    default:
+      return type;
+  }
+}
+
+function describeLisibilite(lisibilite: string) {
+  switch (lisibilite) {
+    case "LISIBLE":
+      return "Course propre, hierarchie plus fiable.";
+    case "COMPLEXE":
+      return "Course ouverte, ecarts plus serres.";
+    default:
+      return "Course trop diffuse pour une lecture nette.";
+  }
+}
+
+function formatObjective(objective: ScoredParticipant["prediction"]["objective"] | null | undefined) {
+  switch (objective) {
+    case "GAGNE":
+      return "Vise la gagne";
+    case "PODIUM":
+      return "Profil podium";
+    case "TOP5":
+      return "Vise le top 5";
+    default:
+      return "Speculatif";
+  }
+}
+
+function describeTicketIntent(runner: ScoredParticipant) {
+  if (runner.prediction.typePariConseille === "PLACE") {
+    if (runner.prediction.objective === "TOP5") {
+      return "Cheval surtout solide pour accrocher une place elargie plutot qu'une gagne seche.";
+    }
+    return "Le moteur le prefere en couverture place, plus fiable que franchement offensif.";
+  }
+
+  if (runner.prediction.objective === "GAGNE") {
+    return "Le moteur voit ici un vrai ticket de gagne, avec suffisamment de tenue pour l'assumer.";
+  }
+
+  return "Lecture offensive mesuree: ticket jouable si la course ne se resserre pas davantage.";
+}
+
+function formatVariation(variation: number | null | undefined) {
+  if (variation === null || variation === undefined || !Number.isFinite(variation)) return null;
+  const rounded = round1(variation);
+  return `${rounded > 0 ? "+" : ""}${rounded}%`;
+}
+
+function getTicketSimple(analysis: RaceAnalysis | null) {
+  if (!analysis) return null;
+  return (
+    analysis.ranking.find(
+      (runner) =>
+        runner.prediction.decision !== "REJET" &&
+        runner.prediction.typePariConseille === "GAGNANT"
+    ) ??
+    analysis.ranking.find((runner) => runner.prediction.decision !== "REJET") ??
+    analysis.favori
   );
 }
 
-function getTodayDateStrClient(): string {
-  const now = getParisNow();
-
-  const day = String(now.getDate()).padStart(2, "0");
-
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-
-  const year = String(now.getFullYear());
-
-  return `${day}${month}${year}`;
+function getBasePlace(analysis: RaceAnalysis | null, simpleTicket: ScoredParticipant | null) {
+  if (!analysis) return null;
+  return (
+    analysis.ranking.find(
+      (runner) =>
+        runner.numPmu !== simpleTicket?.numPmu &&
+        runner.prediction.decision !== "REJET" &&
+        runner.prediction.typePariConseille === "PLACE"
+    ) ??
+    analysis.top5.find((runner) => runner.numPmu !== simpleTicket?.numPmu) ??
+    null
+  );
 }
 
-function parseDateStr(dateStr: string): Date {
-  const day = Number(dateStr.slice(0, 2));
-
-  const month = Number(dateStr.slice(2, 4)) - 1;
-
-  const year = Number(dateStr.slice(4, 8));
-
-  return new Date(year, month, day);
+function getArrivalPosition(numPmu: number | null | undefined, arrival: ArrivalRow[]) {
+  if (!numPmu) return null;
+  return arrival.find((runner) => runner.numPmu === numPmu)?.position ?? null;
 }
 
-/* ------------------------------------------------------------------ */
+function getOutcomeTone(position: number | null, placeMode = false) {
+  if (position === null) {
+    return {
+      label: "Resultat indisponible",
+      background: "#F3F4F6",
+      color: "#606A73",
+    };
+  }
 
-/*  SVG Confidence Gauge                                               */
+  if (position === 1) {
+    return {
+      label: placeMode ? "Dans les 3" : "Gagnant",
+      background: GREEN_SOFT,
+      color: GREEN,
+    };
+  }
 
-/* ------------------------------------------------------------------ */
+  if (placeMode && position <= 3) {
+    return {
+      label: "Place",
+      background: GOLD_SOFT,
+      color: "#A06A00",
+    };
+  }
 
-function ConfidenceGauge({ score }: { score: number }) {
-  const size = 100;
+  return {
+    label: "Perdu",
+    background: RED_SOFT,
+    color: RED,
+  };
+}
 
-  const strokeWidth = 8;
+function getVerdictTone(label: string) {
+  if (label === "Ticket gagnant" || label === "Pari fort") {
+    return { background: GREEN_SOFT, color: GREEN };
+  }
+  if (label === "Ticket place" || label === "Base prudente" || label === "Course ouverte") {
+    return { background: GOLD_SOFT, color: "#A06A00" };
+  }
+  return { background: RED_SOFT, color: RED };
+}
 
-  const radius = (size - strokeWidth) / 2;
+function buildVerdict(
+  response: RaceApiResponse | null,
+  analysis: RaceAnalysis | null,
+  simpleTicket: ScoredParticipant | null
+) {
+  const technicalFavorite = analysis?.favori ?? null;
+  const recommendation = analysis?.recommandation?.decision ?? "PAS DE VALIDATION FORTE";
+  const confidence = analysis?.scoreConfiance?.score ?? 0;
+  const lisibilite = analysis?.prediction.lisibilite ?? "LOTERIE";
+  const solidity = analysis?.soliditeFavori?.score ?? 0;
+  const placeTicket = simpleTicket?.prediction.typePariConseille === "PLACE";
 
-  const circumference = 2 * Math.PI * radius;
+  if (response?.isFinished && response.officialArrival.length > 0 && simpleTicket) {
+    const position = getArrivalPosition(simpleTicket.numPmu, response.officialArrival);
+    if (position === 1) {
+      return {
+        title: "Ticket gagnant",
+        subtitle: `Le ticket principal N${simpleTicket.numPmu} a gagne la course.`,
+        label: "Bilan officiel",
+      };
+    }
+    if (position !== null && position <= 3) {
+      return {
+        title: "Ticket place",
+        subtitle: `Le ticket principal N${simpleTicket.numPmu} termine ${formatPosition(position)}.`,
+        label: "Bilan officiel",
+      };
+    }
+    if (position !== null) {
+      return {
+        title: "Ticket manque",
+        subtitle: `Le ticket principal N${simpleTicket.numPmu} termine ${formatPosition(position)}.`,
+        label: "Bilan officiel",
+      };
+    }
+  }
 
-  const progress = (score / 10) * circumference;
+  if (recommendation === "PARI OFFENSIF" && confidence >= 7) {
+    return {
+      title: "Ticket offensif",
+      subtitle: `Le ticket principal ressort proprement avec ${confidence}/10 de confiance sur une course ${lisibilite.toLowerCase()}.`,
+      label: "Verdict moteur",
+    };
+  }
 
-  const offset = circumference - progress;
+  if (placeTicket && solidity >= 68) {
+    return {
+      title: "Base place",
+      subtitle: "Le moteur prefere une base place solide plutot qu'une attaque gagnante trop agressive.",
+      label: "Verdict moteur",
+    };
+  }
+
+  if (lisibilite === "LOTERIE") {
+    return {
+      title: "Course a laisser",
+      subtitle: "La course est trop ouverte pour sortir un vrai ticket propre.",
+      label: "Verdict moteur",
+    };
+  }
+
+  if (recommendation === "SURVEILLANCE ACTIVE" || lisibilite === "COMPLEXE") {
+    return {
+      title: "Lecture prudente",
+      subtitle: "Le favori reste jouable, mais l'ecart avec ses poursuivants est trop court pour valider un ticket offensif.",
+      label: "Verdict moteur",
+    };
+  }
+
+  if (technicalFavorite && solidity >= 70) {
+    return {
+      title: "Sous surveillance",
+      subtitle: "Le favori tient encore, mais la course demande plus de prudence que d'engagement.",
+      label: "Verdict moteur",
+    };
+  }
+
+  return {
+    title: "Lecture reservee",
+    subtitle: "Le moteur prefere rester defensif plutot que d'insister sur un ticket peu clair.",
+    label: "Verdict moteur",
+  };
+}
+
+function buildStrengths(
+  analysis: RaceAnalysis | null,
+  favorite: ScoredParticipant | null,
+  placeBase: ScoredParticipant | null
+) {
+  if (!analysis || !favorite) return [];
+
+  const points: string[] = [];
+  const solidity = analysis.soliditeFavori;
+
+  if ((favorite.musicStats?.trend ?? 0) > 0.5) points.push("Forme recente orientee a la hausse.");
+  if ((favorite.musicStats?.fiabilite ?? 0) >= 0.75) points.push("Profil fiable dans la musique recente.");
+  if (favorite.signaux.victoire >= 8) points.push("Signal de victoire present dans le moteur.");
+  if (favorite.signaux.podium >= 8) points.push("Base podium solide pour securiser la course.");
+  if ((favorite.stalle ?? favorite.placeCorde ?? 99) <= 4 && analysis.courseInfo.estPlat) {
+    points.push("Bon numero de stalle pour le parcours.");
+  }
+  if (placeBase && placeBase.numPmu !== favorite.numPmu) {
+    points.push(`Base place complementaire: N${placeBase.numPmu} ${placeBase.nom}.`);
+  }
+  if (solidity?.score && solidity.score >= 72) {
+    points.push(`Solidite correcte du favori (${round1(solidity.score)}/100).`);
+  }
+
+  return points.slice(0, 4);
+}
+
+function buildWarnings(analysis: RaceAnalysis | null, favorite: ScoredParticipant | null) {
+  if (!analysis || !favorite) return [];
+
+  const warnings: string[] = [];
+  const solidity = analysis.soliditeFavori;
+
+  if (analysis.prediction.lisibilite === "COMPLEXE") {
+    warnings.push("Course serree: le top 3 se tient de pres.");
+  }
+  if (analysis.prediction.lisibilite === "LOTERIE") {
+    warnings.push("Course trop ouverte pour une validation propre.");
+  }
+  if (solidity && solidity.ecartScore <= 2.5) {
+    warnings.push(`Ecart faible avec le 2e: ${round1(solidity.ecartScore)} pts.`);
+  }
+  if (favorite.signaux.risque >= 8) {
+    warnings.push("Risque technique eleve dans le profil du favori.");
+  }
+  if (favorite.prediction.typePariConseille === "PLACE") {
+    warnings.push("Le moteur voit surtout une base place, pas une vraie gagne seche.");
+  }
+
+  return warnings.slice(0, 3);
+}
+
+function buildContextHighlights(data: RaceApiResponse, analysis: RaceAnalysis | null) {
+  const items: string[] = [];
+
+  if (data.courseInfo.terrain) {
+    items.push(`Terrain: ${data.courseInfo.terrain}`);
+  }
+  if (data.courseInfo.meteo) {
+    items.push(`Meteo: ${data.courseInfo.meteo}`);
+  }
+  items.push(`Lisibilite: ${analysis?.prediction.lisibilite ?? "N/A"}`);
+
+  if (analysis?.soliditeFavori?.ecartScore !== undefined) {
+    items.push(`Ecart favori / 2e: ${round1(analysis.soliditeFavori.ecartScore)} pts`);
+  }
+
+  return items;
+}
+
+function Pill({
+  children,
+  background = "#F3F4F6",
+  color = DARK,
+}: {
+  children: React.ReactNode;
+  background?: string;
+  color?: string;
+}) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "7px 12px",
+        borderRadius: 999,
+        background,
+        color,
+        fontSize: 12,
+        fontWeight: 800,
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+function SectionCard({
+  title,
+  kicker,
+  children,
+  accent = "rgba(18,24,39,0.05)",
+}: {
+  title: string;
+  kicker?: string;
+  children: ReactNode;
+  accent?: string;
+}) {
+  return (
+    <section
+      style={{
+        margin: "0 16px 16px",
+        borderRadius: 24,
+        background: "#FFFFFF",
+        padding: 20,
+        border: `1px solid ${accent}`,
+        boxShadow: "0 18px 38px rgba(15,23,42,0.08)",
+      }}
+    >
+      {kicker ? (
+        <div style={{ fontSize: 12, fontWeight: 800, color: GREEN, marginBottom: 8, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+          {kicker}
+        </div>
+      ) : null}
+      <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 800, color: DARK, marginBottom: 14 }}>
+        {title}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  hint,
+  tone = "default",
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: "default" | "good" | "warn" | "bad";
+}) {
+  const palette =
+    tone === "good"
+      ? { background: "#F4FBF7", border: "#D9F0E2", value: GREEN }
+      : tone === "warn"
+        ? { background: "#FFF8E6", border: "#F6E7B6", value: "#A06A00" }
+        : tone === "bad"
+          ? { background: "#FFF2F2", border: "#F7D5D5", value: RED }
+          : { background: "#F8FAFC", border: "#E7ECF1", value: DARK };
 
   return (
     <div
-      style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
+      style={{
+        borderRadius: 18,
+        padding: 16,
+        background: palette.background,
+        border: `1px solid ${palette.border}`,
+      }}
     >
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="#eee"
-          strokeWidth={strokeWidth}
-        />
-
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke={GREEN}
-          strokeWidth={strokeWidth}
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-          style={{ transition: "stroke-dashoffset 0.8s ease" }}
-        />
-
-        <text
-          x={size / 2}
-          y={size / 2 - 4}
-          textAnchor="middle"
-          dominantBaseline="central"
-          style={{ fontSize: "28px", fontWeight: 700, fill: DARK }}
-        >
-          {score}
-        </text>
-
-        <text
-          x={size / 2}
-          y={size / 2 + 20}
-          textAnchor="middle"
-          dominantBaseline="central"
-          style={{ fontSize: "13px", fill: "#888" }}
-        >
-          /10
-        </text>
-      </svg>
+      <div style={{ fontSize: 11, color: SLATE, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 28, lineHeight: "30px", fontWeight: 800, color: palette.value, marginBottom: hint ? 6 : 0 }}>
+        {value}
+      </div>
+      {hint ? <div style={{ fontSize: 12, color: SLATE, lineHeight: "16px" }}>{hint}</div> : null}
     </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
-
-/*  Skeleton Loader                                                    */
-
-/* ------------------------------------------------------------------ */
-
-function Skeleton() {
-  const shimmer: React.CSSProperties = {
-    background: "linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)",
-
-    backgroundSize: "200% 100%",
-
-    animation: "shimmer 1.5s infinite",
-
-    borderRadius: "8px",
-  };
+function TicketPanel({
+  title,
+  subtitle,
+  runner,
+  badge,
+  accent,
+  placeMode = false,
+  arrivalPosition,
+}: {
+  title: string;
+  subtitle: string;
+  runner: ScoredParticipant;
+  badge: string;
+  accent: string;
+  placeMode?: boolean;
+  arrivalPosition?: number | null;
+}) {
+  const outcome = getOutcomeTone(arrivalPosition ?? null, placeMode);
+  const variation = formatVariation(runner.variationCote);
 
   return (
-    <>
-      <style>{`@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
-
+    <div
+      style={{
+        borderRadius: 20,
+        border: `1px solid ${accent}`,
+        background: "#FFFFFF",
+        overflow: "hidden",
+      }}
+    >
       <div
         style={{
-          padding: "16px",
+          padding: "10px 14px",
+          background: `${accent}22`,
           display: "flex",
-          flexDirection: "column",
-          gap: "16px",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 8,
         }}
       >
-        <div style={{ ...shimmer, height: "120px", borderRadius: "16px" }} />
+        <div style={{ fontSize: 14, fontWeight: 800, color: DARK }}>{title}</div>
+        <Pill background={`${accent}33`} color={accent}>
+          {badge}
+        </Pill>
+      </div>
 
-        <div style={{ ...shimmer, height: "200px", borderRadius: "16px" }} />
-
-        <div style={{ display: "flex", gap: "12px" }}>
+      <div style={{ padding: 16 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
           <div
             style={{
-              ...shimmer,
-              height: "120px",
-              flex: 1,
-              borderRadius: "12px",
+              width: 54,
+              height: 54,
+              borderRadius: 18,
+              background: accent,
+              color: "#FFFFFF",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 28,
+              fontWeight: 800,
+              flexShrink: 0,
+              boxShadow: "0 16px 28px rgba(0,0,0,0.12)",
             }}
-          />
+          >
+            {runner.numPmu}
+          </div>
 
-          <div
-            style={{
-              ...shimmer,
-              height: "120px",
-              flex: 1,
-              borderRadius: "12px",
-            }}
-          />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 800, color: DARK, marginBottom: 6 }}>
+              {runner.nom}
+            </div>
+            <div style={{ fontSize: 14, lineHeight: "18px", color: SLATE, marginBottom: 10 }}>
+              {subtitle}
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              <Pill background="#EEF8F1" color={GREEN}>
+                {formatObjective(runner.prediction.objective)}
+              </Pill>
+              {runner.stalle || runner.placeCorde ? (
+                <Pill background="#F3F4F6" color={SLATE}>
+                  Stalle {runner.stalle ?? runner.placeCorde}
+                </Pill>
+              ) : null}
+              {runner.poids ? (
+                <Pill background={GOLD_SOFT} color="#A06A00">
+                  Poids {runner.poids.toFixed(1)} kg
+                </Pill>
+              ) : null}
+              <Pill background="#EEF5FF" color="#1660C7">
+                PMU {formatOdds(runner.cote)}
+              </Pill>
+              <Pill background="#F4FBF7" color={GREEN}>
+                IA {formatOdds(runner.prediction.probaEstimee > 0 ? 1 / runner.prediction.probaEstimee : null)}
+              </Pill>
+              {variation ? (
+                <Pill background="#FFF8E6" color="#A06A00">
+                  Var. {variation}
+                </Pill>
+              ) : null}
+            </div>
+          </div>
         </div>
 
-        <div style={{ ...shimmer, height: "160px", borderRadius: "16px" }} />
-
-        <div style={{ ...shimmer, height: "260px", borderRadius: "16px" }} />
+        <div
+          style={{
+            marginTop: 14,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <div style={{ fontSize: 13, lineHeight: "18px", color: SLATE }}>
+            {describeTicketIntent(runner)}
+          </div>
+          {arrivalPosition !== undefined ? (
+            <span
+              style={{
+                flexShrink: 0,
+                background: outcome.background,
+                color: outcome.color,
+                borderRadius: 999,
+                padding: "8px 12px",
+                fontSize: 12,
+                fontWeight: 800,
+              }}
+            >
+              {arrivalPosition ? `${outcome.label} (${formatPosition(arrivalPosition)})` : outcome.label}
+            </span>
+          ) : null}
+        </div>
       </div>
-    </>
+    </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
+function SecondaryRunnerCard({
+  title,
+  runner,
+  accent,
+  placeMode = false,
+  arrivalPosition,
+  humanReference,
+}: {
+  title: string;
+  runner: ScoredParticipant;
+  accent: string;
+  placeMode?: boolean;
+  arrivalPosition?: number | null;
+  humanReference: string;
+}) {
+  const outcome = getOutcomeTone(arrivalPosition ?? null, placeMode);
+  const variation = formatVariation(runner.variationCote);
 
-/*  Main Component                                                     */
+  return (
+    <div
+      style={{
+        borderRadius: 18,
+        border: `1px solid ${accent}33`,
+        background: "#F9FBFC",
+        padding: 14,
+        display: "grid",
+        gap: 10,
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+        <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: accent }}>
+          {title}
+        </div>
+        {arrivalPosition !== undefined ? (
+          <span
+            style={{
+              background: outcome.background,
+              color: outcome.color,
+              borderRadius: 999,
+              padding: "6px 10px",
+              fontSize: 11,
+              fontWeight: 800,
+            }}
+          >
+            {arrivalPosition ? `${outcome.label} ${formatPosition(arrivalPosition)}` : outcome.label}
+          </span>
+        ) : null}
+      </div>
 
-/* ------------------------------------------------------------------ */
+      <div>
+        <div style={{ fontSize: 20, lineHeight: "24px", fontWeight: 800, color: DARK }}>
+          N{runner.numPmu} {runner.nom}
+        </div>
+        <div style={{ fontSize: 13, color: SLATE, marginTop: 4 }}>{humanReference}</div>
+      </div>
 
-export default function CourseDetailPage() {
-  const params = useParams();
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        <Pill background="#EEF8F1" color={GREEN}>
+          {formatObjective(runner.prediction.objective)}
+        </Pill>
+        {runner.stalle || runner.placeCorde ? (
+          <Pill background="#F3F4F6" color={SLATE}>
+            Stalle {runner.stalle ?? runner.placeCorde}
+          </Pill>
+        ) : null}
+        {runner.poids ? (
+          <Pill background={GOLD_SOFT} color="#A06A00">
+            Poids {runner.poids.toFixed(1)} kg
+          </Pill>
+        ) : null}
+        <Pill background="#EEF5FF" color="#1660C7">
+          PMU {formatOdds(runner.cote)}
+        </Pill>
+        {variation ? (
+          <Pill background="#FFF8E6" color="#A06A00">
+            Var. {variation}
+          </Pill>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
+export default function CourseDetailPage({
+  params,
+}: {
+  params: Promise<{ reunion: string; course: string }>;
+}) {
   const router = useRouter();
-
   const searchParams = useSearchParams();
-
-  const supabaseConfigured = hasSupabaseConfig();
-
-  const reunion = params.reunion as string;
-
-  const course = params.course as string;
-
-  const selectedDate = searchParams.get("date") || getTodayDateStrClient();
-
-  const [data, setData] = useState<APIResponse | null>(null);
-
+  const [reunion, setReunion] = useState<number | null>(null);
+  const [course, setCourse] = useState<number | null>(null);
+  const [data, setData] = useState<RaceApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [countdown, setCountdown] = useState("");
-
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Betting state
-
-  const [showBetPanel, setShowBetPanel] = useState(false);
-
-  const [betHorse, setBetHorse] = useState<ScoredParticipant | null>(null);
-
-  const [betType, setBetType] = useState<"GAGNANT" | "PLACE">("PLACE");
-
-  const [betMise, setBetMise] = useState(2);
-
-  const [betLoading, setBetLoading] = useState(false);
-
-  const [betMessage, setBetMessage] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
-
-  const [alreadyBet, setAlreadyBet] = useState(false);
-
-  const fetchData = useCallback(async () => {
-    try {
-      const res = await fetch(
-        `/api/race/${reunion}/${course}?date=${selectedDate}`,
-      );
-
-      const json: APIResponse = await res.json();
-
-      setData(json);
-    } catch {
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [reunion, course, selectedDate]);
+  const selectedDate = normalizeSelectedDate(searchParams.get("date"));
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    let cancelled = false;
 
-  /* Live countdown for locked prono */
-
-  useEffect(() => {
-    if (!data || data.pronoAvailable || data.isFinished) {
-      if (countdownRef.current) clearInterval(countdownRef.current);
-
-      return;
-    }
-
-    const courseInfo = data.courseInfo;
-
-    function tick() {
-      const parisNow = getParisNow();
-
-      const [h, m] = courseInfo.heureDepart.split(":").map(Number);
-
-      const target = parseDateStr(selectedDate);
-
-      target.setHours(h, m, 0, 0);
-
-      // Prono available 30 min before
-
-      const unlockTime = new Date(target.getTime() - 30 * 60 * 1000);
-
-      const diffMs = unlockTime.getTime() - parisNow.getTime();
-
-      if (diffMs <= 0) {
-        setCountdown("00:00");
-
-        if (countdownRef.current) clearInterval(countdownRef.current);
-
-        // Auto-refetch
-
-        setLoading(true);
-
-        fetchData();
-
-        return;
-      }
-
-      const totalSec = Math.floor(diffMs / 1000);
-
-      const mm = String(Math.floor(totalSec / 60)).padStart(2, "0");
-
-      const ss = String(totalSec % 60).padStart(2, "0");
-
-      setCountdown(`${mm}:${ss}`);
-    }
-
-    tick();
-
-    countdownRef.current = setInterval(tick, 1000);
+    params
+      .then(({ reunion: reunionParam, course: courseParam }) => {
+        if (cancelled) return;
+        setReunion(Number.parseInt(reunionParam, 10));
+        setCourse(Number.parseInt(courseParam, 10));
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setError("Impossible de lire la course.");
+          setLoading(false);
+        }
+      });
 
     return () => {
-      if (countdownRef.current) clearInterval(countdownRef.current);
+      cancelled = true;
     };
-  }, [data, fetchData, selectedDate]);
+  }, [params]);
 
-  /* ---------------------------------------------------------------- */
+  useEffect(() => {
+    if (!reunion || !course) return;
 
-  /*  Shared styles                                                    */
+    let cancelled = false;
 
-  /* ---------------------------------------------------------------- */
+    fetch(`/api/race/${reunion}/${course}?date=${selectedDate}`)
+      .then(async (response) => {
+        const json = (await response.json()) as RaceApiResponse;
+        if (!response.ok || !json.success) {
+          throw new Error(json.error || "Course introuvable");
+        }
+        if (!cancelled) {
+          setData(json);
+        }
+      })
+      .catch((fetchError) => {
+        if (!cancelled) {
+          setError(fetchError instanceof Error ? fetchError.message : "Analyse indisponible");
+          setData(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
 
-  const pageStyle: React.CSSProperties = {
-    maxWidth: "430px",
+    return () => {
+      cancelled = true;
+    };
+  }, [course, reunion, selectedDate]);
 
-    margin: "0 auto",
+  const analysis = data?.analysis ?? null;
+  const technicalFavorite = analysis?.favori ?? null;
+  const simpleTicket = getTicketSimple(analysis);
+  const placeBase = getBasePlace(analysis, simpleTicket);
+  const verdict = buildVerdict(data, analysis, simpleTicket);
+  const verdictTone = getVerdictTone(verdict.title);
+  const strengths = buildStrengths(analysis, technicalFavorite, placeBase);
+  const warnings = buildWarnings(analysis, technicalFavorite);
+  const technicalFavoritePosition = getArrivalPosition(technicalFavorite?.numPmu, data?.officialArrival ?? []);
+  const simpleTicketPosition = getArrivalPosition(simpleTicket?.numPmu, data?.officialArrival ?? []);
+  const placeBasePosition = getArrivalPosition(placeBase?.numPmu, data?.officialArrival ?? []);
+  const readableDate = formatDateLabel(selectedDate);
+  const contextHighlights = data ? buildContextHighlights(data, analysis) : [];
 
-    minHeight: "100vh",
-
-    background:
-      "radial-gradient(circle at top, rgba(0,132,61,0.08), transparent 24%), linear-gradient(180deg, #F6F8F9 0%, #EEF2F3 100%)",
-
-    paddingBottom: "80px",
-
-    position: "relative",
-  };
-
-  const headerStyle: React.CSSProperties = {
-    position: "sticky",
-
-    top: 0,
-
-    zIndex: 100,
-
-    background: "rgba(18, 22, 26, 0.88)",
-
-    backdropFilter: "blur(18px)",
-
-    borderBottom: "1px solid rgba(255,255,255,0.06)",
-
-    height: "62px",
-
-    display: "flex",
-
-    alignItems: "center",
-
-    justifyContent: "center",
-
-    padding: "0 16px",
-  };
-
-  const cardStyle: React.CSSProperties = {
-    background:
-      "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,251,1) 100%)",
-
-    borderRadius: "22px",
-
-    boxShadow: "0 18px 40px rgba(15,23,42,0.08)",
-
-    border: "1px solid rgba(15,23,42,0.06)",
-
-    padding: "20px",
-
-    margin: "0 16px 16px",
-
-    overflow: "hidden",
-
-    position: "relative",
-  };
-
-  const pillStyle: React.CSSProperties = {
-    display: "inline-block",
-
-    padding: "6px 12px",
-
-    borderRadius: "999px",
-
-    fontSize: "11px",
-
-    fontWeight: 700,
-
-    textTransform: "uppercase" as const,
-
-    letterSpacing: "0.08em",
-  };
-
-  /* ---------------------------------------------------------------- */
-
-  /*  Sub-components                                                   */
-
-  /* ---------------------------------------------------------------- */
-
-  function Header() {
-    const hippo = data?.courseInfo?.hippodrome ?? "";
-
+  if (loading) {
     return (
-      <div style={headerStyle}>
+      <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100vh", background: "#F6F8F9" }}>
+        <div style={{ height: 64, background: "rgba(18,22,26,0.92)" }} />
+        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div
+              key={index}
+              style={{
+                height: index === 0 ? 230 : 160,
+                borderRadius: 24,
+                background: "linear-gradient(90deg, #ECECEC 25%, #F7F7F7 50%, #ECECEC 75%)",
+                backgroundSize: "200% 100%",
+                animation: "shimmer 1.5s linear infinite",
+              }}
+            />
+          ))}
+          <style>{`
+            @keyframes shimmer {
+              0% { background-position: 200% 0; }
+              100% { background-position: -200% 0; }
+            }
+          `}</style>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100vh", background: "#F6F8F9" }}>
         <div
-          onClick={() => router.back()}
           style={{
-            position: "absolute",
-            left: "16px",
-            cursor: "pointer",
+            height: 64,
+            background: "rgba(18,22,26,0.92)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            width: "32px",
-            height: "32px",
-            borderRadius: "50%",
-            background: "rgba(255,255,255,0.1)",
-          }}
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#fff"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-        </div>
-
-        <div
-          style={{
-            color: "#fff",
+            color: "#FFFFFF",
             fontWeight: 800,
-            fontSize: "17px",
-            letterSpacing: "-0.3px",
           }}
         >
-          R{reunion}C{course}
-          <span
-            style={{
-              color: "rgba(255,255,255,0.56)",
-              fontWeight: 500,
-              marginLeft: "6px",
-            }}
-          >
-            &middot; {hippo}
-          </span>
+          Analyse course
         </div>
-      </div>
-    );
-  }
-
-  function RaceInfoCard({ dark }: { dark?: boolean }) {
-    if (!data) return null;
-
-    const ci = data.courseInfo;
-
-    const bg = dark
-      ? {
-          background:
-            "radial-gradient(circle at top right, rgba(16,185,129,0.18), transparent 30%), linear-gradient(135deg, #11181c, #1b2329)",
-
-          border: "1px solid rgba(255,255,255,0.08)",
-
-          boxShadow: "0 26px 48px rgba(15,23,42,0.18)",
-        }
-      : { background: "linear-gradient(180deg, #FFFFFF 0%, #F8FBF9 100%)" };
-
-    const textColor = dark ? "#fff" : DARK;
-
-    return (
-      <div style={{ ...cardStyle, ...bg, color: textColor }}>
-        <div
-          style={{
-            fontSize: 12,
-            fontWeight: 800,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            color: dark ? "#7ee7a8" : GREEN,
-            marginBottom: 10,
-          }}
-        >
-          Course premium
-        </div>
-
-        <div
-          style={{
-            fontWeight: 800,
-            fontSize: "24px",
-            lineHeight: "28px",
-            marginBottom: "8px",
-            letterSpacing: "-0.6px",
-          }}
-        >
-          {ci.nomCourse}
-        </div>
-
-        <div
-          style={{
-            fontWeight: 700,
-            fontSize: "15px",
-            marginBottom: "12px",
-            color: dark ? "rgba(255,255,255,0.76)" : "#475569",
-          }}
-        >
-          {ci.hippodrome}
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            flexWrap: "wrap",
-            marginBottom: "12px",
-          }}
-        >
-          <span
-            style={{
-              ...pillStyle,
-              background: dark ? "rgba(0,132,61,0.25)" : "#E8F5E9",
-              color: GREEN,
-            }}
-          >
-            {disciplineLabel(ci.discipline)}
-          </span>
-
-          <span
-            style={{
-              ...pillStyle,
-              background: dark ? "rgba(255,255,255,0.08)" : "#F3F4F6",
-              color: dark ? "#fff" : "#334155",
-            }}
-          >
-            {ci.distance}m
-          </span>
-
-          <span
-            style={{
-              ...pillStyle,
-              background: dark ? "rgba(255,255,255,0.08)" : "#F3F4F6",
-              color: dark ? "#fff" : "#334155",
-            }}
-          >
-            {ci.nombrePartants} partants
-          </span>
-
-          {ci.allocation > 0 && (
-            <span
+        <div style={{ padding: 16 }}>
+          <SectionCard title="Analyse indisponible" kicker="Erreur">
+            <div style={{ fontSize: 15, lineHeight: "22px", color: SLATE, marginBottom: 16 }}>
+              {error || "La course n&apos;a pas pu etre chargee."}
+            </div>
+            <button
+              onClick={() => router.push(`/?date=${selectedDate}`)}
               style={{
-                ...pillStyle,
-                background: dark ? "rgba(255,215,0,0.12)" : "#FFF8E1",
-                color: dark ? "#FFD54F" : "#B27500",
+                width: "100%",
+                border: "none",
+                borderRadius: 16,
+                padding: "15px 18px",
+                background: DARK,
+                color: "#FFFFFF",
+                fontWeight: 800,
+                fontSize: 15,
+                cursor: "pointer",
               }}
             >
-              Allocation {ci.allocation.toLocaleString("fr-FR")} EUR
-            </span>
-          )}
-        </div>
-
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-          <div
-            style={{
-              fontWeight: 800,
-              color: dark ? "#FFFFFF" : DARK,
-              fontSize: "34px",
-              lineHeight: "36px",
-              letterSpacing: "-1px",
-            }}
-          >
-            {ci.heureDepart}
-          </div>
-
-          <div
-            style={{
-              fontSize: "13px",
-              color: dark ? "rgba(255,255,255,0.68)" : "#64748B",
-            }}
-          >
-            depart officiel
-          </div>
+              Retour aux courses
+            </button>
+          </SectionCard>
         </div>
       </div>
     );
   }
 
-  /* ---------- CASE 1: Prono locked ---------- */
-
-  function LockedSection() {
-    return (
-      <div
-        style={{ textAlign: "center", marginTop: "48px", padding: "0 24px" }}
-      >
-        <div style={{ fontSize: "64px", marginBottom: "18px" }}>&#x1F512;</div>
-
-        <div
-          style={{
-            fontWeight: 700,
-            fontSize: "20px",
-            color: DARK,
-            marginBottom: "16px",
-          }}
-        >
-          Pronostic verrouill&eacute;
-        </div>
-
-        <div
-          style={{
-            fontWeight: 800,
-            fontSize: "32px",
-            color: GREEN,
-            marginBottom: "12px",
-            fontVariantNumeric: "tabular-nums",
-            letterSpacing: "-1px",
-          }}
-        >
-          Disponible dans {countdown || "--:--"}
-        </div>
-
-        <div style={{ fontSize: "14px", color: "#64748B", lineHeight: 1.6 }}>
-          Le pronostic sera d&eacute;voil&eacute; 30 min avant le d&eacute;part
-        </div>
-      </div>
-    );
-  }
-
-  /* ---------- CASE 2 / 3: Full Analysis ---------- */
-
-  function FullAnalysis() {
-    if (!data || !data.analysis) return null;
-
-    const a = data.analysis;
-
-    const favori = a.favori;
-
-    const solidite = a.soliditeFavori;
-
-    const reco = a.recommandation;
-
-    const primarySimpleRecommendation =
-      a.parisRecommandes?.find((pari) => pari.type === "SIMPLE_GAGNANT") ??
-      null;
-
-    const primarySimpleHorse = primarySimpleRecommendation?.chevaux?.[0]
-      ? (a.top5.find(
-          (horse) =>
-            horse.numPmu === primarySimpleRecommendation.chevaux[0].numPmu,
-        ) ?? null)
-      : null;
-
-    const ticketSimpleDiffers = Boolean(
-      favori &&
-      primarySimpleHorse &&
-      favori.numPmu !== primarySimpleHorse.numPmu,
-    );
-
-    const confiance = a.scoreConfiance;
-
-    const profils = a.profils;
-
-    const algoHealth = a.algorithmHealth;
-
-    const simpleHorse = primarySimpleHorse ?? favori;
-
-    const highlightedOdds = simpleHorse
-      ? (a.predictionsCotes[simpleHorse.numPmu] ?? null)
-      : null;
-
-    const highlightedValue = simpleHorse
-      ? (a.valueTop5[simpleHorse.numPmu] ?? null)
-      : null;
-
-    const riderLabel = data.courseInfo.estPlat ? "Jockey" : "Driver";
-
-    const lisibiliteLabel =
-      profils.lisibilite === "LISIBLE"
-        ? "Course lisible"
-        : profils.lisibilite === "COMPLEXE"
-          ? "Course complexe"
-          : "Course ouverte";
-
-    const normalizedDecision = reco?.decision ?? (() => {
-      if (!solidite) return "Lecture en attente";
-
-      if (solidite.score >= 82 && solidite.alertes.length === 0) {
-        return "JOUEZ LE FAVORI";
-      }
-
-      if (solidite.score >= 65) {
-        return "FAVORI JOUABLE AVEC PRUDENCE";
-      }
-
-      if (solidite.score >= 45 || profils.lisibilite === "COMPLEXE") {
-        return "COURSE COMPLEXE";
-      }
-
-      return "COURSE A EVITER";
-    })();
-
-    const tonePalette = {
-      positive: {
-        background: "#EAF8EF",
-
-        border: "1px solid rgba(0,132,61,0.18)",
-
-        text: GREEN_DARK,
-
-        accent: GREEN,
-
-        muted: "#F4FBF6",
-      },
-
-      warning: {
-        background: "#FFF7E8",
-
-        border: "1px solid rgba(214,153,6,0.2)",
-
-        text: "#8A5A00",
-
-        accent: "#D69906",
-
-        muted: "#FFF9F0",
-      },
-
-      danger: {
-        background: "#FFF0F0",
-
-        border: "1px solid rgba(211,47,47,0.18)",
-
-        text: "#A61B1B",
-
-        accent: "#D32F2F",
-
-        muted: "#FFF6F6",
-      },
-
-      info: {
-        background: "#EEF5FF",
-
-        border: "1px solid rgba(59,130,246,0.16)",
-
-        text: "#1D4ED8",
-
-        accent: "#2563EB",
-
-        muted: "#F6FAFF",
-      },
-
-      neutral: {
-        background: "#F8FAFC",
-
-        border: "1px solid rgba(148,163,184,0.18)",
-
-        text: "#334155",
-
-        accent: "#475569",
-
-        muted: "#FFFFFF",
-      },
-    } as const;
-
-    const decisionTone =
-      normalizedDecision === "JOUEZ LE FAVORI"
-        ? tonePalette.positive
-        : normalizedDecision === "FAVORI JOUABLE AVEC PRUDENCE"
-          ? tonePalette.warning
-          : normalizedDecision === "COURSE COMPLEXE"
-            ? tonePalette.info
-            : tonePalette.danger;
-
-    const lisibiliteTone =
-      profils.lisibilite === "LISIBLE"
-        ? tonePalette.positive
-        : profils.lisibilite === "COMPLEXE"
-          ? tonePalette.warning
-          : tonePalette.danger;
-
-    const soliditeTone = !solidite
-      ? tonePalette.info
-      : solidite.score >= 82
-        ? tonePalette.positive
-        : solidite.score >= 65
-          ? tonePalette.warning
-          : tonePalette.danger;
-
-    const displayedOdds =
-      primarySimpleRecommendation?.coteEstimee ??
-      highlightedOdds?.coteEstimee ??
-      simpleHorse?.cote ??
-      null;
-
-    const ticketLabel =
-      displayedOdds !== null && displayedOdds >= 15
-        ? "Outsider speculatif"
-        : displayedOdds !== null && displayedOdds >= 6
-          ? "Value jouable"
-          : "Base solide";
-
-    const ticketTone =
-      displayedOdds !== null && displayedOdds >= 15
-        ? tonePalette.danger
-        : displayedOdds !== null && displayedOdds >= 6
-          ? tonePalette.info
-          : tonePalette.positive;
-
-    const summaryNote = cleanNarrative(
-      reco?.raisonnement?.[0] ??
-        algoHealth?.notes?.[0] ??
-        (normalizedDecision === "JOUEZ LE FAVORI"
-          ? "Le favori ressort nettement et la course reste lisible."
-          : normalizedDecision === "FAVORI JOUABLE AVEC PRUDENCE"
-            ? "Le ticket ressort bien, mais il faut garder un peu de prudence."
-            : normalizedDecision === "COURSE COMPLEXE"
-              ? "Le lot reste serre, mieux vaut rester selectif."
-              : "La course manque de lisibilite pour un ticket offensif."),
-    );
-
-    const splitReading =
-      ticketSimpleDiffers && simpleHorse && favori
-        ? `Le moteur garde N${favori.numPmu} ${favori.nom} comme favori technique, mais prefere jouer N${simpleHorse.numPmu} ${simpleHorse.nom} en simple.`
-        : null;
-
-    const focusStrengths = dedupeStrings(
-      [
-        ...(solidite?.pointsPositifs.map(cleanNarrative) ?? []),
-
-        ...(algoHealth?.strengths.map(cleanNarrative) ?? []),
-
-        ...(primarySimpleRecommendation?.pourquoi.map(cleanNarrative) ?? []),
-      ],
-
-      4,
-    );
-
-    const focusWatchouts = dedupeStrings(
-      [
-        ...(solidite?.alertes.map(cleanNarrative) ?? []),
-
-        ...(algoHealth?.weaknesses.map(cleanNarrative) ?? []),
-
-        ...(confiance?.facteurs
-
-          .filter((facteur) => facteur.includes("(-"))
-
-          .map(cleanNarrative) ?? []),
-      ],
-
-      4,
-    );
-
-    const watchTitle =
-      focusWatchouts.length > 0
-        ? "Ce qui rend la course nerveuse"
-        : "Lecture assez stable";
-
-    const metricCardStyle: React.CSSProperties = {
-      borderRadius: "16px",
-
-      padding: "14px",
-
-      border: "1px solid rgba(15,23,42,0.06)",
-
-      background: "#FFFFFF",
-
-      boxShadow: "0 12px 26px rgba(15,23,42,0.04)",
-    };
-
-    const renderMetricCard = (
-      title: string,
-
-      value: string,
-
-      subtitle: string,
-
-      tone:
-        | typeof tonePalette.positive
-        | typeof tonePalette.warning
-        | typeof tonePalette.danger
-        | typeof tonePalette.info
-        | typeof tonePalette.neutral,
-    ) => (
+  return (
+    <div
+      style={{
+        maxWidth: 430,
+        margin: "0 auto",
+        minHeight: "100vh",
+        background:
+          "radial-gradient(circle at top left, rgba(0,132,61,0.12), transparent 24%), linear-gradient(180deg, #F7FAF8 0%, #EEF3F4 100%)",
+        paddingBottom: 88,
+      }}
+    >
       <div
         style={{
-          ...metricCardStyle,
-          background: tone.muted,
-          border: tone.border,
+          position: "sticky",
+          top: 0,
+          zIndex: 80,
+          height: 64,
+          background: "rgba(18,22,26,0.9)",
+          backdropFilter: "blur(18px)",
+          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#FFFFFF",
         }}
       >
-        <div
+        <button
+          onClick={() => router.push(`/?date=${selectedDate}`)}
           style={{
-            fontSize: "11px",
-            fontWeight: 700,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            color: "#64748B",
-            marginBottom: "8px",
+            position: "absolute",
+            left: 16,
+            width: 34,
+            height: 34,
+            borderRadius: "50%",
+            border: "none",
+            background: "rgba(255,255,255,0.1)",
+            color: "#FFFFFF",
+            fontSize: 22,
+            cursor: "pointer",
           }}
         >
-          {title}
-        </div>
-
-        <div
-          style={{
-            fontSize: "24px",
-            fontWeight: 800,
-            color: tone.text,
-            lineHeight: 1.05,
-          }}
-        >
-          {value}
-        </div>
-
-        <div
-          style={{
-            fontSize: "12px",
-            color: "#64748B",
-            marginTop: "8px",
-            lineHeight: 1.45,
-          }}
-        >
-          {subtitle}
+          {"<"}
+        </button>
+        <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: "-0.3px" }}>
+          R{data.courseInfo.reunion}C{data.courseInfo.course} - {data.courseInfo.hippodrome}
         </div>
       </div>
-    );
 
-    const renderHorseSummary = (
-      horse: ScoredParticipant,
-
-      title: string,
-
-      tone:
-        | typeof tonePalette.positive
-        | typeof tonePalette.warning
-        | typeof tonePalette.danger
-        | typeof tonePalette.info
-        | typeof tonePalette.neutral,
-
-      badge?: string | null,
-    ) => {
-      const rider = data.courseInfo.estPlat
-        ? horse.jockey || horse.driver || horse.entraineur || "Non renseigne"
-        : horse.driver || horse.jockey || horse.entraineur || "Non renseigne";
-
-      const odds = a.predictionsCotes[horse.numPmu] ?? null;
-
-      const value = a.valueTop5[horse.numPmu] ?? null;
-
-      const components = horse.scoreComponents;
-
-      const returnLabel = formatReturnForOneEuro(
-        odds?.coteEstimee ?? horse.cote,
-      );
-
-      const valueShort = value
-        ? value.valueIndex >= 2.2
-          ? "Value forte"
-          : value.valueIndex >= 1.4
-            ? "Value jouable"
-            : value.valueIndex < 0.85
-              ? "Sous pression"
-              : "Prix juste"
-        : null;
-
-      return (
-        <div
-          style={{
-            borderRadius: "20px",
-            padding: "16px",
-            background: tone.muted,
-            border: tone.border,
-            display: "flex",
-            flexDirection: "column",
-            gap: "14px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "10px",
-              flexWrap: "wrap",
-            }}
-          >
-            <span
-              style={{
-                ...pillStyle,
-                background: tone.background,
-                color: tone.accent,
-              }}
-            >
-              {title}
-            </span>
-
-            {badge ? (
-              <span
-                style={{ fontSize: "12px", color: tone.text, fontWeight: 700 }}
-              >
-                {badge}
-              </span>
+      <div style={{ paddingTop: 16 }}>
+        <SectionCard title={data.courseInfo.nomCourse} kicker="Lecture course" accent="rgba(11,139,75,0.12)">
+          <div style={{ fontSize: 16, fontWeight: 700, color: SLATE, marginBottom: 14 }}>
+            {data.courseInfo.hippodrome} - {readableDate}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+            <Pill background={GREEN_SOFT} color={GREEN}>{data.courseInfo.discipline}</Pill>
+            <Pill>{data.courseInfo.distance}m</Pill>
+            <Pill>{data.courseInfo.nombrePartants} partants</Pill>
+            {formatCurrency(data.courseInfo.allocation) ? (
+              <Pill background={GOLD_SOFT} color="#A06A00">
+                Allocation {formatCurrency(data.courseInfo.allocation)}
+              </Pill>
             ) : null}
           </div>
-
-          <div
-            style={{ display: "flex", alignItems: "flex-start", gap: "14px" }}
-          >
-            <div
-              style={{
-                width: "52px",
-
-                height: "52px",
-
-                borderRadius: "16px",
-
-                background: tone.accent,
-
-                color: "#fff",
-
-                display: "flex",
-
-                alignItems: "center",
-
-                justifyContent: "center",
-
-                fontWeight: 800,
-
-                fontSize: "24px",
-
-                flexShrink: 0,
-
-                boxShadow: "0 14px 24px rgba(15,23,42,0.10)",
-              }}
-            >
-              {horse.numPmu}
-            </div>
-
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: "22px",
-                  fontWeight: 800,
-                  color: DARK,
-                  lineHeight: 1.05,
-                  letterSpacing: "-0.4px",
-                }}
-              >
-                {horse.nom}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 42, lineHeight: "42px", fontWeight: 900, color: DARK }}>
+                {data.courseInfo.heureDepart}
               </div>
-
-              <div
-                style={{ fontSize: "13px", color: "#64748B", marginTop: "4px" }}
-              >
-                {riderLabel}: {rider}
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "8px",
-                  marginTop: "10px",
-                }}
-              >
-                {horse.placeCorde ? (
-                  <span
-                    style={{
-                      ...pillStyle,
-                      background: "#F3F4F6",
-                      color: "#475569",
-                    }}
-                  >
-                    Stalle {horse.placeCorde}
-                  </span>
-                ) : null}
-
-                {formatWeight(horse.poids) ? (
-                  <span
-                    style={{
-                      ...pillStyle,
-                      background: "#FFF8E1",
-                      color: "#A66B00",
-                    }}
-                  >
-                    Poids {formatWeight(horse.poids)}
-                  </span>
-                ) : null}
-
-                {valueShort ? (
-                  <span
-                    style={{
-                      ...pillStyle,
-                      background: tone.background,
-                      color: tone.text,
-                    }}
-                  >
-                    {valueShort}
-                  </span>
-                ) : null}
+              <div style={{ fontSize: 14, color: SLATE, marginTop: 6 }}>
+                {data.isFinished
+                  ? "Course terminee"
+                  : data.pronoAvailable
+                    ? "Analyse ouverte"
+                    : formatRevealTime(data.minutesUntilStart)}
               </div>
             </div>
-          </div>
-
-          {components ? (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-              <span
-                style={{
-                  ...pillStyle,
-                  background: "#EEF8F1",
-                  color: GREEN_DARK,
-                }}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
+              <Pill
+                background={data.isFinished ? "#ECEFF4" : data.pronoAvailable ? GREEN_SOFT : "#F3F4F6"}
+                color={data.isFinished ? "#4B5563" : data.pronoAvailable ? GREEN : SLATE}
               >
-                Place {formatRounded(components.placePotential ?? 0)}/10
-              </span>
-
-              <span
-                style={{
-                  ...pillStyle,
-                  background: "#EEF5FF",
-                  color: "#1D4ED8",
-                }}
-              >
-                Gagne {formatRounded(components.winPotential ?? 0)}/10
-              </span>
-
-              <span
-                style={{
-                  ...pillStyle,
-                  background: "#FFF3E0",
-                  color: "#B45309",
-                }}
-              >
-                Risque {formatRounded(components.riskPenalty ?? 0)}/10
-              </span>
-            </div>
-          ) : null}
-
-          {returnLabel ? (
-            <div
-              style={{
-                padding: "10px 12px",
-                borderRadius: "14px",
-                background: tone.background,
-                color: tone.text,
-                fontSize: "13px",
-                fontWeight: 700,
-              }}
-            >
-              Projection marche: {returnLabel}
-            </div>
-          ) : null}
-        </div>
-      );
-    };
-
-    return (
-      <>
-        {data.isFinished && simpleHorse && (
-          <ResultBanner
-            horse={simpleHorse}
-            label={ticketSimpleDiffers ? "Ticket simple" : "Favori"}
-          />
-        )}
-
-        <RaceInfoCard dark />
-
-        {favori && confiance && solidite && (
-          <div
-            style={{
-              ...cardStyle,
-
-              background:
-                "radial-gradient(circle at top right, rgba(0,132,61,0.10), transparent 24%), linear-gradient(180deg, #FFFFFF 0%, #F7FBF8 100%)",
-
-              display: "flex",
-
-              flexDirection: "column",
-
-              gap: "18px",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "space-between",
-                gap: "14px",
-                flexWrap: "wrap",
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    ...pillStyle,
-                    background: decisionTone.background,
-                    color: decisionTone.accent,
-                    marginBottom: "12px",
-                  }}
-                >
-                  Lecture centrale
-                </div>
-
-                <div
-                  style={{
-                    fontSize: "28px",
-                    lineHeight: 1.05,
-                    letterSpacing: "-0.8px",
-                    fontWeight: 800,
-                    color: DARK,
-                    marginBottom: "8px",
-                  }}
-                >
-                  {normalizedDecision}
-                </div>
-
-                <div
-                  style={{
-                    fontSize: "14px",
-                    color: "#475569",
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {summaryNote}
-                </div>
-
-                {splitReading ? (
-                  <div
-                    style={{
-                      marginTop: "12px",
-                      padding: "12px 14px",
-                      borderRadius: "14px",
-                      background: "#F8FAFC",
-                      color: "#475569",
-                      fontSize: "13px",
-                      lineHeight: 1.55,
-                    }}
-                  >
-                    {splitReading}
-                  </div>
-                ) : null}
-              </div>
-
-              <div style={{ flexShrink: 0 }}>
-                <ConfidenceGauge score={confiance.score} />
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-              <span
-                style={{
-                  ...pillStyle,
-                  background: decisionTone.background,
-                  color: decisionTone.accent,
-                }}
-              >
-                Ticket {ticketLabel}
-              </span>
-
-              <span
-                style={{
-                  ...pillStyle,
-                  background: lisibiliteTone.background,
-                  color: lisibiliteTone.accent,
-                }}
-              >
-                {lisibiliteLabel}
-              </span>
-
-              <span
-                style={{
-                  ...pillStyle,
-                  background: soliditeTone.background,
-                  color: soliditeTone.accent,
-                }}
-              >
-                Solidite {solidite.score}/100
-              </span>
-            </div>
-
-            <div style={{ display: "grid", gap: "12px" }}>
-              {simpleHorse
-                ? renderHorseSummary(
-                    simpleHorse,
-
-                    "Ticket simple conseille",
-
-                    decisionTone,
-
-                    ticketLabel,
-                  )
-                : null}
-
-              {ticketSimpleDiffers && favori
-                ? renderHorseSummary(
-                    favori,
-
-                    "Favori technique",
-
-                    tonePalette.neutral,
-
-                    "Lecture brute",
-                  )
-                : null}
-            </div>
-
-            <div
-              style={{
-                display: "grid",
-
-                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-
-                gap: "12px",
-              }}
-            >
-              {renderMetricCard(
-                "Confiance course",
-                `${formatRounded(confiance.score)}/10`,
-                confiance.niveau.label,
-                decisionTone,
-              )}
-
-              {renderMetricCard(
-                "Ecart top 2",
-                `${formatRounded(solidite.ecartScore)} pts`,
-                solidite.alertes.length > 0
-                  ? `${solidite.alertes.length} alerte(s)`
-                  : "Alerte majeure absente",
-                soliditeTone,
-              )}
-
-              {renderMetricCard(
-                "Projection 1 EUR",
-                formatReturnForOneEuro(displayedOdds) ?? "N/A",
-                highlightedValue?.label ?? ticketLabel,
-                highlightedOdds?.tendance === "HAUSSE"
-                  ? tonePalette.warning
-                  : ticketTone,
-              )}
-            </div>
-
-            <div style={{ ...metricCardStyle, background: "#FCFDFC" }}>
-              {splitReading ? (
-                <div
-                  style={{
-                    marginBottom: "12px",
-                    padding: "12px 14px",
-                    borderRadius: "14px",
-                    background: "#F8FAFC",
-                    color: "#475569",
-                    fontSize: "13px",
-                    lineHeight: 1.55,
-                  }}
-                >
-                  {splitReading}
-                </div>
+                {data.isFinished ? "Resultat disponible" : data.pronoAvailable ? "Lecture active" : "T-30"}
+              </Pill>
+              {!data.isFinished ? (
+                <span style={{ fontSize: 13, color: "#D97706", fontWeight: 700 }}>
+                  {formatCountdown(data.minutesUntilStart)}
+                </span>
               ) : null}
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                  gap: "12px",
-                }}
-              >
-                <div
-                  style={{
-                    borderRadius: "14px",
-                    padding: "14px",
-                    background: "#F7FBF8",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: 800,
-                      color: GREEN_DARK,
-                      marginBottom: "12px",
-                    }}
-                  >
-                    Pourquoi le ticket ressort
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "8px",
-                    }}
-                  >
-                    {(focusStrengths.length > 0
-                      ? focusStrengths
-                      : ["Lecture globalement propre pour le ticket simple."]
-                    ).map((item, index) => (
-                      <div
-                        key={index}
-                        style={{
-                          fontSize: "13px",
-                          color: "#475569",
-                          lineHeight: 1.55,
-                        }}
-                      >
-                        OK - {item}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    borderRadius: "14px",
-                    padding: "14px",
-                    background: "#FFFBF2",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: 800,
-                      color: "#9A6700",
-                      marginBottom: "12px",
-                    }}
-                  >
-                    {watchTitle}
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "8px",
-                    }}
-                  >
-                    {(focusWatchouts.length > 0
-                      ? focusWatchouts
-                      : ["Pas de drapeau rouge majeur sur cette lecture."]
-                    ).map((item, index) => (
-                      <div
-                        key={index}
-                        style={{
-                          fontSize: "13px",
-                          color: "#6B7280",
-                          lineHeight: 1.55,
-                        }}
-                      >
-                        {focusWatchouts.length > 0 ? "Alerte -" : "Note -"} {item}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
-        )}
-
-        {a.top5.length > 0 && (
-          <div
-            style={{
-              ...cardStyle,
-              padding: "20px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "14px",
-            }}
-          >
+          {contextHighlights.length > 0 ? (
             <div
               style={{
+                marginTop: 16,
+                paddingTop: 16,
+                borderTop: "1px solid #E7ECF1",
                 display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "space-between",
-                gap: "12px",
+                flexWrap: "wrap",
+                gap: 8,
               }}
             >
-              <div>
-                <div
-                  style={{
-                    ...pillStyle,
-                    background: "#EEF5FF",
-                    color: "#1D4ED8",
-                    marginBottom: "10px",
-                  }}
-                >
-                  Radar top 5
-                </div>
-
-                <div
-                  style={{
-                    fontSize: "22px",
-                    fontWeight: 800,
-                    color: DARK,
-                    letterSpacing: "-0.5px",
-                  }}
-                >
-                  Ordre de lecture de la course
-                </div>
-              </div>
-
-              <div
-                style={{ fontSize: "13px", color: "#64748B", fontWeight: 700 }}
-              >
-                {a.top5.length} chevaux suivis
-              </div>
+              {contextHighlights.map((item) => (
+                <Pill key={item} background="#F8FAFC" color={SLATE}>
+                  {item}
+                </Pill>
+              ))}
             </div>
+          ) : null}
+        </SectionCard>
 
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "12px" }}
-            >
-              {a.top5.map((horse, idx) => {
-                const isSimple = Boolean(
-                  simpleHorse && horse.numPmu === simpleHorse.numPmu,
-                );
+        {!data.pronoAvailable && !data.isFinished ? (
+          <SectionCard title="Lecture a venir" kicker="Tempo moteur">
+            <div style={{ fontSize: 15, lineHeight: "22px", color: SLATE }}>
+              Le moteur ouvrira sa lecture detaillee 30 minutes avant le depart officiel.
+              Pour cette course, l&apos;analyse sera visible via {formatRevealTime(data.minutesUntilStart).toLowerCase()}.
+            </div>
+          </SectionCard>
+        ) : null}
 
-                const isFavori = Boolean(
-                  favori && horse.numPmu === favori.numPmu,
-                );
-
-                const rowTone = isSimple
-                  ? decisionTone
-                  : isFavori
-                    ? tonePalette.info
-                    : tonePalette.neutral;
-
-                const rider = data.courseInfo.estPlat
-                  ? horse.jockey ||
-                    horse.driver ||
-                    horse.entraineur ||
-                    "Non renseigne"
-                  : horse.driver ||
-                    horse.jockey ||
-                    horse.entraineur ||
-                    "Non renseigne";
-
-                const odds = a.predictionsCotes[horse.numPmu] ?? null;
-
-                const components = horse.scoreComponents;
-
-                const maxScore = a.top5[0].scoreAlgo || 1;
-
-                const barWidth = Math.max(
-                  8,
-                  Math.round((horse.scoreAlgo / maxScore) * 100),
-                );
-
-                return (
+        {analysis && simpleTicket ? (
+          <>
+            <SectionCard title={verdict.title} kicker={verdict.label} accent="rgba(11,139,75,0.12)">
+              <div style={{ display: "grid", gap: 14 }}>
+                <div
+                  style={{
+                    borderRadius: 22,
+                    background: "#F8FAFC",
+                    border: "1px solid #E7ECF1",
+                    padding: 16,
+                  }}
+                >
                   <div
-                    key={horse.numPmu}
                     style={{
-                      borderRadius: "18px",
-
-                      padding: "14px",
-
-                      background: rowTone.muted,
-
-                      border: rowTone.border,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      gap: 12,
+                      marginBottom: 14,
                     }}
                   >
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: GREEN, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>
+                        Ticket conseille
+                      </div>
+                      <div style={{ fontSize: 26, lineHeight: "30px", fontWeight: 900, color: DARK, marginBottom: 6 }}>
+                        N{simpleTicket.numPmu} {simpleTicket.nom}
+                      </div>
+                      <div style={{ fontSize: 14, lineHeight: "20px", color: SLATE }}>
+                        {getHumanReference(simpleTicket, data.courseInfo.estPlat)}
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
+                      <Pill background={verdictTone.background} color={verdictTone.color}>
+                        {verdict.title}
+                      </Pill>
+                      <Pill background={`${GREEN}14`} color={GREEN}>
+                        {formatTicketType(simpleTicket.prediction.typePariConseille)}
+                      </Pill>
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: 15, lineHeight: "22px", color: SLATE, marginBottom: 14 }}>
+                    {verdict.subtitle}
+                  </div>
+
+                  {technicalFavorite && technicalFavorite.numPmu !== simpleTicket.numPmu ? (
                     <div
                       style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "12px",
+                        borderRadius: 16,
+                        background: "#FFFFFF",
+                        border: "1px solid #E7ECF1",
+                        padding: "12px 14px",
+                        marginBottom: 14,
+                      }}
+                    >
+                      <div style={{ fontSize: 12, color: SLATE, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>
+                        Favori technique moteur
+                      </div>
+                      <div style={{ fontSize: 15, lineHeight: "21px", color: DARK, fontWeight: 700 }}>
+                        N{technicalFavorite.numPmu} {technicalFavorite.nom}
+                      </div>
+                      <div style={{ fontSize: 13, lineHeight: "18px", color: SLATE, marginTop: 4 }}>
+                        Le moteur voit ce cheval comme repere technique, mais le ticket conseille reste N{simpleTicket.numPmu}.
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <MetricCard
+                      label="Confiance IA"
+                      value={`${analysis.scoreConfiance?.score ?? 0}/10`}
+                      hint={analysis.prediction.decisionCourse === "VALIDE" ? "Ticket jouable pour la gagne" : "Lecture plutot defensive"}
+                      tone={
+                        (analysis.scoreConfiance?.score ?? 0) >= 7
+                          ? "good"
+                          : (analysis.scoreConfiance?.score ?? 0) >= 6
+                            ? "warn"
+                            : "bad"
+                      }
+                    />
+                    <MetricCard
+                      label="Tenue du repere"
+                      value={`${round1(analysis.soliditeFavori?.score ?? 0)}/100`}
+                      hint="Mesure si le repere principal tient reellement la course."
+                      tone={
+                        (analysis.soliditeFavori?.score ?? 0) >= 72
+                          ? "good"
+                          : (analysis.soliditeFavori?.score ?? 0) >= 62
+                            ? "warn"
+                            : "bad"
+                      }
+                    />
+                    <MetricCard
+                      label="Angle de jeu"
+                      value={formatObjective(simpleTicket.prediction.objective)}
+                      hint={simpleTicket.prediction.typePariConseille === "PLACE" ? "Profil oriente place" : "Profil oriente gagne"}
+                      tone={simpleTicket.prediction.typePariConseille === "PLACE" ? "warn" : "good"}
+                    />
+                    <MetricCard
+                      label="Lisibilite"
+                      value={analysis.prediction.lisibilite}
+                      hint={describeLisibilite(analysis.prediction.lisibilite)}
+                      tone={
+                        analysis.prediction.lisibilite === "LISIBLE"
+                          ? "good"
+                          : analysis.prediction.lisibilite === "COMPLEXE"
+                            ? "warn"
+                            : "bad"
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard title="Plan de jeu" kicker="Lecture ticket" accent="rgba(11,139,75,0.14)">
+              <TicketPanel
+                title="Ticket principal"
+                subtitle={getHumanReference(simpleTicket, data.courseInfo.estPlat)}
+                runner={simpleTicket}
+                badge={formatTicketType(simpleTicket.prediction.typePariConseille)}
+                accent={GREEN}
+                arrivalPosition={data.isFinished ? simpleTicketPosition : undefined}
+              />
+
+              {placeBase || (technicalFavorite && technicalFavorite.numPmu !== simpleTicket.numPmu) ? (
+                <div
+                  style={{
+                    marginTop: 12,
+                    display: "grid",
+                    gridTemplateColumns: "1fr",
+                    gap: 10,
+                  }}
+                >
+                  {placeBase && placeBase.numPmu !== simpleTicket.numPmu ? (
+                    <SecondaryRunnerCard
+                      title="Base place de secours"
+                      runner={placeBase}
+                      accent="#C38700"
+                      placeMode
+                      arrivalPosition={data.isFinished ? placeBasePosition : undefined}
+                      humanReference={getHumanReference(placeBase, data.courseInfo.estPlat)}
+                    />
+                  ) : null}
+
+                  {technicalFavorite && technicalFavorite.numPmu !== simpleTicket.numPmu ? (
+                    <SecondaryRunnerCard
+                      title="Favori technique moteur"
+                      runner={technicalFavorite}
+                      accent="#1560C7"
+                      arrivalPosition={data.isFinished ? technicalFavoritePosition : undefined}
+                      humanReference={getHumanReference(technicalFavorite, data.courseInfo.estPlat)}
+                    />
+                  ) : null}
+                </div>
+              ) : null}
+            </SectionCard>
+
+            {data.isFinished && data.officialArrival.length > 0 ? (
+              <SectionCard title="Debrief officiel" kicker="Arrivee course">
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+                  {data.officialArrival.slice(0, 3).map((runner) => (
+                    <Pill key={`${runner.position}-${runner.numPmu}`} background="#F3F4F6" color={DARK}>
+                      {formatPosition(runner.position)} N{runner.numPmu} {runner.nom}
+                    </Pill>
+                  ))}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div
+                    style={{
+                      borderRadius: 18,
+                      padding: 14,
+                      background: "#F9FBFC",
+                      border: "1px solid #E7ECF1",
+                    }}
+                  >
+                    <div style={{ fontSize: 12, color: SLATE, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                      Ticket principal
+                    </div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: DARK, marginBottom: 6 }}>
+                      N{simpleTicket.numPmu} {simpleTicket.nom}
+                    </div>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        padding: "6px 10px",
+                        borderRadius: 999,
+                        background: getOutcomeTone(simpleTicketPosition, false).background,
+                        color: getOutcomeTone(simpleTicketPosition, false).color,
+                        fontSize: 12,
+                        fontWeight: 800,
+                      }}
+                      >
+                      {simpleTicketPosition ? `${getOutcomeTone(simpleTicketPosition, false).label} (${formatPosition(simpleTicketPosition)})` : "Resultat indisponible"}
+                    </span>
+                  </div>
+
+                  {placeBase && placeBase.numPmu !== simpleTicket.numPmu ? (
+                    <div
+                      style={{
+                        borderRadius: 18,
+                        padding: 14,
+                        background: "#F9FBFC",
+                        border: "1px solid #E7ECF1",
+                      }}
+                    >
+                      <div style={{ fontSize: 12, color: SLATE, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                        Base place
+                      </div>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: DARK, marginBottom: 6 }}>
+                        N{placeBase.numPmu} {placeBase.nom}
+                      </div>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          padding: "6px 10px",
+                          borderRadius: 999,
+                          background: getOutcomeTone(placeBasePosition, true).background,
+                          color: getOutcomeTone(placeBasePosition, true).color,
+                          fontSize: 12,
+                          fontWeight: 800,
+                        }}
+                      >
+                        {placeBasePosition ? `${getOutcomeTone(placeBasePosition, true).label} (${formatPosition(placeBasePosition)})` : "Resultat indisponible"}
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+              </SectionCard>
+            ) : null}
+
+            <SectionCard title="Lecture moteur" kicker="Ce qui tient / ce qui force la prudence">
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div
+                  style={{
+                    borderRadius: 18,
+                    border: "1px solid #D9F0E2",
+                    background: "#F4FBF7",
+                    padding: 14,
+                  }}
+                >
+                  <div style={{ fontSize: 14, fontWeight: 800, color: GREEN, marginBottom: 10 }}>Ce qui tient dans la course</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {strengths.length > 0 ? (
+                      strengths.map((point) => (
+                        <div
+                          key={point}
+                          style={{
+                            borderRadius: 14,
+                            padding: "12px 14px",
+                            background: "#FFFFFF",
+                            border: "1px solid #D9F0E2",
+                            color: "#0A6F3B",
+                            fontSize: 14,
+                            lineHeight: "20px",
+                          }}
+                        >
+                          {point}
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ color: SLATE, fontSize: 14 }}>Aucun point fort franc ne ressort du moteur.</div>
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    borderRadius: 18,
+                    border: "1px solid #F1DFC2",
+                    background: "#FFF7E8",
+                    padding: 14,
+                  }}
+                >
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#8A5A00", marginBottom: 10 }}>Ce qui force la prudence</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {warnings.length > 0 ? (
+                      warnings.map((point) => (
+                        <div
+                          key={point}
+                          style={{
+                            borderRadius: 14,
+                            padding: "12px 14px",
+                            background: "#FFFFFF",
+                            border: "1px solid #F1DFC2",
+                            color: "#8A5A00",
+                            fontSize: 14,
+                            lineHeight: "20px",
+                          }}
+                        >
+                          {point}
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ color: SLATE, fontSize: 14 }}>Pas d&apos;alerte majeure remontee par le moteur.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard title="Radar top 5" kicker="Classement du moteur">
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {analysis.top5.map((runner, index) => {
+                  const position = data.isFinished ? getArrivalPosition(runner.numPmu, data.officialArrival) : null;
+                  return (
+                    <div
+                      key={runner.numPmu}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "46px 1fr auto",
+                        gap: 12,
+                        alignItems: "center",
+                        padding: 14,
+                        borderRadius: 18,
+                        background: index === 0 ? "#F4FBF7" : "#F8FAFC",
+                        border: `1px solid ${index === 0 ? "#D9F0E2" : "#E7ECF1"}`,
                       }}
                     >
                       <div
                         style={{
-                          width: "40px",
-
-                          height: "40px",
-
-                          borderRadius: "12px",
-
-                          background: rowTone.accent,
-
-                          color: "#fff",
-
+                          width: 46,
+                          height: 46,
+                          borderRadius: 15,
+                          background: index === 0 ? GREEN : DARK,
+                          color: "#FFFFFF",
                           display: "flex",
-
                           alignItems: "center",
-
                           justifyContent: "center",
-
+                          fontSize: 22,
                           fontWeight: 800,
-
-                          fontSize: "18px",
-
-                          flexShrink: 0,
                         }}
                       >
-                        {idx + 1}
+                        {runner.numPmu}
                       </div>
-
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            gap: "10px",
-                            marginBottom: "6px",
-                          }}
-                        >
-                          <div style={{ minWidth: 0 }}>
-                            <div
-                              style={{
-                                fontWeight: 800,
-                                fontSize: "18px",
-                                color: DARK,
-                                lineHeight: 1.15,
-                              }}
-                            >
-                              N{horse.numPmu} {horse.nom}
-                            </div>
-
-                            <div
-                              style={{
-                                fontSize: "12px",
-                                color: "#64748B",
-                                marginTop: "4px",
-                              }}
-                            >
-                              {riderLabel}: {rider}
-                            </div>
-                          </div>
-
-                          <div style={{ textAlign: "right", flexShrink: 0 }}>
-                            <div
-                              style={{
-                                fontSize: "14px",
-                                fontWeight: 800,
-                                color: rowTone.text,
-                              }}
-                            >
-                              {horse.scoreAlgo}
-                            </div>
-
-                            <div style={{ fontSize: "12px", color: "#64748B" }}>
-                              {odds?.coteEstimee ?? horse.cote ?? "N/A"}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div
-                          style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: "8px",
-                            marginBottom: "10px",
-                          }}
-                        >
-                          {isSimple ? (
-                            <span
-                              style={{
-                                ...pillStyle,
-                                background: decisionTone.background,
-                                color: decisionTone.accent,
-                              }}
-                            >
-                              Ticket simple
-                            </span>
-                          ) : null}
-
-                          {isFavori ? (
-                            <span
-                              style={{
-                                ...pillStyle,
-                                background: tonePalette.info.background,
-                                color: tonePalette.info.accent,
-                              }}
-                            >
-                              Favori technique
-                            </span>
-                          ) : null}
-
-                          {horse.placeCorde ? (
-                            <span
-                              style={{
-                                ...pillStyle,
-                                background: "#F3F4F6",
-                                color: "#475569",
-                              }}
-                            >
-                              Stalle {horse.placeCorde}
-                            </span>
-                          ) : null}
-
-                          {formatWeight(horse.poids) ? (
-                            <span
-                              style={{
-                                ...pillStyle,
-                                background: "#FFF8E1",
-                                color: "#A66B00",
-                              }}
-                            >
-                              {formatWeight(horse.poids)}
-                            </span>
-                          ) : null}
-
-                          {components ? (
-                            <span
-                              style={{
-                                ...pillStyle,
-                                background: "#EEF8F1",
-                                color: GREEN_DARK,
-                              }}
-                            >
-                              Place{" "}
-                              {formatRounded(components.placePotential ?? 0)}/10
-                            </span>
-                          ) : null}
-                        </div>
-
-                        <div
-                          style={{
-                            height: "8px",
-                            borderRadius: "999px",
-                            background: "#E5E7EB",
-                            overflow: "hidden",
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: `${barWidth}%`,
-
-                              height: "100%",
-
-                              borderRadius: "999px",
-
-                              background: rowTone.accent,
-                            }}
-                          />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: DARK, lineHeight: "22px" }}>{runner.nom}</div>
+                        <div style={{ fontSize: 13, color: SLATE, marginTop: 4 }}>
+                          Score {round1(runner.prediction.scoreFinalPari)} - PMU {formatOdds(runner.cote)}
+                          {runner.stalle || runner.placeCorde ? ` - Stalle ${runner.stalle ?? runner.placeCorde}` : ""}
                         </div>
                       </div>
+                      {position ? (
+                        <Pill
+                          background={position <= 3 ? GREEN_SOFT : "#F3F4F6"}
+                          color={position <= 3 ? GREEN : SLATE}
+                        >
+                          {formatPosition(position)}
+                        </Pill>
+                      ) : null}
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {!data.isFinished && simpleHorse && !alreadyBet && (
-          <div style={{ margin: "0 16px 16px" }}>
-            <button
-              onClick={() => openBetPanel(simpleHorse)}
-              style={{
-                width: "100%",
-
-                padding: "18px",
-
-                borderRadius: "18px",
-
-                border: "none",
-
-                background: `linear-gradient(135deg, ${GREEN}, ${GREEN_DARK})`,
-
-                color: "#fff",
-
-                fontSize: "16px",
-
-                fontWeight: 800,
-
-                cursor: "pointer",
-
-                boxShadow: "0 16px 30px rgba(0,132,61,0.26)",
-
-                letterSpacing: "-0.2px",
-              }}
-            >
-              {ticketSimpleDiffers
-                ? "Parier le ticket simple conseille"
-                : "Parier sur cette course"}
-            </button>
-
-            {a.top5.length > 1 &&
-            simpleHorse &&
-            a.top5[1].numPmu !== simpleHorse.numPmu ? (
-              <div style={{ textAlign: "center", marginTop: "8px" }}>
-                <span
-                  onClick={() => openBetPanel(a.top5[1])}
-                  style={{
-                    fontSize: "13px",
-                    color: GREEN,
-                    cursor: "pointer",
-                    fontWeight: 600,
-                  }}
-                >
-                  ou parier sur {a.top5[1].nom} (2e lecture)
-                </span>
+                  );
+                })}
               </div>
-            ) : null}
-          </div>
-        )}
-
-        {alreadyBet && (
-          <div
-            style={{
-              margin: "0 16px 16px",
-              padding: "16px",
-              borderRadius: "14px",
-
-              background: "#E8F5E9",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: "24px", marginBottom: "4px" }}>&#9989;</div>
-
-            <div style={{ fontWeight: 700, color: GREEN, fontSize: "15px" }}>
-              Pari enregistre !
-            </div>
-
-            <div
-              onClick={() => router.push("/mes-paris")}
-              style={{
-                fontSize: "13px",
-                color: GREEN,
-                marginTop: "8px",
-                cursor: "pointer",
-                textDecoration: "underline",
-              }}
-            >
-              Voir mes paris
-            </div>
-          </div>
-        )}
-
-        {betMessage && !showBetPanel && (
-          <div
-            style={{
-              margin: "0 16px 16px",
-              padding: "12px 16px",
-              borderRadius: "12px",
-
-              background: betMessage.type === "success" ? "#E8F5E9" : "#FFEBEE",
-
-              color: betMessage.type === "success" ? GREEN : "#C62828",
-
-              fontSize: "13px",
-              fontWeight: 600,
-              textAlign: "center",
-            }}
-          >
-            {betMessage.text}
-          </div>
-        )}
-      </>
-    );
-  }
-
-  /* Result Banner for finished races */
-
-  function ResultBanner({
-    horse,
-
-    label,
-  }: {
-    horse: ScoredParticipant;
-
-    label: string;
-  }) {
-    const ordre = horse.ordreArrivee;
-
-    let bg: string;
-
-    let text: string;
-
-    if (ordre === 1) {
-      bg = GREEN;
-
-      text = `\uD83C\uDFC6 ${label} gagnant`;
-    } else if (ordre !== null && ordre <= 3) {
-      bg = "#FFD600";
-
-      text = `\u2705 ${label} place (${ordre}e)`;
-    } else {
-      bg = "#D32F2F";
-
-      text = `\u274C ${label} non place`;
-    }
-
-    return (
-      <div
-        style={{
-          margin: "0 16px 16px",
-
-          padding: "16px",
-
-          borderRadius: "12px",
-
-          background: bg,
-
-          textAlign: "center",
-
-          color: ordre !== null && ordre <= 3 && ordre !== 1 ? DARK : "#fff",
-
-          fontWeight: 700,
-
-          fontSize: "20px",
-        }}
-      >
-        {text}
+            </SectionCard>
+          </>
+        ) : null}
       </div>
-    );
-  }
 
-  /* ---------- Bet handler ---------- */
-
-  async function handlePlaceBet() {
-    if (!betHorse || !data) return;
-
-    if (!supabaseConfigured) {
-      setBetMessage({ type: "error", text: getSupabaseConfigError() });
-
-      return;
-    }
-
-    setBetLoading(true);
-
-    setBetMessage(null);
-
-    const supabase = getSupabaseBrowserClient();
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session) {
-      setBetLoading(false);
-
-      router.push(`/login?redirect=/course/${reunion}/${course}`);
-
-      return;
-    }
-
-    const cote =
-      betHorse.cote ||
-      data.analysis?.predictionsCotes[betHorse.numPmu]?.coteEstimee ||
-      2;
-
-    const now = new Date(
-      new Date().toLocaleString("en-US", { timeZone: "Europe/Paris" }),
-    );
-
-    const dateStr = `${String(now.getDate()).padStart(2, "0")}${String(now.getMonth() + 1).padStart(2, "0")}${now.getFullYear()}`;
-
-    try {
-      const res = await fetch("/api/bets", {
-        method: "POST",
-
-        headers: {
-          "Content-Type": "application/json",
-
-          Authorization: `Bearer ${session.access_token}`,
-        },
-
-        body: JSON.stringify({
-          date_str: dateStr,
-
-          reunion: Number(reunion),
-
-          course: Number(course),
-
-          hippodrome: data.courseInfo.hippodrome,
-
-          heure_depart: data.courseInfo.heureDepart,
-
-          cheval_num: betHorse.numPmu,
-
-          cheval_nom: betHorse.nom,
-
-          type_pari: betType,
-
-          mise: betMise,
-
-          cote,
-        }),
-      });
-
-      const result = await res.json();
-
-      if (result.success) {
-        setBetMessage({
-          type: "success",
-          text: `Pari place ! Solde: ${result.solde} EUR`,
-        });
-
-        setAlreadyBet(true);
-
-        setShowBetPanel(false);
-      } else {
-        setBetMessage({ type: "error", text: result.error || "Erreur" });
-      }
-    } catch {
-      setBetMessage({ type: "error", text: "Erreur reseau" });
-    } finally {
-      setBetLoading(false);
-    }
-  }
-
-  function openBetPanel(horse: ScoredParticipant) {
-    setBetHorse(horse);
-
-    setBetType("PLACE");
-
-    setBetMise(2);
-
-    setBetMessage(null);
-
-    setShowBetPanel(true);
-  }
-
-  /* ---------- Bet Panel Overlay ---------- */
-
-  function BetPanel() {
-    if (!showBetPanel || !betHorse || !data) return null;
-
-    const cote =
-      betHorse.cote ||
-      data.analysis?.predictionsCotes[betHorse.numPmu]?.coteEstimee ||
-      2;
-
-    const gainPotentiel =
-      betType === "GAGNANT"
-        ? Math.round((betMise * cote - betMise) * 100) / 100
-        : Math.round((betMise * cote * 0.3 - betMise) * 100) / 100;
-
-    return (
       <div
         style={{
           position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
           bottom: 0,
-
-          background: "rgba(0,0,0,0.5)",
-          zIndex: 300,
-
-          display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "center",
-        }}
-        onClick={() => setShowBetPanel(false)}
-      >
-        <div
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            background: "#fff",
-            borderRadius: "24px 24px 0 0",
-
-            width: "100%",
-            maxWidth: 430,
-            padding: "24px 20px 32px",
-          }}
-        >
-          {/* Handle */}
-
-          <div
-            style={{
-              width: 40,
-              height: 4,
-              background: "#ddd",
-              borderRadius: 2,
-              margin: "0 auto 20px",
-            }}
-          />
-
-          <div
-            style={{
-              fontWeight: 700,
-              fontSize: 18,
-              color: DARK,
-              marginBottom: 16,
-            }}
-          >
-            Placer un pari
-          </div>
-
-          {/* Horse info */}
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              marginBottom: 20,
-            }}
-          >
-            <div
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: "50%",
-                background: GREEN,
-
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: 18,
-              }}
-            >
-              {betHorse.numPmu}
-            </div>
-
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 16, color: DARK }}>
-                {betHorse.nom}
-              </div>
-
-              <div style={{ fontSize: 13, color: "#888" }}>Cote: {cote}</div>
-
-              {(betHorse.placeCorde || formatWeight(betHorse.poids)) && (
-                <div style={{ fontSize: 12, color: "#64748B", marginTop: 4 }}>
-                  {[
-                    betHorse.placeCorde
-                      ? `Stalle ${betHorse.placeCorde}`
-                      : null,
-                    formatWeight(betHorse.poids)
-                      ? `Poids ${formatWeight(betHorse.poids)}`
-                      : null,
-                  ]
-
-                    .filter(Boolean)
-
-                    .join(" - ")}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Type pari */}
-
-          <div style={{ marginBottom: 16 }}>
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: "#555",
-                marginBottom: 8,
-              }}
-            >
-              Type de pari
-            </div>
-
-            <div style={{ display: "flex", gap: 8 }}>
-              {(["PLACE", "GAGNANT"] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setBetType(t)}
-                  style={{
-                    flex: 1,
-                    padding: "12px",
-                    borderRadius: 12,
-
-                    border: `2px solid ${betType === t ? GREEN : "#E0E0E0"}`,
-
-                    background: betType === t ? "#E8F5E9" : "#fff",
-
-                    color: betType === t ? GREEN : "#888",
-
-                    fontWeight: 700,
-                    fontSize: 14,
-                    cursor: "pointer",
-                  }}
-                >
-                  {t === "PLACE" ? "Place (Top 3)" : "Gagnant (1er)"}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Mise */}
-
-          <div style={{ marginBottom: 20 }}>
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: "#555",
-                marginBottom: 8,
-              }}
-            >
-              Mise
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                justifyContent: "center",
-              }}
-            >
-              <button
-                onClick={() => setBetMise(Math.max(1, betMise - 1))}
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  border: "2px solid #E0E0E0",
-
-                  background: "#fff",
-                  fontSize: 20,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  color: DARK,
-                }}
-              >
-                -
-              </button>
-
-              <div
-                style={{
-                  fontSize: 28,
-                  fontWeight: 700,
-                  color: DARK,
-                  minWidth: 60,
-                  textAlign: "center",
-                }}
-              >
-                {betMise} EUR
-              </div>
-
-              <button
-                onClick={() => setBetMise(Math.min(50, betMise + 1))}
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  border: "2px solid #E0E0E0",
-
-                  background: "#fff",
-                  fontSize: 20,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  color: DARK,
-                }}
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          {/* Gain potentiel */}
-
-          <div
-            style={{
-              background: "#F5F5F5",
-              borderRadius: 12,
-              padding: "12px 16px",
-
-              display: "flex",
-              justifyContent: "space-between",
-              marginBottom: 20,
-            }}
-          >
-            <span style={{ fontSize: 14, color: "#666" }}>Gain potentiel</span>
-
-            <span
-              style={{
-                fontSize: 16,
-                fontWeight: 700,
-                color: gainPotentiel > 0 ? GREEN : "#C62828",
-              }}
-            >
-              {gainPotentiel > 0 ? "+" : ""}
-              {gainPotentiel} EUR
-            </span>
-          </div>
-
-          {/* Submit */}
-
-          <button
-            onClick={handlePlaceBet}
-            disabled={betLoading}
-            style={{
-              width: "100%",
-              padding: 16,
-              borderRadius: 12,
-
-              border: "none",
-              background: betLoading ? "#999" : GREEN,
-
-              color: "#fff",
-              fontSize: 16,
-              fontWeight: 700,
-              cursor: betLoading ? "not-allowed" : "pointer",
-            }}
-          >
-            {betLoading ? "Envoi..." : "Confirmer le pari"}
-          </button>
-
-          {betMessage && (
-            <div
-              style={{
-                marginTop: 12,
-                padding: "10px 16px",
-                borderRadius: 12,
-
-                background:
-                  betMessage.type === "success" ? "#E8F5E9" : "#FFEBEE",
-
-                color: betMessage.type === "success" ? GREEN : "#C62828",
-
-                fontSize: 13,
-                fontWeight: 600,
-                textAlign: "center",
-              }}
-            >
-              {betMessage.text}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  /* Bottom Tab Bar */
-
-  function BottomTabBar() {
-    const tabs = [
-      { label: "Courses", icon: "\uD83C\uDFC7", href: "/", active: false },
-
-      {
-        label: "Mes Paris",
-        icon: "\uD83D\uDCB0",
-        href: "/mes-paris",
-        active: false,
-      },
-
-      { label: "Bilan", icon: "\uD83D\uDCCA", href: "/bilan", active: false },
-    ];
-
-    return (
-      <div
-        style={{
-          position: "fixed",
-
-          bottom: 0,
-
           left: "50%",
-
           transform: "translateX(-50%)",
-
           width: "100%",
-
-          maxWidth: "430px",
-
-          height: "70px",
-
-          background: "rgba(255,255,255,0.92)",
-
+          maxWidth: 430,
+          height: 72,
+          background: "rgba(255,255,255,0.94)",
           backdropFilter: "blur(18px)",
-
           borderTop: "1px solid rgba(15,23,42,0.08)",
-
-          boxShadow: "0 -14px 30px rgba(15,23,42,0.08)",
-
+          boxShadow: "0 -12px 30px rgba(15,23,42,0.08)",
           display: "flex",
-
-          alignItems: "center",
-
           justifyContent: "space-around",
-
-          zIndex: 200,
+          alignItems: "center",
+          zIndex: 120,
         }}
       >
-        {tabs.map((tab) => (
-          <div
-            key={tab.label}
-            onClick={() => {
-              if (tab.href !== "#") router.push(tab.href);
-            }}
-            style={{
-              display: "flex",
-
-              flexDirection: "column",
-
-              alignItems: "center",
-
-              gap: "2px",
-
-              cursor: "pointer",
-
-              color: tab.active ? GREEN : "#64748B",
-            }}
-          >
-            <span style={{ fontSize: "20px" }}>{tab.icon}</span>
-
-            <span
-              style={{ fontSize: "11px", fontWeight: tab.active ? 800 : 600 }}
-            >
-              {tab.label}
-            </span>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  /* ---------------------------------------------------------------- */
-
-  /*  Render                                                           */
-
-  /* ---------------------------------------------------------------- */
-
-  return (
-    <div style={pageStyle}>
-      <Header />
-
-      {loading ? (
-        <Skeleton />
-      ) : !data || !data.success ? (
-        <div
-          style={{ textAlign: "center", padding: "60px 20px", color: "#888" }}
+        <button
+          onClick={() => router.push(`/?date=${selectedDate}`)}
+          style={{ border: "none", background: "transparent", color: GREEN, fontWeight: 800, cursor: "pointer" }}
         >
-          <div style={{ fontSize: "48px", marginBottom: "16px" }}>
-            &#x26A0;&#xFE0F;
-          </div>
-
-          <div style={{ fontWeight: 600, fontSize: "16px" }}>
-            Course introuvable
-          </div>
-        </div>
-      ) : !data.pronoAvailable ? (
-        <>
-          <div style={{ height: "16px" }} />
-
-          <RaceInfoCard />
-
-          <LockedSection />
-        </>
-      ) : (
-        <>
-          <div style={{ height: "16px" }} />
-
-          <FullAnalysis />
-        </>
-      )}
-
-      <BottomTabBar />
-
-      <BetPanel />
+          Courses
+        </button>
+        <button
+          onClick={() => router.push("/mes-paris")}
+          style={{ border: "none", background: "transparent", color: SLATE, fontWeight: 700, cursor: "pointer" }}
+        >
+          Mes Paris
+        </button>
+        <button
+          onClick={() => router.push(`/bilan?date=${selectedDate}`)}
+          style={{ border: "none", background: "transparent", color: SLATE, fontWeight: 700, cursor: "pointer" }}
+        >
+          Bilan
+        </button>
+      </div>
     </div>
   );
 }
+
+
+
+

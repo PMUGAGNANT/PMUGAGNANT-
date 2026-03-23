@@ -1,345 +1,345 @@
-import type { RaceSummary, Participant } from './types';
+import { getTodayDateStr as getTodayDateStrFromUtils } from "@/lib/date-utils";
+import type {
+  LiveCourseSnapshot,
+  Participant,
+  RaceSummary,
+  SignalVariation,
+} from "@/lib/types";
 
-const BASE_URL = 'https://online.turfinfo.api.pmu.fr/rest/client/1';
+const BASE_URL = "https://online.turfinfo.api.pmu.fr/rest/client/1";
 
-type PmuProgrammeCourse = {
-  heureDepart: number;
-  discipline?: string;
-  grandPrixNationalTrot?: boolean;
-  categorieParticularite?: string;
-  numOrdre: number;
-  libelle?: string;
-  libelleCourt?: string;
-  montantTotalOffert?: number;
-  distance?: number;
-  nombreDeclaresPartants?: number;
-};
+async function fetchPmuJson<T>(path: string, revalidate = 60): Promise<T> {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    next: { revalidate },
+    headers: {
+      Accept: "application/json",
+      "User-Agent": "pmu-ai-v92/1.0",
+    },
+  } as RequestInit);
 
-type PmuProgrammeReunion = {
-  numOfficiel: number;
-  hippodrome?: { libelleCourt?: string };
-  pays?: { code?: string };
-  courses?: PmuProgrammeCourse[];
-};
+  if (!response.ok) {
+    throw new Error(`PMU API error: ${response.status} ${response.statusText} (${path})`);
+  }
 
-type PmuProgrammeResponse = {
-  programme?: {
-    reunions?: PmuProgrammeReunion[];
-  };
-};
+  return (await response.json()) as T;
+}
 
-type PmuParticipant = {
-  statut?: string;
-  numPmu: number;
-  nom?: string;
-  placeCorde?: number | null;
-  poidsConditionMonte?: number | null;
-  handicapPoids?: number | null;
-  poids?: number | null;
-  poidsTotal?: number | null;
-  charge?: number | null;
-  driver?: string;
-  entraineur?: string;
-  jockey?: string;
-  age?: number;
-  sexe?: string;
-  coteDirect?: { cotePmu?: number | null };
-  dernierRapportDirect?: { rapport?: number | null };
-  musique?: string;
-  nombreCourses?: number;
-  nombreVictoires?: number;
-  nombrePlaces?: number;
-  gainsParticipant?: {
-    gainsCarriere?: number;
-    gainsAnneeEnCours?: number;
-  };
-  nombreIndicateursFavoris?: number;
-  ordreArrivee?: number | null;
-};
+function toParisHour(ms?: number | null) {
+  if (!ms) return "";
+  return new Date(ms).toLocaleTimeString("fr-FR", {
+    timeZone: "Europe/Paris",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
 
-type PmuParticipantsResponse = {
-  participants?: PmuParticipant[];
-};
+function getCoteFromParticipant(raw: Record<string, unknown>): number | null {
+  const coteDirect = raw.coteDirect as Record<string, unknown> | undefined;
+  const lastReport = raw.dernierRapportDirect as Record<string, unknown> | undefined;
+  const rapportSimple = raw.rapportDirect as Record<string, unknown> | undefined;
 
-type PmuLegacyRapportCombinaison = {
-  numPmu?: number;
-  combinaison?: number[];
-  rapport?: number | null;
-};
-
-type PmuLegacyRapport = {
-  typePari?: string;
-  combinaisons?: PmuLegacyRapportCombinaison[];
-};
-
-type PmuLegacyRapportsResponse = {
-  rapports?: PmuLegacyRapport[];
-};
-
-type PmuDefinitiveRapportEntry = {
-  combinaison?: string;
-  dividendePourUnEuro?: number | null;
-  dividendePourUneMiseDeBase?: number | null;
-  dividendeUnite?: string;
-};
-
-type PmuDefinitiveRapport = {
-  typePari?: string;
-  rapports?: PmuDefinitiveRapportEntry[];
-};
-
-type PmuDefinitiveRapportsResponse = {
-  value?: PmuDefinitiveRapport[];
-};
-
-export type DefinitiveRapportsMap = Record<string, Record<string, number>>;
-
-function getParticipantWeightKg(participant: PmuParticipant): number | null {
-  const rawWeight =
-    participant.poidsConditionMonte ??
-    participant.handicapPoids ??
-    participant.poids ??
-    participant.poidsTotal ??
-    participant.charge ??
+  const rawValue =
+    coteDirect?.cotePmu ??
+    lastReport?.rapport ??
+    rapportSimple?.rapport ??
+    raw.cotePmu ??
     null;
 
-  if (rawWeight === null || rawWeight === undefined || Number.isNaN(rawWeight)) {
+  if (typeof rawValue !== "number" || Number.isNaN(rawValue)) {
     return null;
   }
 
-  // PMU payloads can expose either kilograms directly or decagrams/grams depending on feed.
-  if (rawWeight > 200) {
-    return Math.round((rawWeight / 10) * 10) / 10;
-  }
-
-  return Math.round(rawWeight * 10) / 10;
+  return rawValue > 100 ? rawValue / 100 : rawValue;
 }
 
-/**
- * Returns today's date as DDMMYYYY format.
- */
+function getWeight(raw: Record<string, unknown>): number | null {
+  const poids =
+    raw.poids ??
+    raw.handicapPoids ??
+    (raw.poidsConditionMonte as number | undefined) ??
+    ((raw.valeurHandicapPoids as Record<string, unknown> | undefined)?.poids as number | undefined) ??
+    ((raw.valeurHandicapPoids as Record<string, unknown> | undefined)?.valeur as number | undefined) ??
+    null;
+
+  return typeof poids === "number" && !Number.isNaN(poids) ? poids : null;
+}
+
+function getStall(raw: Record<string, unknown>): number | null {
+  const value =
+    raw.placeCorde ??
+    raw.stalle ??
+    raw.corde ??
+    ((raw.position as Record<string, unknown> | undefined)?.placeCorde as number | undefined) ??
+    null;
+
+  return typeof value === "number" && !Number.isNaN(value) ? value : null;
+}
+
+function normalizeSignalVariation(variation: number | null): SignalVariation | null {
+  if (variation === null || Number.isNaN(variation)) return null;
+  if (variation <= -20) return "FORTE_BAISSE";
+  if (variation < -5) return "BAISSE";
+  if (variation >= 30) return "FORTE_HAUSSE";
+  if (variation > 10) return "HAUSSE";
+  return "STABLE";
+}
+
+function mapParticipant(raw: Record<string, unknown>): Participant {
+  const cote = getCoteFromParticipant(raw);
+  const coteMatin =
+    typeof raw.coteMatin === "number"
+      ? (raw.coteMatin as number)
+      : typeof raw.coteReference === "number"
+        ? (raw.coteReference as number)
+        : cote;
+  const variation =
+    cote !== null && coteMatin !== null && coteMatin > 0
+      ? ((cote - coteMatin) / coteMatin) * 100
+      : null;
+  const gainsParticipant = (raw.gainsParticipant as Record<string, unknown> | undefined) ?? {};
+
+  return {
+    numPmu: Number(raw.numPmu ?? 0),
+    nom: String(raw.nom ?? ""),
+    driver: String(raw.driver ?? raw.driverPrincipal ?? ""),
+    entraineur: String(raw.entraineur ?? raw.entraineurPrincipal ?? ""),
+    jockey: String(raw.jockey ?? raw.jockeyPrincipal ?? raw.driver ?? ""),
+    age: Number(raw.age ?? 0),
+    sexe: String(raw.sexe ?? ""),
+    cote,
+    coteMatin,
+    coteDepart: cote,
+    variationCote: variation,
+    signalVariation: normalizeSignalVariation(variation),
+    musique: String(raw.musique ?? ""),
+    nombreCourses: Number(raw.nombreCourses ?? raw.nombreCoursesDuCheval ?? 0),
+    nombreVictoires: Number(raw.nombreVictoires ?? 0),
+    nombrePlaces: Number(raw.nombrePlaces ?? 0),
+    gainCarriere:
+      Number(gainsParticipant.gainsCarriere ?? 0) +
+      Number(gainsParticipant.gainsAnneeEnCours ?? 0),
+    nombreSuiveurs: Number(raw.nombreIndicateursFavoris ?? raw.nombreSuiveurs ?? 0),
+    ordreArrivee:
+      typeof raw.ordreArrivee === "number" ? Number(raw.ordreArrivee) : null,
+    statut: String(raw.statut ?? ""),
+    placeCorde: getStall(raw),
+    stalle: getStall(raw),
+    poids: getWeight(raw),
+    ferrure: typeof raw.ferrure === "string" ? raw.ferrure : null,
+    nonPartant: String(raw.statut ?? "") !== "PARTANT",
+    formeRecenteAmelioree:
+      typeof raw.formeRecenteAmelioree === "boolean"
+        ? raw.formeRecenteAmelioree
+        : false,
+  };
+}
+
 export function getTodayDateStr(): string {
-  const now = new Date();
-  const day = String(now.getDate()).padStart(2, '0');
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const year = now.getFullYear();
-  return `${day}${month}${year}`;
+  return getTodayDateStrFromUtils();
 }
 
-/**
- * Fetches all races for a given date from the PMU API.
- * Returns a flat, sorted array of RaceSummary.
- */
 export async function getAllRaces(dateStr?: string): Promise<RaceSummary[]> {
   const date = dateStr ?? getTodayDateStr();
-  const url = `${BASE_URL}/programme/${date}`;
-
-  const res = await fetch(url, { next: { revalidate: 60 } } as RequestInit);
-  if (!res.ok) {
-    throw new Error(`PMU API error: ${res.status} ${res.statusText}`);
-  }
-
-  const data = (await res.json()) as PmuProgrammeResponse;
-  const reunions = data?.programme?.reunions ?? [];
+  const data = await fetchPmuJson<Record<string, unknown>>(`/programme/${date}`);
+  const reunions = ((data.programme as Record<string, unknown> | undefined)?.reunions ??
+    []) as Record<string, unknown>[];
 
   const races: RaceSummary[] = [];
 
   for (const reunion of reunions) {
-    const numOfficiel: number = reunion.numOfficiel;
-    const hippodrome: string = reunion.hippodrome?.libelleCourt ?? '';
-    const pays: string = reunion.pays?.code ?? '';
-    const courses = reunion.courses ?? [];
+    const reunionNumber = Number(reunion.numOfficiel ?? 0);
+    const hippodrome = String(
+      ((reunion.hippodrome as Record<string, unknown> | undefined)?.libelleCourt as string) ?? ""
+    );
+    const pays = String(((reunion.pays as Record<string, unknown> | undefined)?.code as string) ?? "");
+    const courses = (reunion.courses ?? []) as Record<string, unknown>[];
 
     for (const course of courses) {
-      const heureDepartMs: number = course.heureDepart;
-
-      // Convert ms timestamp to HH:mm in Europe/Paris timezone
-      const heureDepart = new Date(heureDepartMs).toLocaleTimeString('fr-FR', {
-        timeZone: 'Europe/Paris',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      });
-
-      const discipline: string = course.discipline ?? '';
-      const estTrot = discipline.includes('TROT');
-      const estPlat = discipline === 'PLAT';
-      const estQuinte = Boolean(course.grandPrixNationalTrot) || course.categorieParticularite === 'QUINTE';
-
+      const discipline = String(course.discipline ?? "");
       races.push({
         dateStr: date,
-        reunion: numOfficiel,
-        course: course.numOrdre,
+        reunion: reunionNumber,
+        course: Number(course.numOrdre ?? 0),
         hippodrome,
         pays,
-        nomCourse: course.libelle || course.libelleCourt || '',
-        heureDepart,
+        nomCourse: String(course.libelle ?? course.libelleCourt ?? ""),
+        heureDepart: toParisHour(Number(course.heureDepart ?? 0)),
         discipline,
-        estTrot,
-        estPlat,
-        estQuinte,
-        allocation: course.montantTotalOffert ?? 0,
-        distance: course.distance ?? 0,
-        nombrePartants: course.nombreDeclaresPartants ?? 0,
+        estTrot: discipline.includes("TROT"),
+        estPlat: discipline === "PLAT",
+        estQuinte:
+          Boolean(course.grandPrixNationalTrot) ||
+          String(course.categorieParticularite ?? "") === "QUINTE",
+        allocation: Number(course.montantTotalOffert ?? 0),
+        distance: Number(course.distance ?? 0),
+        nombrePartants: Number(course.nombreDeclaresPartants ?? 0),
+        terrain:
+          typeof course.etatTerrain === "string"
+            ? String(course.etatTerrain)
+            : typeof course.libelleTerrain === "string"
+              ? String(course.libelleTerrain)
+              : null,
+        meteo:
+          typeof course.meteo === "string"
+            ? String(course.meteo)
+            : typeof course.conditionsMeteo === "string"
+              ? String(course.conditionsMeteo)
+              : null,
       });
     }
   }
 
-  // Sort by heureDepart (HH:mm string sort works correctly)
   races.sort((a, b) => a.heureDepart.localeCompare(b.heureDepart));
-
   return races;
 }
 
-/**
- * Fetches participants for a specific race from the PMU API.
- * Returns only participants with PARTANT status.
- */
 export async function getParticipants(
   dateStr: string,
   reunion: number,
   course: number
 ): Promise<Participant[]> {
-  const url = `${BASE_URL}/programme/${dateStr}/R${reunion}/C${course}/participants`;
-
-  const res = await fetch(url, { next: { revalidate: 60 } } as RequestInit);
-  if (!res.ok) {
-    throw new Error(`PMU API error: ${res.status} ${res.statusText}`);
-  }
-
-  const data = (await res.json()) as PmuParticipantsResponse;
-  const rawParticipants = data?.participants ?? [];
-
-  const participants: Participant[] = rawParticipants
-    .filter((p) => p.statut === 'PARTANT')
-    .map((p) => {
-      // Determine cote: prefer coteDirect.cotePmu, then dernierRapportDirect.rapport
-      let cote: number | null = null;
-      if (p.coteDirect?.cotePmu != null) {
-        cote = p.coteDirect.cotePmu;
-      } else if (p.dernierRapportDirect?.rapport != null) {
-        cote = p.dernierRapportDirect.rapport;
-      }
-
-      // Sum career gains
-      const gainsCarriere = (p.gainsParticipant?.gainsCarriere ?? 0) +
-        (p.gainsParticipant?.gainsAnneeEnCours ?? 0);
-
-      return {
-        numPmu: p.numPmu,
-        nom: p.nom ?? '',
-        placeCorde: p.placeCorde ?? null,
-        poids: getParticipantWeightKg(p),
-        driver: p.driver ?? '',
-        entraineur: p.entraineur ?? '',
-        jockey: p.jockey ?? '',
-        age: p.age ?? 0,
-        sexe: p.sexe ?? '',
-        cote,
-        musique: p.musique ?? '',
-        nombreCourses: p.nombreCourses ?? 0,
-        nombreVictoires: p.nombreVictoires ?? 0,
-        nombrePlaces: p.nombrePlaces ?? 0,
-        gainCarriere: gainsCarriere,
-        nombreSuiveurs: p.nombreIndicateursFavoris ?? 0,
-        ordreArrivee: p.ordreArrivee ?? null,
-        statut: p.statut ?? 'PARTANT',
-      };
-    });
+  const data = await fetchPmuJson<Record<string, unknown>>(
+    `/programme/${dateStr}/R${reunion}/C${course}/participants`
+  );
+  const participants = ((data.participants ?? []) as Record<string, unknown>[])
+    .filter((participant) => String(participant.statut ?? "PARTANT") !== "SUPPRIME")
+    .map(mapParticipant);
 
   return participants;
 }
 
-/**
- * Fetches real-time odds for a specific race.
- * Returns a map of numPmu -> odds (PMU returns odds * 100, so we divide by 100).
- */
 export async function getRealtimeOdds(
   dateStr: string,
   reunion: number,
   course: number
 ): Promise<Record<number, number>> {
   try {
-    const data = await getDefinitiveRapports(dateStr, reunion, course);
-    const odds: Record<number, number> = {};
-
-    const simpleGagnantRapports = data.SIMPLE_GAGNANT ?? {};
-    for (const [combinaison, rapport] of Object.entries(simpleGagnantRapports)) {
-      const numPmu = Number.parseInt(combinaison, 10);
-      if (Number.isFinite(numPmu)) {
-        odds[numPmu] = rapport;
-      }
-    }
-
-    return odds;
+    const rapports = await getFinalReports(dateStr, reunion, course);
+    const simpleGagnant = rapports.simpleGagnant;
+    return Object.fromEntries(
+      Object.entries(simpleGagnant).map(([key, value]) => [Number(key), value])
+    );
   } catch {
     return {};
   }
 }
 
-function normalizeRapportType(typePari: string | undefined): string | null {
-  if (!typePari) return null;
-  return typePari.replace(/^E_/, '');
+export async function getLiveCourseSnapshot(
+  dateStr: string,
+  reunion: number,
+  course: number
+): Promise<LiveCourseSnapshot> {
+  try {
+    const participants = await getParticipants(dateStr, reunion, course);
+    return {
+      coteActuelleByHorse: Object.fromEntries(
+        participants.map((participant) => [participant.numPmu, participant.cote ?? null])
+      ),
+      nonPartants: participants
+        .filter((participant) => participant.nonPartant || participant.statut !== "PARTANT")
+        .map((participant) => participant.numPmu),
+      ferrureChanges: Object.fromEntries(
+        participants
+          .filter((participant) => participant.ferrure)
+          .map((participant) => [participant.numPmu, participant.ferrure as string])
+      ),
+    };
+  } catch {
+    return {
+      coteActuelleByHorse: {},
+      nonPartants: [],
+      ferrureChanges: {},
+    };
+  }
 }
 
-function normalizeCombinaisonKey(rawCombinaison: string): string {
-  return rawCombinaison
-    .split('-')
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .sort((left, right) => Number(left) - Number(right))
-    .join('-');
+interface FinalReports {
+  simpleGagnant: Record<number, number>;
+  simplePlace: Record<number, number>;
+  coupleGagnant: Record<string, number>;
+  couplePlace: Record<string, number>;
+}
+
+function parseCombinaisonKey(combinaison: unknown): string | null {
+  if (Array.isArray(combinaison)) {
+    return combinaison.join("-");
+  }
+
+  if (typeof combinaison === "string") {
+    return combinaison;
+  }
+
+  return null;
+}
+
+export async function getFinalReports(
+  dateStr: string,
+  reunion: number,
+  course: number
+): Promise<FinalReports> {
+  const data = await fetchPmuJson<Record<string, unknown>>(
+    `/programme/${dateStr}/R${reunion}/C${course}/rapports-definitifs`,
+    30
+  );
+  const rapports = (data.rapports ?? []) as Record<string, unknown>[];
+
+  const result: FinalReports = {
+    simpleGagnant: {},
+    simplePlace: {},
+    coupleGagnant: {},
+    couplePlace: {},
+  };
+
+  for (const rapport of rapports) {
+    const typePari = String(rapport.typePari ?? "");
+    const combinaisons = (rapport.combinaisons ?? []) as Record<string, unknown>[];
+
+    for (const combinaison of combinaisons) {
+      const rawRapport =
+        typeof combinaison.rapport === "number"
+          ? (combinaison.rapport as number)
+          : typeof combinaison.pourUnEuro === "number"
+            ? (combinaison.pourUnEuro as number)
+            : null;
+      const rapportValue =
+        rawRapport === null ? null : rawRapport > 100 ? rawRapport / 100 : rawRapport;
+
+      if (rapportValue === null) continue;
+
+      const numPmu =
+        typeof combinaison.numPmu === "number"
+          ? Number(combinaison.numPmu)
+          : Array.isArray(combinaison.combinaison)
+            ? Number((combinaison.combinaison as unknown[])[0])
+            : null;
+      const combinaisonKey = parseCombinaisonKey(combinaison.combinaison);
+
+      if (typePari.includes("SIMPLE_GAGNANT") && numPmu !== null) {
+        result.simpleGagnant[numPmu] = rapportValue;
+      }
+
+      if (typePari.includes("SIMPLE_PLACE") && numPmu !== null) {
+        result.simplePlace[numPmu] = rapportValue;
+      }
+
+      if (typePari.includes("COUPLE_GAGNANT") && combinaisonKey) {
+        result.coupleGagnant[combinaisonKey] = rapportValue;
+      }
+
+      if (typePari.includes("COUPLE_PLACE") && combinaisonKey) {
+        result.couplePlace[combinaisonKey] = rapportValue;
+      }
+    }
+  }
+
+  return result;
 }
 
 export async function getDefinitiveRapports(
   dateStr: string,
   reunion: number,
   course: number
-): Promise<DefinitiveRapportsMap> {
-  const url = `${BASE_URL}/programme/${dateStr}/R${reunion}/C${course}/rapports-definitifs`;
-
-  const res = await fetch(url, { next: { revalidate: 60 } } as RequestInit);
-  if (!res.ok) {
-    throw new Error(`PMU API error: ${res.status} ${res.statusText}`);
-  }
-
-  const raw = (await res.json()) as PmuDefinitiveRapportsResponse | PmuLegacyRapportsResponse;
-  const definitiveRapports = 'value' in raw ? raw.value ?? [] : [];
-  const legacyRapports = 'rapports' in raw ? raw.rapports ?? [] : [];
-  const rapportsMap: DefinitiveRapportsMap = {};
-
-  for (const rapport of definitiveRapports) {
-    const typePari = normalizeRapportType(rapport.typePari);
-    if (!typePari) continue;
-    if (!rapportsMap[typePari]) {
-      rapportsMap[typePari] = {};
-    }
-
-    for (const entry of rapport.rapports ?? []) {
-      if (!entry.combinaison) continue;
-      const rapportPour1Euro = entry.dividendePourUnEuro;
-      if (rapportPour1Euro == null || !Number.isFinite(rapportPour1Euro)) continue;
-      rapportsMap[typePari][normalizeCombinaisonKey(entry.combinaison)] = rapportPour1Euro / 100;
-    }
-  }
-
-  for (const rapport of legacyRapports) {
-    const typePari = normalizeRapportType(rapport.typePari);
-    if (!typePari) continue;
-    if (!rapportsMap[typePari]) {
-      rapportsMap[typePari] = {};
-    }
-
-    for (const entry of rapport.combinaisons ?? []) {
-      const combinaisonKey = entry.numPmu != null
-        ? String(entry.numPmu)
-        : entry.combinaison?.join('-');
-      if (!combinaisonKey) continue;
-      const rapportPour1Euro = entry.rapport;
-      if (rapportPour1Euro == null || !Number.isFinite(rapportPour1Euro)) continue;
-      rapportsMap[typePari][normalizeCombinaisonKey(combinaisonKey)] = rapportPour1Euro / 100;
-    }
-  }
-
-  return rapportsMap;
+) {
+  return getFinalReports(dateStr, reunion, course);
 }

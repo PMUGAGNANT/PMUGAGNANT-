@@ -1,29 +1,29 @@
-import { NextResponse } from 'next/server';
-import { getParticipants, getAllRaces, getTodayDateStr } from '@/lib/pmu-api';
-import { analyzeRace } from '@/lib/analysis';
-import { getActiveModelWeightProfile } from '@/lib/learning';
+import { NextResponse } from "next/server";
+import { getAllRaces, getParticipants, getTodayDateStr } from "@/lib/pmu-api";
+import { analyzeRaceWithParameters, getMinutesUntilStart } from "@/lib/analysis";
+import { attachFaultRates } from "@/lib/horse-faults";
+import { loadAlgoParameters } from "@/lib/config";
+import type { Participant, RaceSummary } from "@/lib/types";
 
 export const dynamic = 'force-dynamic';
 
-function getParisNow(): Date {
-  return new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Europe/Paris" })
-  );
-}
+function buildOfficialArrival(participants: Participant[]) {
+  return participants
+    .filter((participant) => participant.ordreArrivee !== null && participant.ordreArrivee > 0)
+    .sort((left, right) => {
+      if (left.ordreArrivee !== right.ordreArrivee) {
+        return (left.ordreArrivee ?? 99) - (right.ordreArrivee ?? 99);
+      }
 
-function parseDateStr(dateStr: string): Date {
-  const day = Number(dateStr.slice(0, 2));
-  const month = Number(dateStr.slice(2, 4)) - 1;
-  const year = Number(dateStr.slice(4, 8));
-  return new Date(year, month, day);
-}
-
-function getMinutesUntilStartForDate(dateStr: string, heureDepart: string): number {
-  const [hours, minutes] = heureDepart.split(":").map(Number);
-  const parisNow = getParisNow();
-  const target = parseDateStr(dateStr);
-  target.setHours(hours, minutes, 0, 0);
-  return (target.getTime() - parisNow.getTime()) / 60000;
+      return left.numPmu - right.numPmu;
+    })
+    .map((participant) => ({
+      position: participant.ordreArrivee ?? null,
+      numPmu: participant.numPmu,
+      nom: participant.nom,
+      jockey: participant.jockey || participant.driver || null,
+      entraineur: participant.entraineur || null,
+    }));
 }
 
 export async function GET(
@@ -37,6 +37,8 @@ export async function GET(
   const cNum = parseInt(course);
 
   try {
+    const algoParameters = await loadAlgoParameters();
+
     // Get race info from programme
     const allRaces = await getAllRaces(date);
     const courseInfo = allRaces.find(r => r.reunion === rNum && r.course === cNum);
@@ -45,26 +47,25 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Race not found' }, { status: 404 });
     }
 
-    // Get participants
-    const participants = await getParticipants(date, rNum, cNum);
+    // Get participants and enrich them with historical risk signals.
+    const participants = await attachFaultRates(await getParticipants(date, rNum, cNum));
+    const officialArrival = buildOfficialArrival(participants);
 
     // Check if pronostic should be revealed (30 min before start)
-    const minutesUntil = getMinutesUntilStartForDate(date, courseInfo.heureDepart);
-    const isFinished = minutesUntil < -10; // Consider finished 10 min after start
-    const pronoAvailable = minutesUntil <= 30;
+    const minutesUntil = getMinutesUntilStart(courseInfo.heureDepart, courseInfo.dateStr);
+    const isFinished = officialArrival.length > 0 || minutesUntil < -10;
+    const pronoAvailable = isFinished || minutesUntil <= 30;
 
     let analysis = null;
     if (pronoAvailable && participants.length > 0) {
-      const weightProfile = await getActiveModelWeightProfile(
-        courseInfo.estPlat ? 'PLAT' : 'TROT'
-      );
-      analysis = analyzeRace(courseInfo, participants, weightProfile);
+      analysis = analyzeRaceWithParameters(courseInfo as RaceSummary, participants, algoParameters);
     }
 
     return NextResponse.json({
       success: true,
       courseInfo,
       participants: participants.length,
+      officialArrival,
       minutesUntilStart: minutesUntil,
       pronoAvailable,
       isFinished,

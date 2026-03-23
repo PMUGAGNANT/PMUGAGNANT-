@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { getAllRaces, getDefinitiveRapports, getParticipants, getTodayDateStr } from "@/lib/pmu-api";
-import { analyzeRace, getMinutesUntilStart } from "@/lib/analysis";
-import { getActiveModelWeightProfile } from "@/lib/learning";
-import type { BetRecommendationType } from "@/lib/types";
+import { getAllRaces, getParticipants, getTodayDateStr } from "@/lib/pmu-api";
+import { analyzeRaceWithParameters, getMinutesUntilStart } from "@/lib/analysis";
+import { attachFaultRates } from "@/lib/horse-faults";
+import { loadAlgoParameters } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +12,7 @@ type ConfidenceBucketKey = "high" | "medium" | "low";
 
 interface BilanResult {
   courseInfo: {
+    dateStr: string;
     reunion: number;
     course: number;
     hippodrome: string;
@@ -19,20 +20,28 @@ interface BilanResult {
     discipline: string;
     nomCourse: string;
   };
-  pariType: BetRecommendationType;
-  pariLabel: string;
-  chevaux: Array<{
+  favori: {
     numPmu: number;
     nom: string;
     cotePmu: number | null;
     coteEstimee: number | null;
-    ordreArrivee: number | null;
-  }>;
+  };
   recommandation: string;
   confiance: number;
   resultat: BilanResultat;
-  gainPour1Euro: number | null;
-  beneficeNetPour1Euro: number | null;
+  ordreArrivee?: number | null;
+}
+
+function getTicketSimple(analysis: ReturnType<typeof analyzeRaceWithParameters>) {
+  return (
+    analysis.ranking.find(
+      (runner) =>
+        runner.prediction.decision !== "REJET" &&
+        runner.prediction.typePariConseille === "GAGNANT"
+    ) ??
+    analysis.ranking.find((runner) => runner.prediction.decision !== "REJET") ??
+    analysis.favori
+  );
 }
 
 interface AggregateStats {
@@ -61,184 +70,68 @@ function getSuccessRate(stats: AggregateStats): number {
   return Math.round((stats.success / stats.played) * 100);
 }
 
-function getGainPour1Euro(resultat: BilanResultat, cotePmu: number | null): number | null {
-  if (resultat !== "GAGNANT") return null;
-  if (cotePmu === null || !Number.isFinite(cotePmu) || cotePmu <= 0) return null;
-  return cotePmu;
-}
-
-function getBeneficeNetPour1Euro(gainPour1Euro: number | null): number | null {
-  if (gainPour1Euro === null) return null;
-  const benefice = gainPour1Euro - 1;
-  return benefice > 0 ? benefice : 0;
-}
-
-function getResultatPari(
-  pariType: BetRecommendationType,
-  ordreArrivee: Array<number | null>
-): BilanResultat {
-  if (ordreArrivee.some((position) => position === null)) {
-    return "INCONNU";
-  }
-
-  if (pariType === "SIMPLE_GAGNANT") {
-    const position = ordreArrivee[0];
-    if (position === 1) return "GAGNANT";
-    if (position !== null && position <= 3) return "PLACE";
-    return "PERDU";
-  }
-
-  if (pariType === "COUPLE_PLACE") {
-    return ordreArrivee.every((position) => position !== null && position <= 3)
-      ? "GAGNANT"
-      : "PERDU";
-  }
-
-  if (pariType === "COUPLE_GAGNANT") {
-    return ordreArrivee.every((position) => position !== null && position <= 2)
-      ? "GAGNANT"
-      : "PERDU";
-  }
-
-  return "INCONNU";
-}
-
-function getPariLabel(pariType: BetRecommendationType): string {
-  if (pariType === "SIMPLE_GAGNANT") return "Simple gagnant";
-  if (pariType === "COUPLE_PLACE") return "Couple place";
-  return "Couple gagnant";
-}
-
-function normalizeCombinaisonForLookup(nums: number[]): string {
-  return [...nums].sort((left, right) => left - right).join("-");
-}
-
-function getRapportFinalPour1Euro(
-  pariType: BetRecommendationType,
-  resultat: BilanResultat,
-  numeros: number[],
-  definitiveRapports: Record<string, Record<string, number>>
-): number | null {
-  if (pariType === "SIMPLE_GAGNANT") {
-    const simpleKey = String(numeros[0]);
-    if (resultat === "GAGNANT") {
-      return definitiveRapports.SIMPLE_GAGNANT?.[simpleKey] ?? null;
-    }
-    if (resultat === "PLACE") {
-      return definitiveRapports.SIMPLE_PLACE?.[simpleKey] ?? null;
-    }
-    return null;
-  }
-
-  const combinaisonKey = normalizeCombinaisonForLookup(numeros);
-  if (pariType === "COUPLE_PLACE" && resultat === "GAGNANT") {
-    return definitiveRapports.COUPLE_PLACE?.[combinaisonKey] ?? null;
-  }
-  if (pariType === "COUPLE_GAGNANT" && resultat === "GAGNANT") {
-    return definitiveRapports.COUPLE_GAGNANT?.[combinaisonKey] ?? null;
-  }
-
-  return null;
-}
-
-function getSimpleFallbackRapportPour1Euro(
-  resultat: BilanResultat,
-  numPmu: number,
-  definitiveRapports: Record<string, Record<string, number>>
-): number | null {
-  if (resultat === "GAGNANT") {
-    return definitiveRapports.SIMPLE_GAGNANT?.[String(numPmu)] ?? null;
-  }
-
-  if (resultat === "PLACE") {
-    return definitiveRapports.SIMPLE_PLACE?.[String(numPmu)] ?? null;
-  }
-
-  return null;
-}
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const date = searchParams.get("date") || getTodayDateStr();
 
   try {
+    const algoParameters = await loadAlgoParameters();
     const races = await getAllRaces(date);
-    const [flatWeights, trotWeights] = await Promise.all([
-      getActiveModelWeightProfile("PLAT"),
-      getActiveModelWeightProfile("TROT"),
-    ]);
     const results: BilanResult[] = [];
 
     for (const race of races) {
-      const minutesUntil = getMinutesUntilStart(race.heureDepart);
+      const minutesUntil = getMinutesUntilStart(race.heureDepart, race.dateStr);
       if (minutesUntil >= -10) continue;
 
       try {
-        const [participants, definitiveRapports] = await Promise.all([
-          getParticipants(date, race.reunion, race.course),
-          getDefinitiveRapports(date, race.reunion, race.course).catch(() => ({})),
-        ]);
-        const analysis = analyzeRace(
-          race,
-          participants,
-          race.estPlat ? flatWeights : trotWeights
+        const participants = await attachFaultRates(
+          await getParticipants(date, race.reunion, race.course)
         );
-        if (analysis.parisRecommandes.length === 0) continue;
+        const analysis = analyzeRaceWithParameters(race, participants, algoParameters);
+        const ticketSimple = getTicketSimple(analysis);
+        if (!ticketSimple) continue;
 
-        for (const pari of analysis.parisRecommandes) {
-          const chevaux = pari.chevaux.map((cheval) => {
-            const participant = participants.find((entry) => entry.numPmu === cheval.numPmu);
-            const predictedOdds = analysis.predictionsCotes[cheval.numPmu];
+        const ticketResult = participants.find(
+          (participant) => participant.numPmu === ticketSimple.numPmu
+        );
+        const predictedOdds = analysis.predictionsCotes[ticketSimple.numPmu];
+        const ordreArrivee = ticketResult?.ordreArrivee ?? null;
+        const resultat: BilanResultat =
+          ordreArrivee === 1
+            ? "GAGNANT"
+            : ordreArrivee !== null && ordreArrivee <= 3
+              ? "PLACE"
+              : ordreArrivee !== null
+                ? "PERDU"
+                : "INCONNU";
 
-            return {
-              numPmu: cheval.numPmu,
-              nom: cheval.nom,
-              cotePmu: participant?.cote ?? null,
-              coteEstimee:
-                predictedOdds?.coteEstimee ??
-                predictedOdds?.coteMatin ??
-                null,
-              ordreArrivee: participant?.ordreArrivee ?? null,
-            };
-          });
-
-          const ordreArrivee = chevaux.map((cheval) => cheval.ordreArrivee);
-          const resultat = getResultatPari(pari.type, ordreArrivee);
-          const rapportFinalPour1Euro =
-            getRapportFinalPour1Euro(
-              pari.type,
-              resultat,
-              chevaux.map((cheval) => cheval.numPmu),
-              definitiveRapports
-            ) ??
-            (pari.type === "SIMPLE_GAGNANT"
-              ? getSimpleFallbackRapportPour1Euro(
-                  resultat,
-                  chevaux[0]?.numPmu ?? 0,
-                  definitiveRapports
-                ) ??
-                getGainPour1Euro(resultat, chevaux[0]?.cotePmu ?? null)
-              : null);
-
-          results.push({
-            courseInfo: {
-              reunion: race.reunion,
-              course: race.course,
-              hippodrome: race.hippodrome,
-              heureDepart: race.heureDepart,
-              discipline: race.discipline,
-              nomCourse: race.nomCourse,
-            },
-            pariType: pari.type,
-            pariLabel: getPariLabel(pari.type),
-            chevaux,
-            recommandation: pari.pourquoi[0] ?? analysis.recommandation?.decision ?? "-",
-            confiance: pari.surete ?? analysis.scoreConfiance?.score ?? 0,
-            resultat,
-            gainPour1Euro: rapportFinalPour1Euro,
-            beneficeNetPour1Euro: getBeneficeNetPour1Euro(rapportFinalPour1Euro),
-          });
-        }
+        results.push({
+          courseInfo: {
+            dateStr: race.dateStr,
+            reunion: race.reunion,
+            course: race.course,
+            hippodrome: race.hippodrome,
+            heureDepart: race.heureDepart,
+            discipline: race.discipline,
+            nomCourse: race.nomCourse,
+          },
+          favori: {
+            numPmu: ticketSimple.numPmu,
+            nom: ticketSimple.nom,
+            cotePmu: ticketResult?.cote ?? ticketSimple.cote ?? null,
+            coteEstimee:
+              predictedOdds?.coteEstimee ??
+              predictedOdds?.coteMatin ??
+              null,
+          },
+          recommandation:
+            analysis.recommandation?.decision ||
+            analysis.prediction.decisionCourse ||
+            "-",
+          confiance: analysis.scoreConfiance?.score ?? 0,
+          resultat,
+          ordreArrivee,
+        });
       } catch {
         // Skip failed race fetches so the bilan stays available.
       }

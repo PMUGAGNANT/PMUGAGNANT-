@@ -12,7 +12,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Legacy foundation kept for archive/reference, not part of the deployed Next app.
+    // Legacy/archived code paths kept for reference but not used by the app router build.
     "src/app.js",
     "src/core/**",
     "src/use-cases/**",

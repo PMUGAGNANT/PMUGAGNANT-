@@ -1,0 +1,459 @@
+import { loadAlgoParameters } from "@/lib/config";
+import { getMinutesUntilStart } from "@/lib/date-utils";
+import { attachFaultRates, upsertFaultRates } from "@/lib/horse-faults";
+import { getAllRaces, getFinalReports, getParticipants } from "@/lib/pmu-api";
+import {
+  buildCourseRecord,
+  buildPredictionRows,
+  getRacePredictions,
+  upsertCourseRecord,
+  upsertPredictions,
+} from "@/lib/prediction-store";
+import { analyzeRaceWithParameters } from "@/lib/predictions";
+import {
+  formatMorningTelegram,
+  formatPreRaceTelegram,
+  isTelegramConfigured,
+  sendTelegramMessage,
+} from "@/lib/telegram";
+import type {
+  AlgoParameters,
+  Participant,
+  PredictionDecision,
+  PredictionRow,
+  RaceAnalysis,
+  RaceSummary,
+  SignalVariation,
+} from "@/lib/types";
+
+const BATCH_SIZE = 4;
+
+interface ProcessedRace {
+  race: RaceSummary;
+  participants: Participant[];
+  analysis: RaceAnalysis;
+  rows: PredictionRow[];
+}
+
+interface SelectionAlert {
+  reunion: number;
+  course: number;
+  hippodrome: string;
+  chevalNum: number;
+  chevalNom: string;
+  confiance: number;
+  decision: PredictionDecision;
+}
+
+interface PreRaceAlert {
+  reunion: number;
+  course: number;
+  chevalNum: number;
+  chevalNom: string;
+  variation: number | null;
+  decision: PredictionDecision;
+  confiance: number;
+  extra: string[];
+}
+
+interface RangeOptions {
+  reunion?: number | null;
+  course?: number | null;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function round1(value: number) {
+  return Math.round(value * 10) / 10;
+}
+
+function round2(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function normalizeVariationSignal(
+  variation: number | null,
+  hasVariationData: boolean
+): SignalVariation {
+  if (!hasVariationData) {
+    return "DONNEE_INDISPONIBLE";
+  }
+
+  if (variation === null || Number.isNaN(variation)) {
+    return "DONNEE_INDISPONIBLE";
+  }
+
+  if (variation <= -20) {
+    return "FORTE_BAISSE";
+  }
+
+  if (variation < -5) {
+    return "BAISSE";
+  }
+
+  if (variation >= 30) {
+    return "FORTE_HAUSSE";
+  }
+
+  if (variation > 10) {
+    return "HAUSSE";
+  }
+
+  return "STABLE";
+}
+
+function keepRace(race: RaceSummary, options: RangeOptions) {
+  if (options.reunion !== null && options.reunion !== undefined && race.reunion !== options.reunion) {
+    return false;
+  }
+
+  if (options.course !== null && options.course !== undefined && race.course !== options.course) {
+    return false;
+  }
+
+  return true;
+}
+
+async function processRace(
+  dateStr: string,
+  race: RaceSummary,
+  parameters: AlgoParameters,
+  stage: "MATIN" | "T10" | "RESULTAT"
+): Promise<ProcessedRace> {
+  const participants = await attachFaultRates(
+    await getParticipants(dateStr, race.reunion, race.course)
+  );
+
+  await upsertFaultRates(participants);
+
+  const analysis = analyzeRaceWithParameters(race, participants, parameters);
+  const rows = buildPredictionRows(dateStr, race, analysis, stage);
+
+  return {
+    race,
+    participants,
+    analysis,
+    rows,
+  };
+}
+
+function getPrimarySelection(processed: ProcessedRace): SelectionAlert | null {
+  const primary =
+    processed.rows.find((row) => row.decision === "VALIDE") ??
+    processed.rows.find((row) => row.decision === "SURVEILLANCE") ??
+    null;
+
+  if (!primary) {
+    return null;
+  }
+
+  return {
+    reunion: processed.race.reunion,
+    course: processed.race.course,
+    hippodrome: processed.race.hippodrome,
+    chevalNum: primary.cheval_num,
+    chevalNom: primary.cheval_nom,
+    confiance: primary.confiance,
+    decision: primary.decision,
+  };
+}
+
+async function processInBatches<T, R>(
+  items: T[],
+  worker: (item: T) => Promise<R>
+): Promise<R[]> {
+  const all: R[] = [];
+
+  for (let index = 0; index < items.length; index += BATCH_SIZE) {
+    const batch = items.slice(index, index + BATCH_SIZE);
+    const results = await Promise.all(batch.map((item) => worker(item)));
+    all.push(...results);
+  }
+
+  return all;
+}
+
+function adjustDecisionAfterPreRace(
+  row: PredictionRow,
+  parameters: AlgoParameters
+): PredictionDecision {
+  if (row.non_partant || row.lisibilite === "LOTERIE") {
+    return "REJET";
+  }
+
+  if (
+    row.confiance >= parameters.validation.confianceMin &&
+    row.qualite >= parameters.validation.qualiteMin
+  ) {
+    return "VALIDE";
+  }
+
+  if (
+    row.confiance >= parameters.validation.confianceMin - 0.6 ||
+    row.qualite >= parameters.validation.qualiteMin - 6
+  ) {
+    return "SURVEILLANCE";
+  }
+
+  return "REJET";
+}
+
+function applyPreRaceSecondPass(
+  rows: PredictionRow[],
+  baselineRows: PredictionRow[],
+  parameters: AlgoParameters
+) {
+  const baselineByHorse = new Map(
+    baselineRows.map((row) => [row.cheval_num, row] as const)
+  );
+
+  const alerts: PreRaceAlert[] = [];
+  const updatedRows = rows.map((row) => {
+    const baseline = baselineByHorse.get(row.cheval_num);
+    const notes: string[] = [];
+    const coteMatin = baseline?.cote_matin ?? row.cote_matin ?? null;
+    const coteActuelle = row.cote_depart ?? row.cote_matin ?? null;
+    const hasVariationData = coteMatin !== null && coteActuelle !== null && coteMatin > 0;
+    const variation =
+      hasVariationData
+        ? round2(((coteActuelle - coteMatin) / coteMatin) * 100)
+        : row.variation_cote ?? null;
+
+    let confiance = row.confiance;
+    let decision = row.decision;
+
+    if (variation !== null && variation <= parameters.preRace.strongDropPct) {
+      confiance = round1(clamp(confiance + parameters.preRace.strongBonus, 0, 10));
+      notes.push(`baisse forte ${variation}%`);
+    }
+
+    if (variation !== null && variation >= parameters.preRace.negativeRisePct) {
+      confiance = round1(clamp(confiance - parameters.preRace.riseMalus, 0, 10));
+      notes.push(`hausse ${variation}%`);
+    }
+
+    if (row.non_partant) {
+      decision = "REJET";
+      confiance = 0;
+      notes.push("non partant");
+    }
+
+    if (
+      baseline?.ferrure_ref &&
+      row.ferrure_t10 &&
+      baseline.ferrure_ref !== row.ferrure_t10
+    ) {
+      notes.push(`ferrure ${baseline.ferrure_ref} -> ${row.ferrure_t10}`);
+    }
+
+    const nextRow: PredictionRow = {
+      ...row,
+      cote_matin: coteMatin,
+      cote_depart: coteActuelle,
+      variation_cote: variation,
+      confiance,
+      decision,
+      stage: "T10",
+      signal_variation: normalizeVariationSignal(variation, hasVariationData),
+    };
+
+    nextRow.decision = adjustDecisionAfterPreRace(nextRow, parameters);
+
+    if (
+      variation !== null &&
+      variation >= parameters.preRace.negativeRisePct &&
+      nextRow.confiance < parameters.preRace.retractDecisionBelowConfidence
+    ) {
+      nextRow.decision = "REJET";
+      if (!notes.includes("retrait validation")) {
+        notes.push("retrait validation");
+      }
+    }
+
+    if (
+      nextRow.outsider &&
+      nextRow.mise_simulee > 0 &&
+      nextRow.pari_conseille === "GAGNANT"
+    ) {
+      nextRow.pari_conseille = "PLACE";
+      nextRow.mise_simulee = Math.max(
+        1,
+        Math.round(nextRow.mise_simulee * parameters.outsiders.miseReductionFactor)
+      );
+      notes.push("outsider bascule place");
+    }
+
+    const confidenceDelta = baseline ? Math.abs((baseline.confiance ?? 0) - nextRow.confiance) : 0;
+    const decisionChanged = baseline ? baseline.decision !== nextRow.decision : nextRow.decision !== "REJET";
+    if (notes.length > 0 || decisionChanged || confidenceDelta >= 0.8) {
+      alerts.push({
+        reunion: nextRow.reunion,
+        course: nextRow.course,
+        chevalNum: nextRow.cheval_num,
+        chevalNom: nextRow.cheval_nom,
+        variation,
+        decision: nextRow.decision,
+        confiance: nextRow.confiance,
+        extra: notes,
+      });
+    }
+
+    return nextRow;
+  });
+
+  return { updatedRows, alerts };
+}
+
+function settlePredictionRow(
+  row: PredictionRow,
+  participant: Participant | undefined,
+  reports: Awaited<ReturnType<typeof getFinalReports>>
+) {
+  const ordreArrivee =
+    typeof participant?.ordreArrivee === "number" ? participant.ordreArrivee : null;
+  const resultatGagnant = ordreArrivee === 1;
+  const resultatPlace = ordreArrivee !== null && ordreArrivee <= 3;
+  const rapportGagnant = reports.simpleGagnant[row.cheval_num] ?? null;
+  const rapportPlace = reports.simplePlace[row.cheval_num] ?? null;
+  const nonPartant = Boolean(participant?.nonPartant ?? row.non_partant);
+
+  let gainSimule = 0;
+  if (nonPartant && row.decision !== "REJET") {
+    gainSimule = row.mise_simulee;
+  } else if (row.pari_conseille === "GAGNANT" && resultatGagnant && rapportGagnant) {
+    gainSimule = row.mise_simulee * rapportGagnant;
+  } else if (row.pari_conseille === "PLACE" && resultatPlace && rapportPlace) {
+    gainSimule = row.mise_simulee * rapportPlace;
+  }
+
+  return {
+    ...row,
+    cote_depart: participant?.cote ?? row.cote_depart,
+    ferrure_t10: participant?.ferrure ?? row.ferrure_t10 ?? row.ferrure_ref ?? null,
+    non_partant: nonPartant,
+    resultat_place: resultatPlace,
+    resultat_gagnant: resultatGagnant,
+    rapport_place: rapportPlace,
+    rapport_gagnant: rapportGagnant,
+    gain_simule: round2(gainSimule),
+    stage: "RESULTAT" as const,
+  };
+}
+
+export async function runMorningAnalysis(dateStr: string) {
+  const parameters = await loadAlgoParameters();
+  const races = await getAllRaces(dateStr);
+  const processed = await processInBatches(races, async (race) => {
+    const current = await processRace(dateStr, race, parameters, "MATIN");
+    await upsertCourseRecord(buildCourseRecord(dateStr, race, current.analysis));
+    await upsertPredictions(current.rows);
+    return current;
+  });
+
+  const selections = processed
+    .map(getPrimarySelection)
+    .filter((selection): selection is SelectionAlert => selection !== null);
+
+  if (isTelegramConfigured()) {
+    await sendTelegramMessage(formatMorningTelegram(dateStr, selections));
+  }
+
+  return {
+    success: true,
+    date: dateStr,
+    racesProcessed: processed.length,
+    predictionsStored: processed.reduce((sum, race) => sum + race.rows.length, 0),
+    validated: selections.filter((selection) => selection.decision === "VALIDE").length,
+    surveillance: selections.filter((selection) => selection.decision === "SURVEILLANCE").length,
+    selections,
+  };
+}
+
+export async function runPreRaceSecondPass(
+  dateStr: string,
+  options: RangeOptions = {}
+) {
+  const parameters = await loadAlgoParameters();
+  const races = (await getAllRaces(dateStr)).filter((race) => {
+    if (!keepRace(race, options)) {
+      return false;
+    }
+
+    const minutesUntil = getMinutesUntilStart(race.heureDepart, race.dateStr);
+    return minutesUntil <= 10 && minutesUntil >= -15;
+  });
+
+  const processed = await processInBatches(races, async (race) => {
+    const baselineRows = await getRacePredictions(dateStr, race.reunion, race.course);
+    const current = await processRace(dateStr, race, parameters, "T10");
+    const { updatedRows, alerts } = applyPreRaceSecondPass(
+      current.rows,
+      baselineRows,
+      parameters
+    );
+
+    await upsertCourseRecord(buildCourseRecord(dateStr, race, current.analysis));
+    await upsertPredictions(updatedRows);
+
+    return {
+      race,
+      updatedRows,
+      alerts,
+    };
+  });
+
+  const alerts = processed.flatMap((race) => race.alerts);
+  if (alerts.length > 0 && isTelegramConfigured()) {
+    await sendTelegramMessage(formatPreRaceTelegram(dateStr, alerts));
+  }
+
+  return {
+    success: true,
+    date: dateStr,
+    racesProcessed: processed.length,
+    updatedPredictions: processed.reduce((sum, race) => sum + race.updatedRows.length, 0),
+    alerts,
+  };
+}
+
+export async function runResultSync(dateStr: string, options: RangeOptions = {}) {
+  const parameters = await loadAlgoParameters();
+  const races = (await getAllRaces(dateStr)).filter((race) => {
+    if (!keepRace(race, options)) {
+      return false;
+    }
+
+    return getMinutesUntilStart(race.heureDepart, race.dateStr) < -10;
+  });
+
+  const processed = await processInBatches(races, async (race) => {
+    const current = await processRace(dateStr, race, parameters, "RESULTAT");
+    const baselineRows = await getRacePredictions(dateStr, race.reunion, race.course);
+    const reports = await getFinalReports(dateStr, race.reunion, race.course);
+    const participantByHorse = new Map(
+      current.participants.map((participant) => [participant.numPmu, participant] as const)
+    );
+
+    const sourceRows = baselineRows.length > 0 ? baselineRows : current.rows;
+    const settledRows = sourceRows.map((row) =>
+      settlePredictionRow(row, participantByHorse.get(row.cheval_num), reports)
+    );
+
+    await upsertCourseRecord(buildCourseRecord(dateStr, race, current.analysis));
+    await upsertPredictions(settledRows);
+
+    return {
+      race,
+      settledRows,
+    };
+  });
+
+  return {
+    success: true,
+    date: dateStr,
+    racesProcessed: processed.length,
+    settledPredictions: processed.reduce((sum, race) => sum + race.settledRows.length, 0),
+  };
+}
