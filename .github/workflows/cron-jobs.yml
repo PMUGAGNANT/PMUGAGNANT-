@@ -1,0 +1,63 @@
+name: PMU Cron Jobs
+
+on:
+  schedule:
+    # Pre-race analysis — every 5 minutes
+    - cron: "*/5 * * * *"
+    # Weekly report — Sunday 19:00 UTC
+    - cron: "0 19 * * 0"
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Job to run (prerace, results, weekly)"
+        required: true
+        type: choice
+        options:
+          - prerace
+          - results
+          - weekly
+
+jobs:
+  prerace:
+    if: github.event.schedule == '*/5 * * * *' || github.event.inputs.job == 'prerace'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger pre-race analysis
+        run: |
+          curl -sf -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/prerace" \
+            --max-time 290 || true
+
+  results:
+    if: github.event.schedule == '*/5 * * * *' || github.event.inputs.job == 'results'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if should run (every 10 min)
+        id: check
+        run: |
+          MINUTE=$(date -u +%M)
+          # Run on even 10-min marks: 00, 10, 20, 30, 40, 50
+          if [ $((MINUTE % 10)) -lt 5 ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Trigger results sync
+        if: steps.check.outputs.run == 'true' || github.event.inputs.job == 'results'
+        run: |
+          curl -sf -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/results" \
+            --max-time 290 || true
+
+  weekly:
+    if: github.event.schedule == '0 19 * * 0' || github.event.inputs.job == 'weekly'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger weekly report
+        run: |
+          curl -sf -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/weekly" \
+            --max-time 290 || true
