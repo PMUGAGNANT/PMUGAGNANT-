@@ -302,16 +302,16 @@ function buildVerdict(
 
   if (lisibilite === "LOTERIE") {
     return {
-      title: "Course a laisser",
-      subtitle: "La course est trop ouverte pour sortir un vrai ticket propre.",
+      title: "Course loterie",
+      subtitle: "La course reste trop diffuse pour sortir un ticket net et durable.",
       label: "Verdict moteur",
     };
   }
 
   if (recommendation === "SURVEILLANCE ACTIVE" || lisibilite === "COMPLEXE") {
     return {
-      title: "Lecture prudente",
-      subtitle: "Le favori reste jouable, mais l'ecart avec ses poursuivants est trop court pour valider un ticket offensif.",
+      title: "Course ouverte",
+      subtitle: "Le repere reste jouable, mais l'ecart avec ses poursuivants est trop court pour un ticket trop agressif.",
       label: "Verdict moteur",
     };
   }
@@ -496,7 +496,7 @@ function MetricCard({
       <div style={{ fontSize: 11, color: SLATE, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
         {label}
       </div>
-      <div style={{ fontSize: 28, lineHeight: "30px", fontWeight: 800, color: palette.value, marginBottom: hint ? 6 : 0 }}>
+      <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 800, color: palette.value, marginBottom: hint ? 6 : 0 }}>
         {value}
       </div>
       {hint ? <div style={{ fontSize: 12, color: SLATE, lineHeight: "16px" }}>{hint}</div> : null}
@@ -553,15 +553,15 @@ function TicketPanel({
         <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
           <div
             style={{
-              width: 54,
-              height: 54,
-              borderRadius: 18,
+              width: 50,
+              height: 50,
+              borderRadius: 16,
               background: accent,
               color: "#FFFFFF",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 28,
+              fontSize: 24,
               fontWeight: 800,
               flexShrink: 0,
               boxShadow: "0 16px 28px rgba(0,0,0,0.12)",
@@ -571,7 +571,7 @@ function TicketPanel({
           </div>
 
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 800, color: DARK, marginBottom: 6 }}>
+            <div style={{ fontSize: 22, lineHeight: "26px", fontWeight: 800, color: DARK, marginBottom: 6 }}>
               {runner.nom}
             </div>
             <div style={{ fontSize: 14, lineHeight: "18px", color: SLATE, marginBottom: 10 }}>
@@ -636,6 +636,50 @@ function TicketPanel({
         </div>
       </div>
     </div>
+  );
+}
+
+function CollapsibleBlock({
+  title,
+  subtitle,
+  children,
+  defaultOpen = false,
+}: {
+  title: string;
+  subtitle?: string;
+  children: ReactNode;
+  defaultOpen?: boolean;
+}) {
+  return (
+    <details
+      open={defaultOpen}
+      style={{
+        borderRadius: 18,
+        border: "1px solid #E7ECF1",
+        background: "#FBFCFD",
+        padding: 14,
+      }}
+    >
+      <summary
+        style={{
+          listStyle: "none",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: DARK }}>{title}</div>
+          {subtitle ? (
+            <div style={{ fontSize: 12, lineHeight: "16px", color: SLATE, marginTop: 4 }}>{subtitle}</div>
+          ) : null}
+        </div>
+        <div style={{ fontSize: 12, fontWeight: 800, color: GREEN }}>Voir</div>
+      </summary>
+      <div style={{ marginTop: 12 }}>{children}</div>
+    </details>
   );
 }
 
@@ -997,7 +1041,7 @@ export default function CourseDetailPage({
         {analysis && simpleTicket ? (
           <>
             <SectionCard title={verdict.title} kicker={verdict.label} accent="rgba(11,139,75,0.12)">
-              <div style={{ display: "grid", gap: 14 }}>
+              <div style={{ display: "grid", gap: 16 }}>
                 <div
                   style={{
                     borderRadius: 22,
@@ -1108,247 +1152,288 @@ export default function CourseDetailPage({
                     />
                   </div>
                 </div>
-              </div>
-            </SectionCard>
 
-            <SectionCard title="Plan de jeu" kicker="Lecture ticket" accent="rgba(11,139,75,0.14)">
-              <TicketPanel
-                title="Ticket principal"
-                subtitle={getHumanReference(simpleTicket, data.courseInfo.estPlat)}
-                runner={simpleTicket}
-                badge={formatTicketType(simpleTicket.prediction.typePariConseille)}
-                accent={GREEN}
-                arrivalPosition={data.isFinished ? simpleTicketPosition : undefined}
-              />
+                <TicketPanel
+                  title="Ticket principal"
+                  subtitle={getHumanReference(simpleTicket, data.courseInfo.estPlat)}
+                  runner={simpleTicket}
+                  badge={formatTicketType(simpleTicket.prediction.typePariConseille)}
+                  accent={GREEN}
+                  arrivalPosition={data.isFinished ? simpleTicketPosition : undefined}
+                />
 
-              {placeBase || (technicalFavorite && technicalFavorite.numPmu !== simpleTicket.numPmu) ? (
-                <div
-                  style={{
-                    marginTop: 12,
-                    display: "grid",
-                    gridTemplateColumns: "1fr",
-                    gap: 10,
-                  }}
+                <CollapsibleBlock
+                  title="Lecture de la course"
+                  subtitle="Forces, vigilance et raison du ticket conseille."
+                  defaultOpen
                 >
-                  {placeBase && placeBase.numPmu !== simpleTicket.numPmu ? (
-                    <SecondaryRunnerCard
-                      title="Base place de secours"
-                      runner={placeBase}
-                      accent="#C38700"
-                      placeMode
-                      arrivalPosition={data.isFinished ? placeBasePosition : undefined}
-                      humanReference={getHumanReference(placeBase, data.courseInfo.estPlat)}
-                    />
-                  ) : null}
+                  <div style={{ display: "grid", gap: 12 }}>
+                    <div
+                      style={{
+                        borderRadius: 18,
+                        border: "1px solid #D9F0E2",
+                        background: "#F4FBF7",
+                        padding: 14,
+                      }}
+                    >
+                      <div style={{ fontSize: 14, fontWeight: 800, color: GREEN, marginBottom: 10 }}>
+                        Ce qui tient dans la course
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {strengths.length > 0 ? (
+                          strengths.map((point) => (
+                            <div
+                              key={point}
+                              style={{
+                                borderRadius: 14,
+                                padding: "12px 14px",
+                                background: "#FFFFFF",
+                                border: "1px solid #D9F0E2",
+                                color: "#0A6F3B",
+                                fontSize: 14,
+                                lineHeight: "20px",
+                              }}
+                            >
+                              {point}
+                            </div>
+                          ))
+                        ) : (
+                          <div style={{ color: SLATE, fontSize: 14 }}>
+                            Aucun point fort franc ne ressort du moteur.
+                          </div>
+                        )}
+                      </div>
+                    </div>
 
-                  {technicalFavorite && technicalFavorite.numPmu !== simpleTicket.numPmu ? (
-                    <SecondaryRunnerCard
-                      title="Favori technique moteur"
-                      runner={technicalFavorite}
-                      accent="#1560C7"
-                      arrivalPosition={data.isFinished ? technicalFavoritePosition : undefined}
-                      humanReference={getHumanReference(technicalFavorite, data.courseInfo.estPlat)}
-                    />
-                  ) : null}
-                </div>
-              ) : null}
-            </SectionCard>
+                    <div
+                      style={{
+                        borderRadius: 18,
+                        border: "1px solid #F1DFC2",
+                        background: "#FFF7E8",
+                        padding: 14,
+                      }}
+                    >
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#8A5A00", marginBottom: 10 }}>
+                        Ce qui force la prudence
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {warnings.length > 0 ? (
+                          warnings.map((point) => (
+                            <div
+                              key={point}
+                              style={{
+                                borderRadius: 14,
+                                padding: "12px 14px",
+                                background: "#FFFFFF",
+                                border: "1px solid #F1DFC2",
+                                color: "#8A5A00",
+                                fontSize: 14,
+                                lineHeight: "20px",
+                              }}
+                            >
+                              {point}
+                            </div>
+                          ))
+                        ) : (
+                          <div style={{ color: SLATE, fontSize: 14 }}>
+                            Pas d&apos;alerte majeure remontee par le moteur.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CollapsibleBlock>
 
-            {data.isFinished && data.officialArrival.length > 0 ? (
-              <SectionCard title="Debrief officiel" kicker="Arrivee course">
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
-                  {data.officialArrival.slice(0, 3).map((runner) => (
-                    <Pill key={`${runner.position}-${runner.numPmu}`} background="#F3F4F6" color={DARK}>
-                      {formatPosition(runner.position)} N{runner.numPmu} {runner.nom}
-                    </Pill>
-                  ))}
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  <div
-                    style={{
-                      borderRadius: 18,
-                      padding: 14,
-                      background: "#F9FBFC",
-                      border: "1px solid #E7ECF1",
-                    }}
+                {placeBase || (technicalFavorite && technicalFavorite.numPmu !== simpleTicket.numPmu) ? (
+                  <CollapsibleBlock
+                    title="Plans secondaires"
+                    subtitle="Base place de secours et repere technique si tu ne veux pas jouer le ticket principal."
                   >
-                    <div style={{ fontSize: 12, color: SLATE, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                      Ticket principal
-                    </div>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: DARK, marginBottom: 6 }}>
-                      N{simpleTicket.numPmu} {simpleTicket.nom}
-                    </div>
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        padding: "6px 10px",
-                        borderRadius: 999,
-                        background: getOutcomeTone(simpleTicketPosition, false).background,
-                        color: getOutcomeTone(simpleTicketPosition, false).color,
-                        fontSize: 12,
-                        fontWeight: 800,
-                      }}
-                      >
-                      {simpleTicketPosition ? `${getOutcomeTone(simpleTicketPosition, false).label} (${formatPosition(simpleTicketPosition)})` : "Resultat indisponible"}
-                    </span>
-                  </div>
+                    <div style={{ display: "grid", gap: 10 }}>
+                      {placeBase && placeBase.numPmu !== simpleTicket.numPmu ? (
+                        <SecondaryRunnerCard
+                          title="Base place de secours"
+                          runner={placeBase}
+                          accent="#C38700"
+                          placeMode
+                          arrivalPosition={data.isFinished ? placeBasePosition : undefined}
+                          humanReference={getHumanReference(placeBase, data.courseInfo.estPlat)}
+                        />
+                      ) : null}
 
-                  {placeBase && placeBase.numPmu !== simpleTicket.numPmu ? (
-                    <div
-                      style={{
-                        borderRadius: 18,
-                        padding: 14,
-                        background: "#F9FBFC",
-                        border: "1px solid #E7ECF1",
-                      }}
-                    >
-                      <div style={{ fontSize: 12, color: SLATE, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                        Base place
-                      </div>
-                      <div style={{ fontSize: 16, fontWeight: 800, color: DARK, marginBottom: 6 }}>
-                        N{placeBase.numPmu} {placeBase.nom}
-                      </div>
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          padding: "6px 10px",
-                          borderRadius: 999,
-                          background: getOutcomeTone(placeBasePosition, true).background,
-                          color: getOutcomeTone(placeBasePosition, true).color,
-                          fontSize: 12,
-                          fontWeight: 800,
-                        }}
-                      >
-                        {placeBasePosition ? `${getOutcomeTone(placeBasePosition, true).label} (${formatPosition(placeBasePosition)})` : "Resultat indisponible"}
-                      </span>
-                    </div>
-                  ) : null}
-                </div>
-              </SectionCard>
-            ) : null}
-
-            <SectionCard title="Lecture moteur" kicker="Ce qui tient / ce qui force la prudence">
-              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                <div
-                  style={{
-                    borderRadius: 18,
-                    border: "1px solid #D9F0E2",
-                    background: "#F4FBF7",
-                    padding: 14,
-                  }}
-                >
-                  <div style={{ fontSize: 14, fontWeight: 800, color: GREEN, marginBottom: 10 }}>Ce qui tient dans la course</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {strengths.length > 0 ? (
-                      strengths.map((point) => (
-                        <div
-                          key={point}
-                          style={{
-                            borderRadius: 14,
-                            padding: "12px 14px",
-                            background: "#FFFFFF",
-                            border: "1px solid #D9F0E2",
-                            color: "#0A6F3B",
-                            fontSize: 14,
-                            lineHeight: "20px",
-                          }}
-                        >
-                          {point}
-                        </div>
-                      ))
-                    ) : (
-                      <div style={{ color: SLATE, fontSize: 14 }}>Aucun point fort franc ne ressort du moteur.</div>
-                    )}
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    borderRadius: 18,
-                    border: "1px solid #F1DFC2",
-                    background: "#FFF7E8",
-                    padding: 14,
-                  }}
-                >
-                  <div style={{ fontSize: 14, fontWeight: 800, color: "#8A5A00", marginBottom: 10 }}>Ce qui force la prudence</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {warnings.length > 0 ? (
-                      warnings.map((point) => (
-                        <div
-                          key={point}
-                          style={{
-                            borderRadius: 14,
-                            padding: "12px 14px",
-                            background: "#FFFFFF",
-                            border: "1px solid #F1DFC2",
-                            color: "#8A5A00",
-                            fontSize: 14,
-                            lineHeight: "20px",
-                          }}
-                        >
-                          {point}
-                        </div>
-                      ))
-                    ) : (
-                      <div style={{ color: SLATE, fontSize: 14 }}>Pas d&apos;alerte majeure remontee par le moteur.</div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </SectionCard>
-
-            <SectionCard title="Radar top 5" kicker="Classement du moteur">
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {analysis.top5.map((runner, index) => {
-                  const position = data.isFinished ? getArrivalPosition(runner.numPmu, data.officialArrival) : null;
-                  return (
-                    <div
-                      key={runner.numPmu}
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "46px 1fr auto",
-                        gap: 12,
-                        alignItems: "center",
-                        padding: 14,
-                        borderRadius: 18,
-                        background: index === 0 ? "#F4FBF7" : "#F8FAFC",
-                        border: `1px solid ${index === 0 ? "#D9F0E2" : "#E7ECF1"}`,
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 46,
-                          height: 46,
-                          borderRadius: 15,
-                          background: index === 0 ? GREEN : DARK,
-                          color: "#FFFFFF",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 22,
-                          fontWeight: 800,
-                        }}
-                      >
-                        {runner.numPmu}
-                      </div>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 18, fontWeight: 800, color: DARK, lineHeight: "22px" }}>{runner.nom}</div>
-                        <div style={{ fontSize: 13, color: SLATE, marginTop: 4 }}>
-                          Score {round1(runner.prediction.scoreFinalPari)} - PMU {formatOdds(runner.cote)}
-                          {runner.stalle || runner.placeCorde ? ` - Stalle ${runner.stalle ?? runner.placeCorde}` : ""}
-                        </div>
-                      </div>
-                      {position ? (
-                        <Pill
-                          background={position <= 3 ? GREEN_SOFT : "#F3F4F6"}
-                          color={position <= 3 ? GREEN : SLATE}
-                        >
-                          {formatPosition(position)}
-                        </Pill>
+                      {technicalFavorite && technicalFavorite.numPmu !== simpleTicket.numPmu ? (
+                        <SecondaryRunnerCard
+                          title="Favori technique moteur"
+                          runner={technicalFavorite}
+                          accent="#1560C7"
+                          arrivalPosition={data.isFinished ? technicalFavoritePosition : undefined}
+                          humanReference={getHumanReference(technicalFavorite, data.courseInfo.estPlat)}
+                        />
                       ) : null}
                     </div>
-                  );
-                })}
+                  </CollapsibleBlock>
+                ) : null}
+
+                {data.isFinished && data.officialArrival.length > 0 ? (
+                  <CollapsibleBlock
+                    title="Debrief officiel"
+                    subtitle="Arrivee officielle et bilan du ticket principal."
+                    defaultOpen
+                  >
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+                      {data.officialArrival.slice(0, 3).map((runner) => (
+                        <Pill key={`${runner.position}-${runner.numPmu}`} background="#F3F4F6" color={DARK}>
+                          {formatPosition(runner.position)} N{runner.numPmu} {runner.nom}
+                        </Pill>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      <div
+                        style={{
+                          borderRadius: 18,
+                          padding: 14,
+                          background: "#FFFFFF",
+                          border: "1px solid #E7ECF1",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: 10,
+                            marginBottom: 8,
+                          }}
+                        >
+                          <div style={{ fontSize: 12, color: SLATE, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                            Ticket principal
+                          </div>
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              padding: "6px 10px",
+                              borderRadius: 999,
+                              background: getOutcomeTone(simpleTicketPosition, false).background,
+                              color: getOutcomeTone(simpleTicketPosition, false).color,
+                              fontSize: 12,
+                              fontWeight: 800,
+                            }}
+                          >
+                            {simpleTicketPosition
+                              ? `${getOutcomeTone(simpleTicketPosition, false).label} (${formatPosition(simpleTicketPosition)})`
+                              : "Resultat indisponible"}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: DARK }}>
+                          N{simpleTicket.numPmu} {simpleTicket.nom}
+                        </div>
+                      </div>
+
+                      {placeBase && placeBase.numPmu !== simpleTicket.numPmu ? (
+                        <div
+                          style={{
+                            borderRadius: 18,
+                            padding: 14,
+                            background: "#FFFFFF",
+                            border: "1px solid #E7ECF1",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              gap: 10,
+                              marginBottom: 8,
+                            }}
+                          >
+                            <div style={{ fontSize: 12, color: SLATE, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                              Base place
+                            </div>
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                padding: "6px 10px",
+                                borderRadius: 999,
+                                background: getOutcomeTone(placeBasePosition, true).background,
+                                color: getOutcomeTone(placeBasePosition, true).color,
+                                fontSize: 12,
+                                fontWeight: 800,
+                              }}
+                            >
+                              {placeBasePosition
+                                ? `${getOutcomeTone(placeBasePosition, true).label} (${formatPosition(placeBasePosition)})`
+                                : "Resultat indisponible"}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: DARK }}>
+                            N{placeBase.numPmu} {placeBase.nom}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </CollapsibleBlock>
+                ) : null}
+
+                <CollapsibleBlock
+                  title="Radar top 5"
+                  subtitle="Classement du moteur sur l'ensemble de la course."
+                >
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {analysis.top5.map((runner, index) => {
+                      const position = data.isFinished ? getArrivalPosition(runner.numPmu, data.officialArrival) : null;
+                      return (
+                        <div
+                          key={runner.numPmu}
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "42px 1fr auto",
+                            gap: 12,
+                            alignItems: "center",
+                            padding: 14,
+                            borderRadius: 18,
+                            background: index === 0 ? "#F4FBF7" : "#F8FAFC",
+                            border: `1px solid ${index === 0 ? "#D9F0E2" : "#E7ECF1"}`,
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 42,
+                              height: 42,
+                              borderRadius: 14,
+                              background: index === 0 ? GREEN : DARK,
+                              color: "#FFFFFF",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: 20,
+                              fontWeight: 800,
+                            }}
+                          >
+                            {runner.numPmu}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 17, fontWeight: 800, color: DARK, lineHeight: "22px" }}>
+                              {runner.nom}
+                            </div>
+                            <div style={{ fontSize: 13, color: SLATE, marginTop: 4 }}>
+                              Score {round1(runner.prediction.scoreFinalPari)} - PMU {formatOdds(runner.cote)}
+                              {runner.stalle || runner.placeCorde ? ` - Stalle ${runner.stalle ?? runner.placeCorde}` : ""}
+                            </div>
+                          </div>
+                          {position ? (
+                            <Pill
+                              background={position <= 3 ? GREEN_SOFT : "#F3F4F6"}
+                              color={position <= 3 ? GREEN : SLATE}
+                            >
+                              {formatPosition(position)}
+                            </Pill>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CollapsibleBlock>
               </div>
             </SectionCard>
           </>
