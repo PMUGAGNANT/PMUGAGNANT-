@@ -17,7 +17,8 @@ Application Next.js de pronostics PMU avec moteur de scoring, suivi des meilleur
 - React 19
 - TypeScript
 - Supabase
-- Vercel Cron
+- Vercel
+- GitHub Actions
 - Telegram Bot API
 
 ## Fonctionnalites principales
@@ -122,11 +123,11 @@ npm run cron:prerace -- --date=18032026 --reunion=3 --course=1
 npm run cron:weekly -- --date=2026-03-22
 ```
 
-## Cron Vercel
+## Cron et automatisation
 
-Le projet utilise un cron unique Vercel:
+Le projet expose un dispatcher cron unifie:
 
-- `/api/cron` toutes les 5 minutes
+- `/api/cron`
 
 Le dispatcher decide ensuite quoi executer selon l'heure de Paris:
 
@@ -134,6 +135,19 @@ Le dispatcher decide ensuite quoi executer selon l'heure de Paris:
 - pre-course toutes les 5 minutes
 - resultats toutes les 10 minutes
 - hebdo le dimanche vers `19:00`
+
+### Mode recommande en Vercel Hobby
+
+Le plan Hobby Vercel ne permet pas les crons frequents toutes les 5 minutes.
+
+La configuration recommandee est donc:
+
+- Vercel pour heberger l'application
+- GitHub Actions pour appeler les routes cron frequentes
+
+Le workflow existe deja ici:
+
+- `.github/workflows/cron-jobs.yml`
 
 ## Deploiement Vercel
 
@@ -151,7 +165,13 @@ Le dispatcher decide ensuite quoi executer selon l'heure de Paris:
 1. importer le repo GitHub dans Vercel
 2. renseigner les variables d'environnement
 3. deployer
-4. verifier que `/api/cron` est bien appele par Vercel Cron
+4. configurer les variables GitHub Actions si tu utilises les crons frequents
+5. verifier que l'application repond bien en production
+
+### Secrets GitHub Actions requis
+
+- `APP_URL`
+- `CRON_SECRET`
 
 ## Verifications avant mise en ligne
 
@@ -167,7 +187,7 @@ Le projet est operationnel avec:
 - top 3 des meilleures courses jouables
 - bloc "Mes 3 paris du jour"
 - bouton "Copier mes 3 paris"
-- cron unifie Vercel
+- mode Vercel Hobby compatible avec GitHub Actions pour les crons
 - correction des calculs de date sur fuseau `Europe/Paris`
 
 ## Suite recommandee
