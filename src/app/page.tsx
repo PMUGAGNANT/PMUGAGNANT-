@@ -631,65 +631,97 @@ function HomePageContent() {
     }, 2200);
   }
 
+  const reunionCount = new Set(races.map((race) => race.reunion)).size;
+  const currentSortLabel =
+    sortMode === "hour"
+      ? "Par heure"
+      : sortMode === "score"
+        ? "Meilleure note"
+        : sortMode === "urgent"
+          ? "A suivre vite"
+          : "Gros enjeux";
+  const navigationItems = [
+    { label: "Courses", active: true, href: `/?date=${selectedDate}` },
+    { label: "Mes Paris", active: false, href: "/mes-paris" },
+    { label: "Bilan", active: false, href: `/bilan?date=${selectedDate}` },
+  ] as const;
+
   return (
     <div
-      className="w-full max-w-md sm:max-w-2xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto min-h-screen pb-24"
+      className="min-h-screen w-full pb-24 md:pb-10"
       style={{
         background:
-          "radial-gradient(circle at top left, rgba(11,143,77,0.14), transparent 26%), radial-gradient(circle at top right, rgba(19,35,28,0.16), transparent 22%), linear-gradient(180deg, #f7faf9 0%, #eef3f4 100%)",
+          "radial-gradient(circle at top left, rgba(11,143,77,0.18), transparent 24%), radial-gradient(circle at top right, rgba(19,35,28,0.16), transparent 22%), linear-gradient(180deg, #f8fbfa 0%, #edf2f3 100%)",
       }}
     >
       {/* ─── Sticky header ─── */}
-      <div className="sticky top-0 z-30 bg-[rgba(23,27,31,0.92)] backdrop-blur-xl text-white border-b border-white/[0.06] h-[76px] flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-lg font-black tracking-tight">PMU AI</div>
-          <div className="text-xs font-bold text-white/[0.68] tracking-widest">
-            PRONOSTICS IA
+      <div className="sticky top-0 z-30 border-b border-white/[0.08] bg-[rgba(23,27,31,0.92)] text-white backdrop-blur-xl">
+        <div className="mx-auto flex h-[78px] w-full max-w-7xl items-center justify-between px-4 sm:px-6 xl:px-8">
+          <div>
+            <div className="text-lg font-black tracking-tight">PMU AI</div>
+            <div className="text-xs font-bold tracking-[0.28em] text-white/[0.68]">
+              PRONOSTICS IA
+            </div>
+          </div>
+          <div className="hidden items-center gap-2 md:flex">
+            {navigationItems.map((item) => (
+              <button
+                key={`desktop-nav-${item.label}`}
+                onClick={() => router.push(item.href)}
+                className={`rounded-full px-4 py-2 text-sm transition-all duration-150 ${
+                  item.active
+                    ? "bg-white text-[#132126] font-black"
+                    : "font-bold text-white/74 hover:bg-white/8 hover:text-white"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
       {/* ─── Main content area ─── */}
-      <div className="p-4 md:p-6 grid gap-4">
+      <div className="mx-auto grid w-full max-w-7xl gap-4 px-4 py-4 sm:px-6 md:gap-5 md:py-6 xl:px-8">
         <DateNavigator dateStr={selectedDate} onChange={updateDate} />
 
         {/* ─── Hero summary card ─── */}
-        <div className="bg-gradient-to-br from-[#0b8f4d] to-[#09723d] text-white rounded-3xl p-6 shadow-[0_24px_46px_rgba(9,114,61,0.26)] relative overflow-hidden">
+        <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#0b8f4d] via-[#0b8f4d] to-[#09723d] p-6 text-white shadow-[0_24px_46px_rgba(9,114,61,0.26)] md:p-7">
           {/* Decorative circle */}
           <div className="absolute -top-5 -right-6 w-[150px] h-[150px] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.18)_0%,transparent_72%)]" />
           <div className="relative">
-            <div className="text-[13px] font-extrabold text-white/[0.86] mb-2">
+            <div className="mb-2 text-[12px] font-extrabold uppercase tracking-[0.18em] text-white/[0.78]">
               {formatRelativeDay(selectedDate)}
             </div>
-            <div className="text-lg font-extrabold mb-2.5">
+            <div className="mb-2.5 text-lg font-extrabold md:text-xl">
               {formatDisplayDate(selectedDate)}
             </div>
-            <div className="text-2xl font-black leading-tight mb-1.5">
-              {races.length} courses · {new Set(races.map((race) => race.reunion)).size} reunions
+            <div className="mb-1.5 text-2xl font-black leading-tight md:text-[32px]">
+              {races.length} courses · {reunionCount} reunions
             </div>
-            <div className="text-sm text-white/[0.82] mb-4">
+            <div className="mb-5 max-w-2xl text-sm text-white/[0.82] md:text-[15px]">
               {scoredCount} course{scoredCount > 1 ? "s" : ""} deja notee{scoredCount > 1 ? "s" : ""} par le moteur
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white/[0.12] rounded-[18px] p-3.5">
-                <div className="text-xs text-white/70 mb-1.5 uppercase font-extrabold">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-[20px] bg-white/[0.12] p-4 backdrop-blur-sm">
+                <div className="mb-1.5 text-xs font-extrabold uppercase text-white/70">
                   Radar actif
                 </div>
                 <div className="text-base font-black">{scoredCount} courses notees</div>
               </div>
-              <div className="bg-white/[0.12] rounded-[18px] p-3.5">
-                <div className="text-xs text-white/70 mb-1.5 uppercase font-extrabold">
+              <div className="rounded-[20px] bg-white/[0.12] p-4 backdrop-blur-sm">
+                <div className="mb-1.5 text-xs font-extrabold uppercase text-white/70">
                   Tri moteur
                 </div>
+                <div className="text-base font-black">{currentSortLabel}</div>
+              </div>
+              <div className="rounded-[20px] bg-[#0b6939]/55 p-4 backdrop-blur-sm sm:block hidden">
+                <div className="mb-1.5 text-xs font-extrabold uppercase text-white/70">
+                  Puissance
+                </div>
                 <div className="text-base font-black">
-                  {sortMode === "hour"
-                    ? "Par heure"
-                    : sortMode === "score"
-                      ? "Meilleure note"
-                      : sortMode === "urgent"
-                        ? "A suivre vite"
-                        : "Gros enjeux"}
+                  {dailyBets.length > 0 ? `${dailyBets.length} tickets directs` : "Radar en veille"}
                 </div>
               </div>
             </div>
@@ -753,7 +785,7 @@ function HomePageContent() {
               </div>
             </div>
 
-            <div className="grid gap-3">
+            <div className="grid gap-4 xl:grid-cols-2">
               {featuredRaces.map((entry) => {
                 const key = `${entry.race.reunion}-${entry.race.course}`;
                 const raceScore = scores[key];
@@ -881,7 +913,7 @@ function HomePageContent() {
               </button>
             </div>
 
-            <div className="grid gap-3">
+            <div className="grid gap-4 xl:grid-cols-3">
               {dailyBets.map(({ rank, race, raceScore }) => (
                 <button
                   key={`daily-bet-${race.reunion}-${race.course}`}
@@ -983,7 +1015,7 @@ function HomePageContent() {
 
         {/* ─── Race cards ─── */}
         {!loading && !error ? (
-          <div className="grid gap-3.5 transition-all duration-300">
+          <div className="grid gap-4 transition-all duration-300 xl:grid-cols-2">
             {sortedRaces.map((race) => {
               const key = `${race.reunion}-${race.course}`;
               const raceScore = scores[key];
@@ -1069,12 +1101,8 @@ function HomePageContent() {
       </div>
 
       {/* ─── Bottom navigation bar ─── */}
-      <div className="fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 md:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl bg-white/[0.94] backdrop-blur-lg border-t border-[rgba(15,23,42,0.08)] grid grid-cols-3 z-40">
-        {[
-          { label: "Courses", active: true, href: `/?date=${selectedDate}` },
-          { label: "Mes Paris", active: false, href: "/mes-paris" },
-          { label: "Bilan", active: false, href: `/bilan?date=${selectedDate}` },
-        ].map((item) => (
+      <div className="fixed bottom-0 left-0 right-0 grid grid-cols-3 border-t border-[rgba(15,23,42,0.08)] bg-white/[0.94] backdrop-blur-lg z-40 md:hidden">
+        {navigationItems.map((item) => (
           <button
             key={item.label}
             onClick={() => router.push(item.href)}
@@ -1101,7 +1129,7 @@ export default function HomePage() {
     <Suspense
       fallback={
         <div
-          className="min-h-screen w-full max-w-md sm:max-w-2xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto"
+          className="min-h-screen w-full"
           style={{
             background:
               "radial-gradient(circle at top left, rgba(0,132,61,0.12), transparent 26%), radial-gradient(circle at top right, rgba(18,183,106,0.1), transparent 18%), #F6F7F8",

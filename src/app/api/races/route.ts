@@ -10,7 +10,8 @@ export async function GET(request: Request) {
   try {
     const races = await getAllRaces(date);
     return NextResponse.json({ success: true, date, races });
-  } catch {
+  } catch (error) {
+    console.error("Races API error:", error);
     return NextResponse.json({ success: false, error: 'Failed to fetch races' }, { status: 500 });
   }
 }
