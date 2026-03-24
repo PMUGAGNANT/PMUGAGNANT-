@@ -1,5 +1,14 @@
 const PARIS_TIME_ZONE = "Europe/Paris";
 
+function getParisIsoDate(date: Date) {
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: PARIS_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
 function getParisParts(date: Date) {
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: PARIS_TIME_ZONE,
@@ -82,7 +91,8 @@ export function fromIsoDate(date: string): string {
 }
 
 export function getTodayDateStr(): string {
-  return formatDateToPmu(getParisNow());
+  const [year, month, day] = getParisIsoDate(new Date()).split("-");
+  return `${day}${month}${year}`;
 }
 
 export function getMinutesUntilStart(heureDepart: string, dateStr?: string): number {
