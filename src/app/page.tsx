@@ -633,7 +633,7 @@ function HomePageContent() {
 
   return (
     <div
-      className="w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl mx-auto min-h-screen pb-24"
+      className="w-full max-w-md sm:max-w-2xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto min-h-screen pb-24"
       style={{
         background:
           "radial-gradient(circle at top left, rgba(11,143,77,0.14), transparent 26%), radial-gradient(circle at top right, rgba(19,35,28,0.16), transparent 22%), linear-gradient(180deg, #f7faf9 0%, #eef3f4 100%)",
@@ -650,7 +650,7 @@ function HomePageContent() {
       </div>
 
       {/* ─── Main content area ─── */}
-      <div className="p-4 grid gap-4">
+      <div className="p-4 md:p-6 grid gap-4">
         <DateNavigator dateStr={selectedDate} onChange={updateDate} />
 
         {/* ─── Hero summary card ─── */}
@@ -1069,7 +1069,7 @@ function HomePageContent() {
       </div>
 
       {/* ─── Bottom navigation bar ─── */}
-      <div className="fixed bottom-0 left-0 right-0 sm:left-1/2 sm:-translate-x-1/2 sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white/[0.94] backdrop-blur-lg border-t border-[rgba(15,23,42,0.08)] grid grid-cols-3 z-40">
+      <div className="fixed bottom-0 left-0 right-0 md:left-1/2 md:-translate-x-1/2 md:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl bg-white/[0.94] backdrop-blur-lg border-t border-[rgba(15,23,42,0.08)] grid grid-cols-3 z-40">
         {[
           { label: "Courses", active: true, href: `/?date=${selectedDate}` },
           { label: "Mes Paris", active: false, href: "/mes-paris" },
@@ -1101,7 +1101,7 @@ export default function HomePage() {
     <Suspense
       fallback={
         <div
-          className="min-h-screen max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl mx-auto"
+          className="min-h-screen w-full max-w-md sm:max-w-2xl lg:max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto"
           style={{
             background:
               "radial-gradient(circle at top left, rgba(0,132,61,0.12), transparent 26%), radial-gradient(circle at top right, rgba(18,183,106,0.1), transparent 18%), #F6F7F8",
