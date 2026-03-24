@@ -3,7 +3,7 @@ import { getAllRaces, getParticipants, getTodayDateStr } from "@/lib/pmu-api";
 import { analyzeRaceWithParameters, getMinutesUntilStart } from "@/lib/analysis";
 import { attachFaultRates } from "@/lib/horse-faults";
 import { loadAlgoParameters } from "@/lib/config";
-import type { RaceSummary } from "@/lib/types";
+import type { Lisibilite, PredictionDecision, RaceSummary } from "@/lib/types";
 
 export const dynamic = 'force-dynamic';
 
@@ -19,6 +19,19 @@ export async function GET(request: Request) {
       {
         score: number;
         stage: 'preview_2h' | 'preview_1h' | 'final_30m' | 'finished';
+        lisibilite: Lisibilite;
+        decision: PredictionDecision;
+        playable: boolean;
+        recommendation: string | null;
+        pick:
+          | {
+              numPmu: number;
+              nom: string;
+              decision: PredictionDecision;
+              betType: "GAGNANT" | "PLACE";
+              confidence: number;
+            }
+          | null;
       }
     > = {};
 
@@ -60,6 +73,23 @@ export async function GET(request: Request) {
             key,
             score: analysis.scoreConfiance?.score ?? null,
             stage,
+            lisibilite: analysis.prediction.lisibilite,
+            decision: analysis.prediction.decisionCourse,
+            playable:
+              stage !== "finished" &&
+              analysis.prediction.lisibilite !== "LOTERIE" &&
+              analysis.prediction.decisionCourse !== "REJET" &&
+              Boolean(analysis.recommandation?.vautLeCoup),
+            recommendation: analysis.recommandation?.decision ?? null,
+            pick: analysis.favori
+              ? {
+                  numPmu: analysis.favori.numPmu,
+                  nom: analysis.favori.nom,
+                  decision: analysis.favori.prediction.decision,
+                  betType: analysis.favori.prediction.typePariConseille,
+                  confidence: analysis.favori.prediction.confiance,
+                }
+              : null,
           };
         })
       );
@@ -68,6 +98,11 @@ export async function GET(request: Request) {
           scores[result.value.key] = {
             score: result.value.score,
             stage: result.value.stage,
+            lisibilite: result.value.lisibilite,
+            decision: result.value.decision,
+            playable: result.value.playable,
+            recommendation: result.value.recommendation,
+            pick: result.value.pick,
           };
         }
       }

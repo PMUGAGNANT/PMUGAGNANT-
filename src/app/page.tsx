@@ -10,13 +10,26 @@ import {
   parsePmuDate,
   toIsoDate,
 } from "@/lib/date-utils";
-import type { RaceSummary } from "@/lib/types";
+import type { Lisibilite, PredictionDecision, RaceSummary } from "@/lib/types";
 
 type ScoreStage = "preview_2h" | "preview_1h" | "final_30m" | "finished";
 
 type RaceScore = {
   score: number;
   stage: ScoreStage;
+  lisibilite: Lisibilite;
+  decision: PredictionDecision;
+  playable: boolean;
+  recommendation: string | null;
+  pick:
+    | {
+        numPmu: number;
+        nom: string;
+        decision: PredictionDecision;
+        betType: "GAGNANT" | "PLACE";
+        confidence: number;
+      }
+    | null;
 };
 
 type RacesResponse = {
@@ -32,8 +45,20 @@ type ScoresResponse = {
 
 type SortMode = "hour" | "score" | "urgent" | "allocation";
 
-const DARK = "#171b1f";
-const GREEN = "#0b8f4d";
+type FeaturedRace = {
+  race: RaceSummary;
+  score: number | null;
+  stage: ScoreStage | null;
+  rank: 1 | 2 | 3;
+  reason: string;
+  source: "score" | "fallback";
+};
+
+type DailyBet = {
+  rank: 1 | 2 | 3;
+  race: RaceSummary;
+  raceScore: RaceScore;
+};
 
 function formatCurrency(value: number | null | undefined) {
   if (!value) return "Allocation -";
@@ -83,19 +108,40 @@ function getStageLabel(stage: ScoreStage | null) {
   return "En attente";
 }
 
-function getStageStyle(stage: ScoreStage | null) {
-  if (stage === "preview_2h") return { background: "#EEF5FF", color: "#2563EB" };
-  if (stage === "preview_1h") return { background: "#E7F8EE", color: GREEN };
-  if (stage === "final_30m") return { background: "#FFF4D8", color: "#A66B00" };
-  if (stage === "finished") return { background: "#F3F4F6", color: "#64748B" };
-  return { background: "#F3F4F6", color: "#64748B" };
+function getStageClasses(stage: ScoreStage | null) {
+  if (stage === "preview_2h") return "bg-[#EEF5FF] text-[#2563EB]";
+  if (stage === "preview_1h") return "bg-[#E7F8EE] text-[#0b8f4d]";
+  if (stage === "final_30m") return "bg-[#FFF4D8] text-[#A66B00]";
+  if (stage === "finished") return "bg-gray-100 text-slate-500";
+  return "bg-gray-100 text-slate-500";
 }
 
-function getScoreTone(score: number | null) {
-  if (score === null) return { background: "#F3F4F6", color: "#64748B" };
-  if (score >= 7.5) return { background: "#E7F8EE", color: GREEN };
-  if (score >= 6) return { background: "#FFF4D8", color: "#A66B00" };
-  return { background: "#FDECEA", color: "#D64545" };
+function getScoreClasses(score: number | null) {
+  if (score === null) return "bg-gray-100 text-slate-500";
+  if (score >= 7.5) return "bg-[#E7F8EE] text-[#0b8f4d]";
+  if (score >= 6) return "bg-[#FFF4D8] text-[#A66B00]";
+  return "bg-[#FDECEA] text-[#D64545]";
+}
+
+function getDecisionBadge(decision: PredictionDecision | null | undefined) {
+  if (decision === "VALIDE") {
+    return {
+      label: "Jouable",
+      classes: "bg-[#E7F8EE] text-[#0b8f4d]",
+    };
+  }
+
+  if (decision === "SURVEILLANCE") {
+    return {
+      label: "Sous surveillance",
+      classes: "bg-[#FFF4D8] text-[#A66B00]",
+    };
+  }
+
+  return {
+    label: "A eviter",
+    classes: "bg-[#FDECEA] text-[#D64545]",
+  };
 }
 
 function getRaceHint(race: RaceSummary, score: number | null, stage: ScoreStage | null, minutesUntilStart: number) {
@@ -118,12 +164,100 @@ function getRaceHint(race: RaceSummary, score: number | null, stage: ScoreStage 
 }
 
 function getCardAccent(score: number | null, stage: ScoreStage | null) {
-  if (stage === "finished") return "#CBD5E1";
-  if (score === null) return "#D7DEE7";
-  if (score >= 7.5) return GREEN;
-  if (score >= 6) return "#D4A017";
-  return "#D64545";
+  if (stage === "finished") return "border-l-slate-300";
+  if (score === null) return "border-l-[#D7DEE7]";
+  if (score >= 7.5) return "border-l-[#0b8f4d]";
+  if (score >= 6) return "border-l-[#D4A017]";
+  return "border-l-[#D64545]";
 }
+
+function getFeaturedReason(
+  race: RaceSummary,
+  score: number | null,
+  stage: ScoreStage | null,
+  minutesUntilStart: number,
+  source: "score" | "fallback",
+  raceScore?: RaceScore | null
+) {
+  if (source === "score" && score !== null) {
+    if (raceScore?.recommendation === "PARI OFFENSIF") {
+      return "Course vraiment jouable: le moteur valide un signal offensif propre.";
+    }
+    if (raceScore?.recommendation === "BASE PLACE") {
+      return "Course jouable avec une base place solide et plus saine que speculative.";
+    }
+    if (raceScore?.recommendation === "SURVEILLANCE ACTIVE") {
+      return "Course encore jouable, mais a suivre avec davantage de discipline avant le depart.";
+    }
+    if (score >= 7.5) {
+      return "Lecture tres propre du moteur, base prioritaire du jour.";
+    }
+    if (score >= 6) {
+      return "Course interessante avec un profil jouable et encore lisible.";
+    }
+    return "Course suivie par le moteur, mais a jouer avec plus de prudence.";
+  }
+
+  if (race.estQuinte && race.allocation >= 40000) {
+    return "Selection premium avec gros enjeu et profondeur de marche.";
+  }
+
+  if (minutesUntilStart >= 0 && minutesUntilStart <= 120) {
+    return "Course proche du depart, ideale pour entrer vite dans la lecture du jour.";
+  }
+
+  if (race.allocation >= 30000) {
+    return "Allocation elevee et profil de course a surveiller en priorite.";
+  }
+
+  if (stage === "finished") {
+    return "Course deja terminee, conservee ici pour rester dans le top du jour.";
+  }
+
+  return "La note IA arrive plus tard, mais cette course ressort deja dans la priorite du jour.";
+}
+
+/* ─── Skeleton placeholders ─── */
+
+function SkeletonCard() {
+  return (
+    <div className="bg-white rounded-3xl p-5 shadow-[0_18px_36px_rgba(15,23,42,0.08)] grid gap-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="skeleton h-5 w-16 mb-2" />
+          <div className="skeleton h-5 w-24" />
+        </div>
+        <div className="skeleton h-5 w-20" />
+      </div>
+      <div>
+        <div className="skeleton h-5 w-48 mb-2" />
+        <div className="skeleton h-4 w-36" />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <div className="skeleton h-7 w-28 rounded-full" />
+        <div className="skeleton h-7 w-24 rounded-full" />
+        <div className="skeleton h-7 w-28 rounded-full" />
+      </div>
+      <div className="skeleton h-4 w-full" />
+    </div>
+  );
+}
+
+function SkeletonRadar() {
+  return (
+    <div className="bg-gradient-to-br from-[#132126] to-[#1b252b] rounded-3xl p-5 shadow-[0_24px_46px_rgba(15,23,42,0.22)]">
+      <div className="skeleton h-4 w-24 mb-3 !bg-[#2a3a42]" />
+      <div className="skeleton h-5 w-56 mb-2 !bg-[#2a3a42]" />
+      <div className="skeleton h-4 w-44 mb-4 !bg-[#2a3a42]" />
+      <div className="flex gap-2">
+        <div className="skeleton h-7 w-28 rounded-full !bg-[#2a3a42]" />
+        <div className="skeleton h-7 w-24 rounded-full !bg-[#2a3a42]" />
+      </div>
+    </div>
+  );
+}
+
+/* ─── DateNavigator ─── */
 
 function DateNavigator({
   dateStr,
@@ -133,61 +267,25 @@ function DateNavigator({
   onChange: (nextDate: string) => void;
 }) {
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "44px 1fr 44px",
-        gap: 10,
-        alignItems: "center",
-        marginBottom: 16,
-      }}
-    >
+    <div className="grid grid-cols-[44px_1fr_44px] gap-2.5 items-center mb-4">
       <button
         onClick={() => onChange(addDays(dateStr, -1))}
-        style={{
-          height: 44,
-          borderRadius: 16,
-          border: "1px solid rgba(15,23,42,0.08)",
-          background: "#fff",
-          color: DARK,
-          fontSize: 18,
-          fontWeight: 800,
-          cursor: "pointer",
-        }}
+        className="h-11 rounded-2xl border border-[rgba(15,23,42,0.08)] bg-white text-[#171b1f] text-lg font-extrabold cursor-pointer hover:bg-gray-50 active:scale-95 transition-all"
       >
         {"<"}
       </button>
 
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: 20,
-          border: "1px solid rgba(15,23,42,0.06)",
-          boxShadow: "0 16px 32px rgba(15,23,42,0.06)",
-          padding: 12,
-          display: "grid",
-          gap: 8,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+      <div className="bg-white rounded-[20px] border border-[rgba(15,23,42,0.06)] shadow-[0_16px_32px_rgba(15,23,42,0.06)] p-3 grid gap-2">
+        <div className="flex items-center justify-between gap-2.5">
           <div>
-            <div style={{ fontSize: 12, fontWeight: 800, color: "#7A8A9A", textTransform: "uppercase", letterSpacing: 0.4 }}>
+            <div className="text-xs font-extrabold text-[#7A8A9A] uppercase tracking-wide">
               {formatRelativeDay(dateStr)}
             </div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: DARK }}>{formatDisplayDate(dateStr)}</div>
+            <div className="text-base font-extrabold text-[#171b1f]">{formatDisplayDate(dateStr)}</div>
           </div>
           <button
             onClick={() => onChange(getTodayDateStr())}
-            style={{
-              border: "none",
-              borderRadius: 999,
-              background: "#E7F8EE",
-              color: GREEN,
-              padding: "8px 12px",
-              fontSize: 12,
-              fontWeight: 800,
-              cursor: "pointer",
-            }}
+            className="border-none rounded-full bg-[#E7F8EE] text-[#0b8f4d] px-3 py-2 text-xs font-extrabold cursor-pointer hover:bg-[#d4f0de] active:scale-95 transition-all"
           >
             Aujourd&apos;hui
           </button>
@@ -196,36 +294,21 @@ function DateNavigator({
           type="date"
           value={toIsoDate(dateStr)}
           onChange={(event) => onChange(fromIsoDate(event.target.value))}
-          style={{
-            width: "100%",
-            borderRadius: 14,
-            border: "1px solid rgba(15,23,42,0.08)",
-            padding: "10px 12px",
-            fontSize: 14,
-            fontWeight: 700,
-            color: DARK,
-          }}
+          className="w-full rounded-[14px] border border-[rgba(15,23,42,0.08)] px-3 py-2.5 text-sm font-bold text-[#171b1f] focus:outline-none focus:ring-2 focus:ring-[#0b8f4d]/30 transition-shadow"
         />
       </div>
 
       <button
         onClick={() => onChange(addDays(dateStr, 1))}
-        style={{
-          height: 44,
-          borderRadius: 16,
-          border: "1px solid rgba(15,23,42,0.08)",
-          background: "#fff",
-          color: DARK,
-          fontSize: 18,
-          fontWeight: 800,
-          cursor: "pointer",
-        }}
+        className="h-11 rounded-2xl border border-[rgba(15,23,42,0.08)] bg-white text-[#171b1f] text-lg font-extrabold cursor-pointer hover:bg-gray-50 active:scale-95 transition-all"
       >
         {">"}
       </button>
     </div>
   );
 }
+
+/* ─── HomePageContent ─── */
 
 function HomePageContent() {
   const router = useRouter();
@@ -237,6 +320,7 @@ function HomePageContent() {
   const [scores, setScores] = useState<Record<string, RaceScore>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [copyState, setCopyState] = useState<"idle" | "done" | "error">("idle");
 
   useEffect(() => {
     setSelectedDate(urlDate);
@@ -363,6 +447,163 @@ function HomePageContent() {
     [scores]
   );
 
+  const featuredRaces = useMemo<FeaturedRace[]>(() => {
+    const scoredCandidates = races
+      .map((race) => {
+        const key = `${race.reunion}-${race.course}`;
+        const raceScore = scores[key];
+        return {
+          race,
+          score: raceScore?.score ?? null,
+          stage: raceScore?.stage ?? null,
+          minutesUntilStart: getMinutesUntilStart(race.heureDepart, race.dateStr),
+        };
+      })
+      .filter(
+        (entry) =>
+          entry.score !== null &&
+          entry.stage !== "finished" &&
+          Boolean(scores[`${entry.race.reunion}-${entry.race.course}`]?.playable)
+      )
+      .sort((left, right) => {
+        const leftRaceScore = scores[`${left.race.reunion}-${left.race.course}`];
+        const rightRaceScore = scores[`${right.race.reunion}-${right.race.course}`];
+        const leftDecisionWeight =
+          leftRaceScore?.decision === "VALIDE"
+            ? 2
+            : leftRaceScore?.decision === "SURVEILLANCE"
+              ? 1
+              : 0;
+        const rightDecisionWeight =
+          rightRaceScore?.decision === "VALIDE"
+            ? 2
+            : rightRaceScore?.decision === "SURVEILLANCE"
+              ? 1
+              : 0;
+
+        if (rightDecisionWeight !== leftDecisionWeight) {
+          return rightDecisionWeight - leftDecisionWeight;
+        }
+        if ((right.score ?? 0) !== (left.score ?? 0)) {
+          return (right.score ?? 0) - (left.score ?? 0);
+        }
+        return left.minutesUntilStart - right.minutesUntilStart;
+      })
+      .slice(0, 3)
+      .map((entry, index) => ({
+        race: entry.race,
+        score: entry.score,
+        stage: entry.stage,
+        rank: (index + 1) as 1 | 2 | 3,
+        reason: getFeaturedReason(
+          entry.race,
+          entry.score,
+          entry.stage,
+          entry.minutesUntilStart,
+          "score",
+          scores[`${entry.race.reunion}-${entry.race.course}`]
+        ),
+        source: "score" as const,
+      }));
+
+    if (scoredCandidates.length === 3) {
+      return scoredCandidates;
+    }
+
+    const usedKeys = new Set(
+      scoredCandidates.map((entry) => `${entry.race.reunion}-${entry.race.course}`)
+    );
+
+    const fallbackCandidates = races
+      .filter((race) => !usedKeys.has(`${race.reunion}-${race.course}`))
+      .map((race) => {
+        const key = `${race.reunion}-${race.course}`;
+        const raceScore = scores[key];
+        const minutesUntilStart = getMinutesUntilStart(race.heureDepart, race.dateStr);
+        const urgencyBonus =
+          minutesUntilStart >= 0 && minutesUntilStart <= 180
+            ? 10
+            : minutesUntilStart > 180
+              ? 4
+              : 0;
+        const quinteBonus = race.estQuinte ? 16 : 0;
+        const allocationBonus = Math.min((race.allocation ?? 0) / 4000, 12);
+        const fieldBonus =
+          race.nombrePartants >= 12 && race.nombrePartants <= 16 ? 5 : 2;
+
+        return {
+          race,
+          score: raceScore?.score ?? null,
+          stage: raceScore?.stage ?? null,
+          minutesUntilStart,
+          fallbackScore: urgencyBonus + quinteBonus + allocationBonus + fieldBonus,
+        };
+      })
+      .sort((left, right) => {
+        if (right.fallbackScore !== left.fallbackScore) {
+          return right.fallbackScore - left.fallbackScore;
+        }
+        return left.minutesUntilStart - right.minutesUntilStart;
+      })
+      .slice(0, 3 - scoredCandidates.length)
+      .map((entry, index) => ({
+        race: entry.race,
+        score: entry.score,
+        stage: entry.stage,
+        rank: (scoredCandidates.length + index + 1) as 1 | 2 | 3,
+        reason: getFeaturedReason(
+          entry.race,
+          entry.score,
+          entry.stage,
+          entry.minutesUntilStart,
+          "fallback",
+          scores[`${entry.race.reunion}-${entry.race.course}`]
+        ),
+        source: "fallback" as const,
+      }));
+
+    return [...scoredCandidates, ...fallbackCandidates];
+  }, [races, scores]);
+
+  const dailyBets = useMemo<DailyBet[]>(() => {
+    return featuredRaces
+      .map((entry) => {
+        const raceScore = scores[`${entry.race.reunion}-${entry.race.course}`];
+        if (!raceScore?.pick || !raceScore.playable) {
+          return null;
+        }
+
+        return {
+          rank: entry.rank,
+          race: entry.race,
+          raceScore,
+        } satisfies DailyBet;
+      })
+      .filter((entry): entry is DailyBet => entry !== null);
+  }, [featuredRaces, scores]);
+
+  const dailyBetsText = useMemo(() => {
+    if (dailyBets.length === 0) {
+      return "";
+    }
+
+    const lines = [
+      `Mes 3 paris du jour - ${formatDisplayDate(selectedDate)}`,
+      "",
+      ...dailyBets.map(({ rank, race, raceScore }) => {
+        const pick = raceScore.pick;
+        if (!pick) {
+          return `${rank}. R${race.reunion}C${race.course} ${race.heureDepart} - selection indisponible`;
+        }
+
+        const betLabel = pick.betType === "GAGNANT" ? "Simple gagnant" : "Simple place";
+        return `${rank}. R${race.reunion}C${race.course} ${race.heureDepart} - ${pick.numPmu} ${pick.nom} - ${betLabel} - confiance ${pick.confidence}/10`;
+      }),
+    ];
+
+    return lines.join("\n");
+  }, [dailyBets, selectedDate]);
+
   function updateDate(nextDate: string) {
     setSelectedDate(nextDate);
     router.replace(`/?date=${nextDate}`, { scroll: false });
@@ -372,91 +613,76 @@ function HomePageContent() {
     router.push(`/course/${race.reunion}/${race.course}?date=${selectedDate}`);
   }
 
+  async function copyDailyBets() {
+    if (!dailyBetsText) {
+      setCopyState("error");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(dailyBetsText);
+      setCopyState("done");
+    } catch {
+      setCopyState("error");
+    }
+
+    window.setTimeout(() => {
+      setCopyState("idle");
+    }, 2200);
+  }
+
   return (
     <div
+      className="w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl mx-auto min-h-screen pb-24"
       style={{
-        maxWidth: 430,
-        margin: "0 auto",
-        minHeight: "100vh",
         background:
           "radial-gradient(circle at top left, rgba(11,143,77,0.14), transparent 26%), radial-gradient(circle at top right, rgba(19,35,28,0.16), transparent 22%), linear-gradient(180deg, #f7faf9 0%, #eef3f4 100%)",
-        paddingBottom: 92,
       }}
     >
-      <div
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 30,
-          background: "rgba(23,27,31,0.92)",
-          backdropFilter: "blur(20px)",
-          color: "#fff",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
-          height: 76,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: 0.2 }}>PMU AI</div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.68)", letterSpacing: 1.1 }}>
+      {/* ─── Sticky header ─── */}
+      <div className="sticky top-0 z-30 bg-[rgba(23,27,31,0.92)] backdrop-blur-xl text-white border-b border-white/[0.06] h-[76px] flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg font-black tracking-tight">PMU AI</div>
+          <div className="text-xs font-bold text-white/[0.68] tracking-widest">
             PRONOSTICS IA
           </div>
         </div>
       </div>
 
-      <div style={{ padding: 16, display: "grid", gap: 16 }}>
+      {/* ─── Main content area ─── */}
+      <div className="p-4 grid gap-4">
         <DateNavigator dateStr={selectedDate} onChange={updateDate} />
 
-        <div
-          style={{
-            background: "linear-gradient(145deg, #0b8f4d, #09723d)",
-            color: "#fff",
-            borderRadius: 28,
-            padding: 24,
-            boxShadow: "0 24px 46px rgba(9,114,61,0.26)",
-            position: "relative",
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              top: -20,
-              right: -26,
-              width: 150,
-              height: 150,
-              borderRadius: "50%",
-              background: "radial-gradient(circle, rgba(255,255,255,0.18) 0%, transparent 72%)",
-            }}
-          />
-          <div style={{ position: "relative" }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.86)", marginBottom: 8 }}>
+        {/* ─── Hero summary card ─── */}
+        <div className="bg-gradient-to-br from-[#0b8f4d] to-[#09723d] text-white rounded-3xl p-6 shadow-[0_24px_46px_rgba(9,114,61,0.26)] relative overflow-hidden">
+          {/* Decorative circle */}
+          <div className="absolute -top-5 -right-6 w-[150px] h-[150px] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.18)_0%,transparent_72%)]" />
+          <div className="relative">
+            <div className="text-[13px] font-extrabold text-white/[0.86] mb-2">
               {formatRelativeDay(selectedDate)}
             </div>
-            <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 10 }}>
+            <div className="text-lg font-extrabold mb-2.5">
               {formatDisplayDate(selectedDate)}
             </div>
-            <div style={{ fontSize: 24, fontWeight: 900, lineHeight: 1.1, marginBottom: 6 }}>
+            <div className="text-2xl font-black leading-tight mb-1.5">
               {races.length} courses · {new Set(races.map((race) => race.reunion)).size} reunions
             </div>
-            <div style={{ fontSize: 14, color: "rgba(255,255,255,0.82)", marginBottom: 16 }}>
+            <div className="text-sm text-white/[0.82] mb-4">
               {scoredCount} course{scoredCount > 1 ? "s" : ""} deja notee{scoredCount > 1 ? "s" : ""} par le moteur
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div style={{ background: "rgba(255,255,255,0.12)", borderRadius: 18, padding: 14 }}>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginBottom: 6, textTransform: "uppercase", fontWeight: 800 }}>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white/[0.12] rounded-[18px] p-3.5">
+                <div className="text-xs text-white/70 mb-1.5 uppercase font-extrabold">
                   Radar actif
                 </div>
-                <div style={{ fontSize: 16, fontWeight: 900 }}>{scoredCount} courses notees</div>
+                <div className="text-base font-black">{scoredCount} courses notees</div>
               </div>
-              <div style={{ background: "rgba(255,255,255,0.12)", borderRadius: 18, padding: 14 }}>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginBottom: 6, textTransform: "uppercase", fontWeight: 800 }}>
+              <div className="bg-white/[0.12] rounded-[18px] p-3.5">
+                <div className="text-xs text-white/70 mb-1.5 uppercase font-extrabold">
                   Tri moteur
                 </div>
-                <div style={{ fontSize: 16, fontWeight: 900 }}>
+                <div className="text-base font-black">
                   {sortMode === "hour"
                     ? "Par heure"
                     : sortMode === "score"
@@ -470,74 +696,245 @@ function HomePageContent() {
           </div>
         </div>
 
-        {radarRace ? (() => {
+        {/* ─── Radar du jour ─── */}
+        {loading && !radarRace ? (
+          <SkeletonRadar />
+        ) : radarRace ? (() => {
           const key = `${radarRace.reunion}-${radarRace.course}`;
           const raceScore = scores[key];
           const minutesUntilStart = getMinutesUntilStart(radarRace.heureDepart, radarRace.dateStr);
           const scoreValue = raceScore?.score ?? null;
-          const scoreTone = getScoreTone(scoreValue);
-          const stageTone = getStageStyle(raceScore?.stage ?? null);
+          const scoreClasses = getScoreClasses(scoreValue);
+          const stageClasses = getStageClasses(raceScore?.stage ?? null);
 
           return (
             <button
               onClick={() => openRace(radarRace)}
-              style={{
-                border: "none",
-                cursor: "pointer",
-                textAlign: "left",
-                background: "linear-gradient(145deg, #132126, #1b252b)",
-                color: "#fff",
-                borderRadius: 28,
-                padding: 22,
-                boxShadow: "0 24px 46px rgba(15,23,42,0.22)",
-              }}
+              className="border-none cursor-pointer text-left bg-gradient-to-br from-[#132126] to-[#1b252b] text-white rounded-3xl p-5 shadow-[0_24px_46px_rgba(15,23,42,0.22)] hover:shadow-[0_28px_52px_rgba(15,23,42,0.30)] active:scale-[0.98] transition-all duration-200"
             >
-              <div style={{ fontSize: 12, fontWeight: 800, color: "#6CE4A0", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 10 }}>
+              <div className="text-xs font-extrabold text-[#6CE4A0] uppercase tracking-wider mb-2.5">
                 Radar du jour
               </div>
-              <div style={{ fontSize: 18, fontWeight: 900, lineHeight: 1.15, marginBottom: 8 }}>
+              <div className="text-lg font-black leading-tight mb-2">
                 R{radarRace.reunion}C{radarRace.course} - {radarRace.nomCourse}
               </div>
-              <div style={{ color: "rgba(255,255,255,0.74)", fontSize: 14, marginBottom: 14 }}>
+              <div className="text-white/[0.74] text-sm mb-3.5">
                 {radarRace.hippodrome} · {radarRace.heureDepart} · {radarRace.nombrePartants} partants · {radarRace.distance} m
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+              <div className="flex flex-wrap gap-2 mb-3">
                 {scoreValue !== null ? (
-                  <span
-                    style={{
-                      background: scoreTone.background,
-                      color: scoreTone.color,
-                      borderRadius: 999,
-                      padding: "8px 12px",
-                      fontSize: 13,
-                      fontWeight: 800,
-                    }}
-                  >
+                  <span className={`${scoreClasses} rounded-full px-3 py-2 text-[13px] font-extrabold`}>
                     Confiance {scoreValue}/10
                   </span>
                 ) : null}
-                <span
-                  style={{
-                    background: stageTone.background,
-                    color: stageTone.color,
-                    borderRadius: 999,
-                    padding: "8px 12px",
-                    fontSize: 13,
-                    fontWeight: 800,
-                  }}
-                >
+                <span className={`${stageClasses} rounded-full px-3 py-2 text-[13px] font-extrabold`}>
                   {getStageLabel(raceScore?.stage ?? null)}
                 </span>
               </div>
-              <div style={{ color: "rgba(255,255,255,0.82)", fontSize: 14, lineHeight: 1.45 }}>
+              <div className="text-white/[0.82] text-sm leading-relaxed">
                 {getRaceHint(radarRace, scoreValue, raceScore?.stage ?? null, minutesUntilStart)}
               </div>
             </button>
           );
         })() : null}
 
-        <div style={{ display: "grid", gap: 10 }}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {/* ─── Sort controls ─── */}
+        {!loading && !error && featuredRaces.length > 0 ? (
+          <section className="grid gap-3">
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <div className="text-lg font-black text-[#171b1f] mb-1">Top 3 du jour</div>
+                <div className="text-sm text-[#738395]">
+                  Selection priorisee par la note IA, puis completee intelligemment si le moteur n&apos;a pas encore tout note.
+                </div>
+              </div>
+              <div className="rounded-full bg-[#171b1f] text-white px-3 py-2 text-xs font-extrabold">
+                {featuredRaces.length} priorites
+              </div>
+            </div>
+
+            <div className="grid gap-3">
+              {featuredRaces.map((entry) => {
+                const key = `${entry.race.reunion}-${entry.race.course}`;
+                const raceScore = scores[key];
+                const scoreValue = entry.score ?? raceScore?.score ?? null;
+                const stageValue = entry.stage ?? raceScore?.stage ?? null;
+                const decisionBadge = getDecisionBadge(raceScore?.decision);
+                const featuredPick = raceScore?.pick ?? null;
+                const minutesUntilStart = getMinutesUntilStart(
+                  entry.race.heureDepart,
+                  entry.race.dateStr
+                );
+
+                return (
+                  <button
+                    key={`featured-${entry.race.reunion}-${entry.race.course}`}
+                    onClick={() => openRace(entry.race)}
+                    className="border-none cursor-pointer text-left rounded-[28px] bg-white p-5 shadow-[0_18px_36px_rgba(15,23,42,0.08)] hover:shadow-[0_22px_44px_rgba(15,23,42,0.14)] active:scale-[0.99] transition-all duration-200"
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#171b1f] text-white text-base font-black">
+                          {entry.rank}
+                        </div>
+                        <div>
+                          <div className="text-[17px] font-black text-[#171b1f] leading-tight">
+                            R{entry.race.reunion}C{entry.race.course} - {entry.race.nomCourse}
+                          </div>
+                          <div className="text-sm text-slate-500">
+                            {entry.race.hippodrome} · {entry.race.heureDepart} · {entry.race.nombrePartants} partants
+                          </div>
+                        </div>
+                      </div>
+                      <span className="rounded-full bg-[#EEF7EF] px-3 py-2 text-xs font-extrabold text-[#0b8f4d]">
+                        {entry.source === "score" ? "Note IA" : "Selection auto"}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      <span className={`${decisionBadge.classes} rounded-full px-2.5 py-[7px] text-xs font-extrabold`}>
+                        {decisionBadge.label}
+                      </span>
+                      {scoreValue !== null ? (
+                        <span className={`${getScoreClasses(scoreValue)} rounded-full px-2.5 py-[7px] text-xs font-extrabold`}>
+                          Confiance {scoreValue}/10
+                        </span>
+                      ) : (
+                        <span className="bg-gray-100 text-slate-500 rounded-full px-2.5 py-[7px] text-xs font-extrabold">
+                          Note en attente
+                        </span>
+                      )}
+                      <span className={`${getStageClasses(stageValue)} rounded-full px-2.5 py-[7px] text-xs font-extrabold`}>
+                        {getStageLabel(stageValue)}
+                      </span>
+                      <span className="bg-gray-100 text-slate-600 rounded-full px-2.5 py-[7px] text-xs font-extrabold">
+                        {formatCurrency(entry.race.allocation)}
+                      </span>
+                      <span className="bg-[#FFF4D8] text-[#A66B00] rounded-full px-2.5 py-[7px] text-xs font-extrabold">
+                        {minutesUntilStart >= 60
+                          ? `Dans ${Math.round(minutesUntilStart / 60)}h`
+                          : minutesUntilStart >= 0
+                            ? `Dans ${Math.round(minutesUntilStart)} min`
+                            : stageValue === "finished"
+                              ? "Terminee"
+                              : "En cours"}
+                      </span>
+                    </div>
+
+                    <div className="text-sm leading-relaxed text-[#5B6472]">
+                      {entry.reason}
+                    </div>
+
+                    {featuredPick ? (
+                      <div className="mt-3 rounded-2xl bg-[#F6F8F9] px-4 py-3">
+                        <div className="text-[11px] font-extrabold uppercase tracking-wide text-[#7A8A9A] mb-1">
+                          Pari du jour
+                        </div>
+                        <div className="text-sm font-black text-[#171b1f]">
+                          {featuredPick.numPmu} - {featuredPick.nom}
+                        </div>
+                        <div className="text-sm text-[#5B6472]">
+                          {featuredPick.betType === "GAGNANT" ? "Simple gagnant" : "Simple place"} · confiance {featuredPick.confidence}/10
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="mt-3 flex justify-end">
+                      <span className="inline-flex items-center rounded-full bg-[#171b1f] px-4 py-2 text-xs font-extrabold text-white">
+                        Voir le ticket
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
+
+        {!loading && !error && dailyBets.length > 0 ? (
+          <section className="grid gap-3">
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <div className="text-lg font-black text-[#171b1f] mb-1">Mes 3 paris du jour</div>
+                <div className="text-sm text-[#738395]">
+                  Vue express pour jouer vite: course, cheval, type de pari et confiance.
+                </div>
+              </div>
+              <button
+                onClick={copyDailyBets}
+                className={`
+                  border-none rounded-full px-4 py-2 text-xs font-extrabold cursor-pointer transition-all duration-200
+                  ${
+                    copyState === "done"
+                      ? "bg-[#E7F8EE] text-[#0b8f4d]"
+                      : copyState === "error"
+                        ? "bg-[#FDECEA] text-[#D64545]"
+                        : "bg-[#171b1f] text-white hover:bg-[#242a30]"
+                  }
+                `}
+              >
+                {copyState === "done"
+                  ? "Copie"
+                  : copyState === "error"
+                    ? "Impossible"
+                    : "Copier mes 3 paris"}
+              </button>
+            </div>
+
+            <div className="grid gap-3">
+              {dailyBets.map(({ rank, race, raceScore }) => (
+                <button
+                  key={`daily-bet-${race.reunion}-${race.course}`}
+                  onClick={() => openRace(race)}
+                  className="border-none cursor-pointer text-left rounded-[24px] bg-[#171b1f] text-white p-5 shadow-[0_20px_40px_rgba(15,23,42,0.18)] hover:shadow-[0_24px_48px_rgba(15,23,42,0.24)] active:scale-[0.99] transition-all duration-200"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-[#171b1f] text-sm font-black">
+                        {rank}
+                      </div>
+                      <div>
+                        <div className="text-base font-black">
+                          R{race.reunion}C{race.course} - {race.heureDepart}
+                        </div>
+                        <div className="text-sm text-white/70">
+                          {race.hippodrome} · {race.nomCourse}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="rounded-full bg-[#6CE4A0] px-3 py-2 text-[11px] font-extrabold text-[#0c2517]">
+                      {raceScore.pick?.betType === "GAGNANT" ? "Simple gagnant" : "Simple place"}
+                    </span>
+                  </div>
+
+                  <div className="rounded-2xl bg-white/10 px-4 py-3 mb-3">
+                    <div className="text-[11px] font-extrabold uppercase tracking-wide text-white/60 mb-1">
+                      Cheval a jouer
+                    </div>
+                    <div className="text-lg font-black">
+                      {raceScore.pick?.numPmu} - {raceScore.pick?.nom}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <span className="rounded-full bg-white/10 px-3 py-2 text-xs font-extrabold text-white">
+                      Confiance {raceScore.pick?.confidence}/10
+                    </span>
+                    <span className={`${getDecisionBadge(raceScore.decision).classes} rounded-full px-3 py-2 text-xs font-extrabold`}>
+                      {getDecisionBadge(raceScore.decision).label}
+                    </span>
+                    <span className={`${getStageClasses(raceScore.stage)} rounded-full px-3 py-2 text-xs font-extrabold`}>
+                      {getStageLabel(raceScore.stage)}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        <div className="grid gap-2.5">
+          <div className="flex flex-wrap gap-2">
             {([
               { key: "hour", label: "Par heure" },
               { key: "score", label: "Meilleure note" },
@@ -547,17 +944,15 @@ function HomePageContent() {
               <button
                 key={option.key}
                 onClick={() => setSortMode(option.key)}
-                style={{
-                  border: option.key === sortMode ? "none" : "1px solid rgba(15,23,42,0.08)",
-                  background: option.key === sortMode ? DARK : "#fff",
-                  color: option.key === sortMode ? "#fff" : "#475569",
-                  borderRadius: 999,
-                  padding: "10px 14px",
-                  fontSize: 13,
-                  fontWeight: 800,
-                  cursor: "pointer",
-                  boxShadow: option.key === sortMode ? "0 14px 28px rgba(15,23,42,0.18)" : "none",
-                }}
+                className={`
+                  rounded-full px-3.5 py-2.5 text-[13px] font-extrabold cursor-pointer
+                  transition-all duration-200 active:scale-95
+                  ${
+                    option.key === sortMode
+                      ? "border-none bg-[#171b1f] text-white shadow-[0_14px_28px_rgba(15,23,42,0.18)]"
+                      : "border border-[rgba(15,23,42,0.08)] bg-white text-slate-600 hover:bg-gray-50 hover:border-[rgba(15,23,42,0.14)]"
+                  }
+                `}
               >
                 {option.label}
               </button>
@@ -565,65 +960,67 @@ function HomePageContent() {
           </div>
 
           <div>
-            <div style={{ fontSize: 18, fontWeight: 900, color: DARK, marginBottom: 6 }}>Courses a suivre</div>
-            <div style={{ color: "#738395", fontSize: 14 }}>
+            <div className="text-lg font-black text-[#171b1f] mb-1.5">Courses a suivre</div>
+            <div className="text-[#738395] text-sm">
               Tri intelligent par heure, confiance, urgence et niveau d&apos;enjeu.
             </div>
           </div>
         </div>
 
+        {/* ─── Loading skeleton ─── */}
         {loading ? (
-          <div style={{ color: "#64748B", background: "#fff", borderRadius: 24, padding: 20 }}>Chargement des courses...</div>
+          <div className="grid gap-3.5">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
         ) : null}
 
+        {/* ─── Error state ─── */}
         {error ? (
-          <div style={{ color: "#D64545", background: "#fff", borderRadius: 24, padding: 20 }}>{error}</div>
+          <div className="text-[#D64545] bg-white rounded-3xl p-5">{error}</div>
         ) : null}
 
+        {/* ─── Race cards ─── */}
         {!loading && !error ? (
-          <div style={{ display: "grid", gap: 14 }}>
+          <div className="grid gap-3.5 transition-all duration-300">
             {sortedRaces.map((race) => {
               const key = `${race.reunion}-${race.course}`;
               const raceScore = scores[key];
               const minutesUntilStart = getMinutesUntilStart(race.heureDepart, race.dateStr);
-              const accent = getCardAccent(raceScore?.score ?? null, raceScore?.stage ?? null);
-              const scoreTone = getScoreTone(raceScore?.score ?? null);
-              const stageTone = getStageStyle(raceScore?.stage ?? null);
+              const accentClass = getCardAccent(raceScore?.score ?? null, raceScore?.stage ?? null);
+              const scoreClasses = getScoreClasses(raceScore?.score ?? null);
+              const stageClasses = getStageClasses(raceScore?.stage ?? null);
 
               return (
                 <button
                   key={`${race.reunion}-${race.course}-${race.dateStr}`}
                   onClick={() => openRace(race)}
-                  style={{
-                    border: "none",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    background: "#fff",
-                    borderRadius: 26,
-                    padding: 20,
-                    boxShadow: "0 18px 36px rgba(15,23,42,0.08)",
-                    borderLeft: `5px solid ${accent}`,
-                    display: "grid",
-                    gap: 12,
-                  }}
+                  className={`
+                    border-none cursor-pointer text-left bg-white rounded-[26px] p-5
+                    shadow-[0_18px_36px_rgba(15,23,42,0.08)] border-l-[5px] ${accentClass}
+                    grid gap-3
+                    hover:shadow-[0_22px_44px_rgba(15,23,42,0.14)] hover:-translate-y-0.5
+                    active:scale-[0.99] transition-all duration-200
+                  `}
                 >
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                  <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div style={{ fontSize: 16, fontWeight: 900, color: DARK, marginBottom: 6 }}>
+                      <div className="text-base font-black text-[#171b1f] mb-1.5">
                         {race.heureDepart}
                       </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                        <span style={{ background: "#EEF7EF", color: GREEN, borderRadius: 999, padding: "6px 10px", fontSize: 12, fontWeight: 800 }}>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="bg-[#EEF7EF] text-[#0b8f4d] rounded-full px-2.5 py-1.5 text-xs font-extrabold">
                           {formatDiscipline(race)}
                         </span>
                         {race.estQuinte ? (
-                          <span style={{ background: "#FFF4D8", color: "#A66B00", borderRadius: 999, padding: "6px 10px", fontSize: 12, fontWeight: 800 }}>
+                          <span className="bg-[#FFF4D8] text-[#A66B00] rounded-full px-2.5 py-1.5 text-xs font-extrabold">
                             Quinte
                           </span>
                         ) : null}
                       </div>
                     </div>
-                    <span style={{ color: "#D97706", fontSize: 14, fontWeight: 800, whiteSpace: "nowrap" }}>
+                    <span className="text-amber-600 text-sm font-extrabold whitespace-nowrap">
                       {minutesUntilStart >= 60
                         ? `Dans ${Math.round(minutesUntilStart / 60)}h`
                         : minutesUntilStart >= 0
@@ -635,69 +1032,33 @@ function HomePageContent() {
                   </div>
 
                   <div>
-                    <div style={{ fontSize: 17, fontWeight: 900, color: DARK, lineHeight: 1.2, marginBottom: 6 }}>
+                    <div className="text-[17px] font-black text-[#171b1f] leading-tight mb-1.5">
                       R{race.reunion}C{race.course} - {race.nomCourse}
                     </div>
-                    <div style={{ color: "#64748B", fontSize: 14 }}>
+                    <div className="text-slate-500 text-sm">
                       {race.hippodrome} · {race.nombrePartants} partants · {race.distance} m
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  <div className="flex flex-wrap gap-2">
                     {raceScore?.score !== undefined ? (
-                      <span
-                        style={{
-                          background: scoreTone.background,
-                          color: scoreTone.color,
-                          borderRadius: 999,
-                          padding: "7px 10px",
-                          fontSize: 12,
-                          fontWeight: 800,
-                        }}
-                      >
+                      <span className={`${scoreClasses} rounded-full px-2.5 py-[7px] text-xs font-extrabold`}>
                         Confiance {raceScore.score}/10
                       </span>
                     ) : (
-                      <span
-                        style={{
-                          background: "#F3F4F6",
-                          color: "#64748B",
-                          borderRadius: 999,
-                          padding: "7px 10px",
-                          fontSize: 12,
-                          fontWeight: 800,
-                        }}
-                      >
+                      <span className="bg-gray-100 text-slate-500 rounded-full px-2.5 py-[7px] text-xs font-extrabold">
                         Analyse a venir
                       </span>
                     )}
-                    <span
-                      style={{
-                        background: stageTone.background,
-                        color: stageTone.color,
-                        borderRadius: 999,
-                        padding: "7px 10px",
-                        fontSize: 12,
-                        fontWeight: 800,
-                      }}
-                    >
+                    <span className={`${stageClasses} rounded-full px-2.5 py-[7px] text-xs font-extrabold`}>
                       {getStageLabel(raceScore?.stage ?? null)}
                     </span>
-                    <span
-                      style={{
-                        background: "#F3F4F6",
-                        color: "#475569",
-                        borderRadius: 999,
-                        padding: "7px 10px",
-                        fontSize: 12,
-                        fontWeight: 800,
-                      }}
-                    >
+                    <span className="bg-gray-100 text-slate-600 rounded-full px-2.5 py-[7px] text-xs font-extrabold">
                       {formatCurrency(race.allocation)}
                     </span>
                   </div>
 
-                  <div style={{ color: "#5B6472", fontSize: 14, lineHeight: 1.45 }}>
+                  <div className="text-[#5B6472] text-sm leading-relaxed">
                     {getRaceHint(race, raceScore?.score ?? null, raceScore?.stage ?? null, minutesUntilStart)}
                   </div>
                 </button>
@@ -707,22 +1068,8 @@ function HomePageContent() {
         ) : null}
       </div>
 
-      <div
-        style={{
-          position: "fixed",
-          left: "50%",
-          bottom: 0,
-          transform: "translateX(-50%)",
-          width: "100%",
-          maxWidth: 430,
-          background: "rgba(255,255,255,0.94)",
-          backdropFilter: "blur(18px)",
-          borderTop: "1px solid rgba(15,23,42,0.08)",
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr",
-          zIndex: 40,
-        }}
-      >
+      {/* ─── Bottom navigation bar ─── */}
+      <div className="fixed bottom-0 left-0 right-0 sm:left-1/2 sm:-translate-x-1/2 sm:max-w-lg md:max-w-xl lg:max-w-2xl bg-white/[0.94] backdrop-blur-lg border-t border-[rgba(15,23,42,0.08)] grid grid-cols-3 z-40">
         {[
           { label: "Courses", active: true, href: `/?date=${selectedDate}` },
           { label: "Mes Paris", active: false, href: "/mes-paris" },
@@ -731,14 +1078,15 @@ function HomePageContent() {
           <button
             key={item.label}
             onClick={() => router.push(item.href)}
-            style={{
-              border: "none",
-              background: "transparent",
-              padding: "14px 10px 16px",
-              fontWeight: item.active ? 900 : 700,
-              color: item.active ? GREEN : "#5B6472",
-              cursor: "pointer",
-            }}
+            className={`
+              border-none bg-transparent pt-3.5 px-2.5 pb-4 cursor-pointer
+              transition-colors duration-150
+              ${
+                item.active
+                  ? "font-black text-[#0b8f4d]"
+                  : "font-bold text-[#5B6472] hover:text-[#171b1f]"
+              }
+            `}
           >
             {item.label}
           </button>
@@ -753,12 +1101,10 @@ export default function HomePage() {
     <Suspense
       fallback={
         <div
+          className="min-h-screen max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl mx-auto"
           style={{
-            minHeight: "100vh",
             background:
               "radial-gradient(circle at top left, rgba(0,132,61,0.12), transparent 26%), radial-gradient(circle at top right, rgba(18,183,106,0.1), transparent 18%), #F6F7F8",
-            maxWidth: 430,
-            margin: "0 auto",
           }}
         />
       }
