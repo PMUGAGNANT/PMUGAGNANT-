@@ -2,7 +2,10 @@ import { getMinutesUntilStart } from "@/lib/date-utils";
 import { DEFAULT_ALGO_PARAMETERS } from "@/lib/config";
 import type {
   AlgoParameters,
+  BettingPlan,
+  CompositeBetPlan,
   ConfidenceScore,
+  DaySignal,
   FavoriteSolidity,
   Lisibilite,
   MusicStats,
@@ -17,6 +20,10 @@ import type {
   StrategicProfiles,
   ValueAnalysis,
 } from "@/lib/types";
+
+const BANKROLL_BASE_EUROS = 100;
+const MAX_KELLY_BANKROLL_PCT = 0.05;
+const VALUE_CONFIRMATION_MULTIPLIER = 1.15;
 
 const ELITE_DRIVERS_TROT: Record<string, number> = {
   bazire: 10,
@@ -66,6 +73,35 @@ function round2(value: number) {
 
 function normalizeKey(value?: string | null) {
   return (value ?? "").toLowerCase().trim();
+}
+
+function safeRate(value: number | null | undefined) {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return null;
+  }
+
+  if (value > 1) {
+    return clamp(value / 100, 0, 1);
+  }
+
+  return clamp(value, 0, 1);
+}
+
+function marketProbabilityFromOdds(odds: number | null | undefined) {
+  if (!odds || !Number.isFinite(odds) || odds <= 1) {
+    return 0;
+  }
+
+  return 1 / odds;
+}
+
+function kellyFraction(probability: number, odds: number | null | undefined) {
+  if (!odds || !Number.isFinite(odds) || odds <= 1 || probability <= 0) {
+    return 0;
+  }
+
+  const raw = (probability * odds - 1) / (odds - 1);
+  return clamp(raw, 0, MAX_KELLY_BANKROLL_PCT);
 }
 
 function getEliteScore(target: string, eliteMap: Record<string, number>) {
@@ -265,6 +301,119 @@ function getTrainerSignal(participant: Participant) {
   return getEliteScore(participant.entraineur, ELITE_TRAINERS);
 }
 
+function getJockeyFormSignal(participant: Participant, race: RaceSummary) {
+  const humanBase = race.estPlat
+    ? getEliteScore(participant.jockey || participant.driver, ELITE_JOCKEYS_FLAT)
+    : getEliteScore(participant.driver || participant.jockey, ELITE_DRIVERS_TROT);
+  const winRate = safeRate(participant.jockeyWinRate) ?? 0;
+  const recentForm = safeRate(participant.jockeyRecentForm) ?? 0;
+  const signal = humanBase * 0.45 + winRate * 18 + recentForm * 12;
+  return clamp(Math.round(signal), 0, 15);
+}
+
+function getTrainerTrackSignal(participant: Participant) {
+  const trackWinRate = safeRate(participant.trainerTrackWinRate) ?? 0;
+  const eliteBonus = getTrainerSignal(participant) * 0.4;
+  return clamp(Math.round(trackWinRate * 18 + eliteBonus), 0, 14);
+}
+
+function getDistanceSignal(participant: Participant, race: RaceSummary) {
+  const winRate = safeRate(participant.distanceWinRate) ?? 0;
+  const placeRate = safeRate(participant.distancePlaceRate) ?? 0;
+  let signal = winRate * 16 + placeRate * 10;
+
+  if (race.distance >= 2600 && participant.age >= 5 && participant.age <= 7) {
+    signal += 2;
+  }
+
+  if (race.distance <= 1600 && participant.age >= 3 && participant.age <= 5) {
+    signal += 2;
+  }
+
+  return clamp(Math.round(signal), -2, 16);
+}
+
+function getTerrainSignal(participant: Participant, race: RaceSummary) {
+  const terrain = normalizeKey(race.terrain);
+  const preference = normalizeKey(participant.terrainPreference);
+  const winRate = safeRate(participant.terrainWinRate) ?? 0;
+  const placeRate = safeRate(participant.terrainPlaceRate) ?? 0;
+
+  let signal = winRate * 12 + placeRate * 8;
+  if (terrain && preference) {
+    if (terrain.includes(preference) || preference.includes(terrain)) {
+      signal += 4;
+    } else if (
+      (terrain.includes("lourd") && preference.includes("bon")) ||
+      (terrain.includes("bon") && preference.includes("lourd"))
+    ) {
+      signal -= 3;
+    }
+  }
+
+  return clamp(Math.round(signal), -4, 14);
+}
+
+function getWeatherSignal(participant: Participant, race: RaceSummary) {
+  const meteo = normalizeKey(race.meteo);
+  const preference = normalizeKey(participant.meteoPreference);
+  if (!meteo || !preference) {
+    return 0;
+  }
+
+  if (meteo.includes(preference) || preference.includes(meteo)) {
+    return 3;
+  }
+
+  if (
+    (meteo.includes("pluie") && preference.includes("sec")) ||
+    (meteo.includes("orage") && preference.includes("soleil"))
+  ) {
+    return -3;
+  }
+
+  return 0;
+}
+
+function getTrackHistorySignal(participant: Participant) {
+  const winRate = safeRate(participant.trackWinRate) ?? 0;
+  const placeRate = safeRate(participant.trackPlaceRate) ?? 0;
+  return clamp(Math.round(winRate * 16 + placeRate * 10), -2, 15);
+}
+
+function getAgeSexSignal(participant: Participant, race: RaceSummary) {
+  let signal = 0;
+  if (race.estPlat) {
+    if (participant.age >= 3 && participant.age <= 5) signal += 4;
+    else if (participant.age >= 6) signal -= 2;
+  } else {
+    if (participant.age >= 4 && participant.age <= 7) signal += 4;
+    else if (participant.age >= 9) signal -= 3;
+  }
+
+  const sexe = normalizeKey(participant.sexe);
+  if (sexe.includes("f") || sexe.includes("mare")) {
+    signal += 1;
+  }
+
+  return clamp(signal, -4, 6);
+}
+
+function getRestSignal(participant: Participant) {
+  const restDays = participant.daysSinceLastRun;
+  if (restDays === null || restDays === undefined || !Number.isFinite(restDays)) {
+    return 0;
+  }
+
+  if (restDays <= 4) return -4;
+  if (restDays <= 14) return 3;
+  if (restDays <= 28) return 2;
+  if (restDays <= 45) return 0;
+  if (restDays <= 75) return -3;
+  if (restDays <= 120) return -6;
+  return -8;
+}
+
 function getGainsSignal(participant: Participant) {
   if (!participant.gainCarriere) return 0;
   const signal = Math.log10(participant.gainCarriere + 1) * 2 - 6;
@@ -379,8 +528,14 @@ function computeTop3Potential(signaux: RunnerSignals, stats: MusicStats, scoreCh
     signaux.forme * 1.2 +
     signaux.humain * 0.9 +
     signaux.entraineur * 0.5 +
+    signaux.jockeyForme * 0.8 +
+    signaux.trainerTrack * 0.7 +
     signaux.stalle * 0.5 +
     signaux.poids * 0.3 +
+    signaux.distance * 0.9 +
+    signaux.terrain * 0.6 +
+    signaux.hippodrome * 0.6 +
+    signaux.repos * 0.6 +
     stats.serie * 1.8 -
     signaux.risque * 1.2 -
     signaux.faute * 0.8;
@@ -398,6 +553,12 @@ function computeTop5Potential(signaux: RunnerSignals, stats: MusicStats, scoreCh
     signaux.gains * 0.5 +
     signaux.humain * 0.5 +
     signaux.entraineur * 0.4 +
+    signaux.jockeyForme * 0.5 +
+    signaux.trainerTrack * 0.5 +
+    signaux.distance * 0.7 +
+    signaux.terrain * 0.5 +
+    signaux.hippodrome * 0.7 +
+    signaux.repos * 0.4 +
     Math.max(stats.serie - 1, 0) * 1.2 -
     signaux.risque * 0.8 -
     signaux.faute * 0.6;
@@ -458,11 +619,19 @@ function buildSignals(
   const podium = getPodiumSignal(participant, stats);
   const humain = getHumanSignal(participant, race);
   const entraineur = getTrainerSignal(participant);
+  const jockeyForme = getJockeyFormSignal(participant, race);
+  const trainerTrack = getTrainerTrackSignal(participant);
   const marche = getMarketSignal(participant.cote, participant.variationCote ?? null);
   const gains = getGainsSignal(participant);
   const popularite = getPopularitySignal(participant);
   const stalle = getStallSignal(participant, race);
   const poids = getWeightSignal(participant, race);
+  const distance = getDistanceSignal(participant, race);
+  const terrain = getTerrainSignal(participant, race);
+  const meteo = getWeatherSignal(participant, race);
+  const hippodrome = getTrackHistorySignal(participant);
+  const ageSexe = getAgeSexSignal(participant, race);
+  const repos = getRestSignal(participant);
   const faute =
     (participant.tauxFaute ?? 0) > parameters.fautifs.rejectRate
       ? 10
@@ -478,11 +647,19 @@ function buildSignals(
     podium,
     humain,
     entraineur,
+    jockeyForme,
+    trainerTrack,
     marche,
     gains,
     popularite,
     stalle,
     poids,
+    distance,
+    terrain,
+    meteo,
+    hippodrome,
+    ageSexe,
+    repos,
     faute,
     risque,
   };
@@ -496,14 +673,22 @@ function computeBaseHorseScore(signaux: RunnerSignals) {
     signaux.podium +
     signaux.humain +
     signaux.entraineur +
+    signaux.jockeyForme +
+    signaux.trainerTrack +
     signaux.marche +
     signaux.gains +
     signaux.popularite +
     signaux.stalle +
-    signaux.poids;
+    signaux.poids +
+    signaux.distance +
+    signaux.terrain +
+    signaux.meteo +
+    signaux.hippodrome +
+    signaux.ageSexe +
+    signaux.repos;
 
   const negatives = signaux.risque + signaux.faute;
-  return clamp(38 + positives - negatives, 0, 100);
+  return clamp(32 + positives - negatives, 0, 100);
 }
 
 function determineRaceReadabilityScore(
@@ -668,10 +853,22 @@ function buildValue(
   parameters: AlgoParameters
 ): ValueAnalysis {
   const cotePMU = runner.cote ?? runner.coteDepart ?? runner.coteMatin ?? 0;
-  const valueCalculee = cotePMU > 0 ? runner.prediction.probaEstimee * cotePMU - 1 : 0;
-  const valueAllowed =
+  const probabiliteImplicite = marketProbabilityFromOdds(cotePMU);
+  const probabiliteValueSeuil = clamp(
+    probabiliteImplicite * VALUE_CONFIRMATION_MULTIPLIER,
+    0,
+    1
+  );
+  const confirmedValueBet =
+    runner.prediction.probaEstimee > 0 &&
+    runner.prediction.probaEstimee >= probabiliteValueSeuil &&
     runner.prediction.confiance >= parameters.value.confidenceMin &&
     lisibilite !== "LOTERIE";
+  const valueCalculee = cotePMU > 0 ? runner.prediction.probaEstimee * cotePMU - 1 : 0;
+  const valueAllowed =
+    confirmedValueBet ||
+    (runner.prediction.confiance >= parameters.value.confidenceMin &&
+      lisibilite !== "LOTERIE");
   const valueEffective = valueAllowed
     ? round2(
         Math.min(parameters.value.maxCap, valueCalculee) *
@@ -681,10 +878,10 @@ function buildValue(
 
   let label = "Neutre";
   let emoji = "NEUTRE";
-  if (valueEffective >= 2.5) {
+  if (confirmedValueBet && valueEffective >= 2.5) {
     label = "Value premium";
     emoji = "PREMIUM";
-  } else if (valueEffective >= 1) {
+  } else if (confirmedValueBet && valueEffective >= 1) {
     label = "Value jouable";
     emoji = "JOUABLE";
   } else if (valueEffective <= -0.25) {
@@ -694,15 +891,239 @@ function buildValue(
 
   return {
     probabilite: round2(runner.prediction.probaEstimee),
+    probabiliteImplicite: round2(probabiliteImplicite),
+    probabiliteValueSeuil: round2(probabiliteValueSeuil),
     coteJuste:
       runner.prediction.probaEstimee > 0 ? round2(1 / runner.prediction.probaEstimee) : 0,
     cotePMU,
     valueIndex: valueEffective,
     valueBrute: round2(valueCalculee),
     valueEffective,
+    valueBet: confirmedValueBet,
+    bankrollPct: round2(runner.prediction.bankrollPct),
+    kellyFraction: round2(runner.prediction.kellyFraction),
     label,
     emoji,
     miseConseillee: runner.prediction.miseConseillee,
+  };
+}
+
+function buildTopFactors(runner: ScoredParticipant) {
+  const factors = [
+    {
+      label: "Forme recente",
+      score: runner.signaux.forme + runner.signaux.regularite + runner.signaux.victoire,
+    },
+    {
+      label: "Humains en forme",
+      score:
+        runner.signaux.humain +
+        runner.signaux.entraineur +
+        runner.signaux.jockeyForme +
+        runner.signaux.trainerTrack,
+    },
+    {
+      label: "Distance / piste",
+      score:
+        runner.signaux.distance + runner.signaux.hippodrome + runner.signaux.stalle,
+    },
+    {
+      label: "Terrain / meteo",
+      score: runner.signaux.terrain + runner.signaux.meteo,
+    },
+    {
+      label: "Marche PMU",
+      score: runner.signaux.marche + Math.max(-(runner.variationCote ?? 0) / 8, 0),
+    },
+    {
+      label: "Poids / fraicheur",
+      score: runner.signaux.poids + runner.signaux.repos + runner.signaux.ageSexe,
+    },
+  ];
+
+  return factors
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 3)
+    .filter((factor) => factor.score > 0)
+    .map((factor) => factor.label);
+}
+
+function buildCompositeBetPlan(
+  type: CompositeBetPlan["type"],
+  chevaux: ScoredParticipant[],
+  eligible: boolean,
+  raison: string
+): CompositeBetPlan | null {
+  if (chevaux.length === 0) {
+    return null;
+  }
+
+  const averageConfidence =
+    chevaux.reduce((sum, runner) => sum + runner.prediction.confiance, 0) / chevaux.length;
+
+  return {
+    type,
+    chevaux: chevaux.map((runner) => runner.numPmu),
+    confiance: round1(averageConfidence),
+    eligible,
+    raison,
+  };
+}
+
+function buildBettingPlan(
+  ranked: ScoredParticipant[],
+  lisibilite: Lisibilite
+): BettingPlan {
+  const valueBets = ranked.filter(
+    (runner) => runner.prediction.action === "MISER" && runner.prediction.valueBet
+  );
+  const top2 = ranked.slice(0, 2);
+  const top3 = ranked.slice(0, 3);
+  const top5 = ranked.slice(0, 5);
+  const strongest = ranked[0] ?? null;
+
+  const simpleGagnant =
+    strongest !== null
+      ? buildCompositeBetPlan(
+          "SIMPLE_GAGNANT",
+          [strongest],
+          strongest.prediction.action === "MISER" &&
+            strongest.prediction.confiance > 7 &&
+            strongest.prediction.typePariConseille === "GAGNANT",
+          strongest.prediction.action === "MISER" && strongest.prediction.confiance > 7
+            ? "Simple gagnant retenu: confiance > 7/10 et value bet confirme."
+            : "Simple gagnant refuse: confiance insuffisante ou value bet non confirme."
+        )
+      : null;
+
+  const couple = buildCompositeBetPlan(
+    "COUPLE",
+    top2,
+    top2.length === 2 &&
+      top2.every((runner) => runner.prediction.confiance >= 6) &&
+      lisibilite !== "LOTERIE",
+    top2.length === 2
+      ? "Couple construit sur les 2 meilleurs scores de confiance."
+      : "Couple indisponible faute de deux profils solides."
+  );
+
+  const trio = buildCompositeBetPlan(
+    "TRIO",
+    top3,
+    top3.length === 3 &&
+      top3.filter((runner) => runner.prediction.confiance >= 6).length === 3 &&
+      lisibilite !== "LOTERIE",
+    top3.length === 3
+      ? "Trio base sur le top 3 du moteur."
+      : "Trio indisponible faute de trois profils fiables."
+  );
+
+  const quinte = buildCompositeBetPlan(
+    "QUINTE",
+    top5,
+    top5.length === 5 &&
+      valueBets.filter((runner) => top5.some((topRunner) => topRunner.numPmu === runner.numPmu))
+        .length >= 3,
+    top5.length === 5
+      ? "Quinte propose uniquement si le top 5 contient au moins 3 value bets confirmes."
+      : "Quinte indisponible faute de top 5 complet."
+  );
+
+  const multi = buildCompositeBetPlan(
+    "MULTI",
+    top4OrTop5(top5, lisibilite),
+    false,
+    "Multi desactive tant que le ROI historique par type n'est pas confirme au-dessus de 15%."
+  );
+
+  return {
+    bankrollBase: BANKROLL_BASE_EUROS,
+    simpleGagnant,
+    couple,
+    trio,
+    quinte,
+    multi,
+  };
+}
+
+function top4OrTop5(top5: ScoredParticipant[], lisibilite: Lisibilite) {
+  return lisibilite === "LISIBLE" ? top5.slice(0, 4) : top5;
+}
+
+function buildRaceAlerts(
+  ranked: ScoredParticipant[],
+  lisibilite: Lisibilite
+) {
+  const alerts: string[] = [];
+  const valueBets = ranked.filter((runner) => runner.prediction.valueBet);
+  const overRested = ranked.filter((runner) => (runner.daysSinceLastRun ?? 0) >= 75).length;
+  const overloaded = ranked.filter((runner) => runner.nombreCourses >= 45).length;
+
+  if (valueBets.length >= 3) {
+    alerts.push("Opportunite forte: au moins 3 value bets confirmes dans cette course.");
+  }
+  if (lisibilite === "LOTERIE") {
+    alerts.push("Course a eviter: lisibilite trop faible.");
+  }
+  if (overRested >= 3) {
+    alerts.push("Plusieurs chevaux reviennent apres une longue absence.");
+  }
+  if (overloaded >= 3) {
+    alerts.push("Peloton use: plusieurs chevaux tres sollicites ces derniers mois.");
+  }
+
+  return alerts;
+}
+
+function buildDaySignal(
+  ranked: ScoredParticipant[],
+  lisibilite: Lisibilite,
+  alerts: string[]
+): DaySignal {
+  const valueCount = ranked.filter((runner) => runner.prediction.valueBet).length;
+  const averageConfidence =
+    ranked.slice(0, 5).reduce((sum, runner) => sum + runner.prediction.confiance, 0) /
+    Math.max(Math.min(ranked.length, 5), 1);
+  const score = round1(
+    clamp(
+      45 +
+        valueCount * 8 +
+        averageConfidence * 4 +
+        (lisibilite === "LISIBLE" ? 12 : lisibilite === "COMPLEXE" ? 2 : -14) -
+        alerts.length * 5,
+      0,
+      100
+    )
+  );
+
+  if (score >= 68) {
+    return {
+      label: "JOURNEE_FAVORABLE",
+      score,
+      raisons: [
+        `${valueCount} value bet(s) confirme(s) sur la course.`,
+        `Confiance moyenne top 5: ${round1(averageConfidence)}/10.`,
+      ],
+    };
+  }
+
+  if (score <= 42) {
+    return {
+      label: "JOURNEE_DEFAVORABLE",
+      score,
+      raisons: alerts.length > 0 ? alerts.slice(0, 2) : ["Course trop ouverte pour engager proprement."],
+    };
+  }
+
+  return {
+    label: "JOURNEE_NEUTRE",
+    score,
+    raisons: [
+      `${valueCount} value bet(s) confirme(s).`,
+      lisibilite === "COMPLEXE"
+        ? "La course reste jouable mais demande de la discipline."
+        : "Signaux corrects sans avantage massif.",
+    ],
   };
 }
 
@@ -970,12 +1391,21 @@ export function analyzeRaceWithParameters(
         confiance: 0,
         scoreFinalPari: 0,
         probaEstimee: 0,
+        probabiliteImplicite: 0,
+        probabiliteValueSeuil: 0,
         valueCalculee: 0,
         valueEffective: 0,
         top3Potential: 0,
         top5Potential: 0,
         objective: "SPECULATIF",
         outsider: Boolean((participant.cote ?? 0) > parameters.outsiders.coteMin),
+        valueBet: false,
+        marketEdge: 0,
+        kellyFraction: 0,
+        bankrollPct: 0,
+        miseBase100: 0,
+        action: "NE PAS MISER",
+        topFacteurs: [],
         decision: "REJET",
         typePariConseille: "PLACE",
         miseConseillee: 0,
@@ -987,13 +1417,23 @@ export function analyzeRaceWithParameters(
   const lisibilite = determinerLisibilite(course, preRanked, parameters);
   const coefficientLisibilite = parameters.lisibilite.coefficients[lisibilite];
   const totalIntrinsicScore = Math.max(
-    preRanked.reduce((sum, runner) => sum + runner.prediction.scoreCheval, 0),
+    preRanked.reduce((sum, runner) => {
+      const rawStrength =
+        Math.pow(Math.max(runner.prediction.scoreCheval, 1), 1.18) *
+        (1 + Math.max(runner.signaux.marche, 0) / 40) *
+        (1 + Math.max(runner.signaux.distance + runner.signaux.hippodrome, 0) / 55);
+      return sum + rawStrength;
+    }, 0),
     1
   );
 
   let outsiderCount = 0;
   const ranked = preRanked.map((runner) => {
-    const probaEstimee = clamp(runner.prediction.scoreCheval / totalIntrinsicScore, 0.03, 0.45);
+    const rawStrength =
+      Math.pow(Math.max(runner.prediction.scoreCheval, 1), 1.18) *
+      (1 + Math.max(runner.signaux.marche, 0) / 40) *
+      (1 + Math.max(runner.signaux.distance + runner.signaux.hippodrome, 0) / 55);
+    const probaEstimee = clamp(rawStrength / totalIntrinsicScore, 0.01, 0.55);
     const scoreFinalPari = round2(runner.prediction.scoreCheval * coefficientLisibilite);
     const top3Potential = computeTop3Potential(
       runner.signaux,
@@ -1005,12 +1445,27 @@ export function analyzeRaceWithParameters(
       runner.musicStats,
       runner.prediction.scoreCheval
     );
+    const probabiliteImplicite = marketProbabilityFromOdds(
+      runner.cote ?? runner.coteDepart ?? runner.coteMatin
+    );
+    const probabiliteValueSeuil = clamp(
+      probabiliteImplicite * VALUE_CONFIRMATION_MULTIPLIER,
+      0,
+      1
+    );
+    const marketEdge = round2(probaEstimee - probabiliteImplicite);
     const confiance = round1(
       clamp(
         scoreFinalPari / 10 +
           runner.signaux.marche / 10 -
           runner.signaux.risque / 20 +
-          (runner.signaux.regularite + runner.signaux.forme) / 40,
+          (runner.signaux.regularite +
+            runner.signaux.forme +
+            runner.signaux.distance +
+            runner.signaux.hippodrome +
+            runner.signaux.repos) /
+            55 +
+          marketEdge * 12,
         0,
         10
       )
@@ -1038,9 +1493,19 @@ export function analyzeRaceWithParameters(
       lisibilite,
       parameters
     );
+    const confirmedValueBet =
+      probaEstimee >= probabiliteValueSeuil &&
+      marketEdge > 0 &&
+      lisibilite !== "LOTERIE" &&
+      confiance >= parameters.value.confidenceMin;
+    const kelly = kellyFraction(probaEstimee, runner.cote ?? runner.coteDepart ?? runner.coteMatin);
+    const bankrollPct = confirmedValueBet ? kelly : 0;
+    const miseBase100 = round2(BANKROLL_BASE_EUROS * bankrollPct);
 
     let decision = decisionState.decision;
-    let miseConseillee = decisionState.miseConseillee;
+    let miseConseillee = confirmedValueBet
+      ? Math.max(0, Math.round(miseBase100))
+      : decisionState.miseConseillee;
     if (outsider) {
       outsiderCount += 1;
       if (outsiderCount > parameters.outsiders.maxPerReunion) {
@@ -1048,6 +1513,14 @@ export function analyzeRaceWithParameters(
         miseConseillee = 0;
       }
     }
+
+    if (!confirmedValueBet) {
+      miseConseillee = 0;
+    }
+
+    const topFacteurs = buildTopFactors(runner);
+    const action =
+      confirmedValueBet && miseConseillee > 0 && decision !== "REJET" ? "MISER" : "NE PAS MISER";
 
     return {
       ...runner,
@@ -1059,12 +1532,21 @@ export function analyzeRaceWithParameters(
         confiance,
         scoreFinalPari,
         probaEstimee: round2(probaEstimee),
+        probabiliteImplicite: round2(probabiliteImplicite),
+        probabiliteValueSeuil: round2(probabiliteValueSeuil),
         valueCalculee: round2(((runner.cote ?? 0) > 0 ? probaEstimee * (runner.cote ?? 0) - 1 : 0)),
         valueEffective: 0,
         top3Potential,
         top5Potential,
         objective,
         outsider,
+        valueBet: confirmedValueBet,
+        marketEdge,
+        kellyFraction: round2(kelly),
+        bankrollPct: round2(bankrollPct),
+        miseBase100,
+        action,
+        topFacteurs,
         decision,
         typePariConseille: decisionState.typePariConseille,
         miseConseillee,
@@ -1083,6 +1565,11 @@ export function analyzeRaceWithParameters(
     valueTop5[runner.numPmu] = value;
     runner.prediction.valueEffective = value.valueEffective;
     runner.prediction.valueCalculee = value.valueBrute;
+    runner.prediction.valueBet = Boolean(value.valueBet);
+    runner.prediction.action =
+      runner.prediction.valueBet && runner.prediction.miseConseillee > 0
+        ? "MISER"
+        : "NE PAS MISER";
   }
 
   const favori =
@@ -1099,6 +1586,9 @@ export function analyzeRaceWithParameters(
   );
   const scoreConfiance = buildConfidenceScore(favori, soliditeFavori, lisibilite);
   const profils = buildProfiles(ranked.slice(0, 5), lisibilite, parameters);
+  const alertes = buildRaceAlerts(ranked.slice(0, 5), lisibilite);
+  const journeeSignal = buildDaySignal(ranked.slice(0, 5), lisibilite, alertes);
+  const bettingPlan = buildBettingPlan(ranked.slice(0, 5), lisibilite);
 
   const scoreLisibilite = determineRaceReadabilityScore(course, ranked);
   const decisionCourse =
@@ -1127,7 +1617,10 @@ export function analyzeRaceWithParameters(
       lisibilite,
       decisionCourse,
       outsiderAutorise: lisibilite === "LISIBLE",
+      journeeSignal,
     },
+    bettingPlan,
+    alertes,
   };
 }
 

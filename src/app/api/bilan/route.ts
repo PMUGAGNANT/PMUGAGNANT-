@@ -3,6 +3,7 @@ import { getAllRaces, getParticipants, getTodayDateStr } from "@/lib/pmu-api";
 import { analyzeRaceWithParameters, getMinutesUntilStart } from "@/lib/analysis";
 import { attachFaultRates } from "@/lib/horse-faults";
 import { loadAlgoParameters } from "@/lib/config";
+import { listCourseRecordsBetween, listPredictionsBetween } from "@/lib/prediction-store";
 import { badRequest, serverError } from "@/lib/api-response";
 import { normalizeRequestedDate } from "@/lib/request-utils";
 import { logger } from "@/lib/server-logger";
@@ -28,11 +29,40 @@ interface BilanResult {
     nom: string;
     cotePmu: number | null;
     coteEstimee: number | null;
+    jockey?: string | null;
   };
   recommandation: string;
   confiance: number;
   resultat: BilanResultat;
   ordreArrivee?: number | null;
+}
+
+interface SegmentSummary {
+  label: string;
+  roi: number;
+  sample: number;
+}
+
+interface TimelinePoint {
+  date: string;
+  gain: number;
+  stake: number;
+  profit: number;
+  cumulativeProfit: number;
+}
+
+interface HistoricalDashboard {
+  available: boolean;
+  globalRoi: number;
+  algoSuccessRate: number;
+  randomSuccessRate: number;
+  totalBets: number;
+  totalStake: number;
+  totalGain: number;
+  bestTracks: SegmentSummary[];
+  bestBetTypes: SegmentSummary[];
+  bestJockeys: SegmentSummary[];
+  timeline: TimelinePoint[];
 }
 
 function getTicketSimple(analysis: ReturnType<typeof analyzeRaceWithParameters>) {
@@ -71,6 +101,155 @@ function getConfidenceBucketLabel(bucket: ConfidenceBucketKey): string {
 function getSuccessRate(stats: AggregateStats): number {
   if (stats.played === 0) return 0;
   return Math.round((stats.success / stats.played) * 100);
+}
+
+function round2(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function getRoi(stake: number, gain: number) {
+  if (stake <= 0) return 0;
+  return round2(((gain - stake) / stake) * 100);
+}
+
+function buildHistoricalDashboard(
+  predictions: Awaited<ReturnType<typeof listPredictionsBetween>>,
+  courses: Awaited<ReturnType<typeof listCourseRecordsBetween>>,
+  dailyResults: BilanResult[]
+): HistoricalDashboard {
+  const playedRows = predictions.filter(
+    (row) =>
+      row.stage === "RESULTAT" &&
+      row.decision !== "REJET" &&
+      (row.mise_simulee ?? 0) > 0 &&
+      row.gain_simule !== null
+  );
+
+  if (playedRows.length === 0) {
+    return {
+      available: false,
+      globalRoi: 0,
+      algoSuccessRate: 0,
+      randomSuccessRate: 0,
+      totalBets: 0,
+      totalStake: 0,
+      totalGain: 0,
+      bestTracks: [],
+      bestBetTypes: [],
+      bestJockeys: [],
+      timeline: [],
+    };
+  }
+
+  const courseMap = new Map<string, (typeof courses)[number]>(
+    courses.map((course) => [`${course.date}-${course.reunion}-${course.course}`, course] as const)
+  );
+  const byTrack = new Map<string, { stake: number; gain: number; count: number }>();
+  const byBetType = new Map<string, { stake: number; gain: number; count: number }>();
+  const byDate = new Map<string, { stake: number; gain: number }>();
+  const dailyJockeys = new Map<string, { stake: number; gain: number; count: number }>();
+
+  let totalStake = 0;
+  let totalGain = 0;
+  let algoHits = 0;
+  let randomExpectedHits = 0;
+
+  for (const row of playedRows) {
+    const stake = row.mise_simulee ?? 0;
+    const gain = row.gain_simule ?? 0;
+    const raceKey = `${row.date}-${row.reunion}-${row.course}`;
+    const course = courseMap.get(raceKey);
+    const trackKey = row.hippodrome || "Inconnu";
+    const betTypeKey = row.pari_conseille || "AUTRE";
+
+    totalStake += stake;
+    totalGain += gain;
+
+    if (gain > stake) {
+      algoHits += 1;
+    }
+
+    randomExpectedHits += 1 / Math.max(course?.nombre_partants ?? 12, 1);
+
+    const trackSegment = byTrack.get(trackKey) ?? { stake: 0, gain: 0, count: 0 };
+    trackSegment.stake += stake;
+    trackSegment.gain += gain;
+    trackSegment.count += 1;
+    byTrack.set(trackKey, trackSegment);
+
+    const betTypeSegment = byBetType.get(betTypeKey) ?? { stake: 0, gain: 0, count: 0 };
+    betTypeSegment.stake += stake;
+    betTypeSegment.gain += gain;
+    betTypeSegment.count += 1;
+    byBetType.set(betTypeKey, betTypeSegment);
+
+    const dateSegment = byDate.get(row.date) ?? { stake: 0, gain: 0 };
+    dateSegment.stake += stake;
+    dateSegment.gain += gain;
+    byDate.set(row.date, dateSegment);
+  }
+
+  for (const result of dailyResults) {
+    const jockey = result.favori.jockey?.trim();
+    if (!jockey) continue;
+
+    const segment = dailyJockeys.get(jockey) ?? { stake: 0, gain: 0, count: 0 };
+    segment.count += 1;
+    if (result.resultat === "GAGNANT") {
+      segment.gain += 1;
+    } else if (result.resultat === "PLACE") {
+      segment.gain += 0.5;
+    }
+    segment.stake += 1;
+    dailyJockeys.set(jockey, segment);
+  }
+
+  const timeline: TimelinePoint[] = [];
+  let cumulativeProfit = 0;
+
+  for (const [timelineDate, values] of [...byDate.entries()].sort((left, right) =>
+    left[0].localeCompare(right[0])
+  )) {
+    const profit = round2(values.gain - values.stake);
+    cumulativeProfit = round2(cumulativeProfit + profit);
+    timeline.push({
+      date: timelineDate,
+      gain: round2(values.gain),
+      stake: round2(values.stake),
+      profit,
+      cumulativeProfit,
+    });
+  }
+
+  const toSegmentSummary = (
+    map: Map<string, { stake: number; gain: number; count: number }>
+  ): SegmentSummary[] =>
+    [...map.entries()]
+      .map(([label, values]) => ({
+        label,
+        roi: getRoi(values.stake, values.gain),
+        sample: values.count,
+      }))
+      .filter((entry) => entry.sample > 0)
+      .sort((left, right) => {
+        if (right.roi !== left.roi) return right.roi - left.roi;
+        return right.sample - left.sample;
+      })
+      .slice(0, 5);
+
+  return {
+    available: true,
+    globalRoi: getRoi(totalStake, totalGain),
+    algoSuccessRate: round2((algoHits / playedRows.length) * 100),
+    randomSuccessRate: round2((randomExpectedHits / playedRows.length) * 100),
+    totalBets: playedRows.length,
+    totalStake: round2(totalStake),
+    totalGain: round2(totalGain),
+    bestTracks: toSegmentSummary(byTrack),
+    bestBetTypes: toSegmentSummary(byBetType),
+    bestJockeys: toSegmentSummary(dailyJockeys),
+    timeline: timeline.slice(-12),
+  };
 }
 
 export async function GET(request: Request) {
@@ -129,6 +308,7 @@ export async function GET(request: Request) {
               predictedOdds?.coteEstimee ??
               predictedOdds?.coteMatin ??
               null,
+            jockey: ticketSimple.jockey || ticketSimple.driver || null,
           },
           recommandation:
             analysis.recommandation?.decision ||
@@ -263,6 +443,33 @@ export async function GET(request: Request) {
       );
     }
 
+    let dashboard: HistoricalDashboard = {
+      available: false,
+      globalRoi: 0,
+      algoSuccessRate: 0,
+      randomSuccessRate: 0,
+      totalBets: 0,
+      totalStake: 0,
+      totalGain: 0,
+      bestTracks: [],
+      bestBetTypes: [],
+      bestJockeys: [],
+      timeline: [],
+    };
+
+    try {
+      const [historicalPredictions, historicalCourses] = await Promise.all([
+        listPredictionsBetween("2020-01-01", "2100-01-01"),
+        listCourseRecordsBetween("2020-01-01", "2100-01-01"),
+      ]);
+      dashboard = buildHistoricalDashboard(historicalPredictions, historicalCourses, results);
+    } catch (dashboardError) {
+      logger.warn("bilan.dashboard_unavailable", {
+        date,
+        error: dashboardError instanceof Error ? dashboardError.message : String(dashboardError),
+      });
+    }
+
     return NextResponse.json({
       success: true,
       date,
@@ -284,6 +491,7 @@ export async function GET(request: Request) {
         disciplineBreakdown: disciplineEntries,
         insights,
       },
+      dashboard,
       results,
     });
   } catch (error) {

@@ -80,6 +80,63 @@ function getWeight(raw: Record<string, unknown>): number | null {
   return typeof poids === "number" && !Number.isNaN(poids) ? poids : null;
 }
 
+function getNumericCandidate(raw: Record<string, unknown>, candidates: string[]) {
+  for (const candidate of candidates) {
+    const value = raw[candidate];
+    if (typeof value === "number" && !Number.isNaN(value)) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function normalizePercentValue(value: number | null) {
+  if (value === null) return null;
+  if (value > 1) return value / 100;
+  if (value < 0) return null;
+  return value;
+}
+
+function getNestedNumeric(
+  raw: Record<string, unknown>,
+  sectionKey: string,
+  candidates: string[]
+) {
+  const section = raw[sectionKey] as Record<string, unknown> | undefined;
+  if (!section) return null;
+  return getNumericCandidate(section, candidates);
+}
+
+function getDaysSinceLastRun(raw: Record<string, unknown>) {
+  const direct = getNumericCandidate(raw, [
+    "joursDepuisDerniereCourse",
+    "joursRepos",
+    "delaiDepuisDerniereCourse",
+  ]);
+  if (direct !== null) {
+    return direct;
+  }
+
+  const dateCandidate = [
+    raw.dateDerniereCourse,
+    raw.derniereCourseDate,
+    raw.dateLastRun,
+  ].find((value) => typeof value === "string");
+
+  if (!dateCandidate || typeof dateCandidate !== "string") {
+    return null;
+  }
+
+  const parsed = new Date(dateCandidate);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  const diffDays = Math.round((Date.now() - parsed.getTime()) / 86_400_000);
+  return diffDays >= 0 ? diffDays : null;
+}
+
 function getStall(raw: Record<string, unknown>): number | null {
   const value =
     raw.placeCorde ??
@@ -113,6 +170,54 @@ function mapParticipant(raw: Record<string, unknown>): Participant {
       ? ((cote - coteMatin) / coteMatin) * 100
       : null;
   const gainsParticipant = (raw.gainsParticipant as Record<string, unknown> | undefined) ?? {};
+  const jockeyWinRate = normalizePercentValue(
+    getNumericCandidate(raw, ["tauxVictoireJockey", "jockeyWinRate"]) ??
+      getNestedNumeric(raw, "statistiquesJockey", ["tauxVictoire", "winRate"])
+  );
+  const jockeyRecentForm = normalizePercentValue(
+    getNumericCandidate(raw, ["formeRecenteJockey", "jockeyRecentForm"]) ??
+      getNestedNumeric(raw, "statistiquesJockey", ["formeRecente", "recentForm"])
+  );
+  const trainerTrackWinRate = normalizePercentValue(
+    getNumericCandidate(raw, ["tauxVictoireEntraineurHippodrome", "trainerTrackWinRate"]) ??
+      getNestedNumeric(raw, "statistiquesEntraineur", ["tauxVictoireHippodrome", "trackWinRate"])
+  );
+  const distanceWinRate = normalizePercentValue(
+    getNumericCandidate(raw, ["tauxVictoireDistance", "distanceWinRate"]) ??
+      getNestedNumeric(raw, "statistiquesDistance", ["tauxVictoire", "winRate"])
+  );
+  const distancePlaceRate = normalizePercentValue(
+    getNumericCandidate(raw, ["tauxPlaceDistance", "distancePlaceRate"]) ??
+      getNestedNumeric(raw, "statistiquesDistance", ["tauxPlace", "placeRate"])
+  );
+  const trackWinRate = normalizePercentValue(
+    getNumericCandidate(raw, ["tauxVictoireHippodrome", "trackWinRate"]) ??
+      getNestedNumeric(raw, "statistiquesHippodrome", ["tauxVictoire", "winRate"])
+  );
+  const trackPlaceRate = normalizePercentValue(
+    getNumericCandidate(raw, ["tauxPlaceHippodrome", "trackPlaceRate"]) ??
+      getNestedNumeric(raw, "statistiquesHippodrome", ["tauxPlace", "placeRate"])
+  );
+  const terrainWinRate = normalizePercentValue(
+    getNumericCandidate(raw, ["tauxVictoireTerrain", "terrainWinRate"]) ??
+      getNestedNumeric(raw, "statistiquesTerrain", ["tauxVictoire", "winRate"])
+  );
+  const terrainPlaceRate = normalizePercentValue(
+    getNumericCandidate(raw, ["tauxPlaceTerrain", "terrainPlaceRate"]) ??
+      getNestedNumeric(raw, "statistiquesTerrain", ["tauxPlace", "placeRate"])
+  );
+  const terrainPreference =
+    typeof raw.preferenceTerrain === "string"
+      ? String(raw.preferenceTerrain)
+      : typeof raw.terrainFavori === "string"
+        ? String(raw.terrainFavori)
+        : null;
+  const meteoPreference =
+    typeof raw.preferenceMeteo === "string"
+      ? String(raw.preferenceMeteo)
+      : typeof raw.meteoFavorite === "string"
+        ? String(raw.meteoFavorite)
+        : null;
 
   return {
     numPmu: Number(raw.numPmu ?? 0),
@@ -147,6 +252,18 @@ function mapParticipant(raw: Record<string, unknown>): Participant {
       typeof raw.formeRecenteAmelioree === "boolean"
         ? raw.formeRecenteAmelioree
         : false,
+    jockeyWinRate,
+    jockeyRecentForm,
+    trainerTrackWinRate,
+    distanceWinRate,
+    distancePlaceRate,
+    trackWinRate,
+    trackPlaceRate,
+    terrainWinRate,
+    terrainPlaceRate,
+    terrainPreference,
+    meteoPreference,
+    daysSinceLastRun: getDaysSinceLastRun(raw),
   };
 }
 

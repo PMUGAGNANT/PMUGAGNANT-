@@ -25,6 +25,7 @@ interface PickInfo {
   nom: string;
   cotePmu: number | null;
   coteEstimee: number | null;
+  jockey?: string | null;
 }
 
 interface BilanResult {
@@ -56,6 +57,25 @@ interface BilanData {
     confidenceBuckets: Array<{ bucket: string; label: string; played: number; success: number; rate: number }>;
     disciplineBreakdown: Array<{ discipline: string; played: number; success: number; rate: number }>;
     insights: string[];
+  };
+  dashboard: {
+    available: boolean;
+    globalRoi: number;
+    algoSuccessRate: number;
+    randomSuccessRate: number;
+    totalBets: number;
+    totalStake: number;
+    totalGain: number;
+    bestTracks: Array<{ label: string; roi: number; sample: number }>;
+    bestBetTypes: Array<{ label: string; roi: number; sample: number }>;
+    bestJockeys: Array<{ label: string; roi: number; sample: number }>;
+    timeline: Array<{
+      date: string;
+      gain: number;
+      stake: number;
+      profit: number;
+      cumulativeProfit: number;
+    }>;
   };
   results: BilanResult[];
 }
@@ -165,6 +185,15 @@ function formatOdds(value: number | null): string {
   const normalized = Number(value);
   if (!Number.isFinite(normalized)) return "-";
   return normalized.toFixed(1);
+}
+
+function formatSignedPercent(value: number) {
+  return `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
+}
+
+function formatSignedCurrency(value: number) {
+  const formatted = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(value);
+  return `${value > 0 ? "+" : ""}${formatted} EUR`;
 }
 
 function DateNavigator({
@@ -318,6 +347,41 @@ function SkeletonCards() {
           }}
         />
       ))}
+    </div>
+  );
+}
+
+function MiniBarChart({
+  timeline,
+}: {
+  timeline: BilanData["dashboard"]["timeline"];
+}) {
+  if (timeline.length === 0) return null;
+
+  const maxAbs = Math.max(...timeline.map((point) => Math.abs(point.cumulativeProfit)), 1);
+
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 160 }}>
+      {timeline.map((point) => {
+        const height = `${Math.max((Math.abs(point.cumulativeProfit) / maxAbs) * 100, 8)}%`;
+        const positive = point.cumulativeProfit >= 0;
+        return (
+          <div key={point.date} style={{ flex: 1, display: "grid", gap: 8, justifyItems: "center" }}>
+            <div
+              style={{
+                width: "100%",
+                minWidth: 16,
+                height,
+                borderRadius: 12,
+                background: positive ? "linear-gradient(180deg, #0F9D58, #0B7A44)" : "linear-gradient(180deg, #E57373, #D64545)",
+              }}
+            />
+            <div style={{ fontSize: 11, color: "#7A7A7A", textAlign: "center" }}>
+              {point.date.slice(5)}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -497,6 +561,125 @@ function BilanPageContent() {
               <SummaryCard label="Tickets perdus" value={data.summary.losses} tone={data.summary.losses > data.summary.wins + data.summary.places ? "bad" : "default"} />
               <SummaryCard label="Courses finies" value={data.results.length} />
             </div>
+
+            {data.dashboard.available ? (
+              <div style={{ margin: "0 16px 18px", display: "grid", gap: 14 }}>
+                <div
+                  style={{
+                    background: "#FFFFFF",
+                    borderRadius: 24,
+                    padding: 18,
+                    border: "1px solid rgba(15,23,42,0.05)",
+                    boxShadow: "0 18px 36px rgba(15,23,42,0.08)",
+                  }}
+                >
+                  <div style={{ fontSize: 22, fontWeight: 800, color: GREEN_DARK, marginBottom: 12 }}>
+                    Dashboard performance
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <SummaryCard
+                      label="ROI global"
+                      value={formatSignedPercent(data.dashboard.globalRoi)}
+                      tone={data.dashboard.globalRoi >= 0 ? "good" : "bad"}
+                    />
+                    <SummaryCard
+                      label="Hasard estime"
+                      value={`${data.dashboard.randomSuccessRate.toFixed(1)}%`}
+                      tone="default"
+                    />
+                    <SummaryCard
+                      label="Algo reussite"
+                      value={`${data.dashboard.algoSuccessRate.toFixed(1)}%`}
+                      tone={data.dashboard.algoSuccessRate >= data.dashboard.randomSuccessRate ? "good" : "warn"}
+                    />
+                    <SummaryCard label="Bets historiques" value={data.dashboard.totalBets} />
+                    <SummaryCard label="Mises" value={formatSignedCurrency(data.dashboard.totalStake)} />
+                    <SummaryCard
+                      label="Gains"
+                      value={formatSignedCurrency(data.dashboard.totalGain)}
+                      tone={data.dashboard.totalGain >= data.dashboard.totalStake ? "good" : "warn"}
+                    />
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    background: "#FFFFFF",
+                    borderRadius: 24,
+                    padding: 18,
+                    border: "1px solid rgba(15,23,42,0.05)",
+                    boxShadow: "0 18px 36px rgba(15,23,42,0.08)",
+                  }}
+                >
+                  <div style={{ fontSize: 18, fontWeight: 800, color: DARK, marginBottom: 12 }}>
+                    Gains / pertes dans le temps
+                  </div>
+                  <MiniBarChart timeline={data.dashboard.timeline} />
+                </div>
+
+                <div
+                  style={{
+                    background: "#FFFFFF",
+                    borderRadius: 24,
+                    padding: 18,
+                    border: "1px solid rgba(15,23,42,0.05)",
+                    boxShadow: "0 18px 36px rgba(15,23,42,0.08)",
+                    display: "grid",
+                    gap: 14,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: DARK, marginBottom: 10 }}>
+                      Meilleurs hippodromes
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {data.dashboard.bestTracks.map((track) => (
+                        <div key={track.label} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 14 }}>
+                          <span style={{ color: DARK, fontWeight: 700 }}>{track.label}</span>
+                          <span style={{ color: track.roi >= 0 ? GREEN : RED, fontWeight: 800 }}>
+                            {formatSignedPercent(track.roi)} ({track.sample})
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: DARK, marginBottom: 10 }}>
+                      Taux par type de pari
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {data.dashboard.bestBetTypes.map((betType) => (
+                        <div key={betType.label} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 14 }}>
+                          <span style={{ color: DARK, fontWeight: 700 }}>{betType.label}</span>
+                          <span style={{ color: betType.roi >= 0 ? GREEN : RED, fontWeight: 800 }}>
+                            {formatSignedPercent(betType.roi)} ({betType.sample})
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: DARK, marginBottom: 10 }}>
+                      Jockeys detectes
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {data.dashboard.bestJockeys.length > 0 ? data.dashboard.bestJockeys.map((jockey) => (
+                        <div key={jockey.label} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 14 }}>
+                          <span style={{ color: DARK, fontWeight: 700 }}>{jockey.label}</span>
+                          <span style={{ color: jockey.roi >= 0 ? GREEN : RED, fontWeight: 800 }}>
+                            {formatSignedPercent(jockey.roi)} ({jockey.sample})
+                          </span>
+                        </div>
+                      )) : (
+                        <div style={{ color: "#666", fontSize: 14 }}>Pas assez de signal jockey exploitable pour cette date.</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             <div style={{ margin: "0 16px 18px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>

@@ -58,6 +58,16 @@ export interface Participant {
   tauxFaute?: number | null;
   terrainPreference?: string | null;
   meteoPreference?: string | null;
+  jockeyWinRate?: number | null;
+  jockeyRecentForm?: number | null;
+  trainerTrackWinRate?: number | null;
+  distanceWinRate?: number | null;
+  distancePlaceRate?: number | null;
+  trackWinRate?: number | null;
+  trackPlaceRate?: number | null;
+  terrainWinRate?: number | null;
+  terrainPlaceRate?: number | null;
+  daysSinceLastRun?: number | null;
 }
 
 export interface MusicStats {
@@ -80,11 +90,19 @@ export interface RunnerSignals {
   podium: number;
   humain: number;
   entraineur: number;
+  jockeyForme: number;
+  trainerTrack: number;
   marche: number;
   gains: number;
   popularite: number;
   stalle: number;
   poids: number;
+  distance: number;
+  terrain: number;
+  meteo: number;
+  hippodrome: number;
+  ageSexe: number;
+  repos: number;
   risque: number;
   faute: number;
 }
@@ -95,12 +113,21 @@ export interface RunnerPredictionMetrics {
   confiance: number;
   scoreFinalPari: number;
   probaEstimee: number;
+  probabiliteImplicite: number;
+  probabiliteValueSeuil: number;
   valueCalculee: number;
   valueEffective: number;
   top3Potential: number;
   top5Potential: number;
   objective: "GAGNE" | "PODIUM" | "TOP5" | "SPECULATIF";
   outsider: boolean;
+  valueBet: boolean;
+  marketEdge: number;
+  kellyFraction: number;
+  bankrollPct: number;
+  miseBase100: number;
+  action: "MISER" | "NE PAS MISER";
+  topFacteurs: string[];
   decision: PredictionDecision;
   typePariConseille: "GAGNANT" | "PLACE";
   miseConseillee: number;
@@ -125,11 +152,16 @@ export interface PredictedOdds {
 
 export interface ValueAnalysis {
   probabilite: number;
+  probabiliteImplicite?: number;
+  probabiliteValueSeuil?: number;
   coteJuste: number;
   cotePMU: number;
   valueIndex: number;
   valueBrute: number;
   valueEffective: number;
+  valueBet?: boolean;
+  bankrollPct?: number;
+  kellyFraction?: number;
   label: string;
   emoji: string;
   miseConseillee: number;
@@ -177,6 +209,30 @@ export interface RacePredictionSummary {
   lisibilite: Lisibilite;
   decisionCourse: PredictionDecision;
   outsiderAutorise: boolean;
+  journeeSignal?: DaySignal;
+}
+
+export interface CompositeBetPlan {
+  type: "SIMPLE_GAGNANT" | "COUPLE" | "TRIO" | "QUINTE" | "MULTI";
+  chevaux: number[];
+  confiance: number;
+  eligible: boolean;
+  raison: string;
+}
+
+export interface BettingPlan {
+  bankrollBase: number;
+  simpleGagnant: CompositeBetPlan | null;
+  couple: CompositeBetPlan | null;
+  trio: CompositeBetPlan | null;
+  quinte: CompositeBetPlan | null;
+  multi: CompositeBetPlan | null;
+}
+
+export interface DaySignal {
+  label: "JOURNEE_FAVORABLE" | "JOURNEE_NEUTRE" | "JOURNEE_DEFAVORABLE";
+  score: number;
+  raisons: string[];
 }
 
 export interface RaceAnalysis {
@@ -192,6 +248,8 @@ export interface RaceAnalysis {
   profils: StrategicProfiles;
   valueTop5: Record<number, ValueAnalysis>;
   prediction: RacePredictionSummary;
+  bettingPlan: BettingPlan;
+  alertes: string[];
 }
 
 export interface AlgoParameters {

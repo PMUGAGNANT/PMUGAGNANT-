@@ -62,6 +62,11 @@ function formatOdds(value: number | null | undefined) {
   return Number(value).toFixed(1);
 }
 
+function formatPercent(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "-";
+  return `${Math.round(Number(value) * 100)}%`;
+}
+
 function formatCountdown(minutesUntilStart: number) {
   if (minutesUntilStart <= 0) return "Depart imminent";
   if (minutesUntilStart < 60) return `Dans ${Math.round(minutesUntilStart)} min`;
@@ -171,6 +176,24 @@ function formatVariation(variation: number | null | undefined) {
   if (variation === null || variation === undefined || !Number.isFinite(variation)) return null;
   const rounded = round1(variation);
   return `${rounded > 0 ? "+" : ""}${rounded}%`;
+}
+
+function getConfidenceFill(score: number) {
+  return `${Math.max(0, Math.min(score, 10)) * 10}%`;
+}
+
+function getActionTone(action: string, valueBet: boolean) {
+  if (action === "MISER" && valueBet) {
+    return { background: "#E8F5ED", color: GREEN, label: "VALUE BET ✅" };
+  }
+
+  return { background: "#FDECEC", color: RED, label: "EVITER ❌" };
+}
+
+function getConfianceStyle(score: number) {
+  if (score >= 7.5) return { background: "#E8F5E9", color: GREEN };
+  if (score >= 5.5) return { background: "#FFF8E1", color: "#A66B00" };
+  return { background: "#FDECEA", color: RED };
 }
 
 function getTicketSimple(analysis: RaceAnalysis | null) {
@@ -504,6 +527,70 @@ function MetricCard({
   );
 }
 
+function ConfidenceBar({ score }: { score: number }) {
+  const tone = getConfianceStyle(score);
+  return (
+    <div style={{ display: "grid", gap: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ fontSize: 12, fontWeight: 800, color: SLATE, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          Confiance
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: tone.color }}>{score}/10</div>
+      </div>
+      <div style={{ height: 10, borderRadius: 999, background: "#E7ECF1", overflow: "hidden" }}>
+        <div
+          style={{
+            width: getConfidenceFill(score),
+            height: "100%",
+            borderRadius: 999,
+            background: tone.color,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function BetPlanCard({
+  label,
+  summary,
+}: {
+  label: string;
+  summary: { chevaux: number[]; eligible: boolean; confiance: number; raison: string } | null;
+}) {
+  if (!summary) return null;
+
+  return (
+    <div
+      style={{
+        borderRadius: 18,
+        padding: 14,
+        background: summary.eligible ? "#F4FBF7" : "#F8FAFC",
+        border: `1px solid ${summary.eligible ? "#D9F0E2" : "#E7ECF1"}`,
+        display: "grid",
+        gap: 8,
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: DARK }}>{label}</div>
+        <Pill
+          background={summary.eligible ? "#E8F5ED" : "#F3F4F6"}
+          color={summary.eligible ? GREEN : SLATE}
+        >
+          {summary.eligible ? "Jouable" : "Bloque"}
+        </Pill>
+      </div>
+      <div style={{ fontSize: 14, color: DARK, fontWeight: 700 }}>
+        {summary.chevaux.length > 0 ? `Chevaux: ${summary.chevaux.map((num) => `N${num}`).join(" - ")}` : "Aucune combinaison"}
+      </div>
+      <div style={{ fontSize: 13, color: SLATE }}>
+        Confiance moyenne {summary.confiance}/10
+      </div>
+      <div style={{ fontSize: 13, color: SLATE, lineHeight: "18px" }}>{summary.raison}</div>
+    </div>
+  );
+}
+
 function TicketPanel({
   title,
   subtitle,
@@ -523,6 +610,7 @@ function TicketPanel({
 }) {
   const outcome = getOutcomeTone(arrivalPosition ?? null, placeMode);
   const variation = formatVariation(runner.variationCote);
+  const actionTone = getActionTone(runner.prediction.action, runner.prediction.valueBet);
 
   return (
     <div
@@ -581,6 +669,9 @@ function TicketPanel({
               <Pill background="#EEF8F1" color={GREEN}>
                 {formatObjective(runner.prediction.objective)}
               </Pill>
+              <Pill background={actionTone.background} color={actionTone.color}>
+                {actionTone.label}
+              </Pill>
               {runner.stalle || runner.placeCorde ? (
                 <Pill background="#F3F4F6" color={SLATE}>
                   Stalle {runner.stalle ?? runner.placeCorde}
@@ -595,7 +686,7 @@ function TicketPanel({
                 PMU {formatOdds(runner.cote)}
               </Pill>
               <Pill background="#F4FBF7" color={GREEN}>
-                IA {formatOdds(runner.prediction.probaEstimee > 0 ? 1 / runner.prediction.probaEstimee : null)}
+                Proba reel. {formatPercent(runner.prediction.probaEstimee)}
               </Pill>
               {variation ? (
                 <Pill background="#FFF8E6" color="#A06A00">
@@ -604,6 +695,10 @@ function TicketPanel({
               ) : null}
             </div>
           </div>
+        </div>
+
+        <div style={{ marginTop: 14 }}>
+          <ConfidenceBar score={runner.prediction.confiance} />
         </div>
 
         <div
@@ -616,7 +711,7 @@ function TicketPanel({
           }}
         >
           <div style={{ fontSize: 13, lineHeight: "18px", color: SLATE }}>
-            {describeTicketIntent(runner)}
+            {describeTicketIntent(runner)} Mise reco: {formatCurrency(runner.prediction.miseBase100) ?? "0 EUR"} sur bankroll 100 EUR.
           </div>
           {arrivalPosition !== undefined ? (
             <span
@@ -699,6 +794,12 @@ function SecondaryRunnerCard({
         <Pill background="#EEF8F1" color={GREEN}>
           {formatObjective(runner.prediction.objective)}
         </Pill>
+        <Pill
+          background={getActionTone(runner.prediction.action, runner.prediction.valueBet).background}
+          color={getActionTone(runner.prediction.action, runner.prediction.valueBet).color}
+        >
+          {getActionTone(runner.prediction.action, runner.prediction.valueBet).label}
+        </Pill>
         {runner.stalle || runner.placeCorde ? (
           <Pill background="#F3F4F6" color={SLATE}>
             Stalle {runner.stalle ?? runner.placeCorde}
@@ -718,6 +819,8 @@ function SecondaryRunnerCard({
           </Pill>
         ) : null}
       </div>
+
+      <ConfidenceBar score={runner.prediction.confiance} />
     </div>
   );
 }
@@ -803,6 +906,7 @@ export default function CourseDetailPage({
   const placeBasePosition = getArrivalPosition(placeBase?.numPmu, data?.officialArrival ?? []);
   const readableDate = formatDateLabel(selectedDate);
   const contextHighlights = data ? buildContextHighlights(data, analysis) : [];
+  const daySignal = analysis?.prediction.journeeSignal ?? null;
 
   if (loading) {
     return (
@@ -1090,9 +1194,9 @@ export default function CourseDetailPage({
                     />
                     <MetricCard
                       label="Angle de jeu"
-                      value={formatObjective(simpleTicket.prediction.objective)}
-                      hint={simpleTicket.prediction.typePariConseille === "PLACE" ? "Profil oriente place" : "Profil oriente gagne"}
-                      tone={simpleTicket.prediction.typePariConseille === "PLACE" ? "warn" : "good"}
+                      value={simpleTicket.prediction.action}
+                      hint={simpleTicket.prediction.valueBet ? "Value bet confirme" : "Pas assez d'edge pour miser"}
+                      tone={simpleTicket.prediction.action === "MISER" ? "good" : "bad"}
                     />
                     <MetricCard
                       label="Lisibilite"
@@ -1108,6 +1212,120 @@ export default function CourseDetailPage({
                     />
                   </div>
                 </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard title="Value et mise" kicker="Decision bankroll" accent="rgba(11,139,75,0.1)">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <MetricCard
+                  label="Cote actuelle"
+                  value={formatOdds(simpleTicket.cote)}
+                  hint="Cote PMU au moment de l'analyse"
+                  tone="default"
+                />
+                <MetricCard
+                  label="Proba reelle"
+                  value={formatPercent(simpleTicket.prediction.probaEstimee)}
+                  hint={`Marche ${formatPercent(simpleTicket.prediction.probabiliteImplicite)}`}
+                  tone={simpleTicket.prediction.valueBet ? "good" : "warn"}
+                />
+                <MetricCard
+                  label="Mise Kelly"
+                  value={formatCurrency(simpleTicket.prediction.miseBase100) ?? "0 EUR"}
+                  hint={`Cap bankroll ${Math.round(simpleTicket.prediction.bankrollPct * 100)}%`}
+                  tone={simpleTicket.prediction.action === "MISER" ? "good" : "bad"}
+                />
+                <MetricCard
+                  label="Decision"
+                  value={simpleTicket.prediction.action}
+                  hint={
+                    simpleTicket.prediction.valueBet
+                      ? "Value bet confirme: proba reelle > proba cote x 1.15"
+                      : "Aucun value bet confirme"
+                  }
+                  tone={simpleTicket.prediction.action === "MISER" ? "good" : "bad"}
+                />
+              </div>
+
+              <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {(simpleTicket.prediction.topFacteurs ?? []).map((factor) => (
+                  <Pill key={factor} background="#F4FBF7" color={GREEN}>
+                    {factor}
+                  </Pill>
+                ))}
+              </div>
+            </SectionCard>
+
+            <SectionCard title="Paris optimises" kicker="Simple, couple, trio, quinte, multi">
+              <div style={{ display: "grid", gap: 10 }}>
+                <BetPlanCard label="Simple gagnant" summary={analysis.bettingPlan.simpleGagnant} />
+                <BetPlanCard label="Couple" summary={analysis.bettingPlan.couple} />
+                <BetPlanCard label="Trio" summary={analysis.bettingPlan.trio} />
+                <BetPlanCard label="Quinte" summary={analysis.bettingPlan.quinte} />
+                <BetPlanCard label="Multi" summary={analysis.bettingPlan.multi} />
+              </div>
+            </SectionCard>
+
+            <SectionCard title="Alertes intelligentes" kicker="Lecture globale">
+              <div style={{ display: "grid", gap: 12 }}>
+                {daySignal ? (
+                  <div
+                    style={{
+                      borderRadius: 18,
+                      padding: 16,
+                      background:
+                        daySignal.label === "JOURNEE_FAVORABLE"
+                          ? "#F4FBF7"
+                          : daySignal.label === "JOURNEE_DEFAVORABLE"
+                            ? "#FFF2F2"
+                            : "#F8FAFC",
+                      border:
+                        daySignal.label === "JOURNEE_FAVORABLE"
+                          ? "1px solid #D9F0E2"
+                          : daySignal.label === "JOURNEE_DEFAVORABLE"
+                            ? "1px solid #F7D5D5"
+                            : "1px solid #E7ECF1",
+                    }}
+                  >
+                    <div style={{ fontSize: 12, fontWeight: 800, color: SLATE, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+                      Indicateur journee
+                    </div>
+                    <div style={{ fontSize: 24, fontWeight: 900, color: DARK, marginBottom: 8 }}>
+                      {daySignal.label.replaceAll("_", " ")}
+                    </div>
+                    <div style={{ fontSize: 14, color: SLATE, marginBottom: 10 }}>
+                      Score global {daySignal.score}/100
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {daySignal.raisons.map((reason) => (
+                        <div key={reason} style={{ fontSize: 14, lineHeight: "20px", color: SLATE }}>
+                          {reason}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {analysis.alertes.length > 0 ? (
+                  analysis.alertes.map((alert) => (
+                    <div
+                      key={alert}
+                      style={{
+                        borderRadius: 16,
+                        padding: "12px 14px",
+                        background: "#FFF8E6",
+                        border: "1px solid #F1DFC2",
+                        color: "#8A5A00",
+                        fontSize: 14,
+                        lineHeight: "20px",
+                      }}
+                    >
+                      {alert}
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ color: SLATE, fontSize: 14 }}>Aucune alerte additionnelle sur cette course.</div>
+                )}
               </div>
             </SectionCard>
 
@@ -1334,8 +1552,24 @@ export default function CourseDetailPage({
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 18, fontWeight: 800, color: DARK, lineHeight: "22px" }}>{runner.nom}</div>
                         <div style={{ fontSize: 13, color: SLATE, marginTop: 4 }}>
-                          Score {round1(runner.prediction.scoreFinalPari)} - PMU {formatOdds(runner.cote)}
-                          {runner.stalle || runner.placeCorde ? ` - Stalle ${runner.stalle ?? runner.placeCorde}` : ""}
+                          Score {round1(runner.prediction.scoreFinalPari)} - PMU {formatOdds(runner.cote)} - Proba {formatPercent(runner.prediction.probaEstimee)}
+                          {runner.stalle || runner.placeCorde ? ` - Stalle ${runner.stalle ?? runner.placeCorde}` : ""} - Mise {formatCurrency(runner.prediction.miseBase100) ?? "0 EUR"}
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                          <Pill
+                            background={getActionTone(runner.prediction.action, runner.prediction.valueBet).background}
+                            color={getActionTone(runner.prediction.action, runner.prediction.valueBet).color}
+                          >
+                            {getActionTone(runner.prediction.action, runner.prediction.valueBet).label}
+                          </Pill>
+                          {(runner.prediction.topFacteurs ?? []).map((factor) => (
+                            <Pill key={`${runner.numPmu}-${factor}`} background="#F3F4F6" color={SLATE}>
+                              {factor}
+                            </Pill>
+                          ))}
+                        </div>
+                        <div style={{ marginTop: 10 }}>
+                          <ConfidenceBar score={runner.prediction.confiance} />
                         </div>
                       </div>
                       {position ? (
