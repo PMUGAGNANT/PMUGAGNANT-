@@ -475,20 +475,20 @@ function SectionCard({
   return (
     <section
       style={{
-        margin: "0 16px 16px",
-        borderRadius: 24,
-        background: "#FFFFFF",
-        padding: 20,
+        margin: "0 0 18px",
+        borderRadius: 28,
+        background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,251,0.9))",
+        padding: 22,
         border: `1px solid ${accent}`,
-        boxShadow: "0 18px 38px rgba(15,23,42,0.08)",
+        boxShadow: "0 22px 42px rgba(15,23,42,0.08)",
       }}
     >
       {kicker ? (
-        <div style={{ fontSize: 12, fontWeight: 800, color: GREEN, marginBottom: 8, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+        <div style={{ fontSize: 11, fontWeight: 800, color: GREEN, marginBottom: 10, letterSpacing: "0.12em", textTransform: "uppercase" }}>
           {kicker}
         </div>
       ) : null}
-      <div style={{ fontSize: 24, lineHeight: "28px", fontWeight: 800, color: DARK, marginBottom: 14 }}>
+      <div style={{ fontSize: 26, lineHeight: "30px", fontWeight: 900, color: DARK, marginBottom: 16, letterSpacing: "-0.5px" }}>
         {title}
       </div>
       {children}
@@ -1051,7 +1051,7 @@ export default function CourseDetailPage({
         </div>
       </div>
 
-      <div style={{ paddingTop: 16 }}>
+      <div style={{ paddingTop: 18, display: "grid", gap: 18 }}>
         <SectionCard title={data.courseInfo.nomCourse} kicker="Lecture course" accent="rgba(11,139,75,0.12)">
           <div style={{ fontSize: 16, fontWeight: 700, color: SLATE, marginBottom: 14 }}>
             {data.courseInfo.hippodrome} - {readableDate}
@@ -1286,6 +1286,13 @@ export default function CourseDetailPage({
               </div>
             </SectionCard>
 
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                gap: 18,
+              }}
+            >
             <SectionCard title="Value et mise" kicker="Decision bankroll" accent="rgba(11,139,75,0.1)">
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 <MetricCard
@@ -1336,7 +1343,15 @@ export default function CourseDetailPage({
                 <BetPlanCard label="Multi" summary={analysis.bettingPlan.multi} />
               </div>
             </SectionCard>
+            </div>
 
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                gap: 18,
+              }}
+            >
             <SectionCard title="Alertes intelligentes" kicker="Lecture globale">
               <div style={{ display: "grid", gap: 12 }}>
                 {daySignal ? (
@@ -1442,6 +1457,7 @@ export default function CourseDetailPage({
                 </div>
               ) : null}
             </SectionCard>
+            </div>
 
             {data.isFinished && data.officialArrival.length > 0 ? (
               <SectionCard title="Debrief officiel" kicker="Arrivee course">
@@ -1516,6 +1532,13 @@ export default function CourseDetailPage({
               </SectionCard>
             ) : null}
 
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                gap: 18,
+              }}
+            >
             <SectionCard title="Lecture moteur" kicker="Ce qui tient / ce qui force la prudence">
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <div
@@ -1656,6 +1679,7 @@ export default function CourseDetailPage({
                 })}
               </div>
             </SectionCard>
+            </div>
           </>
         ) : null}
       </div>
