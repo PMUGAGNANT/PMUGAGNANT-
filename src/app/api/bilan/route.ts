@@ -3,6 +3,9 @@ import { getAllRaces, getParticipants, getTodayDateStr } from "@/lib/pmu-api";
 import { analyzeRaceWithParameters, getMinutesUntilStart } from "@/lib/analysis";
 import { attachFaultRates } from "@/lib/horse-faults";
 import { loadAlgoParameters } from "@/lib/config";
+import { badRequest, serverError } from "@/lib/api-response";
+import { normalizeRequestedDate } from "@/lib/request-utils";
+import { logger } from "@/lib/server-logger";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +75,10 @@ function getSuccessRate(stats: AggregateStats): number {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const date = searchParams.get("date") || getTodayDateStr();
+  const date = normalizeRequestedDate(searchParams.get("date"), getTodayDateStr());
+  if (!date) {
+    return badRequest("Invalid date format. Expected DDMMYYYY.");
+  }
 
   try {
     const algoParameters = await loadAlgoParameters();
@@ -132,7 +138,13 @@ export async function GET(request: Request) {
           resultat,
           ordreArrivee,
         });
-      } catch {
+      } catch (error) {
+        logger.warn("bilan.race_failed", {
+          date,
+          reunion: race.reunion,
+          course: race.course,
+          error: error instanceof Error ? error.message : String(error),
+        });
         // Skip failed race fetches so the bilan stays available.
       }
     }
@@ -274,10 +286,7 @@ export async function GET(request: Request) {
       },
       results,
     });
-  } catch {
-    return NextResponse.json(
-      { success: false, error: "Bilan failed" },
-      { status: 500 }
-    );
+  } catch (error) {
+    return serverError("Bilan failed", error, { date });
   }
 }

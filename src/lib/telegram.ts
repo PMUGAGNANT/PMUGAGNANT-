@@ -1,6 +1,9 @@
 import type { WeeklyReportRow } from "@/lib/types";
+import { logger } from "@/lib/server-logger";
 
 const TELEGRAM_ENDPOINT = "https://api.telegram.org";
+const TELEGRAM_TIMEOUT_MS = 10_000;
+const MAX_TELEGRAM_MESSAGE_LENGTH = 3900;
 
 function getTelegramConfig() {
   return {
@@ -20,24 +23,38 @@ export async function sendTelegramMessage(text: string) {
     return { sent: false, skipped: true };
   }
 
-  const response = await fetch(`${TELEGRAM_ENDPOINT}/bot${token}/sendMessage`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-      disable_web_page_preview: true,
-    }),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TELEGRAM_TIMEOUT_MS);
+  const safeText = text.length > MAX_TELEGRAM_MESSAGE_LENGTH
+    ? `${text.slice(0, MAX_TELEGRAM_MESSAGE_LENGTH - 12)}\n\n[message coupe]`
+    : text;
 
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Telegram send failed: ${response.status} ${body}`);
+  try {
+    const response = await fetch(`${TELEGRAM_ENDPOINT}/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: safeText,
+        disable_web_page_preview: true,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Telegram send failed: ${response.status} ${body}`);
+    }
+
+    return { sent: true };
+  } catch (error) {
+    logger.error("telegram.send_failed", error);
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  return { sent: true };
 }
 
 export function formatMorningTelegram(

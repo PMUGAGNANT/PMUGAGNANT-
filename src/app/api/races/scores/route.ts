@@ -3,13 +3,19 @@ import { getAllRaces, getParticipants, getTodayDateStr } from "@/lib/pmu-api";
 import { analyzeRaceWithParameters, getMinutesUntilStart } from "@/lib/analysis";
 import { attachFaultRates } from "@/lib/horse-faults";
 import { loadAlgoParameters } from "@/lib/config";
+import { badRequest, serverError } from "@/lib/api-response";
+import { normalizeRequestedDate } from "@/lib/request-utils";
+import { logger } from "@/lib/server-logger";
 import type { Lisibilite, PredictionDecision, RaceSummary } from "@/lib/types";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const date = searchParams.get("date") || getTodayDateStr();
+  const date = normalizeRequestedDate(searchParams.get("date"), getTodayDateStr());
+  if (!date) {
+    return badRequest("Invalid date format. Expected DDMMYYYY.");
+  }
 
   try {
     const algoParameters = await loadAlgoParameters();
@@ -104,13 +110,17 @@ export async function GET(request: Request) {
             recommendation: result.value.recommendation,
             pick: result.value.pick,
           };
+        } else if (result.status === "rejected") {
+          logger.warn("race_scores.batch_item_failed", {
+            date,
+            error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+          });
         }
       }
     }
 
     return NextResponse.json({ success: true, scores });
   } catch (error) {
-    console.error("Race scores error:", error);
-    return NextResponse.json({ success: false, scores: {} });
+    return serverError("Race scores failed", error, { date });
   }
 }

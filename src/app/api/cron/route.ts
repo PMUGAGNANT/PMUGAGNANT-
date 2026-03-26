@@ -3,6 +3,7 @@ import { ensureCronAuthorized } from "@/lib/cron-auth";
 import { getTodayDateStr } from "@/lib/pmu-api";
 import { runMorningAnalysis, runPreRaceSecondPass, runResultSync } from "@/lib/prediction-pipeline";
 import { runWeeklyReport } from "@/lib/weekly-reports";
+import { logger } from "@/lib/server-logger";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -42,6 +43,7 @@ export async function GET(request: NextRequest) {
     try {
       results.morning = await runMorningAnalysis(date);
     } catch (e) {
+      logger.error("cron.dispatch.morning_failed", e, { date });
       results.morning = { error: e instanceof Error ? e.message : "morning failed" };
     }
   }
@@ -50,6 +52,7 @@ export async function GET(request: NextRequest) {
   try {
     results.prerace = await runPreRaceSecondPass(date, { reunion: null, course: null });
   } catch (e) {
+    logger.error("cron.dispatch.prerace_failed", e, { date });
     results.prerace = { error: e instanceof Error ? e.message : "prerace failed" };
   }
 
@@ -58,6 +61,7 @@ export async function GET(request: NextRequest) {
     try {
       results.results = await runResultSync(date, { reunion: null, course: null });
     } catch (e) {
+      logger.error("cron.dispatch.results_failed", e, { date });
       results.results = { error: e instanceof Error ? e.message : "results failed" };
     }
   }
@@ -67,6 +71,7 @@ export async function GET(request: NextRequest) {
     try {
       results.weekly = await runWeeklyReport();
     } catch (e) {
+      logger.error("cron.dispatch.weekly_failed", e, { date });
       results.weekly = { error: e instanceof Error ? e.message : "weekly failed" };
     }
   }

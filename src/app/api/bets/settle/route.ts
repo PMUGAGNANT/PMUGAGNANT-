@@ -3,116 +3,135 @@ import {
   createSupabaseRequestClient,
   getSupabaseConfigError,
 } from "@/lib/supabase";
-
-const PMU_API = "https://online.turfinfo.api.pmu.fr/rest/client/1";
+import { getFinalReports, getParticipants } from "@/lib/pmu-api";
+import { serverError, unauthorized } from "@/lib/api-response";
+import { getBearerToken } from "@/lib/request-utils";
+import { logger } from "@/lib/server-logger";
 
 function getSupabaseClient(req: NextRequest) {
-  const token = req.headers.get("authorization")?.replace("Bearer ", "");
+  const token = getBearerToken(req.headers.get("authorization"));
   return createSupabaseRequestClient(token);
 }
 
-// POST /api/bets/settle - Settle pending bets by checking results
 export async function POST(req: NextRequest) {
   const client = getSupabaseClient(req);
   if (!client) {
-    return NextResponse.json({ success: false, error: getSupabaseConfigError() }, { status: 500 });
+    return serverError(getSupabaseConfigError());
   }
 
-  const { data: { user } } = await client.auth.getUser();
+  const { data: { user }, error: authError } = await client.auth.getUser();
+  if (authError) {
+    return serverError("Authentication failed", authError);
+  }
 
   if (!user) {
-    return NextResponse.json({ success: false, error: "Non connecté" }, { status: 401 });
+    return unauthorized("Non connecte");
   }
 
-  // Get all pending bets for user
-  const { data: pendingBets } = await client
+  const { data: pendingBets, error: betsError } = await client
     .from("bets")
     .select("*")
     .eq("user_id", user.id)
     .eq("statut", "EN_ATTENTE");
 
+  if (betsError) {
+    return serverError("Failed to fetch pending bets", betsError, { userId: user.id });
+  }
+
   if (!pendingBets || pendingBets.length === 0) {
-    return NextResponse.json({ success: true, settled: 0 });
+    return NextResponse.json({ success: true, settled: 0, totalGains: 0 });
+  }
+
+  const { data: profile, error: profileError } = await client
+    .from("profiles")
+    .select("solde")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError) {
+    return serverError("Failed to fetch profile balance", profileError, { userId: user.id });
   }
 
   let settledCount = 0;
-  let totalGains = 0;
+  let totalReturnedToBalance = 0;
+  let currentSolde = profile?.solde ?? 1000;
 
   for (const bet of pendingBets) {
     try {
-      // Fetch race results from PMU API
-      const url = `${PMU_API}/programme/${bet.date_str}/R${bet.reunion}/C${bet.course}/participants`;
-      const res = await fetch(url);
-      if (!res.ok) continue;
+      const [participants, reports] = await Promise.all([
+        getParticipants(bet.date_str, bet.reunion, bet.course),
+        getFinalReports(bet.date_str, bet.reunion, bet.course),
+      ]);
 
-      const data = await res.json();
-      const participants = data.participants || [];
-
-      // Find our horse
-      const horse = participants.find(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (p: any) => p.numPmu === bet.cheval_num
-      );
-      if (!horse || !horse.ordreArrivee) continue; // race not finished yet
+      const horse = participants.find((participant) => participant.numPmu === bet.cheval_num);
+      if (!horse || !horse.ordreArrivee) {
+        continue;
+      }
 
       const position = horse.ordreArrivee;
       let statut: string;
       let gain: number;
+      let returnedToBalance = 0;
 
       if (bet.type_pari === "GAGNANT") {
         if (position === 1) {
           statut = "GAGNE";
-          gain = bet.mise * bet.cote - bet.mise;
+          const report = reports.simpleGagnant[bet.cheval_num] ?? bet.cote ?? 0;
+          gain = Math.round((bet.mise * report - bet.mise) * 100) / 100;
+          returnedToBalance = Math.round((bet.mise + gain) * 100) / 100;
         } else {
           statut = "PERDU";
           gain = -bet.mise;
         }
+      } else if (position <= 3) {
+        statut = "PLACE";
+        const report = reports.simplePlace[bet.cheval_num] ?? Math.max(1, (bet.cote ?? 0) * 0.3);
+        gain = Math.round((bet.mise * report - bet.mise) * 100) / 100;
+        if (gain < 0) gain = 0;
+        returnedToBalance = Math.round((bet.mise + gain) * 100) / 100;
       } else {
-        // PLACE - top 3
-        if (position <= 3) {
-          statut = "PLACE";
-          gain = Math.round((bet.mise * (bet.cote * 0.3) - bet.mise) * 100) / 100;
-          // Minimum gain for place = 0 (return stake if cote too low)
-          if (gain < 0) gain = 0;
-        } else {
-          statut = "PERDU";
-          gain = -bet.mise;
-        }
+        statut = "PERDU";
+        gain = -bet.mise;
       }
 
-      // Update bet
-      await client
+      const { error: updateBetError } = await client
         .from("bets")
         .update({ statut, gain })
         .eq("id", bet.id);
 
-      // Update solde (add back gains, or nothing if lost since we already deducted)
-      if (gain > 0) {
-        const { data: profile } = await client
-          .from("profiles")
-          .select("solde")
-          .eq("id", user.id)
-          .single();
+      if (updateBetError) {
+        throw updateBetError;
+      }
 
-        const currentSolde = profile?.solde ?? 1000;
-        await client
-          .from("profiles")
-          .update({ solde: currentSolde + gain + bet.mise }) // return stake + gains
-          .eq("id", user.id);
-
-        totalGains += gain + bet.mise;
+      if (returnedToBalance > 0) {
+        currentSolde = Math.round((currentSolde + returnedToBalance) * 100) / 100;
+        totalReturnedToBalance += returnedToBalance;
       }
 
       settledCount++;
-    } catch {
-      // Skip this bet if API fails
-      continue;
+    } catch (error) {
+      logger.warn("bets.settle_single_failed", {
+        userId: user.id,
+        betId: bet.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  if (totalReturnedToBalance > 0) {
+    const { error: updateProfileError } = await client
+      .from("profiles")
+      .update({ solde: currentSolde })
+      .eq("id", user.id);
+
+    if (updateProfileError) {
+      return serverError("Failed to update profile balance", updateProfileError, { userId: user.id });
     }
   }
 
   return NextResponse.json({
     success: true,
     settled: settledCount,
-    totalGains,
+    totalGains: totalReturnedToBalance,
   });
 }

@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
+import { getBearerToken } from "@/lib/request-utils";
 
-function getBearerToken(request: NextRequest) {
-  const header = request.headers.get("authorization");
-  if (!header?.startsWith("Bearer ")) {
-    return null;
-  }
-
-  return header.slice("Bearer ".length).trim();
+function safeSecretEqual(left: string, right: string) {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
 export function ensureCronAuthorized(request: NextRequest) {
   const configuredSecret = process.env.CRON_SECRET;
-  const bearerToken = getBearerToken(request);
+  const bearerToken = getBearerToken(request.headers.get("authorization"));
   const queryToken = new URL(request.url).searchParams.get("token");
   const vercelCronHeader = request.headers.get("x-vercel-cron");
 
@@ -23,7 +22,8 @@ export function ensureCronAuthorized(request: NextRequest) {
 
   if (
     configuredSecret &&
-    (configuredSecret === bearerToken || configuredSecret === queryToken)
+    ((bearerToken && safeSecretEqual(configuredSecret, bearerToken)) ||
+      (queryToken && safeSecretEqual(configuredSecret, queryToken)))
   ) {
     return null;
   }

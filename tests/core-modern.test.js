@@ -7,6 +7,7 @@ const { parseMusic, shouldRejectAsTocard } = require('../src/core/horse/music');
 const { analyzeRunnerValue, estimateProbabilityFromMusic } = require('../src/core/betting/value');
 const { getHippodromeCalibration, resolveOperationalSelection, resolveWatchSelection } = require('../src/core/analysis/selection-policy');
 const { buildOperationalBetPlan, settleSelection } = require('../src/core/analysis/settlement');
+const { calculateFairOdds, calculateValueIndex, marketProbabilityFromOdds, parseOdds } = require('../src/core/utils/odds');
 
 test('parseMusic parse correctement la musique et les incidents', () => {
     const stats = parseMusic('1a2aDa0a5a');
@@ -221,4 +222,17 @@ test('buildOperationalBetPlan et settleSelection reglent correctement les paris 
     );
     assert.equal(placeSettlement.result, 'PLACE');
     assert.equal(placeSettlement.profit, 2);
+});
+
+test('parseOdds et les calculs de cotes gerent les formats PMU courants et les entrees invalides', () => {
+    assert.equal(parseOdds(4.25), 4.25);
+    assert.equal(parseOdds(' 4,25 '), 4.25);
+    assert.equal(parseOdds('PMU 12,5'), 12.5);
+    assert.equal(parseOdds('cote 0'), null);
+    assert.equal(parseOdds(null), null);
+    assert.equal(parseOdds('abc'), null);
+
+    assert.equal(calculateFairOdds(0.2, 0), 5);
+    assert.equal(calculateValueIndex(10, 5), 2);
+    assert.ok(marketProbabilityFromOdds('4,0') > 0.25);
 });

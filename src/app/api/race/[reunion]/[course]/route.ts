@@ -3,6 +3,8 @@ import { getAllRaces, getParticipants, getTodayDateStr } from "@/lib/pmu-api";
 import { analyzeRaceWithParameters, getMinutesUntilStart } from "@/lib/analysis";
 import { attachFaultRates } from "@/lib/horse-faults";
 import { loadAlgoParameters } from "@/lib/config";
+import { badRequest, serverError } from "@/lib/api-response";
+import { normalizeRequestedDate, parsePositiveInteger } from "@/lib/request-utils";
 import type { Participant, RaceSummary } from "@/lib/types";
 
 export const dynamic = 'force-dynamic';
@@ -32,9 +34,17 @@ export async function GET(
 ) {
   const { reunion, course } = await params;
   const { searchParams } = new URL(request.url);
-  const date = searchParams.get('date') || getTodayDateStr();
-  const rNum = parseInt(reunion);
-  const cNum = parseInt(course);
+  const date = normalizeRequestedDate(searchParams.get('date'), getTodayDateStr());
+  const rNum = parsePositiveInteger(reunion);
+  const cNum = parsePositiveInteger(course);
+
+  if (!date) {
+    return badRequest("Invalid date format. Expected DDMMYYYY.");
+  }
+
+  if (!rNum || !cNum) {
+    return badRequest("Invalid race identifier.");
+  }
 
   try {
     const algoParameters = await loadAlgoParameters();
@@ -72,7 +82,6 @@ export async function GET(
       analysis,
     });
   } catch (error) {
-    console.error('Race analysis error:', error);
-    return NextResponse.json({ success: false, error: 'Analysis failed' }, { status: 500 });
+    return serverError("Analysis failed", error, { date, reunion: rNum, course: cNum });
   }
 }

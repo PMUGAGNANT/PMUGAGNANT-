@@ -1,4 +1,6 @@
 import { getTodayDateStr as getTodayDateStrFromUtils } from "@/lib/date-utils";
+import { isValidPmuDate } from "@/lib/request-utils";
+import { logger } from "@/lib/server-logger";
 import type {
   LiveCourseSnapshot,
   Participant,
@@ -7,21 +9,34 @@ import type {
 } from "@/lib/types";
 
 const BASE_URL = "https://online.turfinfo.api.pmu.fr/rest/client/1";
+const REQUEST_TIMEOUT_MS = 12_000;
+const MAX_REVALIDATE_SECONDS = 300;
 
 async function fetchPmuJson<T>(path: string, revalidate = 60): Promise<T> {
-  const response = await fetch(`${BASE_URL}${path}`, {
-    next: { revalidate },
-    headers: {
-      Accept: "application/json",
-      "User-Agent": "pmu-ai-v92/1.0",
-    },
-  } as RequestInit);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  if (!response.ok) {
-    throw new Error(`PMU API error: ${response.status} ${response.statusText} (${path})`);
+  try {
+    const response = await fetch(`${BASE_URL}${path}`, {
+      next: { revalidate: Math.max(0, Math.min(MAX_REVALIDATE_SECONDS, revalidate)) },
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "pmu-ai-v92/1.0",
+      },
+      signal: controller.signal,
+    } as RequestInit);
+
+    if (!response.ok) {
+      throw new Error(`PMU API error: ${response.status} ${response.statusText} (${path})`);
+    }
+
+    return (await response.json()) as T;
+  } catch (error) {
+    logger.error("pmu_api.fetch_failed", error, { path });
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  return (await response.json()) as T;
 }
 
 function toParisHour(ms?: number | null) {
@@ -141,6 +156,10 @@ export function getTodayDateStr(): string {
 
 export async function getAllRaces(dateStr?: string): Promise<RaceSummary[]> {
   const date = dateStr ?? getTodayDateStr();
+  if (!isValidPmuDate(date)) {
+    throw new Error(`Invalid PMU date format: ${date}`);
+  }
+
   const data = await fetchPmuJson<Record<string, unknown>>(`/programme/${date}`);
   const reunions = ((data.programme as Record<string, unknown> | undefined)?.reunions ??
     []) as Record<string, unknown>[];
@@ -199,6 +218,14 @@ export async function getParticipants(
   reunion: number,
   course: number
 ): Promise<Participant[]> {
+  if (!isValidPmuDate(dateStr)) {
+    throw new Error(`Invalid PMU date format: ${dateStr}`);
+  }
+
+  if (!Number.isInteger(reunion) || reunion <= 0 || !Number.isInteger(course) || course <= 0) {
+    throw new Error(`Invalid race identifier: R${reunion}C${course}`);
+  }
+
   const data = await fetchPmuJson<Record<string, unknown>>(
     `/programme/${dateStr}/R${reunion}/C${course}/participants`
   );
@@ -220,7 +247,13 @@ export async function getRealtimeOdds(
     return Object.fromEntries(
       Object.entries(simpleGagnant).map(([key, value]) => [Number(key), value])
     );
-  } catch {
+  } catch (error) {
+    logger.warn("pmu_api.realtime_odds_unavailable", {
+      dateStr,
+      reunion,
+      course,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return {};
   }
 }
@@ -245,7 +278,13 @@ export async function getLiveCourseSnapshot(
           .map((participant) => [participant.numPmu, participant.ferrure as string])
       ),
     };
-  } catch {
+  } catch (error) {
+    logger.warn("pmu_api.live_snapshot_unavailable", {
+      dateStr,
+      reunion,
+      course,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return {
       coteActuelleByHorse: {},
       nonPartants: [],
@@ -278,6 +317,10 @@ export async function getFinalReports(
   reunion: number,
   course: number
 ): Promise<FinalReports> {
+  if (!isValidPmuDate(dateStr)) {
+    throw new Error(`Invalid PMU date format: ${dateStr}`);
+  }
+
   const data = await fetchPmuJson<Record<string, unknown>>(
     `/programme/${dateStr}/R${reunion}/C${course}/rapports-definitifs`,
     30
