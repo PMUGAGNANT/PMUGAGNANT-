@@ -74,7 +74,7 @@ export default function PremiumPage() {
       }}
     >
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[rgba(18,22,26,0.88)] backdrop-blur-xl">
-        <div className="mx-auto flex h-[72px] w-[min(1180px,calc(100%-24px))] items-center justify-between gap-4">
+        <div className="app-shell flex h-[72px] items-center justify-between gap-4">
           <button
             onClick={() => router.push("/")}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xl font-black text-white transition hover:bg-white/14"
@@ -96,14 +96,14 @@ export default function PremiumPage() {
         </div>
       </header>
 
-      <main className="mx-auto grid w-[min(1180px,calc(100%-24px))] gap-6 py-6 md:py-8">
-        <section className="grid gap-5 rounded-[36px] bg-[linear-gradient(135deg,#132126,#18242a)] p-6 text-white shadow-[0_30px_60px_rgba(15,23,42,0.18)] md:grid-cols-[minmax(0,1.15fr)_360px] md:p-8">
+      <main className="app-shell grid gap-6 py-6 md:py-8">
+        <section className="grid gap-5 overflow-hidden rounded-[36px] bg-[linear-gradient(135deg,#132126,#18242a)] p-5 text-white shadow-[0_30px_60px_rgba(15,23,42,0.18)] md:grid-cols-[minmax(0,1.15fr)_minmax(0,360px)] md:p-8">
           <div className="grid gap-5">
             <div>
               <div className="mb-3 inline-flex rounded-full bg-white/10 px-3 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#6CE4A0]">
                 Offre premium
               </div>
-              <h1 className="max-w-3xl text-[34px] font-black leading-[0.98] tracking-[-0.05em] md:text-[52px]">
+              <h1 className="max-w-3xl text-[30px] font-black leading-[0.98] tracking-[-0.05em] sm:text-[36px] md:text-[52px]">
                 Tu ne paies pas pour voir plus de courses. Tu paies pour jouer moins, mais mieux.
               </h1>
               <p className="mt-4 max-w-2xl text-[15px] leading-7 text-white/76 md:text-[17px]">
@@ -112,7 +112,7 @@ export default function PremiumPage() {
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               <div className="rounded-[26px] border border-white/10 bg-white/8 p-4">
                 <div className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#6CE4A0]">
                   Ce que tu vois
@@ -196,11 +196,11 @@ export default function PremiumPage() {
         </section>
 
         <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.92fr)]">
-          <div className="dark-surface rounded-[34px] p-6 text-white md:p-7">
+          <div className="dark-surface overflow-hidden rounded-[34px] p-6 text-white md:p-7">
             <div className="text-[12px] font-extrabold uppercase tracking-[0.18em] text-[#6CE4A0]">
               Pour qui
             </div>
-            <h2 className="mt-3 text-[30px] font-black leading-[1] tracking-[-0.04em]">
+            <h2 className="mt-3 text-[28px] font-black leading-[1] tracking-[-0.04em] md:text-[30px]">
               Une offre utile si tu veux jouer avec un cadre, pas au feeling.
             </h2>
             <div className="mt-5 grid gap-3">
@@ -212,11 +212,11 @@ export default function PremiumPage() {
             </div>
           </div>
 
-          <div className="premium-surface rounded-[34px] p-6 md:p-7">
+          <div className="premium-surface overflow-hidden rounded-[34px] p-6 md:p-7">
             <div className="text-[12px] font-extrabold uppercase tracking-[0.18em] text-[#D64545]">
               Ce n&apos;est pas pour toi si
             </div>
-            <h2 className="mt-3 text-[30px] font-black leading-[1] tracking-[-0.04em] text-[#171b1f]">
+            <h2 className="mt-3 text-[28px] font-black leading-[1] tracking-[-0.04em] text-[#171b1f] md:text-[30px]">
               Tu cherches une promesse fantasmee plutot qu&apos;un outil de discipline.
             </h2>
             <div className="mt-5 grid gap-3">
@@ -229,13 +229,13 @@ export default function PremiumPage() {
           </div>
         </section>
 
-        <section className="premium-surface rounded-[34px] p-6 md:p-7">
+        <section className="premium-surface overflow-hidden rounded-[34px] p-6 md:p-7">
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
             <div>
               <div className="text-[12px] font-extrabold uppercase tracking-[0.18em] text-[#0b8f4d]">
                 Questions frequentes
               </div>
-              <h2 className="mt-2 text-[32px] font-black leading-[1] tracking-[-0.04em] text-[#171b1f]">
+              <h2 className="mt-2 text-[28px] font-black leading-[1] tracking-[-0.04em] text-[#171b1f] md:text-[32px]">
                 Ce que tu dois savoir avant de t&apos;abonner
               </h2>
             </div>

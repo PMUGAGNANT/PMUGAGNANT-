@@ -11,6 +11,30 @@ import {
 const GREEN = "#00843D";
 const DARK = "#1A1A1A";
 
+function getFriendlyAuthError(message: string) {
+  if (message.includes("Invalid login")) {
+    return "Email ou mot de passe incorrect.";
+  }
+
+  if (message.includes("already registered")) {
+    return "Cet email est deja utilise. Connecte-toi a la place.";
+  }
+
+  if (message.includes("Password should be")) {
+    return "Le mot de passe doit contenir au moins 6 caracteres.";
+  }
+
+  if (message.includes("Invalid API key")) {
+    return "La cle publique Supabase de production est invalide. Remplace NEXT_PUBLIC_SUPABASE_ANON_KEY dans Vercel par la vraie anon key de Supabase puis redeploie.";
+  }
+
+  if (message.includes("fetch") || message.includes("Failed to fetch")) {
+    return "Impossible de joindre Supabase pour le moment. Verifie NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY sur Vercel.";
+  }
+
+  return message;
+}
+
 function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -53,16 +77,11 @@ function LoginPageContent() {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Une erreur est survenue";
 
-      if (message.includes("Invalid login")) {
-        setError("Email ou mot de passe incorrect.");
-      } else if (message.includes("already registered")) {
-        setError("Cet email est deja utilise. Connecte-toi a la place.");
+      if (message.includes("already registered")) {
         setIsSignUp(false);
-      } else if (message.includes("Password should be")) {
-        setError("Le mot de passe doit contenir au moins 6 caracteres.");
-      } else {
-        setError(message);
       }
+
+      setError(getFriendlyAuthError(message));
     } finally {
       setLoading(false);
     }
@@ -70,9 +89,8 @@ function LoginPageContent() {
 
   return (
     <div
+      className="app-shell"
       style={{
-        width: "min(1180px, calc(100% - 24px))",
-        margin: "0 auto",
         minHeight: "100vh",
         background:
           "radial-gradient(circle at top left, rgba(0,132,61,0.16), transparent 24%), radial-gradient(circle at top right, rgba(18,183,106,0.1), transparent 20%), linear-gradient(180deg, #f6f8f9 0%, #eef2f3 100%)",
@@ -126,7 +144,7 @@ function LoginPageContent() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "minmax(0,1.15fr) minmax(320px,0.9fr)",
+          gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
           gap: 20,
           padding: "24px 0 96px",
           alignItems: "start",
@@ -140,6 +158,7 @@ function LoginPageContent() {
               "radial-gradient(circle at top right, rgba(108,228,160,0.18), transparent 30%), linear-gradient(135deg, #132126, #18242a)",
             color: "#fff",
             boxShadow: "0 28px 58px rgba(15,23,42,0.2)",
+            overflow: "hidden",
           }}
         >
           <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color: "#6CE4A0", marginBottom: 10 }}>
@@ -210,10 +229,13 @@ function LoginPageContent() {
             border: "1px solid rgba(15,23,42,0.06)",
             boxShadow: "0 22px 48px rgba(15,23,42,0.08)",
             padding: 26,
+            overflow: "hidden",
           }}
         >
           <div style={{ textAlign: "center", marginBottom: 26 }}>
-            <div style={{ fontSize: 44, marginBottom: 10 }}>{premiumIntent ? "🔓" : "🏇"}</div>
+            <div style={{ fontSize: 40, marginBottom: 10, fontWeight: 900, color: premiumIntent ? GREEN : DARK }}>
+              {premiumIntent ? "PREMIUM" : "COMPTE"}
+            </div>
             <h1
               style={{
                 fontSize: 28,
@@ -326,8 +348,9 @@ function LoginPageContent() {
                   padding: "12px 16px",
                   borderRadius: 14,
                   fontSize: 13,
-                  fontWeight: 500,
+                  fontWeight: 600,
                   marginBottom: 16,
+                  lineHeight: "20px",
                 }}
               >
                 {error}
@@ -385,7 +408,9 @@ function LoginPageContent() {
               textAlign: "center",
             }}
           >
-            <div style={{ fontSize: 24, marginBottom: 6 }}>{isSignUp ? "💸" : "🎯"}</div>
+            <div style={{ fontSize: 24, marginBottom: 6, fontWeight: 900, color: premiumIntent ? GREEN : DARK }}>
+              {isSignUp ? "BANKROLL" : "ACCES"}
+            </div>
             <div style={{ fontSize: 14, fontWeight: 800, color: premiumIntent ? GREEN : DARK }}>
               {isSignUp ? "1 000 EUR offerts en bankroll fictive" : "Connexion rapide, puis acces a ton espace perso"}
             </div>
