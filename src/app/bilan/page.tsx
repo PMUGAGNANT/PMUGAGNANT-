@@ -80,6 +80,34 @@ interface BilanData {
   results: BilanResult[];
 }
 
+interface BacktestResponse {
+  success: boolean;
+  cached?: boolean;
+  backtest?: {
+    startDate: string;
+    endDate: string;
+    days: number;
+    racesAnalyzed: number;
+    racesSkipped: number;
+    totalBets: number;
+    totalStake: number;
+    totalGain: number;
+    totalProfit: number;
+    roi: number;
+    summarySentence: string;
+    byBetType: Array<{
+      betType: string;
+      betsPlaced: number;
+      winningBets: number;
+      totalStake: number;
+      totalGain: number;
+      profit: number;
+      roi: number;
+      hitRate: number;
+    }>;
+  };
+}
+
 const GREEN = "#00843D";
 const GREEN_DARK = "#006B31";
 const GOLD = "#D4A017";
@@ -392,6 +420,7 @@ function BilanPageContent() {
   const urlDate = searchParams.get("date") || getTodayDateStr();
   const [selectedDate, setSelectedDate] = useState(urlDate);
   const [data, setData] = useState<BilanData | null>(null);
+  const [backtest, setBacktest] = useState<BacktestResponse["backtest"] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -415,6 +444,19 @@ function BilanPageContent() {
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [selectedDate]);
+
+  useEffect(() => {
+    fetch("/api/backtest?days=90", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((json: BacktestResponse) => {
+        if (json.success && json.backtest) {
+          setBacktest(json.backtest);
+        }
+      })
+      .catch(() => {
+        setBacktest(null);
+      });
+  }, []);
 
   const winners = useMemo(
     () => data?.results.filter((result) => result.resultat === "GAGNANT") ?? [],
@@ -677,6 +719,92 @@ function BilanPageContent() {
                       )}
                     </div>
                   </div>
+                </div>
+              </div>
+            ) : null}
+
+            {backtest ? (
+              <div
+                style={{
+                  margin: "0 16px 18px",
+                  background: "#FFFFFF",
+                  borderRadius: 24,
+                  padding: 18,
+                  border: "1px solid rgba(15,23,42,0.05)",
+                  boxShadow: "0 18px 36px rgba(15,23,42,0.08)",
+                  display: "grid",
+                  gap: 14,
+                }}
+              >
+                <div style={{ fontSize: 22, fontWeight: 800, color: GREEN_DARK }}>
+                  Backtest 90 jours
+                </div>
+                <div
+                  style={{
+                    borderRadius: 18,
+                    padding: 16,
+                    background: backtest.totalProfit >= 0 ? "#F4FBF7" : "#FFF2F2",
+                    border: `1px solid ${backtest.totalProfit >= 0 ? "#D9F0E2" : "#F7D5D5"}`,
+                    color: backtest.totalProfit >= 0 ? GREEN : RED,
+                    fontSize: 16,
+                    lineHeight: "22px",
+                    fontWeight: 700,
+                  }}
+                >
+                  {backtest.summarySentence}
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <SummaryCard
+                    label="ROI 90j"
+                    value={formatSignedPercent(backtest.roi)}
+                    tone={backtest.roi >= 0 ? "good" : "bad"}
+                  />
+                  <SummaryCard label="Courses" value={backtest.racesAnalyzed} />
+                  <SummaryCard label="Mise totale" value={formatSignedCurrency(backtest.totalStake)} />
+                  <SummaryCard
+                    label="Profit"
+                    value={formatSignedCurrency(backtest.totalProfit)}
+                    tone={backtest.totalProfit >= 0 ? "good" : "bad"}
+                  />
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {backtest.byBetType.map((betType) => (
+                    <div
+                      key={betType.betType}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1.2fr 0.8fr 0.8fr",
+                        gap: 10,
+                        alignItems: "center",
+                        borderRadius: 16,
+                        padding: "12px 14px",
+                        background: "#F8FAFC",
+                        border: "1px solid #E7ECF1",
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: DARK }}>{betType.betType}</div>
+                        <div style={{ fontSize: 12, color: "#666" }}>
+                          {betType.betsPlaced} ticket{betType.betsPlaced > 1 ? "s" : ""} · hit {betType.hitRate}%
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 13, color: DARK, fontWeight: 700 }}>
+                        Stake {betType.totalStake.toFixed(2)} EUR
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 800,
+                          color: betType.roi >= 0 ? GREEN : RED,
+                          textAlign: "right",
+                        }}
+                      >
+                        {formatSignedPercent(betType.roi)}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             ) : null}

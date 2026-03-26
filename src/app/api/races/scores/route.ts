@@ -6,6 +6,7 @@ import { loadAlgoParameters } from "@/lib/config";
 import { badRequest, serverError } from "@/lib/api-response";
 import { normalizeRequestedDate } from "@/lib/request-utils";
 import { logger } from "@/lib/server-logger";
+import { getRequestSubscriptionState } from "@/lib/subscription";
 import type { Lisibilite, PredictionDecision, RaceSummary } from "@/lib/types";
 
 export const dynamic = 'force-dynamic';
@@ -19,6 +20,9 @@ export async function GET(request: Request) {
 
   try {
     const algoParameters = await loadAlgoParameters();
+    const { state: subscriptionState } = await getRequestSubscriptionState(
+      request.headers.get("authorization")
+    );
     const races = await getAllRaces(date);
     const scores: Record<
       string,
@@ -75,19 +79,22 @@ export async function GET(request: Request) {
                   ? 'preview_1h'
                   : 'preview_2h';
 
+          const allowFullScore = subscriptionState.isSubscribed || stage === "finished";
+
           return {
             key,
-            score: analysis.scoreConfiance?.score ?? null,
+            score: allowFullScore ? analysis.scoreConfiance?.score ?? null : null,
             stage,
             lisibilite: analysis.prediction.lisibilite,
-            decision: analysis.prediction.decisionCourse,
+            decision: allowFullScore ? analysis.prediction.decisionCourse : "REJET",
             playable:
+              allowFullScore &&
               stage !== "finished" &&
               analysis.prediction.lisibilite !== "LOTERIE" &&
               analysis.prediction.decisionCourse !== "REJET" &&
               Boolean(analysis.recommandation?.vautLeCoup),
-            recommendation: analysis.recommandation?.decision ?? null,
-            pick: analysis.favori
+            recommendation: allowFullScore ? analysis.recommandation?.decision ?? null : null,
+            pick: allowFullScore && analysis.favori
               ? {
                   numPmu: analysis.favori.numPmu,
                   nom: analysis.favori.nom,

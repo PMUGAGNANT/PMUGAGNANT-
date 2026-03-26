@@ -68,7 +68,7 @@ export function getParisNow(): Date {
 
 export function formatDateToPmu(date: Date): string {
   const { day, month, year } = getParisParts(date);
-  return `${day}${month}${year}`;
+  return `${String(day).padStart(2, "0")}${String(month).padStart(2, "0")}${year}`;
 }
 
 export function parsePmuDate(dateStr: string): Date {
@@ -168,4 +168,18 @@ export function getWeekBounds(reference = getParisNow()) {
       endParts.day
     ).padStart(2, "0")}`,
   };
+}
+
+export function listRecentPmuDates(days: number, reference = getParisNow()) {
+  const safeDays = Math.max(1, Math.floor(days));
+  const dates: string[] = [];
+  const cursor = new Date(reference);
+
+  for (let offset = 0; offset < safeDays; offset += 1) {
+    const next = new Date(cursor);
+    next.setDate(cursor.getDate() - offset);
+    dates.push(formatDateToPmu(next));
+  }
+
+  return dates.reverse();
 }

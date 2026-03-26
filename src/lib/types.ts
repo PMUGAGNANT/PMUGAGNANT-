@@ -288,6 +288,14 @@ export interface AlgoParameters {
     rejectRate: number;
     warningMalus: number;
   };
+  probabilityCalibration: {
+    bins: Array<{
+      min: number;
+      max: number;
+      multiplier: number;
+      sampleSize?: number;
+    }>;
+  };
 }
 
 export interface LiveCourseSnapshot {
@@ -388,3 +396,38 @@ export interface CourseRecordRow {
 }
 
 export type RaceStatus = "upcoming" | "prono_available" | "live" | "finished";
+
+export interface BacktestBetTypeResult {
+  betType: "SIMPLE_GAGNANT" | "COUPLE" | "TRIO" | "QUINTE" | "MULTI";
+  betsPlaced: number;
+  winningBets: number;
+  totalStake: number;
+  totalGain: number;
+  profit: number;
+  roi: number;
+  hitRate: number;
+}
+
+export interface BacktestCalibrationBin {
+  label: string;
+  sampleSize: number;
+  averagePredicted: number;
+  actualWinRate: number;
+  delta: number;
+}
+
+export interface BacktestSummary {
+  startDate: string;
+  endDate: string;
+  days: number;
+  racesAnalyzed: number;
+  racesSkipped: number;
+  totalBets: number;
+  totalStake: number;
+  totalGain: number;
+  totalProfit: number;
+  roi: number;
+  summarySentence: string;
+  byBetType: BacktestBetTypeResult[];
+  calibration: BacktestCalibrationBin[];
+}

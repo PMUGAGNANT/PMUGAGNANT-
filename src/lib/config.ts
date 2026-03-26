@@ -45,6 +45,16 @@ export const DEFAULT_ALGO_PARAMETERS: AlgoParameters = {
     rejectRate: 0.5,
     warningMalus: 1.5,
   },
+  probabilityCalibration: {
+    bins: [
+      { min: 0, max: 0.1, multiplier: 1 },
+      { min: 0.1, max: 0.2, multiplier: 1 },
+      { min: 0.2, max: 0.3, multiplier: 1 },
+      { min: 0.3, max: 0.4, multiplier: 1 },
+      { min: 0.4, max: 0.5, multiplier: 1 },
+      { min: 0.5, max: 1, multiplier: 1 },
+    ],
+  },
 };
 
 type JsonRecord = Record<string, unknown>;
@@ -93,6 +103,7 @@ export async function loadAlgoParameters(): Promise<AlgoParameters> {
     outsiders: overrides.outsiders ?? {},
     preRace: overrides.preRace ?? {},
     fautifs: overrides.fautifs ?? {},
+    probabilityCalibration: overrides.probabilityCalibration ?? {},
   };
 
   return deepMerge(

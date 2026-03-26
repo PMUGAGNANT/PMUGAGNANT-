@@ -30,7 +30,12 @@ async function fetchPmuJson<T>(path: string, revalidate = 60): Promise<T> {
       throw new Error(`PMU API error: ${response.status} ${response.statusText} (${path})`);
     }
 
-    return (await response.json()) as T;
+    const text = await response.text();
+    if (!text.trim()) {
+      return {} as T;
+    }
+
+    return JSON.parse(text) as T;
   } catch (error) {
     logger.error("pmu_api.fetch_failed", error, { path });
     throw error;
@@ -410,11 +415,16 @@ export async function getLiveCourseSnapshot(
   }
 }
 
-interface FinalReports {
+export interface FinalReports {
   simpleGagnant: Record<number, number>;
   simplePlace: Record<number, number>;
   coupleGagnant: Record<string, number>;
   couplePlace: Record<string, number>;
+  trio: Record<string, number>;
+  quinteOrdre: Record<string, number>;
+  quinteDesordre: Record<string, number>;
+  multi: Record<string, number>;
+  generic: Record<string, Record<string, number>>;
 }
 
 function parseCombinaisonKey(combinaison: unknown): string | null {
@@ -438,29 +448,41 @@ export async function getFinalReports(
     throw new Error(`Invalid PMU date format: ${dateStr}`);
   }
 
-  const data = await fetchPmuJson<Record<string, unknown>>(
+  const data = await fetchPmuJson<Record<string, unknown> | Record<string, unknown>[]>(
     `/programme/${dateStr}/R${reunion}/C${course}/rapports-definitifs`,
     30
   );
-  const rapports = (data.rapports ?? []) as Record<string, unknown>[];
+  const rapports = Array.isArray(data)
+    ? (data as Record<string, unknown>[])
+    : ((data.rapports ?? []) as Record<string, unknown>[]);
 
   const result: FinalReports = {
     simpleGagnant: {},
     simplePlace: {},
     coupleGagnant: {},
     couplePlace: {},
+    trio: {},
+    quinteOrdre: {},
+    quinteDesordre: {},
+    multi: {},
+    generic: {},
   };
 
   for (const rapport of rapports) {
     const typePari = String(rapport.typePari ?? "");
-    const combinaisons = (rapport.combinaisons ?? []) as Record<string, unknown>[];
+    const combinaisons =
+      ((rapport.rapports ?? rapport.combinaisons ?? []) as Record<string, unknown>[]) ?? [];
 
     for (const combinaison of combinaisons) {
       const rawRapport =
-        typeof combinaison.rapport === "number"
-          ? (combinaison.rapport as number)
-          : typeof combinaison.pourUnEuro === "number"
-            ? (combinaison.pourUnEuro as number)
+        typeof combinaison.dividendePourUnEuro === "number"
+          ? (combinaison.dividendePourUnEuro as number)
+          : typeof combinaison.dividende === "number"
+            ? (combinaison.dividende as number)
+            : typeof combinaison.rapport === "number"
+              ? (combinaison.rapport as number)
+              : typeof combinaison.pourUnEuro === "number"
+                ? (combinaison.pourUnEuro as number)
             : null;
       const rapportValue =
         rawRapport === null ? null : rawRapport > 100 ? rawRapport / 100 : rawRapport;
@@ -470,6 +492,8 @@ export async function getFinalReports(
       const numPmu =
         typeof combinaison.numPmu === "number"
           ? Number(combinaison.numPmu)
+          : typeof combinaison.combinaison === "string" && !String(combinaison.combinaison).includes("-")
+            ? Number(combinaison.combinaison)
           : Array.isArray(combinaison.combinaison)
             ? Number((combinaison.combinaison as unknown[])[0])
             : null;
@@ -489,6 +513,37 @@ export async function getFinalReports(
 
       if (typePari.includes("COUPLE_PLACE") && combinaisonKey) {
         result.couplePlace[combinaisonKey] = rapportValue;
+      }
+
+      if (typePari.includes("TRIO") && combinaisonKey) {
+        result.trio[combinaisonKey] = rapportValue;
+      }
+
+      if (typePari.includes("QUINTE_ORDRE") && combinaisonKey) {
+        result.quinteOrdre[combinaisonKey] = rapportValue;
+      }
+
+      if (
+        (typePari.includes("QUINTE_DESORDRE") || typePari.includes("QUINTE_BONUS")) &&
+        combinaisonKey
+      ) {
+        result.quinteDesordre[combinaisonKey] = rapportValue;
+      }
+
+      if (typePari.includes("MULTI") && combinaisonKey) {
+        result.multi[combinaisonKey] = rapportValue;
+      }
+
+      if (combinaisonKey) {
+        if (!result.generic[typePari]) {
+          result.generic[typePari] = {};
+        }
+        result.generic[typePari][combinaisonKey] = rapportValue;
+      } else if (numPmu !== null) {
+        if (!result.generic[typePari]) {
+          result.generic[typePari] = {};
+        }
+        result.generic[typePari][String(numPmu)] = rapportValue;
       }
     }
   }

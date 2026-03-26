@@ -13,6 +13,10 @@ create table if not exists profiles (
   id uuid references auth.users on delete cascade primary key,
   email text,
   solde integer default 1000,
+  stripe_customer_id text,
+  stripe_subscription_id text,
+  subscription_status text default 'FREE',
+  is_subscribed boolean default false,
   created_at timestamptz default now()
 );
 
@@ -59,6 +63,11 @@ create trigger on_auth_user_created
 
 alter table profiles enable row level security;
 alter table bets enable row level security;
+
+alter table profiles add column if not exists stripe_customer_id text;
+alter table profiles add column if not exists stripe_subscription_id text;
+alter table profiles add column if not exists subscription_status text default 'FREE';
+alter table profiles add column if not exists is_subscribed boolean default false;
 
 drop policy if exists "Users can view own profile" on profiles;
 create policy "Users can view own profile"

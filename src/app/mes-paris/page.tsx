@@ -35,8 +35,11 @@ export default function MesParisPage() {
   const [solde, setSolde] = useState(1000);
   const [loading, setLoading] = useState(true);
   const [settling, setSettling] = useState(false);
+  const [billingLoading, setBillingLoading] = useState(false);
   const [user, setUser] = useState<{ email?: string } | null>(null);
   const [error, setError] = useState("");
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState("FREE");
 
   const fetchBets = useCallback(async () => {
     if (!supabaseConfigured) {
@@ -62,6 +65,8 @@ export default function MesParisPage() {
       if (data.success) {
         setBets(data.bets);
         setSolde(data.solde);
+        setIsSubscribed(Boolean(data.isSubscribed));
+        setSubscriptionStatus(data.subscriptionStatus ?? "FREE");
       }
     } catch {
       // silent
@@ -110,6 +115,40 @@ export default function MesParisPage() {
     const supabase = getSupabaseBrowserClient();
     await supabase.auth.signOut();
     router.push("/");
+  }
+
+  async function handleBilling(action: "checkout" | "portal") {
+    if (!supabaseConfigured) {
+      setError(getSupabaseConfigError());
+      return;
+    }
+
+    setBillingLoading(true);
+    const supabase = getSupabaseBrowserClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      router.push("/login?redirect=/mes-paris");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        action === "checkout" ? "/api/stripe/checkout" : "/api/stripe/portal",
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        }
+      );
+      const payload = await response.json();
+      if (!response.ok || !payload.url) {
+        throw new Error(payload.error || "Billing indisponible");
+      }
+      window.location.href = payload.url;
+    } catch (billingError) {
+      setError(billingError instanceof Error ? billingError.message : "Billing indisponible");
+    } finally {
+      setBillingLoading(false);
+    }
   }
 
   const pendingCount = bets.filter((b) => b.statut === "EN_ATTENTE").length;
@@ -224,6 +263,40 @@ export default function MesParisPage() {
             </div>
             <div style={{ fontSize: 14, opacity: 0.92, fontWeight: 600 }}>
               {bets.length} paris · {wonCount} gagnés · {placedCount} placés
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>
+              <button
+                onClick={() => handleBilling(isSubscribed ? "portal" : "checkout")}
+                disabled={billingLoading}
+                style={{
+                  border: "none",
+                  borderRadius: 999,
+                  padding: "10px 14px",
+                  background: "#FFFFFF",
+                  color: DARK,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                {billingLoading
+                  ? "Ouverture..."
+                  : isSubscribed
+                    ? "Gerer l'abonnement"
+                    : "Debloquer les pronostics premium"}
+              </button>
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  padding: "10px 14px",
+                  borderRadius: 999,
+                  background: "rgba(255,255,255,0.16)",
+                  fontSize: 12,
+                  fontWeight: 800,
+                }}
+              >
+                {isSubscribed ? `Abonnement ${subscriptionStatus}` : "Compte gratuit"}
+              </div>
             </div>
           </div>
 

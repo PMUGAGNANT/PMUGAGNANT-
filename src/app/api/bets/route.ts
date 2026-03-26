@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
 
   const { data: profile, error: profileError } = await client
     .from("profiles")
-    .select("solde")
+    .select("solde,is_subscribed,subscription_status,stripe_customer_id")
     .eq("id", user.id)
     .single();
 
@@ -98,6 +98,9 @@ export async function GET(req: NextRequest) {
     success: true,
     bets: bets ?? [],
     solde: profile?.solde ?? 1000,
+    isSubscribed: Boolean(profile?.is_subscribed),
+    subscriptionStatus: profile?.subscription_status ?? "FREE",
+    stripeCustomerId: profile?.stripe_customer_id ?? null,
   });
 }
 

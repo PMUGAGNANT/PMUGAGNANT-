@@ -10,6 +10,7 @@ import {
   parsePmuDate,
   toIsoDate,
 } from "@/lib/date-utils";
+import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 import type { Lisibilite, PredictionDecision, RaceSummary } from "@/lib/types";
 
 type ScoreStage = "preview_2h" | "preview_1h" | "final_30m" | "finished";
@@ -357,9 +358,20 @@ function HomePageContent() {
       setLoading(true);
       setError("");
       try {
+        let headers: HeadersInit | undefined;
+        if (hasSupabaseConfig()) {
+          const supabase = getSupabaseBrowserClient();
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            headers = { Authorization: `Bearer ${session.access_token}` };
+          }
+        }
+
         const [racesResponse, scoresResponse] = await Promise.all([
           fetch(`/api/races?date=${selectedDate}`, { cache: "no-store" }),
-          fetch(`/api/races/scores?date=${selectedDate}`, { cache: "no-store" }),
+          fetch(`/api/races/scores?date=${selectedDate}`, { cache: "no-store", headers }),
         ]);
 
         const racesPayload = (await racesResponse.json()) as RacesResponse;
@@ -684,6 +696,33 @@ function HomePageContent() {
       {/* ─── Main content area ─── */}
       <div className="mx-auto grid w-full max-w-7xl gap-4 px-4 py-4 sm:px-6 md:gap-5 md:py-6 xl:px-8">
         <DateNavigator dateStr={selectedDate} onChange={updateDate} />
+
+        <div className="mb-4 rounded-[24px] border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-[0_16px_32px_rgba(15,23,42,0.06)]">
+          <div className="mb-1 text-[12px] font-extrabold uppercase tracking-[0.16em] text-[#0b8f4d]">
+            Gratuit + Premium
+          </div>
+          <div className="mb-2 text-[18px] font-black text-[#132126]">
+            Page d&apos;accueil publique, pronostics complets reserves aux abonnes
+          </div>
+          <div className="text-[13px] leading-5 text-slate-600">
+            Les visiteurs voient la selection du jour et les courses. Les value bets, mises Kelly,
+            classements detailles et tickets optimises se debloquent dans l&apos;espace abonne.
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              onClick={() => router.push("/login?redirect=/mes-paris")}
+              className="rounded-full bg-[#132126] px-4 py-2 text-sm font-black text-white transition hover:bg-[#0f181c]"
+            >
+              Se connecter
+            </button>
+            <button
+              onClick={() => router.push("/mes-paris")}
+              className="rounded-full bg-[#e7f8ee] px-4 py-2 text-sm font-black text-[#0b8f4d] transition hover:bg-[#daf2e4]"
+            >
+              Voir l&apos;offre premium
+            </button>
+          </div>
+        </div>
 
         {/* ─── Hero summary card ─── */}
         <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#0b8f4d] via-[#0b8f4d] to-[#09723d] p-6 text-white shadow-[0_24px_46px_rgba(9,114,61,0.26)] md:p-7">

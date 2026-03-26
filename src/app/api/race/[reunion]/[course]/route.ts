@@ -5,6 +5,7 @@ import { attachFaultRates } from "@/lib/horse-faults";
 import { loadAlgoParameters } from "@/lib/config";
 import { badRequest, serverError } from "@/lib/api-response";
 import { normalizeRequestedDate, parsePositiveInteger } from "@/lib/request-utils";
+import { getRequestSubscriptionState } from "@/lib/subscription";
 import type { Participant, RaceSummary } from "@/lib/types";
 
 export const dynamic = 'force-dynamic';
@@ -48,6 +49,9 @@ export async function GET(
 
   try {
     const algoParameters = await loadAlgoParameters();
+    const { state: subscriptionState } = await getRequestSubscriptionState(
+      request.headers.get("authorization")
+    );
 
     // Get race info from programme
     const allRaces = await getAllRaces(date);
@@ -68,7 +72,42 @@ export async function GET(
 
     let analysis = null;
     if (pronoAvailable && participants.length > 0) {
-      analysis = analyzeRaceWithParameters(courseInfo as RaceSummary, participants, algoParameters);
+      const computedAnalysis = analyzeRaceWithParameters(
+        courseInfo as RaceSummary,
+        participants,
+        algoParameters
+      );
+      analysis =
+        isFinished || subscriptionState.isSubscribed
+          ? computedAnalysis
+          : null;
+
+      return NextResponse.json({
+        success: true,
+        courseInfo,
+        participants: participants.length,
+        officialArrival,
+        minutesUntilStart: minutesUntil,
+        pronoAvailable,
+        isFinished,
+        analysis,
+        paywall:
+          !isFinished && !subscriptionState.isSubscribed
+            ? {
+                required: true,
+                preview: {
+                  lisibilite: computedAnalysis.prediction.lisibilite,
+                  recommendation: computedAnalysis.recommandation?.decision ?? null,
+                  favori: computedAnalysis.favori
+                    ? {
+                        numPmu: computedAnalysis.favori.numPmu,
+                        nom: computedAnalysis.favori.nom,
+                      }
+                    : null,
+                },
+              }
+            : null,
+      });
     }
 
     return NextResponse.json({
@@ -80,6 +119,7 @@ export async function GET(
       pronoAvailable,
       isFinished,
       analysis,
+      paywall: null,
     });
   } catch (error) {
     return serverError("Analysis failed", error, { date, reunion: rNum, course: cNum });

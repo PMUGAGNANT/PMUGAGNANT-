@@ -104,6 +104,18 @@ function kellyFraction(probability: number, odds: number | null | undefined) {
   return clamp(raw, 0, MAX_KELLY_BANKROLL_PCT);
 }
 
+function getProbabilityCalibrationMultiplier(
+  probability: number,
+  parameters: AlgoParameters
+) {
+  const bins = parameters.probabilityCalibration?.bins ?? [];
+  const match = bins.find(
+    (bin) => probability >= bin.min && (probability < bin.max || bin.max >= 1)
+  );
+
+  return match ? clamp(match.multiplier, 0.5, 1.8) : 1;
+}
+
 function getEliteScore(target: string, eliteMap: Record<string, number>) {
   const normalized = normalizeKey(target);
   if (!normalized) return 0;
@@ -1416,24 +1428,27 @@ export function analyzeRaceWithParameters(
 
   const lisibilite = determinerLisibilite(course, preRanked, parameters);
   const coefficientLisibilite = parameters.lisibilite.coefficients[lisibilite];
+  const rawStrengths = preRanked.map((runner) =>
+    Math.pow(Math.max(runner.prediction.scoreCheval, 1), 1.18) *
+    (1 + Math.max(runner.signaux.marche, 0) / 40) *
+    (1 + Math.max(runner.signaux.distance + runner.signaux.hippodrome, 0) / 55)
+  );
   const totalIntrinsicScore = Math.max(
-    preRanked.reduce((sum, runner) => {
-      const rawStrength =
-        Math.pow(Math.max(runner.prediction.scoreCheval, 1), 1.18) *
-        (1 + Math.max(runner.signaux.marche, 0) / 40) *
-        (1 + Math.max(runner.signaux.distance + runner.signaux.hippodrome, 0) / 55);
-      return sum + rawStrength;
-    }, 0),
+    rawStrengths.reduce((sum, strength) => sum + strength, 0),
+    1
+  );
+  const calibratedWeights = rawStrengths.map((strength) => {
+    const rawProbability = strength / totalIntrinsicScore;
+    return rawProbability * getProbabilityCalibrationMultiplier(rawProbability, parameters);
+  });
+  const totalCalibratedWeight = Math.max(
+    calibratedWeights.reduce((sum, weight) => sum + weight, 0),
     1
   );
 
   let outsiderCount = 0;
-  const ranked = preRanked.map((runner) => {
-    const rawStrength =
-      Math.pow(Math.max(runner.prediction.scoreCheval, 1), 1.18) *
-      (1 + Math.max(runner.signaux.marche, 0) / 40) *
-      (1 + Math.max(runner.signaux.distance + runner.signaux.hippodrome, 0) / 55);
-    const probaEstimee = clamp(rawStrength / totalIntrinsicScore, 0.01, 0.55);
+  const ranked = preRanked.map((runner, index) => {
+    const probaEstimee = clamp(calibratedWeights[index] / totalCalibratedWeight, 0.01, 0.55);
     const scoreFinalPari = round2(runner.prediction.scoreCheval * coefficientLisibilite);
     const top3Potential = computeTop3Potential(
       runner.signaux,

@@ -3,6 +3,7 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { fromIsoDate, getTodayDateStr, parsePmuDate } from "@/lib/date-utils";
+import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 import type { RaceAnalysis, RaceSummary, ScoredParticipant } from "@/lib/types";
 
 interface ArrivalRow {
@@ -21,6 +22,14 @@ interface RaceApiResponse {
   pronoAvailable: boolean;
   isFinished: boolean;
   analysis: RaceAnalysis | null;
+  paywall?: {
+    required: boolean;
+    preview?: {
+      lisibilite: string;
+      recommendation: string | null;
+      favori: { numPmu: number; nom: string } | null;
+    } | null;
+  } | null;
   error?: string;
 }
 
@@ -866,8 +875,20 @@ export default function CourseDetailPage({
 
     let cancelled = false;
 
-    fetch(`/api/race/${reunion}/${course}?date=${selectedDate}`)
-      .then(async (response) => {
+    async function loadRace() {
+      let headers: HeadersInit | undefined;
+      if (hasSupabaseConfig()) {
+        const supabase = getSupabaseBrowserClient();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          headers = { Authorization: `Bearer ${session.access_token}` };
+        }
+      }
+
+      fetch(`/api/race/${reunion}/${course}?date=${selectedDate}`, { headers })
+        .then(async (response) => {
         const json = (await response.json()) as RaceApiResponse;
         if (!response.ok || !json.success) {
           throw new Error(json.error || "Course introuvable");
@@ -887,6 +908,9 @@ export default function CourseDetailPage({
           setLoading(false);
         }
       });
+    }
+
+    void loadRace();
 
     return () => {
       cancelled = true;
@@ -1094,6 +1118,53 @@ export default function CourseDetailPage({
             <div style={{ fontSize: 15, lineHeight: "22px", color: SLATE }}>
               Le moteur ouvrira sa lecture detaillee 30 minutes avant le depart officiel.
               Pour cette course, l&apos;analyse sera visible via {formatRevealTime(data.minutesUntilStart).toLowerCase()}.
+            </div>
+          </SectionCard>
+        ) : null}
+
+        {data.paywall?.required && !analysis ? (
+          <SectionCard title="Pronostic reserve aux abonnes" kicker="PMU AI Premium">
+            <div style={{ display: "grid", gap: 12 }}>
+              <div style={{ fontSize: 15, lineHeight: "22px", color: SLATE }}>
+                La page d&apos;accueil reste gratuite, mais le classement complet, les value bets,
+                les mises Kelly et les tickets detailles sont reserves aux abonnes.
+              </div>
+              {data.paywall.preview?.favori ? (
+                <div
+                  style={{
+                    borderRadius: 18,
+                    padding: 14,
+                    background: "#F8FAFC",
+                    border: "1px solid #E7ECF1",
+                  }}
+                >
+                  <div style={{ fontSize: 12, color: SLATE, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                    Apercu gratuit
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: DARK }}>
+                    Favori technique: N{data.paywall.preview.favori.numPmu} {data.paywall.preview.favori.nom}
+                  </div>
+                  <div style={{ fontSize: 14, color: SLATE, marginTop: 6 }}>
+                    Lisibilite {data.paywall.preview.lisibilite} · {data.paywall.preview.recommendation ?? "Lecture premium"}
+                  </div>
+                </div>
+              ) : null}
+              <button
+                onClick={() => router.push("/login?redirect=/mes-paris")}
+                style={{
+                  width: "100%",
+                  border: "none",
+                  borderRadius: 16,
+                  padding: "15px 18px",
+                  background: GREEN,
+                  color: "#FFFFFF",
+                  fontWeight: 800,
+                  fontSize: 15,
+                  cursor: "pointer",
+                }}
+              >
+                Se connecter et s&apos;abonner
+              </button>
             </div>
           </SectionCard>
         ) : null}
