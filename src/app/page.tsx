@@ -724,11 +724,11 @@ function HomePageContent() {
               >
                 Se connecter
               </button>
-              <button
-                onClick={() => router.push("/mes-paris")}
-                className="rounded-full bg-[#e7f8ee] px-5 py-3 text-sm font-black text-[#0b8f4d] transition hover:bg-[#daf2e4]"
-              >
-                Voir l&apos;offre premium
+                <button
+                  onClick={() => router.push("/premium")}
+                  className="rounded-full bg-[#e7f8ee] px-5 py-3 text-sm font-black text-[#0b8f4d] transition hover:bg-[#daf2e4]"
+                >
+                  Voir l&apos;offre premium
               </button>
             </div>
             <div className="mt-5 flex flex-wrap gap-2">

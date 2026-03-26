@@ -349,9 +349,25 @@ export default function MesParisPage() {
                 {billingLoading
                   ? "Ouverture..."
                   : isSubscribed
-                    ? "Gerer l'abonnement"
+                  ? "Gerer l'abonnement"
                     : "Debloquer les pronostics premium"}
               </button>
+              {!isSubscribed ? (
+                <button
+                  onClick={() => router.push("/premium")}
+                  style={{
+                    border: "1px solid rgba(255,255,255,0.18)",
+                    borderRadius: 999,
+                    padding: "12px 16px",
+                    background: "transparent",
+                    color: "#fff",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                  }}
+                >
+                  Voir le detail de l&apos;offre
+                </button>
+              ) : null}
               {!isSubscribed ? (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                   {[
