@@ -731,6 +731,21 @@ function HomePageContent() {
                 Voir l&apos;offre premium
               </button>
             </div>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {[
+                "Value bets filtres",
+                "Mises Kelly prêtes a jouer",
+                "Tickets simple / couple / trio",
+                "Lecture reservee aux vraies opportunites",
+              ].map((item) => (
+                <span
+                  key={item}
+                  className="rounded-full border border-[rgba(11,143,77,0.12)] bg-white/70 px-3 py-2 text-xs font-extrabold text-[#132126]"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
             {[
@@ -746,6 +761,38 @@ function HomePageContent() {
                 <div className="mt-1 text-sm leading-5 text-slate-600">{text}</div>
               </div>
             ))}
+          </div>
+        </section>
+
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+          <div className="dark-surface rounded-[34px] p-6 text-white">
+            <div className="mb-2 text-[12px] font-extrabold uppercase tracking-[0.18em] text-[#6CE4A0]">
+              Pourquoi payer
+            </div>
+            <div className="max-w-2xl text-[26px] font-black leading-[1.06]">
+              Tu ne paies pas pour voir plus de courses. Tu paies pour jouer moins, mais mieux.
+            </div>
+            <div className="mt-3 max-w-2xl text-sm leading-6 text-white/76">
+              Le premium sert a couper le bruit: seules les courses lisibles, les chevaux value et les
+              mises cohérentes remontent dans le ticket final.
+            </div>
+          </div>
+          <div className="premium-surface rounded-[34px] p-5">
+            <div className="text-[12px] font-extrabold uppercase tracking-[0.18em] text-[#0b8f4d]">
+              Ce que tu debloques
+            </div>
+            <div className="mt-3 grid gap-3">
+              {[
+                ["Avant course", "Classement complet, proba reelle, edge marche, mise recommandee."],
+                ["Execution", "Ticket simple gagnant, couple, trio, quinte et multi quand ils sont justifies."],
+                ["Apres course", "ROI, bilan, backtest 90 jours et suivi reel de l'algo."],
+              ].map(([title, text]) => (
+                <div key={title} className="rounded-[20px] border border-[rgba(15,23,42,0.06)] bg-white/72 px-4 py-4">
+                  <div className="text-sm font-black text-[#132126]">{title}</div>
+                  <div className="mt-1 text-sm leading-5 text-slate-600">{text}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 

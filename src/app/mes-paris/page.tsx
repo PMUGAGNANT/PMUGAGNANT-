@@ -328,6 +328,11 @@ export default function MesParisPage() {
               >
                 {isSubscribed ? `Abonnement ${subscriptionStatus}` : "Compte gratuit"}
               </div>
+              <div style={{ fontSize: 13, lineHeight: "19px", color: "rgba(255,255,255,0.78)" }}>
+                {isSubscribed
+                  ? "Ton espace premium est actif: pronostics complets, mises et tickets detailles."
+                  : "Passe premium pour debloquer les value bets filtres, les mises Kelly et les tickets optimises."}
+              </div>
               <button
                 onClick={() => handleBilling(isSubscribed ? "portal" : "checkout")}
                 disabled={billingLoading}
@@ -347,6 +352,29 @@ export default function MesParisPage() {
                     ? "Gerer l'abonnement"
                     : "Debloquer les pronostics premium"}
               </button>
+              {!isSubscribed ? (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {[
+                    "Top 5 complet",
+                    "Value bet confirme",
+                    "Mise bankroll",
+                    "Bilan reel de l'algo",
+                  ].map((item) => (
+                    <div
+                      key={item}
+                      style={{
+                        padding: "8px 10px",
+                        borderRadius: 999,
+                        background: "rgba(255,255,255,0.12)",
+                        fontSize: 11,
+                        fontWeight: 800,
+                      }}
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </section>
 
