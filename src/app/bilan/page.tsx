@@ -490,7 +490,7 @@ function BilanPageContent() {
         minHeight: "100vh",
         background:
           "radial-gradient(circle at top left, rgba(0,132,61,0.12), transparent 26%), radial-gradient(circle at top right, rgba(18,183,106,0.1), transparent 18%), #F6F7F8",
-        maxWidth: 430,
+        width: "min(1180px, calc(100% - 24px))",
         margin: "0 auto",
         position: "relative",
       }}
@@ -1191,7 +1191,7 @@ function BilanPageContent() {
           left: "50%",
           transform: "translateX(-50%)",
           width: "100%",
-          maxWidth: 430,
+          maxWidth: 1180,
           background: "rgba(255,255,255,0.94)",
           backdropFilter: "blur(18px)",
           borderTop: "1px solid rgba(15,23,42,0.08)",

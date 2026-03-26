@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   getSupabaseBrowserClient,
@@ -28,6 +28,13 @@ interface Bet {
   created_at: string;
 }
 
+function formatEuros(value: number) {
+  return `${new Intl.NumberFormat("fr-FR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(value)} EUR`;
+}
+
 export default function MesParisPage() {
   const router = useRouter();
   const supabaseConfigured = hasSupabaseConfig();
@@ -49,7 +56,10 @@ export default function MesParisPage() {
     }
 
     const supabase = getSupabaseBrowserClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     if (!session) {
       router.push("/login?redirect=/mes-paris");
       return;
@@ -69,14 +79,14 @@ export default function MesParisPage() {
         setSubscriptionStatus(data.subscriptionStatus ?? "FREE");
       }
     } catch {
-      // silent
+      setError("Impossible de charger l'espace paris.");
     } finally {
       setLoading(false);
     }
   }, [router, supabaseConfigured]);
 
   useEffect(() => {
-    fetchBets();
+    void fetchBets();
   }, [fetchBets]);
 
   async function handleSettle() {
@@ -87,7 +97,10 @@ export default function MesParisPage() {
 
     setSettling(true);
     const supabase = getSupabaseBrowserClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     if (!session) {
       setSettling(false);
       return;
@@ -100,7 +113,7 @@ export default function MesParisPage() {
       });
       await fetchBets();
     } catch {
-      // silent
+      setError("La verification des resultats a echoue.");
     } finally {
       setSettling(false);
     }
@@ -125,7 +138,10 @@ export default function MesParisPage() {
 
     setBillingLoading(true);
     const supabase = getSupabaseBrowserClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     if (!session) {
       router.push("/login?redirect=/mes-paris");
       return;
@@ -154,29 +170,26 @@ export default function MesParisPage() {
   const pendingCount = bets.filter((b) => b.statut === "EN_ATTENTE").length;
   const wonCount = bets.filter((b) => b.statut === "GAGNE").length;
   const placedCount = bets.filter((b) => b.statut === "PLACE").length;
-  const totalGain = bets
-    .filter((b) => b.gain !== null)
-    .reduce((sum, b) => sum + (b.gain || 0), 0);
+  const totalGain = bets.filter((b) => b.gain !== null).reduce((sum, b) => sum + (b.gain || 0), 0);
 
   const statusConfig: Record<string, { bg: string; color: string; label: string }> = {
     EN_ATTENTE: { bg: "#FFF8E1", color: "#F57F17", label: "En attente" },
-    GAGNE: { bg: "#E8F5E9", color: GREEN, label: "Gagné" },
-    PLACE: { bg: "#E3F2FD", color: "#1565C0", label: "Placé" },
+    GAGNE: { bg: "#E8F5E9", color: GREEN, label: "Gagne" },
+    PLACE: { bg: "#E3F2FD", color: "#1565C0", label: "Place" },
     PERDU: { bg: "#FFEBEE", color: "#C62828", label: "Perdu" },
   };
 
   return (
     <div
       style={{
-        maxWidth: 430,
+        width: "min(1180px, calc(100% - 24px))",
         margin: "0 auto",
         minHeight: "100vh",
         background:
           "radial-gradient(circle at top left, rgba(0,132,61,0.12), transparent 24%), linear-gradient(180deg, #F6F8F9 0%, #EDF2F3 100%)",
-        paddingBottom: 80,
+        paddingBottom: 96,
       }}
     >
-      {/* Header */}
       <div
         style={{
           position: "sticky",
@@ -185,7 +198,7 @@ export default function MesParisPage() {
           background: "rgba(18, 22, 26, 0.88)",
           backdropFilter: "blur(18px)",
           borderBottom: "1px solid rgba(255,255,255,0.06)",
-          height: 62,
+          height: 68,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -200,27 +213,40 @@ export default function MesParisPage() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            width: 32,
-            height: 32,
+            width: 36,
+            height: 36,
             borderRadius: "50%",
             background: "rgba(255,255,255,0.1)",
           }}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#fff"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
         </div>
-        <div style={{ color: "#22c55e", fontWeight: 800, fontSize: 19, letterSpacing: "-0.3px" }}>Mes Paris</div>
+        <div style={{ color: "#22c55e", fontWeight: 800, fontSize: 20, letterSpacing: "-0.3px" }}>
+          Mes Paris
+        </div>
         <div
           onClick={handleLogout}
           style={{
             position: "absolute",
             right: 16,
-            color: "rgba(255,255,255,0.58)",
+            color: "rgba(255,255,255,0.68)",
             fontSize: 12,
             cursor: "pointer",
             fontWeight: 700,
           }}
         >
-          Déconnexion
+          Deconnexion
         </div>
       </div>
 
@@ -229,11 +255,11 @@ export default function MesParisPage() {
       ) : error ? (
         <div
           style={{
-            margin: "16px",
+            margin: "18px 0",
             background: "#FFF3CD",
             color: "#856404",
-            padding: "16px",
-            borderRadius: 12,
+            padding: 16,
+            borderRadius: 16,
             fontSize: 14,
             fontWeight: 500,
           }}
@@ -242,36 +268,73 @@ export default function MesParisPage() {
         </div>
       ) : (
         <>
-          {/* Profile card */}
-          <div
+          <section
             style={{
               background:
                 "radial-gradient(circle at top right, rgba(255,255,255,0.16), transparent 30%), linear-gradient(135deg, #0a8f4d, #066737)",
-              borderRadius: 28,
-              margin: "14px 16px",
-              padding: 22,
+              borderRadius: 30,
+              margin: "18px 0 16px",
+              padding: 28,
               color: "#fff",
               boxShadow: "0 24px 48px rgba(0,132,61,0.24)",
               border: "1px solid rgba(255,255,255,0.12)",
+              display: "grid",
+              gap: 18,
+              gridTemplateColumns: "minmax(0,1.4fr) minmax(240px,0.9fr)",
             }}
           >
-            <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 4 }}>
-              {user?.email}
+            <div>
+              <div style={{ fontSize: 12, opacity: 0.84, marginBottom: 6 }}>{user?.email}</div>
+              <div style={{ fontSize: 46, fontWeight: 900, marginBottom: 8, letterSpacing: "-1.2px" }}>
+                {formatEuros(solde)}
+              </div>
+              <div style={{ fontSize: 14, opacity: 0.92, fontWeight: 600 }}>
+                {bets.length} paris · {wonCount} gagnes · {placedCount} places
+              </div>
             </div>
-            <div style={{ fontSize: 40, fontWeight: 800, marginBottom: 6, letterSpacing: "-1px" }}>
-              {solde}€
-            </div>
-            <div style={{ fontSize: 14, opacity: 0.92, fontWeight: 600 }}>
-              {bets.length} paris · {wonCount} gagnés · {placedCount} placés
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 14 }}>
+            <div
+              style={{
+                borderRadius: 24,
+                background: "rgba(0,0,0,0.16)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                padding: 18,
+                display: "grid",
+                gap: 12,
+                alignContent: "start",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  opacity: 0.72,
+                }}
+              >
+                Abonnement
+              </div>
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  width: "fit-content",
+                  padding: "10px 14px",
+                  borderRadius: 999,
+                  background: "rgba(255,255,255,0.16)",
+                  fontSize: 12,
+                  fontWeight: 800,
+                }}
+              >
+                {isSubscribed ? `Abonnement ${subscriptionStatus}` : "Compte gratuit"}
+              </div>
               <button
                 onClick={() => handleBilling(isSubscribed ? "portal" : "checkout")}
                 disabled={billingLoading}
                 style={{
                   border: "none",
                   borderRadius: 999,
-                  padding: "10px 14px",
+                  padding: "12px 16px",
                   background: "#FFFFFF",
                   color: DARK,
                   fontWeight: 800,
@@ -284,64 +347,55 @@ export default function MesParisPage() {
                     ? "Gerer l'abonnement"
                     : "Debloquer les pronostics premium"}
               </button>
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  padding: "10px 14px",
-                  borderRadius: 999,
-                  background: "rgba(255,255,255,0.16)",
-                  fontSize: 12,
-                  fontWeight: 800,
-                }}
-              >
-                {isSubscribed ? `Abonnement ${subscriptionStatus}` : "Compte gratuit"}
-              </div>
             </div>
-          </div>
+          </section>
 
-          {/* Stats row */}
-          <div
+          <section
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr 1fr 1fr 1fr",
-              gap: 8,
-              margin: "0 16px 16px",
+              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+              gap: 12,
+              marginBottom: 18,
             }}
           >
             {[
               { label: "En attente", value: pendingCount, color: "#F57F17" },
-              { label: "Gagnés", value: wonCount, color: GREEN },
-              { label: "Placés", value: placedCount, color: "#1565C0" },
-              { label: "P/L", value: totalGain >= 0 ? `+${totalGain}€` : `${totalGain}€`, color: totalGain >= 0 ? GREEN : "#C62828" },
-            ].map((s) => (
+              { label: "Gagnes", value: wonCount, color: GREEN },
+              { label: "Places", value: placedCount, color: "#1565C0" },
+              {
+                label: "P/L",
+                value: totalGain >= 0 ? `+${formatEuros(totalGain)}` : formatEuros(totalGain),
+                color: totalGain >= 0 ? GREEN : "#C62828",
+              },
+            ].map((item) => (
               <div
-                key={s.label}
+                key={item.label}
                 style={{
-                  background: "#fff",
-                  borderRadius: 18,
-                  padding: "14px 8px",
+                  background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,251,0.92))",
+                  borderRadius: 22,
+                  padding: "16px 12px",
                   textAlign: "center",
                   boxShadow: "0 14px 28px rgba(15,23,42,0.07)",
                   border: "1px solid rgba(15,23,42,0.05)",
                 }}
               >
-                <div style={{ fontSize: 22, fontWeight: 800, color: s.color, letterSpacing: "-0.4px" }}>{s.value}</div>
-                <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>{s.label}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: item.color, letterSpacing: "-0.4px" }}>
+                  {item.value}
+                </div>
+                <div style={{ fontSize: 11, color: "#888", marginTop: 3 }}>{item.label}</div>
               </div>
             ))}
-          </div>
+          </section>
 
-          {/* Settle button */}
-          {pendingCount > 0 && (
-            <div style={{ margin: "0 16px 16px" }}>
+          {pendingCount > 0 ? (
+            <div style={{ marginBottom: 18 }}>
               <button
                 onClick={handleSettle}
                 disabled={settling}
                 style={{
                   width: "100%",
-                  padding: "16px",
-                  borderRadius: 16,
+                  padding: 16,
+                  borderRadius: 18,
                   border: "none",
                   background: settling ? "#999" : "#FF9800",
                   color: "#fff",
@@ -351,14 +405,13 @@ export default function MesParisPage() {
                   boxShadow: "0 16px 28px rgba(255,152,0,0.24)",
                 }}
               >
-                {settling ? "Vérification..." : `Vérifier les résultats (${pendingCount} en attente)`}
+                {settling ? "Verification..." : `Verifier les resultats (${pendingCount} en attente)`}
               </button>
             </div>
-          )}
+          ) : null}
 
-          {/* Bets list */}
-          <div style={{ padding: "0 16px" }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: DARK, marginBottom: 12 }}>
+          <section style={{ padding: 0 }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: DARK, marginBottom: 14 }}>
               Historique
             </div>
 
@@ -366,113 +419,121 @@ export default function MesParisPage() {
               <div
                 style={{
                   textAlign: "center",
-                  padding: "40px 20px",
+                  padding: "48px 20px",
                   color: "#888",
+                  borderRadius: 24,
+                  background: "rgba(255,255,255,0.9)",
+                  border: "1px solid rgba(15,23,42,0.05)",
                 }}
               >
                 <div style={{ fontSize: 48, marginBottom: 12 }}>&#127922;</div>
-                <div style={{ fontWeight: 600 }}>Aucun pari</div>
+                <div style={{ fontWeight: 700 }}>Aucun pari</div>
                 <div style={{ fontSize: 13, marginTop: 8 }}>
-                  Allez sur une course pour placer votre premier pari
+                  Ouvre une course pour poser ton premier ticket.
                 </div>
               </div>
             ) : (
-              bets.map((bet) => {
-                const cfg = statusConfig[bet.statut] || statusConfig.EN_ATTENTE;
-                return (
-                  <div
-                    key={bet.id}
-                    style={{
-                      background: "#fff",
-                      borderRadius: 18,
-                      padding: 16,
-                      marginBottom: 8,
-                      boxShadow: "0 14px 28px rgba(15,23,42,0.07)",
-                      border: "1px solid rgba(15,23,42,0.05)",
-                    }}
-                  >
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                  gap: 12,
+                }}
+              >
+                {bets.map((bet) => {
+                  const cfg = statusConfig[bet.statut] || statusConfig.EN_ATTENTE;
+                  return (
                     <div
+                      key={bet.id}
                       style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: 8,
-                      }}
-                    >
-                      <div style={{ fontSize: 13, color: "#888" }}>
-                        R{bet.reunion}C{bet.course} · {bet.hippodrome}
-                      </div>
-                      <span
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 600,
-                          background: cfg.bg,
-                          color: cfg.color,
-                          padding: "3px 10px",
-                          borderRadius: 20,
-                        }}
-                      >
-                        {cfg.label}
-                      </span>
-                    </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        marginBottom: 8,
+                        background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,251,0.92))",
+                        borderRadius: 22,
+                        padding: 18,
+                        boxShadow: "0 14px 28px rgba(15,23,42,0.07)",
+                        border: "1px solid rgba(15,23,42,0.05)",
                       }}
                     >
                       <div
                         style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: "50%",
-                          background: GREEN,
                           display: "flex",
+                          justifyContent: "space-between",
                           alignItems: "center",
-                          justifyContent: "center",
-                          color: "#fff",
-                          fontWeight: 700,
-                          fontSize: 14,
-                          flexShrink: 0,
+                          gap: 10,
+                          marginBottom: 10,
                         }}
                       >
-                        {bet.cheval_num}
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 15, color: DARK }}>
-                          {bet.cheval_nom}
+                        <div style={{ fontSize: 13, color: "#6B7280" }}>
+                          R{bet.reunion}C{bet.course} · {bet.hippodrome}
                         </div>
-                        <div style={{ fontSize: 12, color: "#888" }}>
-                          {bet.type_pari} · Cote {bet.cote} · Mise {bet.mise}€
-                        </div>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            background: cfg.bg,
+                            color: cfg.color,
+                            padding: "5px 10px",
+                            borderRadius: 20,
+                          }}
+                        >
+                          {cfg.label}
+                        </span>
                       </div>
-                    </div>
 
-                    {bet.gain !== null && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                        <div
+                          style={{
+                            width: 42,
+                            height: 42,
+                            borderRadius: 16,
+                            background: GREEN,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "#fff",
+                            fontWeight: 800,
+                            fontSize: 15,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {bet.cheval_num}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 800, fontSize: 16, color: DARK }}>{bet.cheval_nom}</div>
+                          <div style={{ fontSize: 12, color: "#6B7280", marginTop: 2 }}>
+                            {bet.type_pari} · Cote {bet.cote} · Mise {formatEuros(bet.mise)}
+                          </div>
+                        </div>
+                      </div>
+
                       <div
                         style={{
-                          textAlign: "right",
-                          fontWeight: 700,
-                          fontSize: 16,
-                          color: bet.gain >= 0 ? GREEN : "#C62828",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          gap: 10,
+                          fontSize: 12,
+                          color: "#6B7280",
                         }}
                       >
-                        {bet.gain >= 0 ? "+" : ""}
-                        {bet.gain}€
+                        <span>{bet.heure_depart} · {bet.date_str}</span>
+                        {bet.gain !== null ? (
+                          <strong style={{ color: bet.gain >= 0 ? GREEN : "#C62828", fontSize: 15 }}>
+                            {bet.gain >= 0 ? "+" : ""}
+                            {formatEuros(bet.gain)}
+                          </strong>
+                        ) : (
+                          <span>Resultat en attente</span>
+                        )}
                       </div>
-                    )}
-                  </div>
-                );
-              })
+                    </div>
+                  );
+                })}
+              </div>
             )}
-          </div>
+          </section>
         </>
       )}
 
-      {/* Bottom Tab Bar */}
       <div
         style={{
           position: "fixed",
@@ -480,7 +541,7 @@ export default function MesParisPage() {
           left: "50%",
           transform: "translateX(-50%)",
           width: "100%",
-          maxWidth: 430,
+          maxWidth: 1180,
           zIndex: 50,
           background: "rgba(255,255,255,0.92)",
           backdropFilter: "blur(18px)",
@@ -494,13 +555,28 @@ export default function MesParisPage() {
       >
         <div
           onClick={() => router.push("/")}
-          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer", paddingTop: 8 }}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
+            cursor: "pointer",
+            paddingTop: 8,
+          }}
         >
           <span style={{ fontSize: 22 }}>&#127943;</span>
           <span style={{ fontSize: 11, fontWeight: 600, color: "#999" }}>Courses</span>
         </div>
         <div
-          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer", paddingTop: 8, position: "relative" }}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
+            cursor: "pointer",
+            paddingTop: 8,
+            position: "relative",
+          }}
         >
           <div style={{ width: 4, height: 4, borderRadius: "50%", background: GREEN, position: "absolute", top: 0 }} />
           <span style={{ fontSize: 22 }}>&#128176;</span>
@@ -508,7 +584,14 @@ export default function MesParisPage() {
         </div>
         <div
           onClick={() => router.push("/bilan")}
-          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, cursor: "pointer", paddingTop: 8 }}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
+            cursor: "pointer",
+            paddingTop: 8,
+          }}
         >
           <span style={{ fontSize: 22 }}>&#128202;</span>
           <span style={{ fontSize: 11, fontWeight: 600, color: "#999" }}>Bilan</span>

@@ -28,6 +28,7 @@ body {
   color: #1A1A1A;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  font-family: "Segoe UI", "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
 body::before {
@@ -62,4 +63,37 @@ body::before {
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 8px;
+}
+
+.app-shell {
+  width: min(1180px, calc(100% - 24px));
+  margin: 0 auto;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: 0 20px 44px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.premium-surface {
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.92), rgba(247,250,248,0.86)),
+    radial-gradient(circle at top right, rgba(11, 143, 77, 0.1), transparent 34%);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: 0 24px 56px rgba(15, 23, 42, 0.09);
+}
+
+.dark-surface {
+  background:
+    radial-gradient(circle at top right, rgba(108, 228, 160, 0.18), transparent 26%),
+    linear-gradient(135deg, #132126 0%, #18242a 100%);
+  box-shadow: 0 26px 56px rgba(15, 23, 42, 0.2);
+}
+
+@media (min-width: 768px) {
+  .app-shell {
+    width: min(1180px, calc(100% - 40px));
+  }
 }

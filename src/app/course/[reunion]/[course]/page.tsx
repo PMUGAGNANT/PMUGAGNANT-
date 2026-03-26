@@ -934,7 +934,7 @@ export default function CourseDetailPage({
 
   if (loading) {
     return (
-      <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100vh", background: "#F6F8F9" }}>
+      <div style={{ width: "min(1180px, calc(100% - 24px))", margin: "0 auto", minHeight: "100vh", background: "#F6F8F9" }}>
         <div style={{ height: 64, background: "rgba(18,22,26,0.92)" }} />
         <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
           {Array.from({ length: 5 }).map((_, index) => (
@@ -962,7 +962,7 @@ export default function CourseDetailPage({
 
   if (error || !data) {
     return (
-      <div style={{ maxWidth: 430, margin: "0 auto", minHeight: "100vh", background: "#F6F8F9" }}>
+      <div style={{ width: "min(1180px, calc(100% - 24px))", margin: "0 auto", minHeight: "100vh", background: "#F6F8F9" }}>
         <div
           style={{
             height: 64,
@@ -1006,7 +1006,7 @@ export default function CourseDetailPage({
   return (
     <div
       style={{
-        maxWidth: 430,
+        width: "min(1180px, calc(100% - 24px))",
         margin: "0 auto",
         minHeight: "100vh",
         background:
@@ -1667,7 +1667,7 @@ export default function CourseDetailPage({
           left: "50%",
           transform: "translateX(-50%)",
           width: "100%",
-          maxWidth: 430,
+          maxWidth: 1180,
           height: 72,
           background: "rgba(255,255,255,0.94)",
           backdropFilter: "blur(18px)",

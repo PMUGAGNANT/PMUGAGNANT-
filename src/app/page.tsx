@@ -669,13 +669,21 @@ function HomePageContent() {
       {/* ─── Sticky header ─── */}
       <div className="sticky top-0 z-30 border-b border-white/[0.08] bg-[rgba(23,27,31,0.92)] text-white backdrop-blur-xl">
         <div className="mx-auto flex h-[78px] w-full max-w-7xl items-center justify-between px-4 sm:px-6 xl:px-8">
-          <div>
-            <div className="text-lg font-black tracking-tight">PMU AI</div>
-            <div className="text-xs font-bold tracking-[0.28em] text-white/[0.68]">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-sm font-black text-[#6CE4A0]">
+              AI
+            </div>
+            <div>
+              <div className="text-lg font-black tracking-tight">PMU AI</div>
+              <div className="text-xs font-bold tracking-[0.28em] text-white/[0.68]">
               PRONOSTICS IA
+              </div>
             </div>
           </div>
-          <div className="hidden items-center gap-2 md:flex">
+          <div className="hidden items-center gap-3 md:flex">
+            <div className="rounded-full border border-white/10 bg-white/6 px-3 py-2 text-xs font-extrabold text-white/70">
+              Radar jour {scoredCount > 0 ? "actif" : "en attente"}
+            </div>
             {navigationItems.map((item) => (
               <button
                 key={`desktop-nav-${item.label}`}
@@ -694,38 +702,55 @@ function HomePageContent() {
       </div>
 
       {/* ─── Main content area ─── */}
-      <div className="mx-auto grid w-full max-w-7xl gap-4 px-4 py-4 sm:px-6 md:gap-5 md:py-6 xl:px-8">
+      <div className="mx-auto grid w-full max-w-7xl gap-5 px-4 py-4 sm:px-6 md:gap-6 md:py-6 xl:px-8">
         <DateNavigator dateStr={selectedDate} onChange={updateDate} />
 
-        <div className="mb-4 rounded-[24px] border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-[0_16px_32px_rgba(15,23,42,0.06)]">
-          <div className="mb-1 text-[12px] font-extrabold uppercase tracking-[0.16em] text-[#0b8f4d]">
-            Gratuit + Premium
+        <section className="premium-surface grid gap-5 overflow-hidden rounded-[34px] p-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.8fr)] lg:p-7">
+          <div>
+            <div className="mb-2 text-[12px] font-extrabold uppercase tracking-[0.18em] text-[#0b8f4d]">
+              Gratuit + Premium
+            </div>
+            <div className="max-w-2xl text-[24px] font-black leading-[1.08] text-[#132126] md:text-[28px]">
+              Lecture publique du jour, tickets complets et value bets reserves aux abonnes.
+            </div>
+            <div className="mt-3 max-w-2xl text-[14px] leading-6 text-slate-600">
+              L&apos;accueil reste utile pour reperer les bonnes courses. Les mises Kelly, le classement
+              detaille, les tickets optimises et les angles value se debloquent dans l&apos;espace premium.
+            </div>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <button
+                onClick={() => router.push("/login?redirect=/mes-paris")}
+                className="rounded-full bg-[#132126] px-5 py-3 text-sm font-black text-white transition hover:bg-[#0f181c]"
+              >
+                Se connecter
+              </button>
+              <button
+                onClick={() => router.push("/mes-paris")}
+                className="rounded-full bg-[#e7f8ee] px-5 py-3 text-sm font-black text-[#0b8f4d] transition hover:bg-[#daf2e4]"
+              >
+                Voir l&apos;offre premium
+              </button>
+            </div>
           </div>
-          <div className="mb-2 text-[18px] font-black text-[#132126]">
-            Page d&apos;accueil publique, pronostics complets reserves aux abonnes
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+            {[
+              ["Public", "Radar, priorites du jour et lecture rapide visibles sans compte."],
+              ["Premium", "Value bets, mises bankroll, top 5 detaille et tickets optimises."],
+              ["Execution", "Un parcours plus clair: reperer, ouvrir, puis miser si le moteur confirme."],
+            ].map(([title, text]) => (
+              <div
+                key={title}
+                className="rounded-[22px] border border-[rgba(15,23,42,0.06)] bg-[#f8fbf9] px-4 py-4"
+              >
+                <div className="text-sm font-black text-[#132126]">{title}</div>
+                <div className="mt-1 text-sm leading-5 text-slate-600">{text}</div>
+              </div>
+            ))}
           </div>
-          <div className="text-[13px] leading-5 text-slate-600">
-            Les visiteurs voient la selection du jour et les courses. Les value bets, mises Kelly,
-            classements detailles et tickets optimises se debloquent dans l&apos;espace abonne.
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              onClick={() => router.push("/login?redirect=/mes-paris")}
-              className="rounded-full bg-[#132126] px-4 py-2 text-sm font-black text-white transition hover:bg-[#0f181c]"
-            >
-              Se connecter
-            </button>
-            <button
-              onClick={() => router.push("/mes-paris")}
-              className="rounded-full bg-[#e7f8ee] px-4 py-2 text-sm font-black text-[#0b8f4d] transition hover:bg-[#daf2e4]"
-            >
-              Voir l&apos;offre premium
-            </button>
-          </div>
-        </div>
+        </section>
 
         {/* ─── Hero summary card ─── */}
-        <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-[#0b8f4d] via-[#0b8f4d] to-[#09723d] p-6 text-white shadow-[0_24px_46px_rgba(9,114,61,0.26)] md:p-7">
+        <div className="relative overflow-hidden rounded-[34px] bg-gradient-to-br from-[#0b8f4d] via-[#0b8f4d] to-[#09723d] p-6 text-white shadow-[0_28px_54px_rgba(9,114,61,0.26)] md:p-7">
           {/* Decorative circle */}
           <div className="absolute -top-5 -right-6 w-[150px] h-[150px] rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.18)_0%,transparent_72%)]" />
           <div className="relative">
@@ -742,7 +767,7 @@ function HomePageContent() {
               {scoredCount} course{scoredCount > 1 ? "s" : ""} deja notee{scoredCount > 1 ? "s" : ""} par le moteur
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-[20px] bg-white/[0.12] p-4 backdrop-blur-sm">
                 <div className="mb-1.5 text-xs font-extrabold uppercase text-white/70">
                   Radar actif
@@ -755,12 +780,20 @@ function HomePageContent() {
                 </div>
                 <div className="text-base font-black">{currentSortLabel}</div>
               </div>
-              <div className="rounded-[20px] bg-[#0b6939]/55 p-4 backdrop-blur-sm sm:block hidden">
+              <div className="rounded-[20px] bg-[#0b6939]/55 p-4 backdrop-blur-sm">
                 <div className="mb-1.5 text-xs font-extrabold uppercase text-white/70">
                   Puissance
                 </div>
                 <div className="text-base font-black">
                   {dailyBets.length > 0 ? `${dailyBets.length} tickets directs` : "Radar en veille"}
+                </div>
+              </div>
+              <div className="rounded-[20px] bg-white/[0.12] p-4 backdrop-blur-sm">
+                <div className="mb-1.5 text-xs font-extrabold uppercase text-white/70">
+                  Rythme
+                </div>
+                <div className="text-base font-black">
+                  {featuredRaces.length > 0 ? `${featuredRaces.length} pistes chaudes` : "Journee calme"}
                 </div>
               </div>
             </div>
@@ -781,7 +814,7 @@ function HomePageContent() {
           return (
             <button
               onClick={() => openRace(radarRace)}
-              className="border-none cursor-pointer text-left bg-gradient-to-br from-[#132126] to-[#1b252b] text-white rounded-3xl p-5 shadow-[0_24px_46px_rgba(15,23,42,0.22)] hover:shadow-[0_28px_52px_rgba(15,23,42,0.30)] active:scale-[0.98] transition-all duration-200"
+              className="dark-surface border-none cursor-pointer text-left text-white rounded-[34px] p-6 hover:shadow-[0_28px_52px_rgba(15,23,42,0.30)] active:scale-[0.98] transition-all duration-200"
             >
               <div className="text-xs font-extrabold text-[#6CE4A0] uppercase tracking-wider mb-2.5">
                 Radar du jour
@@ -811,7 +844,7 @@ function HomePageContent() {
 
         {/* ─── Sort controls ─── */}
         {!loading && !error && featuredRaces.length > 0 ? (
-          <section className="grid gap-3">
+          <section className="grid gap-4">
             <div className="flex items-end justify-between gap-3">
               <div>
                 <div className="text-lg font-black text-[#171b1f] mb-1">Top 3 du jour</div>
@@ -824,7 +857,7 @@ function HomePageContent() {
               </div>
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-2">
+            <div className="grid gap-4 xl:grid-cols-3">
               {featuredRaces.map((entry) => {
                 const key = `${entry.race.reunion}-${entry.race.course}`;
                 const raceScore = scores[key];
@@ -841,7 +874,7 @@ function HomePageContent() {
                   <button
                     key={`featured-${entry.race.reunion}-${entry.race.course}`}
                     onClick={() => openRace(entry.race)}
-                    className="border-none cursor-pointer text-left rounded-[28px] bg-white p-5 shadow-[0_18px_36px_rgba(15,23,42,0.08)] hover:shadow-[0_22px_44px_rgba(15,23,42,0.14)] active:scale-[0.99] transition-all duration-200"
+                    className="premium-surface border-none cursor-pointer text-left rounded-[30px] p-5 hover:shadow-[0_22px_44px_rgba(15,23,42,0.14)] active:scale-[0.99] transition-all duration-200"
                   >
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex items-center gap-3">
@@ -897,7 +930,7 @@ function HomePageContent() {
                     </div>
 
                     {featuredPick ? (
-                      <div className="mt-3 rounded-2xl bg-[#F6F8F9] px-4 py-3">
+                      <div className="mt-4 rounded-[20px] border border-[rgba(15,23,42,0.06)] bg-white/70 px-4 py-3">
                         <div className="text-[11px] font-extrabold uppercase tracking-wide text-[#7A8A9A] mb-1">
                           Pari du jour
                         </div>
@@ -1004,7 +1037,7 @@ function HomePageContent() {
           </section>
         ) : null}
 
-        <div className="grid gap-2.5">
+        <div className="premium-surface grid gap-4 rounded-[30px] p-5">
           <div className="flex flex-wrap gap-2">
             {([
               { key: "hour", label: "Par heure" },
@@ -1030,10 +1063,15 @@ function HomePageContent() {
             ))}
           </div>
 
-          <div>
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+            <div>
             <div className="text-lg font-black text-[#171b1f] mb-1.5">Courses a suivre</div>
             <div className="text-[#738395] text-sm">
               Tri intelligent par heure, confiance, urgence et niveau d&apos;enjeu.
+            </div>
+            </div>
+            <div className="rounded-full bg-[#132126] px-3 py-2 text-xs font-extrabold text-white">
+              {sortedRaces.length} courses analysees
             </div>
           </div>
         </div>
@@ -1054,7 +1092,7 @@ function HomePageContent() {
 
         {/* ─── Race cards ─── */}
         {!loading && !error ? (
-          <div className="grid gap-4 transition-all duration-300 xl:grid-cols-2">
+          <div className="grid gap-4 transition-all duration-300 xl:grid-cols-3 2xl:grid-cols-4">
             {sortedRaces.map((race) => {
               const key = `${race.reunion}-${race.course}`;
               const raceScore = scores[key];
@@ -1068,8 +1106,8 @@ function HomePageContent() {
                   key={`${race.reunion}-${race.course}-${race.dateStr}`}
                   onClick={() => openRace(race)}
                   className={`
-                    border-none cursor-pointer text-left bg-white rounded-[26px] p-5
-                    shadow-[0_18px_36px_rgba(15,23,42,0.08)] border-l-[5px] ${accentClass}
+                    premium-surface border-none cursor-pointer text-left rounded-[28px] p-5
+                    border-l-[5px] ${accentClass}
                     grid gap-3
                     hover:shadow-[0_22px_44px_rgba(15,23,42,0.14)] hover:-translate-y-0.5
                     active:scale-[0.99] transition-all duration-200
