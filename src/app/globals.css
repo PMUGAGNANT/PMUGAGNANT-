@@ -22,9 +22,9 @@
 
 body {
   background:
-    radial-gradient(circle at top left, rgba(0, 132, 61, 0.18), transparent 24%),
-    radial-gradient(circle at top right, rgba(18, 183, 106, 0.12), transparent 18%),
-    linear-gradient(180deg, #f5f7f8 0%, #edf1f3 100%);
+    radial-gradient(circle at top left, rgba(0, 132, 61, 0.12), transparent 22%),
+    radial-gradient(circle at top right, rgba(18, 183, 106, 0.08), transparent 16%),
+    linear-gradient(180deg, #f6f8f9 0%, #eef2f4 100%);
   color: #1A1A1A;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
@@ -39,9 +39,9 @@ body::before {
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.28) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.28) 1px, transparent 1px);
-  background-size: 22px 22px;
+  background-size: 28px 28px;
   mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.34), transparent 72%);
-  opacity: 0.35;
+  opacity: 0.18;
 }
 
 ::selection {
@@ -67,9 +67,9 @@ body::before {
 
 .app-shell {
   width: 100%;
-  max-width: 1180px;
+  max-width: 1420px;
   margin: 0 auto;
-  padding-inline: 12px;
+  padding-inline: 16px;
 }
 
 .glass-panel {
@@ -96,6 +96,6 @@ body::before {
 
 @media (min-width: 768px) {
   .app-shell {
-    padding-inline: 20px;
+    padding-inline: 28px;
   }
 }
