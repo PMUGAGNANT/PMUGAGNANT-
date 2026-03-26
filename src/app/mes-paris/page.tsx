@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   getSupabaseBrowserClient,
   getSupabaseConfigError,
@@ -35,8 +35,23 @@ function formatEuros(value: number) {
   }).format(value)} EUR`;
 }
 
-export default function MesParisPage() {
+function MesParisFallback() {
+  return (
+    <div
+      style={{
+        width: "min(1180px, calc(100% - 24px))",
+        margin: "0 auto",
+        minHeight: "100vh",
+        background:
+          "radial-gradient(circle at top left, rgba(0,132,61,0.12), transparent 24%), linear-gradient(180deg, #F6F8F9 0%, #EDF2F3 100%)",
+      }}
+    />
+  );
+}
+
+function MesParisContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabaseConfigured = hasSupabaseConfig();
   const [bets, setBets] = useState<Bet[]>([]);
   const [solde, setSolde] = useState(1000);
@@ -47,6 +62,11 @@ export default function MesParisPage() {
   const [error, setError] = useState("");
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState("FREE");
+  const [billingNotice, setBillingNotice] = useState<{
+    tone: "success" | "warning" | "loading";
+    title: string;
+    message: string;
+  } | null>(null);
 
   const fetchBets = useCallback(async () => {
     if (!supabaseConfigured) {
@@ -88,6 +108,111 @@ export default function MesParisPage() {
   useEffect(() => {
     void fetchBets();
   }, [fetchBets]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function handleSubscriptionReturn() {
+      const subscriptionFlag = searchParams.get("subscription");
+      const sessionId = searchParams.get("session_id");
+
+      if (subscriptionFlag === "cancel") {
+        setBillingNotice({
+          tone: "warning",
+          title: "Paiement annule",
+          message: "Le paiement a ete interrompu. Ton compte reste sur l'offre gratuite tant que l'abonnement n'est pas confirme.",
+        });
+        router.replace("/mes-paris");
+        return;
+      }
+
+      if (subscriptionFlag !== "success") {
+        return;
+      }
+
+      setBillingNotice({
+        tone: "loading",
+        title: "Verification du paiement",
+        message: "Nous confirmons ton abonnement premium avec Stripe avant d'ouvrir l'acces complet.",
+      });
+
+      if (!sessionId || !supabaseConfigured) {
+        if (!cancelled) {
+          setBillingNotice({
+            tone: "warning",
+            title: "Retour paiement detecte",
+            message: "Le paiement est revenu de Stripe, mais la confirmation automatique est incomplete. Recharge la page dans quelques secondes.",
+          });
+        }
+        router.replace("/mes-paris");
+        return;
+      }
+
+      try {
+        const supabase = getSupabaseBrowserClient();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session) {
+          if (!cancelled) {
+            setBillingNotice({
+              tone: "warning",
+              title: "Connexion requise",
+              message: "Reconnecte-toi pour finaliser l'activation de l'abonnement.",
+            });
+          }
+          return;
+        }
+
+        const response = await fetch(`/api/stripe/checkout-status?session_id=${encodeURIComponent(sessionId)}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload.error || "Confirmation Stripe impossible");
+        }
+
+        await fetchBets();
+        router.replace("/mes-paris");
+
+        if (!cancelled) {
+          setBillingNotice(
+            payload.activated
+              ? {
+                  tone: "success",
+                  title: "Abonnement active",
+                  message: "Paiement confirme. Ton abonnement premium est maintenant actif et tes acces ont bien ete ouverts.",
+                }
+              : {
+                  tone: "loading",
+                  title: "Paiement recu",
+                  message: "Le paiement est revenu, mais l'activation finale est encore en cours. Recharge la page dans quelques secondes.",
+                }
+          );
+        }
+      } catch (confirmationError) {
+        router.replace("/mes-paris");
+        if (!cancelled) {
+          setBillingNotice({
+            tone: "warning",
+            title: "Confirmation en attente",
+            message:
+              confirmationError instanceof Error
+                ? confirmationError.message
+                : "Le paiement est revenu de Stripe, mais la confirmation automatique a echoue.",
+          });
+        }
+      }
+    }
+
+    void handleSubscriptionReturn();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchBets, router, searchParams, supabaseConfigured]);
 
   async function handleSettle() {
     if (!supabaseConfigured) {
@@ -268,6 +393,54 @@ export default function MesParisPage() {
         </div>
       ) : (
         <>
+          {billingNotice ? (
+            <div
+              style={{
+                margin: "18px 0 0",
+                padding: 18,
+                borderRadius: 20,
+                border: `1px solid ${
+                  billingNotice.tone === "success"
+                    ? "rgba(0,132,61,0.18)"
+                    : billingNotice.tone === "loading"
+                      ? "rgba(21,101,192,0.16)"
+                      : "rgba(245,127,23,0.16)"
+                }`,
+                background:
+                  billingNotice.tone === "success"
+                    ? "linear-gradient(180deg, rgba(232,245,233,0.98), rgba(243,250,244,0.96))"
+                    : billingNotice.tone === "loading"
+                      ? "linear-gradient(180deg, rgba(227,242,253,0.98), rgba(243,248,253,0.96))"
+                      : "linear-gradient(180deg, rgba(255,248,225,0.98), rgba(255,252,244,0.96))",
+                boxShadow: "0 14px 28px rgba(15,23,42,0.06)",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.12em",
+                  color:
+                    billingNotice.tone === "success"
+                      ? GREEN
+                      : billingNotice.tone === "loading"
+                        ? "#1565C0"
+                        : "#C77700",
+                  marginBottom: 8,
+                }}
+              >
+                Confirmation d&apos;abonnement
+              </div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: DARK, marginBottom: 6 }}>
+                {billingNotice.title}
+              </div>
+              <div style={{ fontSize: 14, lineHeight: "21px", color: "#51606F" }}>
+                {billingNotice.message}
+              </div>
+            </div>
+          ) : null}
+
           <section
             style={{
               background:
@@ -349,7 +522,7 @@ export default function MesParisPage() {
                 {billingLoading
                   ? "Ouverture..."
                   : isSubscribed
-                  ? "Gerer l'abonnement"
+                    ? "Gerer l&apos;abonnement"
                     : "Debloquer les pronostics premium"}
               </button>
               {!isSubscribed ? (
@@ -642,5 +815,13 @@ export default function MesParisPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MesParisPage() {
+  return (
+    <Suspense fallback={<MesParisFallback />}>
+      <MesParisContent />
+    </Suspense>
   );
 }
