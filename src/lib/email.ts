@@ -2,6 +2,7 @@ import { logger } from "@/lib/server-logger";
 
 const resendApiKey = process.env.RESEND_API_KEY;
 const resendFromEmail = process.env.RESEND_FROM_EMAIL;
+const supportEmail = process.env.SUPPORT_EMAIL;
 
 type SendEmailOptions = {
   to: string;
@@ -99,6 +100,6 @@ export async function sendSubscriptionActivatedEmail({
     subject,
     html,
     text,
-    replyTo: resendFromEmail,
+    replyTo: supportEmail ?? resendFromEmail,
   });
 }

@@ -86,6 +86,7 @@ STRIPE_WEBHOOK_SECRET=
 STRIPE_PRICE_ID=
 RESEND_API_KEY=
 RESEND_FROM_EMAIL=
+SUPPORT_EMAIL=
 ```
 
 ### 3. Initialiser Supabase
@@ -173,6 +174,7 @@ Le workflow existe deja ici:
 - `STRIPE_PRICE_ID`
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
+- `SUPPORT_EMAIL` (optionnel mais recommande)
 
 ### Etapes
 
@@ -181,6 +183,21 @@ Le workflow existe deja ici:
 3. deployer
 4. configurer les variables GitHub Actions si tu utilises les crons frequents
 5. verifier que l'application repond bien en production
+
+## Email et delivrabilite
+
+Pour les confirmations d'abonnement:
+
+- `RESEND_FROM_EMAIL` peut etre par exemple `TurfEdge <no-reply@turfedge.fr>`
+- `SUPPORT_EMAIL` peut etre par exemple `support@turfedge.fr`
+- le domaine d'envoi doit etre verifie dans Resend avec SPF, DKIM et DMARC
+
+Sur un domaine neuf, Gmail peut classer les premiers emails en spam pendant un temps. Pour ameliorer la delivrabilite:
+
+- garder un expéditeur stable
+- utiliser une adresse support reelle en reply-to
+- eviter les objets trop promotionnels
+- marquer les premiers emails comme `Not spam` dans Gmail
 
 ### Secrets GitHub Actions requis
 
