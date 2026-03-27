@@ -703,22 +703,22 @@ function HomePageContent() {
 
       {/* Main content area */}
       <div className="app-shell py-4 md:py-6">
-        <div className="mx-auto grid max-w-[1180px] gap-5 md:gap-6">
+        <div className="mx-auto grid max-w-[1420px] gap-5 md:gap-6">
           <DateNavigator dateStr={selectedDate} onChange={updateDate} />
 
-          <section className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_360px] xl:items-start">
-            <div className="premium-surface overflow-hidden rounded-[34px] p-5 md:p-6">
-              <div className="mb-3 inline-flex rounded-full bg-[#E7F8EE] px-3 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#0b8f4d]">
-                Radar public + execution premium
+          <section className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_360px] xl:items-stretch">
+            <div className="premium-surface overflow-hidden rounded-[36px] p-6 md:p-7">
+              <div className="mb-4 inline-flex rounded-full bg-[#E7F8EE] px-3 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#0b8f4d]">
+                Radar jour + execution premium
               </div>
-              <div className="max-w-3xl text-[28px] font-black leading-[1.02] text-[#132126] md:text-[38px]">
-                Les bonnes courses d&apos;abord. Le premium sert a jouer proprement, pas a charger l&apos;ecran.
+              <div className="max-w-4xl text-[30px] font-black leading-[0.98] text-[#132126] md:text-[46px]">
+                Une page courses claire, rapide et utile. Les signaux forts doivent sortir tout de suite.
               </div>
-              <div className="mt-3 max-w-3xl text-[15px] leading-6 text-slate-600">
-                La page doit rester nette: radar du jour, top priorites, tri moteur et lecture rapide.
-                Le premium vient ensuite ajouter l&apos;execution bankroll, les value bets filtres et les tickets plus cadres.
+              <div className="mt-4 max-w-3xl text-[15px] leading-7 text-slate-600 md:text-base">
+                On garde seulement ce qui aide a decider: radar du jour, priorites lisibles, tri moteur et cartes courses faciles a scanner.
+                Le premium sert ensuite a executer proprement avec bankroll, value bets et tickets cadres.
               </div>
-              <div className="mt-5 flex flex-wrap gap-3">
+              <div className="mt-6 flex flex-wrap gap-3">
                 <button
                   onClick={() => router.push("/login?redirect=/mes-paris")}
                   className="rounded-full bg-[#132126] px-5 py-3 text-sm font-black text-white transition hover:bg-[#0f181c]"
@@ -732,34 +732,31 @@ function HomePageContent() {
                   Voir l&apos;offre premium
                 </button>
               </div>
-              <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="mt-6 grid gap-3 md:grid-cols-3">
                 {[
-                  "Lecture publique rapide",
-                  "Top courses du jour",
-                  "Execution bankroll premium",
-                  "Bilan et ROI apres course",
-                ].map((item) => (
+                  ["Lecture rapide", "Priorites du jour, lecture propre et courses a surveiller."],
+                  ["Execution premium", "Mises bankroll, tickets cadres et value bets filtres."],
+                  ["Suivi reel", "Bilan, ROI et verification post-course sans bruit visuel."],
+                ].map(([title, text]) => (
                   <div
-                    key={item}
-                    className="rounded-[20px] border border-[rgba(15,23,42,0.06)] bg-white/76 px-4 py-3 text-sm font-extrabold text-[#132126]"
+                    key={title}
+                    className="rounded-[24px] border border-[rgba(15,23,42,0.06)] bg-white/72 px-4 py-4"
                   >
-                    {item}
+                    <div className="text-sm font-black text-[#132126]">{title}</div>
+                    <div className="mt-2 text-sm leading-6 text-slate-600">{text}</div>
                   </div>
                 ))}
               </div>
             </div>
             <div className="grid gap-3">
               {[
-                ["Lecture publique", "Radar, priorites du jour et tri moteur visibles des l'arrivee sur le site."],
-                ["Execution premium", "Proba reelle, edge marche, mise bankroll et tickets optimises quand il y a vraiment une opportunite."],
-                ["Apres course", "Bilan, ROI et suivi reel pour savoir si l'algo aide vraiment."],
+                ["Lecture publique", "Le radar, le top du jour et les courses a lire vite doivent etre visibles en 10 secondes."],
+                ["Niveau d&apos;engagement", "Le premium ne surcharge pas l&apos;ecran: il ajoute seulement les decisions de jeu utiles."],
+                ["Structure propre", "Desktop plus aere, cartes mieux alignees, lecture moins dense et plus editoriale."],
               ].map(([title, text]) => (
-                <div
-                  key={title}
-                  className="premium-surface rounded-[26px] px-4 py-4"
-                >
+                <div key={title} className="premium-surface rounded-[28px] px-5 py-5">
                   <div className="text-sm font-black text-[#132126]">{title}</div>
-                  <div className="mt-1 text-sm leading-5 text-slate-600">{text}</div>
+                  <div className="mt-2 text-sm leading-6 text-slate-600">{text}</div>
                 </div>
               ))}
             </div>
@@ -865,7 +862,7 @@ function HomePageContent() {
           <section className="grid gap-4">
             <div className="flex items-end justify-between gap-3">
               <div>
-                <div className="text-lg font-black text-[#171b1f] mb-1">Top 3 du jour</div>
+                <div className="mb-1 text-2xl font-black text-[#171b1f]">Top 3 du jour</div>
                 <div className="text-sm text-[#738395]">
                   Selection priorisee par la note IA, puis completee intelligemment si le moteur n&apos;a pas encore tout note.
                 </div>
@@ -875,7 +872,7 @@ function HomePageContent() {
               </div>
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-3">
+            <div className="grid gap-5 lg:grid-cols-2 2xl:grid-cols-3">
               {featuredRaces.map((entry) => {
                 const key = `${entry.race.reunion}-${entry.race.course}`;
                 const raceScore = scores[key];
@@ -892,7 +889,7 @@ function HomePageContent() {
                   <button
                     key={`featured-${entry.race.reunion}-${entry.race.course}`}
                     onClick={() => openRace(entry.race)}
-                    className="premium-surface border-none cursor-pointer text-left rounded-[30px] p-5 hover:shadow-[0_22px_44px_rgba(15,23,42,0.14)] active:scale-[0.99] transition-all duration-200"
+                    className="premium-surface border-none cursor-pointer text-left rounded-[32px] p-6 hover:shadow-[0_22px_44px_rgba(15,23,42,0.14)] active:scale-[0.99] transition-all duration-200"
                   >
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="flex items-center gap-3">
@@ -974,10 +971,10 @@ function HomePageContent() {
         ) : null}
 
         {!loading && !error && dailyBets.length > 0 ? (
-          <section className="grid gap-3">
+          <section className="grid gap-4">
             <div className="flex items-end justify-between gap-3">
               <div>
-                <div className="text-lg font-black text-[#171b1f] mb-1">Mes 3 paris du jour</div>
+                <div className="mb-1 text-2xl font-black text-[#171b1f]">Mes 3 paris du jour</div>
                 <div className="text-sm text-[#738395]">
                   Vue express pour jouer vite: course, cheval, type de pari et confiance.
                 </div>
@@ -1003,12 +1000,12 @@ function HomePageContent() {
               </button>
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-3">
+            <div className="grid gap-5 lg:grid-cols-2 2xl:grid-cols-3">
               {dailyBets.map(({ rank, race, raceScore }) => (
                 <button
                   key={`daily-bet-${race.reunion}-${race.course}`}
                   onClick={() => openRace(race)}
-                  className="border-none cursor-pointer text-left rounded-[24px] bg-[#171b1f] text-white p-5 shadow-[0_20px_40px_rgba(15,23,42,0.18)] hover:shadow-[0_24px_48px_rgba(15,23,42,0.24)] active:scale-[0.99] transition-all duration-200"
+                  className="border-none cursor-pointer text-left rounded-[28px] bg-[#171b1f] text-white p-6 shadow-[0_20px_40px_rgba(15,23,42,0.18)] hover:shadow-[0_24px_48px_rgba(15,23,42,0.24)] active:scale-[0.99] transition-all duration-200"
                 >
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex items-center gap-3">
@@ -1055,8 +1052,8 @@ function HomePageContent() {
           </section>
         ) : null}
 
-        <div className="premium-surface grid gap-4 rounded-[30px] p-5">
-          <div className="flex flex-wrap gap-2">
+        <div className="premium-surface grid gap-5 rounded-[32px] p-5 md:p-6">
+          <div className="flex flex-wrap gap-2.5">
             {([
               { key: "hour", label: "Par heure" },
               { key: "score", label: "Meilleure note" },
@@ -1083,10 +1080,10 @@ function HomePageContent() {
 
           <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
             <div>
-            <div className="text-lg font-black text-[#171b1f] mb-1.5">Courses a suivre</div>
-            <div className="text-[#738395] text-sm">
-              Tri intelligent par heure, confiance, urgence et niveau d&apos;enjeu.
-            </div>
+              <div className="mb-1.5 text-2xl font-black text-[#171b1f]">Courses a suivre</div>
+              <div className="max-w-2xl text-sm leading-6 text-[#738395]">
+                Une grille plus propre, plus aeree et plus lisible pour scanner les vraies opportunites sans effet catalogue.
+              </div>
             </div>
             <div className="rounded-full bg-[#132126] px-3 py-2 text-xs font-extrabold text-white">
               {sortedRaces.length} courses analysees
@@ -1110,7 +1107,7 @@ function HomePageContent() {
 
         {/* ─── Race cards ─── */}
         {!loading && !error ? (
-          <div className="grid gap-4 transition-all duration-300 xl:grid-cols-3 2xl:grid-cols-4">
+          <div className="grid gap-5 transition-all duration-300 md:grid-cols-2 2xl:grid-cols-3">
             {sortedRaces.map((race) => {
               const key = `${race.reunion}-${race.course}`;
               const raceScore = scores[key];
@@ -1124,16 +1121,16 @@ function HomePageContent() {
                   key={`${race.reunion}-${race.course}-${race.dateStr}`}
                   onClick={() => openRace(race)}
                   className={`
-                    premium-surface border-none cursor-pointer text-left rounded-[28px] p-5
+                    premium-surface border-none cursor-pointer text-left rounded-[30px] p-6
                     border-l-[5px] ${accentClass}
-                    grid gap-3
+                    grid gap-4
                     hover:shadow-[0_22px_44px_rgba(15,23,42,0.14)] hover:-translate-y-0.5
                     active:scale-[0.99] transition-all duration-200
                   `}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="text-base font-black text-[#171b1f] mb-1.5">
+                      <div className="mb-1 text-[28px] font-black leading-none text-[#171b1f]">
                         {race.heureDepart}
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -1159,10 +1156,10 @@ function HomePageContent() {
                   </div>
 
                   <div>
-                    <div className="text-[17px] font-black text-[#171b1f] leading-tight mb-1.5">
+                    <div className="mb-2 text-[20px] font-black leading-tight text-[#171b1f]">
                       R{race.reunion}C{race.course} - {race.nomCourse}
                     </div>
-                    <div className="text-slate-500 text-sm">
+                    <div className="text-sm text-slate-500 md:text-[15px]">
                       {race.hippodrome} · {race.nombrePartants} partants · {race.distance} m
                     </div>
                   </div>
@@ -1185,8 +1182,13 @@ function HomePageContent() {
                     </span>
                   </div>
 
-                  <div className="text-[#5B6472] text-sm leading-relaxed">
+                  <div className="rounded-[20px] bg-[#F6F7F8] px-4 py-4 text-sm leading-7 text-[#5B6472]">
                     {getRaceHint(race, raceScore?.score ?? null, raceScore?.stage ?? null, minutesUntilStart)}
+                  </div>
+                  <div className="flex justify-end">
+                    <span className="inline-flex items-center rounded-full border border-[rgba(15,23,42,0.08)] bg-white px-4 py-2 text-xs font-extrabold text-[#171b1f]">
+                      Voir le detail
+                    </span>
                   </div>
                 </button>
               );
