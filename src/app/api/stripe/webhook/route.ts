@@ -5,6 +5,8 @@ import {
   getStripeWebhookConfigError,
   getStripeWebhookSecret,
 } from "@/lib/stripe";
+import { sendSubscriptionActivatedEmail } from "@/lib/email";
+import { logger } from "@/lib/server-logger";
 import { isActiveSubscriptionStatus, updateSubscriptionByCustomer } from "@/lib/subscription";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +40,26 @@ export async function POST(request: NextRequest) {
             subscriptionStatus: "active",
             isSubscribed: true,
           });
+
+          const recipientEmail =
+            session.customer_details?.email ?? session.customer_email ?? null;
+
+          if (recipientEmail) {
+            try {
+              await sendSubscriptionActivatedEmail({ to: recipientEmail });
+            } catch (emailError) {
+              logger.error("Subscription activation email failed", emailError, {
+                customerId,
+                recipientEmail,
+                eventType: event.type,
+              });
+            }
+          } else {
+            logger.warn("Subscription activation email skipped: recipient missing", {
+              customerId,
+              eventType: event.type,
+            });
+          }
         }
         break;
       }

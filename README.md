@@ -20,6 +20,8 @@ Application Next.js de pronostics PMU avec moteur de scoring, suivi des meilleur
 - Vercel
 - GitHub Actions
 - Telegram Bot API
+- Stripe
+- Resend (optionnel pour les emails de confirmation)
 
 ## Fonctionnalites principales
 
@@ -78,6 +80,12 @@ SUPABASE_SERVICE_ROLE_KEY=
 CRON_SECRET=
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=
+NEXT_PUBLIC_SITE_URL=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PRICE_ID=
+RESEND_API_KEY=
+RESEND_FROM_EMAIL=
 ```
 
 ### 3. Initialiser Supabase
@@ -159,6 +167,12 @@ Le workflow existe deja ici:
 - `CRON_SECRET`
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
+- `NEXT_PUBLIC_SITE_URL`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_PRICE_ID`
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
 
 ### Etapes
 
