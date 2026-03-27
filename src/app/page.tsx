@@ -702,67 +702,68 @@ function HomePageContent() {
       </div>
 
       {/* Main content area */}
-      <div className="app-shell grid gap-5 py-4 md:gap-6 md:py-6">
-        <DateNavigator dateStr={selectedDate} onChange={updateDate} />
+      <div className="app-shell py-4 md:py-6">
+        <div className="mx-auto grid max-w-[1180px] gap-5 md:gap-6">
+          <DateNavigator dateStr={selectedDate} onChange={updateDate} />
 
-        <section className="premium-surface grid gap-6 overflow-hidden rounded-[34px] p-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.9fr)] lg:p-7">
-          <div>
-            <div className="mb-2 text-[12px] font-extrabold uppercase tracking-[0.18em] text-[#0b8f4d]">
-              Gratuit + Premium
-            </div>
-            <div className="max-w-2xl text-[26px] font-black leading-[1.05] text-[#132126] md:text-[34px]">
-              Une home simple pour reperer les bonnes courses. Le premium sert a executer proprement.
-            </div>
-            <div className="mt-3 max-w-2xl text-[14px] leading-6 text-slate-600">
-              La partie publique doit aller droit au but: radar du jour, top courses et lecture rapide.
-              Le premium debloque ensuite les value bets filtres, les mises bankroll et les tickets deja cadres.
-            </div>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <button
-                onClick={() => router.push("/login?redirect=/mes-paris")}
-                className="rounded-full bg-[#132126] px-5 py-3 text-sm font-black text-white transition hover:bg-[#0f181c]"
-              >
-                Se connecter
-              </button>
+          <section className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_360px] xl:items-start">
+            <div className="premium-surface overflow-hidden rounded-[34px] p-5 md:p-6">
+              <div className="mb-3 inline-flex rounded-full bg-[#E7F8EE] px-3 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#0b8f4d]">
+                Radar public + execution premium
+              </div>
+              <div className="max-w-3xl text-[28px] font-black leading-[1.02] text-[#132126] md:text-[38px]">
+                Les bonnes courses d&apos;abord. Le premium sert a jouer proprement, pas a charger l&apos;ecran.
+              </div>
+              <div className="mt-3 max-w-3xl text-[15px] leading-6 text-slate-600">
+                La page doit rester nette: radar du jour, top priorites, tri moteur et lecture rapide.
+                Le premium vient ensuite ajouter l&apos;execution bankroll, les value bets filtres et les tickets plus cadres.
+              </div>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <button
+                  onClick={() => router.push("/login?redirect=/mes-paris")}
+                  className="rounded-full bg-[#132126] px-5 py-3 text-sm font-black text-white transition hover:bg-[#0f181c]"
+                >
+                  Se connecter
+                </button>
                 <button
                   onClick={() => router.push("/premium")}
-                  className="rounded-full bg-[#e7f8ee] px-5 py-3 text-sm font-black text-[#0b8f4d] transition hover:bg-[#daf2e4]"
+                  className="rounded-full bg-[#E7F8EE] px-5 py-3 text-sm font-black text-[#0b8f4d] transition hover:bg-[#daf2e4]"
                 >
                   Voir l&apos;offre premium
-              </button>
+                </button>
+              </div>
+              <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                {[
+                  "Lecture publique rapide",
+                  "Top courses du jour",
+                  "Execution bankroll premium",
+                  "Bilan et ROI apres course",
+                ].map((item) => (
+                  <div
+                    key={item}
+                    className="rounded-[20px] border border-[rgba(15,23,42,0.06)] bg-white/76 px-4 py-3 text-sm font-extrabold text-[#132126]"
+                  >
+                    {item}
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="mt-5 flex flex-wrap gap-2">
+            <div className="grid gap-3">
               {[
-                "Value bets filtres",
-                "Mises Kelly pretes a jouer",
-                "Tickets simple / couple / trio",
-                "Lecture reservee aux vraies opportunites",
-              ].map((item) => (
-                <span
-                  key={item}
-                  className="rounded-full border border-[rgba(11,143,77,0.12)] bg-white/82 px-3 py-2 text-xs font-extrabold text-[#132126]"
+                ["Lecture publique", "Radar, priorites du jour et tri moteur visibles des l'arrivee sur le site."],
+                ["Execution premium", "Proba reelle, edge marche, mise bankroll et tickets optimises quand il y a vraiment une opportunite."],
+                ["Apres course", "Bilan, ROI et suivi reel pour savoir si l'algo aide vraiment."],
+              ].map(([title, text]) => (
+                <div
+                  key={title}
+                  className="premium-surface rounded-[26px] px-4 py-4"
                 >
-                  {item}
-                </span>
+                  <div className="text-sm font-black text-[#132126]">{title}</div>
+                  <div className="mt-1 text-sm leading-5 text-slate-600">{text}</div>
+                </div>
               ))}
             </div>
-          </div>
-          <div className="grid gap-4">
-            {[
-              ["Lecture publique", "Radar, priorites du jour et tri moteur visibles des l'arrivee sur le site."],
-              ["Execution premium", "Proba reelle, edge marche, mise bankroll et tickets optimises quand il y a vraiment une opportunite."],
-              ["Apres course", "Bilan, ROI et suivi reel pour savoir si l'algo aide vraiment."],
-            ].map(([title, text]) => (
-              <div
-                key={title}
-                className="rounded-[24px] border border-[rgba(15,23,42,0.06)] bg-white/72 px-4 py-4"
-              >
-                <div className="text-sm font-black text-[#132126]">{title}</div>
-                <div className="mt-1 text-sm leading-5 text-slate-600">{text}</div>
-              </div>
-            ))}
-          </div>
-        </section>
+          </section>
 
         
 
@@ -1192,6 +1193,7 @@ function HomePageContent() {
             })}
           </div>
         ) : null}
+        </div>
       </div>
 
       {/* ─── Bottom navigation bar ─── */}
