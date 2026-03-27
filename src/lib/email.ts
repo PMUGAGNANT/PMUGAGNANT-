@@ -8,13 +8,14 @@ type SendEmailOptions = {
   subject: string;
   html: string;
   text: string;
+  replyTo?: string;
 };
 
 export function hasEmailConfig() {
   return Boolean(resendApiKey && resendFromEmail);
 }
 
-export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
+export async function sendEmail({ to, subject, html, text, replyTo }: SendEmailOptions) {
   if (!hasEmailConfig()) {
     logger.warn("Email skipped: Resend config missing", {
       to,
@@ -37,6 +38,7 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
       subject,
       html,
       text,
+      reply_to: replyTo,
     }),
   });
 
@@ -53,27 +55,30 @@ export async function sendSubscriptionActivatedEmail({
 }: {
   to: string;
 }) {
-  const subject = "Abonnement PMU AI active";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const premiumUrl = `${siteUrl}/mes-paris`;
+  const subject = "Confirmation de ton abonnement TurfEdge";
   const html = `
-    <div style="background:#f4f7f6;padding:32px 16px;font-family:Arial,sans-serif;color:#171b1f;">
-      <div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:24px;overflow:hidden;border:1px solid rgba(15,23,42,0.06);box-shadow:0 18px 36px rgba(15,23,42,0.08);">
-        <div style="background:linear-gradient(135deg,#0b8f4d,#066737);padding:28px 32px;color:#ffffff;">
-          <div style="font-size:12px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;opacity:0.8;">PMU AI</div>
-          <div style="margin-top:10px;font-size:30px;font-weight:900;line-height:1.1;">Ton abonnement premium est actif.</div>
-          <div style="margin-top:10px;font-size:15px;line-height:1.6;opacity:0.9;">Le paiement a bien ete confirme et ton acces premium est maintenant ouvert.</div>
+    <div style="background:#f5f7f8;padding:32px 16px;font-family:Arial,sans-serif;color:#171b1f;">
+      <div style="max-width:620px;margin:0 auto;background:#ffffff;border-radius:20px;overflow:hidden;border:1px solid #e6ebef;">
+        <div style="padding:24px 28px;border-bottom:1px solid #eef2f5;background:#ffffff;">
+          <div style="font-size:12px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#0b8f4d;">TurfEdge</div>
+          <div style="margin-top:10px;font-size:28px;font-weight:800;line-height:1.2;color:#171b1f;">Ton abonnement premium est actif</div>
+          <div style="margin-top:10px;font-size:15px;line-height:1.6;color:#4b5563;">
+            Le paiement a bien ete confirme. Ton compte premium est maintenant ouvert.
+          </div>
         </div>
-        <div style="padding:28px 32px;">
-          <div style="font-size:16px;font-weight:800;margin-bottom:12px;">Ce que tu peux faire maintenant</div>
-          <ul style="padding-left:18px;margin:0 0 20px;line-height:1.8;color:#51606f;">
-            <li>consulter les pronostics premium complets</li>
-            <li>voir les value bets filtres</li>
-            <li>utiliser les tickets et mises optimises</li>
-          </ul>
-          <a href="${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/mes-paris" style="display:inline-block;padding:14px 18px;border-radius:999px;background:#171b1f;color:#ffffff;text-decoration:none;font-weight:800;">
-            Ouvrir mon espace premium
-          </a>
-          <div style="margin-top:22px;font-size:13px;line-height:1.7;color:#6b7280;">
-            Si tu n&apos;es pas a l&apos;origine de cet achat, reponds a cet email ou contacte le support.
+        <div style="padding:24px 28px;">
+          <div style="font-size:15px;line-height:1.7;color:#4b5563;">
+            Tu peux des maintenant acceder a tes pronostics premium, tes value bets filtres et tes tickets optimises depuis ton espace membre.
+          </div>
+          <div style="margin-top:20px;">
+            <a href="${premiumUrl}" style="display:inline-block;padding:13px 18px;border-radius:999px;background:#0b8f4d;color:#ffffff;text-decoration:none;font-weight:700;">
+              Ouvrir mon espace premium
+            </a>
+          </div>
+          <div style="margin-top:22px;padding-top:18px;border-top:1px solid #eef2f5;font-size:13px;line-height:1.7;color:#6b7280;">
+            Email de confirmation automatique suite a ton paiement. Si tu n'es pas a l'origine de cet achat, contacte le support.
           </div>
         </div>
       </div>
@@ -81,11 +86,12 @@ export async function sendSubscriptionActivatedEmail({
   `;
 
   const text = [
-    "Ton abonnement PMU AI est actif.",
+    "Confirmation de ton abonnement TurfEdge",
     "",
-    "Le paiement a bien ete confirme et ton acces premium est maintenant ouvert.",
+    "Le paiement a bien ete confirme.",
+    "Ton compte premium est maintenant actif.",
     "",
-    `Ouvre ton espace premium: ${(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000")}/mes-paris`,
+    `Ouvre ton espace premium: ${premiumUrl}`,
   ].join("\n");
 
   return sendEmail({
@@ -93,5 +99,6 @@ export async function sendSubscriptionActivatedEmail({
     subject,
     html,
     text,
+    replyTo: resendFromEmail,
   });
 }

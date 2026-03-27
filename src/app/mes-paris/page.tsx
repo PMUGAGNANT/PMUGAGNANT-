@@ -182,7 +182,7 @@ function MesParisContent() {
             payload.activated
               ? {
                   tone: "success",
-                  title: "Abonnement active",
+                  title: "Abonnement actif",
                   message: "Paiement confirme. Ton abonnement premium est maintenant actif et tes acces ont bien ete ouverts.",
                 }
               : {
@@ -430,7 +430,7 @@ function MesParisContent() {
                   marginBottom: 8,
                 }}
               >
-                Confirmation d&apos;abonnement
+                {"Confirmation d'abonnement"}
               </div>
               <div style={{ fontSize: 18, fontWeight: 800, color: DARK, marginBottom: 6 }}>
                 {billingNotice.title}
@@ -522,7 +522,7 @@ function MesParisContent() {
                 {billingLoading
                   ? "Ouverture..."
                   : isSubscribed
-                    ? "Gerer l&apos;abonnement"
+                    ? "Gerer l'abonnement"
                     : "Debloquer les pronostics premium"}
               </button>
               {!isSubscribed ? (
@@ -538,7 +538,7 @@ function MesParisContent() {
                     cursor: "pointer",
                   }}
                 >
-                  Voir le detail de l&apos;offre
+                  {"Voir le detail de l'offre"}
                 </button>
               ) : null}
               {!isSubscribed ? (
