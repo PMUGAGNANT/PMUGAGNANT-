@@ -316,28 +316,44 @@ function PageContent() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const storedSort = window.localStorage.getItem("pmu-sort-mode");
-    if (storedSort === "hour" || storedSort === "score" || storedSort === "urgent" || storedSort === "allocation") {
-      setSortMode(storedSort);
+    try {
+      const storedSort = window.localStorage.getItem("pmu-sort-mode");
+      if (storedSort === "hour" || storedSort === "score" || storedSort === "urgent" || storedSort === "allocation") {
+        setSortMode(storedSort);
+      }
+    } catch (effectError) {
+      console.error(effectError);
     }
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem("pmu-sort-mode", sortMode);
+    try {
+      window.localStorage.setItem("pmu-sort-mode", sortMode);
+    } catch (effectError) {
+      console.error(effectError);
+    }
   }, [sortMode]);
 
   useEffect(() => {
-    setSelectedDate(initialDate);
+    try {
+      setSelectedDate(initialDate);
+    } catch (effectError) {
+      console.error(effectError);
+    }
   }, [initialDate]);
 
   useEffect(() => {
-    const currentParam = normalizeDateParam(searchParams.get("date"));
-    if (currentParam === selectedDate) {
-      return;
-    }
+    try {
+      const currentParam = normalizeDateParam(searchParams.get("date"));
+      if (currentParam === selectedDate) {
+        return;
+      }
 
-    const nextPath = selectedDate === getTodayDateStr() ? "/" : `/?date=${selectedDate}`;
-    router.replace(nextPath, { scroll: false });
+      const nextPath = selectedDate === getTodayDateStr() ? "/" : `/?date=${selectedDate}`;
+      router.replace(nextPath, { scroll: false });
+    } catch (effectError) {
+      console.error(effectError);
+    }
   }, [router, searchParams, selectedDate]);
 
   useEffect(() => {
@@ -360,11 +376,16 @@ function PageContent() {
 
         let authorization = "";
         if (hasSupabaseConfig()) {
-          const supabase = getSupabaseBrowserClient();
-          const {
-            data: { session },
-          } = await supabase.auth.getSession();
-          authorization = session?.access_token ? `Bearer ${session.access_token}` : "";
+          try {
+            const supabase = getSupabaseBrowserClient();
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
+            authorization = session?.access_token ? `Bearer ${session.access_token}` : "";
+          } catch (sessionError) {
+            console.error(sessionError);
+            authorization = "";
+          }
         }
 
         const scoresResponse = await fetch(`/api/races/scores?date=${selectedDate}`, {
