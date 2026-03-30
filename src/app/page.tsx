@@ -232,7 +232,7 @@ function getRaceHint(race: RaceSummary, score?: RaceScore) {
 }
 
 function buildFeaturedRaces(races: RaceSummary[], scoresMap: Map<string, RaceScore>) {
-  return races.map((race) => {
+  return (races ?? []).map((race) => {
     const key = `${race.reunion}-${race.course}`;
     const score = scoresMap.get(key);
     const scoreValue = score?.score ?? 0;
@@ -422,7 +422,10 @@ function PageContent() {
     };
   }, [selectedDate]);
 
-  const scoresMap = useMemo(() => new Map(scores.map((score) => [`${score.reunion}-${score.course}`, score])), [scores]);
+  const scoresMap = useMemo(
+    () => new Map((scores ?? []).map((score) => [`${score.reunion}-${score.course}`, score])),
+    [scores]
+  );
 
   const featuredRaces = useMemo(() => sortFeaturedRaces(buildFeaturedRaces(races, scoresMap), sortMode), [races, scoresMap, sortMode]);
 
@@ -437,10 +440,12 @@ function PageContent() {
   const topParisItems = useMemo(() => getTopParisItems(featuredRaces, navigateToRace), [featuredRaces, navigateToRace]);
 
   const summaryStats = useMemo(() => {
-    const meetings = new Set(races.map((race) => race.reunion)).size;
-    const playable = featuredRaces.filter((item) => item.status === "jouable").length;
-    const hot = featuredRaces.filter((item) => item.confidence >= 8).length;
-    const closingSoon = featuredRaces.filter((item) => item.status !== "resultat" && item.minutesUntilStart <= 60).length;
+    const meetings = new Set((races ?? []).map((race) => race.reunion)).size;
+    const playable = (featuredRaces ?? []).filter((item) => item.status === "jouable").length;
+    const hot = (featuredRaces ?? []).filter((item) => item.confidence >= 8).length;
+    const closingSoon = (featuredRaces ?? []).filter(
+      (item) => item.status !== "resultat" && item.minutesUntilStart <= 60
+    ).length;
 
     return { meetings, playable, hot, closingSoon };
   }, [featuredRaces, races]);
@@ -619,7 +624,7 @@ function PageContent() {
 
       {isLoading ? (
         <section className="grid gap-5">
-          {Array.from({ length: 5 }).map((_, index) => (
+          {(Array.from({ length: 5 }) ?? []).map((_, index) => (
             <div key={index} className="app-card h-52 animate-pulse bg-[linear-gradient(180deg,#131313_0%,#0f0f0f_100%)]" />
           ))}
         </section>
@@ -627,7 +632,7 @@ function PageContent() {
 
       {!isLoading && !error && featuredRaces.length ? (
         <section className="grid gap-5 2xl:grid-cols-2">
-          {featuredRaces.map((item) => (
+          {(featuredRaces ?? []).map((item) => (
             <CourseCard
               key={`${item.race.reunion}-${item.race.course}`}
               timeLabel={item.race.heureDepart}

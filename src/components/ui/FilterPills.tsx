@@ -13,7 +13,7 @@ export function FilterPills<T extends string>({ options, value, onChange }: Filt
   return (
     <div className="-mx-1 overflow-x-auto pb-1">
       <div className="flex min-w-max gap-2 px-1">
-        {options.map((option) => {
+        {(options ?? []).map((option) => {
           const active = option.value === value;
 
           return (

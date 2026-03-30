@@ -28,7 +28,7 @@ export function TopParisStrip({ items }: TopParisStripProps) {
       </div>
 
       <div className="mt-5 grid gap-4 xl:grid-cols-3">
-        {items.map((item) => (
+        {(items ?? []).map((item) => (
           <button
             key={`${item.rank}-${item.title}`}
             type="button"

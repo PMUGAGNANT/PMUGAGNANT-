@@ -43,7 +43,7 @@ export function Sidebar() {
         </Link>
 
         <div className="mt-8 space-y-1">
-          {navItems.map((item) => {
+          {(navItems ?? []).map((item) => {
             const active = isActive(pathname, item.href);
 
             return (

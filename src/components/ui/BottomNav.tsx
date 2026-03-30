@@ -24,7 +24,7 @@ export function BottomNav() {
   return (
     <nav className="app-surface fixed inset-x-0 bottom-0 z-50 border-t border-[var(--pmu-border)] px-3 py-2 lg:hidden">
       <div className="mx-auto grid max-w-xl grid-cols-4 gap-2">
-        {navItems.map((item) => {
+        {(navItems ?? []).map((item) => {
           const active = isActive(pathname, item.href);
 
           return (
