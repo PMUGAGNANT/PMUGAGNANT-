@@ -1,11 +1,11 @@
 {
   "name": "PMU Gagnant",
   "short_name": "PMU Gagnant",
-  "description": "Pronostics hippiques",
+  "description": "Pronostics IA courses hippiques",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f0f4f9",
-  "theme_color": "#0d9488",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
   "icons": [
     {
       "src": "/next.svg",

@@ -67,13 +67,13 @@ export default function PremiumPage() {
 
   return (
     <div
-      className="min-h-screen"
+      className="min-h-screen bg-[#0A0A0A] text-white"
       style={{
         background:
-          "radial-gradient(circle at top left, rgba(0,132,61,0.16), transparent 24%), radial-gradient(circle at top right, rgba(18,183,106,0.12), transparent 20%), linear-gradient(180deg, #f6f8f9 0%, #edf2f3 100%)",
+          "radial-gradient(circle at top left, rgba(0,255,136,0.08), transparent 32%), radial-gradient(circle at top right, rgba(0,255,136,0.05), transparent 28%), #0A0A0A",
       }}
     >
-      <header className="sticky top-0 z-50 border-b border-[var(--pmu-border)] bg-[rgba(255,255,255,0.92)] backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-[#1E1E1E] bg-[rgba(10,10,10,0.92)] backdrop-blur-xl">
         <div className="app-shell flex h-[72px] items-center justify-between gap-4">
           <button
             onClick={() => router.push("/")}
@@ -89,7 +89,7 @@ export default function PremiumPage() {
           </div>
           <Link
             href="/login?redirect=/mes-paris"
-            className="rounded-full bg-[var(--pmu-primary)] px-4 py-2 text-xs font-black text-white transition hover:opacity-90"
+            className="rounded-full bg-[#00FF88] px-4 py-2 text-xs font-black text-black transition hover:opacity-90"
           >
             Se connecter
           </Link>
@@ -136,27 +136,27 @@ export default function PremiumPage() {
 
           <aside className="premium-surface grid gap-4 self-start rounded-[32px] p-5 md:p-6">
             <div>
-              <div className="text-[12px] font-extrabold uppercase tracking-[0.18em] text-[#0b8f4d]">
+              <div className="text-[12px] font-extrabold uppercase tracking-[0.18em] text-[#00FF88]">
                 Tarif
               </div>
-              <div className="mt-3 flex items-end gap-2 text-[#171b1f]">
+              <div className="mt-3 flex items-end gap-2 text-white">
                 <span className="text-[54px] font-black leading-none tracking-[-0.06em]">14,99</span>
                 <span className="pb-2 text-[16px] font-black">EUR / mois</span>
               </div>
-              <p className="mt-2 text-sm leading-6 text-[#5B6472]">
+              <p className="mt-2 text-sm leading-6 text-[#888888]">
                 Acces aux pronostics complets, aux mises recommandees et au suivi reel de {"l'algo"}.
               </p>
             </div>
 
-            <div className="grid gap-2 rounded-[24px] bg-[#F5FAF6] p-4">
+            <div className="grid gap-2 rounded-[24px] border border-[#1E1E1E] bg-[#161616] p-4">
               {[
                 "Page d'accueil publique conservee",
                 "Pronostics complets reserves aux abonnes",
                 "Gestion d'abonnement via Stripe",
                 "Arret possible a tout moment",
               ].map((item) => (
-                <div key={item} className="flex items-start gap-2 text-sm font-semibold text-[#24303C]">
-                  <span className="mt-[2px] text-[#0b8f4d]">+</span>
+                <div key={item} className="flex items-start gap-2 text-sm font-semibold text-[#CCCCCC]">
+                  <span className="mt-[2px] text-[#00FF88]">+</span>
                   <span>{item}</span>
                 </div>
               ))}
@@ -164,17 +164,17 @@ export default function PremiumPage() {
 
             <Link
               href="/login?redirect=/mes-paris"
-              className="rounded-full bg-[#0b8f4d] px-5 py-4 text-center text-sm font-black text-white transition hover:bg-[#08703d]"
+              className="rounded-full bg-[#00FF88] px-5 py-4 text-center text-sm font-black text-black transition hover:opacity-90"
             >
               Activer le premium
             </Link>
             <Link
               href="/bilan"
-              className="rounded-full border border-[rgba(15,23,42,0.08)] bg-white px-5 py-4 text-center text-sm font-black text-[#171b1f] transition hover:bg-[#F8FAFB]"
+              className="rounded-full border border-[#333333] bg-[#111111] px-5 py-4 text-center text-sm font-black text-white transition hover:border-[#00FF88]/40"
             >
               {`Voir le bilan de l'algo`}
             </Link>
-            <div className="text-center text-xs font-semibold leading-5 text-[#7A8A9A]">
+            <div className="text-center text-xs font-semibold leading-5 text-[#888888]">
               Paiement securise via Stripe. Le premium te donne une lecture plus exploitable, pas une promesse magique.
             </div>
           </aside>
@@ -186,11 +186,11 @@ export default function PremiumPage() {
               key={feature.title}
               className="premium-surface rounded-[30px] p-5 shadow-[0_18px_34px_rgba(15,23,42,0.07)]"
             >
-              <div className="text-[12px] font-extrabold uppercase tracking-[0.16em] text-[#0b8f4d]">
+              <div className="text-[12px] font-extrabold uppercase tracking-[0.16em] text-[#00FF88]">
                 Inclus
               </div>
-              <h2 className="mt-3 text-[22px] font-black leading-[1.05] text-[#171b1f]">{feature.title}</h2>
-              <p className="mt-3 text-sm leading-7 text-[#5B6472]">{feature.text}</p>
+              <h2 className="mt-3 text-[22px] font-black leading-[1.05] text-white">{feature.title}</h2>
+              <p className="mt-3 text-sm leading-7 text-[#888888]">{feature.text}</p>
             </article>
           ))}
         </section>
@@ -216,12 +216,12 @@ export default function PremiumPage() {
             <div className="text-[12px] font-extrabold uppercase tracking-[0.18em] text-[#D64545]">
               {"Ce n'est pas pour toi si"}
             </div>
-            <h2 className="mt-3 text-[28px] font-black leading-[1] tracking-[-0.04em] text-[#171b1f] md:text-[30px]">
+            <h2 className="mt-3 text-[28px] font-black leading-[1] tracking-[-0.04em] text-white md:text-[30px]">
               Tu cherches une promesse fantasmee plutot {"qu'un outil"} de discipline.
             </h2>
             <div className="mt-5 grid gap-3">
               {NOT_FOR_YOU_ITEMS.map((item) => (
-                <div key={item} className="rounded-[22px] border border-[rgba(214,69,69,0.12)] bg-[#FFF7F6] px-4 py-3 text-sm font-semibold text-[#5B6472]">
+                <div key={item} className="rounded-[22px] border border-[rgba(255,68,68,0.2)] bg-[rgba(255,68,68,0.06)] px-4 py-3 text-sm font-semibold text-[#888888]">
                   {item}
                 </div>
               ))}
@@ -232,16 +232,16 @@ export default function PremiumPage() {
         <section className="premium-surface overflow-hidden rounded-[34px] p-6 md:p-7">
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
             <div>
-              <div className="text-[12px] font-extrabold uppercase tracking-[0.18em] text-[#0b8f4d]">
+              <div className="text-[12px] font-extrabold uppercase tracking-[0.18em] text-[#00FF88]">
                 Questions frequentes
               </div>
-              <h2 className="mt-2 text-[28px] font-black leading-[1] tracking-[-0.04em] text-[#171b1f] md:text-[32px]">
+              <h2 className="mt-2 text-[28px] font-black leading-[1] tracking-[-0.04em] text-white md:text-[32px]">
                 {`Ce que tu dois savoir avant de t'abonner`}
               </h2>
             </div>
             <Link
               href="/login?redirect=/mes-paris"
-              className="rounded-full bg-[var(--pmu-text)] px-5 py-3 text-sm font-black text-white transition hover:opacity-90"
+              className="rounded-full bg-[#00FF88] px-5 py-3 text-sm font-black text-black transition hover:opacity-90"
             >
               {`Continuer vers l'offre`}
             </Link>
@@ -249,9 +249,9 @@ export default function PremiumPage() {
 
           <div className="grid gap-4 md:grid-cols-2">
             {FAQ_ITEMS.map((item) => (
-              <article key={item.title} className="rounded-[24px] border border-[rgba(15,23,42,0.06)] bg-white p-5">
-                <h3 className="text-[19px] font-black leading-tight text-[#171b1f]">{item.title}</h3>
-                <p className="mt-3 text-sm leading-7 text-[#5B6472]">{item.text}</p>
+              <article key={item.title} className="rounded-[24px] border border-[#1E1E1E] bg-[#161616] p-5">
+                <h3 className="text-[19px] font-black leading-tight text-white">{item.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-[#888888]">{item.text}</p>
               </article>
             ))}
           </div>

@@ -8,27 +8,27 @@ type ConfidenceBadgeProps = {
 function getTone(score: number) {
   if (score >= SEUIL_JOUABLE) {
     return {
-      ring: "border-[rgba(13,148,136,0.35)]",
-      bg: "bg-[rgba(13,148,136,0.1)]",
-      text: "text-[var(--pmu-primary)]",
-      dot: "bg-[var(--pmu-primary)]",
+      ring: "border-[rgba(0,255,136,0.45)]",
+      bg: "bg-[rgba(0,255,136,0.1)]",
+      text: "text-[#00FF88]",
+      dot: "bg-[#00FF88]",
     };
   }
 
   if (score >= SEUIL_SURVEILLANCE) {
     return {
-      ring: "border-[rgba(217,119,6,0.3)]",
-      bg: "bg-[rgba(217,119,6,0.1)]",
-      text: "text-[var(--pmu-orange)]",
-      dot: "bg-[var(--pmu-orange)]",
+      ring: "border-[rgba(255,184,0,0.4)]",
+      bg: "bg-[rgba(255,184,0,0.1)]",
+      text: "text-[#FFB800]",
+      dot: "bg-[#FFB800]",
     };
   }
 
   return {
-    ring: "border-[rgba(100,116,139,0.35)]",
-    bg: "bg-[rgba(148,163,184,0.1)]",
-    text: "text-[#64748b]",
-    dot: "bg-[#94a3b8]",
+    ring: "border-[#444444]",
+    bg: "bg-[#161616]",
+    text: "text-[#888888]",
+    dot: "bg-[#666666]",
   };
 }
 

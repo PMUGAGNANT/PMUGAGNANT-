@@ -35,25 +35,25 @@ interface RaceApiResponse {
   error?: string;
 }
 
-/* ─── Palette (mode clair, teal pro) ─────────────────── */
-const G = "#0d9488";
-const G_DIM = "rgba(13, 148, 136, 0.12)";
-const DARK = "#f0f4f9";
-const DARK_GLASS = "rgba(255, 255, 255, 0.88)";
-const CARD = "#ffffff";
-const CARD2 = "#f8fafc";
-const CARD_HI = "#f1f5f9";
-const BORDER = "rgba(15, 23, 42, 0.1)";
-const BORDER_SOFT = "rgba(15, 23, 42, 0.06)";
-const MUTED = "#64748b";
-const WHITE = "#0f172a";
-const GOLD = "#d97706";
-const GOLD_DIM = "rgba(217, 119, 6, 0.1)";
-const RED = "#e11d48";
-const RED_DIM = "rgba(225, 29, 72, 0.1)";
-const BLUE = "#2563eb";
-const BLUE_DIM = "rgba(37, 99, 235, 0.1)";
-const VIOLET = "#7c3aed";
+/* ─── Palette dark premium (NIVEAU 3) ─────────────────── */
+const G = "#00FF88";
+const G_DIM = "rgba(0, 255, 136, 0.12)";
+const DARK = "#0A0A0A";
+const DARK_GLASS = "rgba(17, 17, 17, 0.92)";
+const CARD = "#111111";
+const CARD2 = "#161616";
+const CARD_HI = "#1E1E1E";
+const BORDER = "#1E1E1E";
+const BORDER_SOFT = "rgba(30, 30, 30, 0.8)";
+const MUTED = "#888888";
+const WHITE = "#FFFFFF";
+const GOLD = "#FFB800";
+const GOLD_DIM = "rgba(255, 184, 0, 0.12)";
+const RED = "#FF4444";
+const RED_DIM = "rgba(255, 68, 68, 0.12)";
+const BLUE = "#3b82f6";
+const BLUE_DIM = "rgba(59, 130, 246, 0.12)";
+const VIOLET = "#a78bfa";
 
 /* ─── Helpers (identiques) ─────────────────────────────── */
 function round1(v: number) { return Math.round(v * 10) / 10; }
@@ -639,7 +639,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
         </div>
         <SectionCard title="Analyse indisponible" kicker="Erreur">
           <p style={{ fontSize: 14, color: MUTED, marginBottom: 16 }}>{error || "La course n'a pas pu être chargée."}</p>
-          <button onClick={() => router.push(`/?date=${selectedDate}`)} style={{ width: "100%", padding: "14px 0", borderRadius: 8, border: "none", background: G, color: "#ffffff", fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+          <button onClick={() => router.push(`/?date=${selectedDate}`)} style={{ width: "100%", padding: "14px 0", borderRadius: 8, border: "none", background: G, color: "#000000", fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
             ← Retour aux courses
           </button>
         </SectionCard>
@@ -755,7 +755,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
             )}
             <button onClick={() => router.push("/login?redirect=/mes-paris")} style={{
               width: "100%", padding: "14px 0", borderRadius: 8, border: "none",
-              background: G, color: "#ffffff", fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 14, cursor: "pointer",
+              background: G, color: "#000000", fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 14, cursor: "pointer",
             }}>
               Se connecter et {"s'abonner"}
             </button>

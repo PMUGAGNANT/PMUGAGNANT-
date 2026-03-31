@@ -19,41 +19,45 @@ export function RadarHero({
   ctaLabel,
   onClick,
 }: RadarHeroProps) {
+  const scoreDisplay = Math.round(confidence * 10) / 10;
+
   return (
-    <section className="overflow-hidden rounded-[2rem] border border-[rgba(13,148,136,0.2)] bg-[radial-gradient(ellipse_75%_55%_at_100%_0%,rgba(13,148,136,0.12),transparent_50%),radial-gradient(ellipse_55%_40%_at_0%_100%,rgba(37,99,235,0.06),transparent_50%),linear-gradient(165deg,#ffffff_0%,#f8fafc_45%,#f1f5f9_100%)] p-6 shadow-[0_20px_50px_rgba(15,23,42,0.08)] md:p-8">
-      <div className="grid gap-6 lg:grid-cols-[1.6fr,0.8fr] lg:items-end">
-        <div className="space-y-4">
+    <section
+      className="w-full overflow-hidden rounded-[2rem] border border-[#1E1E1E] bg-[linear-gradient(165deg,rgba(0,255,136,0.14)_0%,rgba(0,40,24,0.35)_28%,#0A0A0A_72%)] p-6 shadow-[0_24px_64px_rgba(0,0,0,0.5)] md:p-10"
+    >
+      <div className="grid gap-8 lg:grid-cols-[1.55fr,0.85fr] lg:items-end">
+        <div className="space-y-5">
           <div>
             <p className="app-kicker">Radar du jour</p>
-            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
+            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#888888]">
               Meilleur rapport confiance / enjeu
             </p>
           </div>
-          <div className="space-y-3">
-            <h1 className="max-w-3xl text-3xl font-black leading-[0.98] tracking-tight text-[var(--pmu-text)] md:text-5xl">
+          <div className="space-y-4">
+            <h1 className="max-w-3xl text-3xl font-black leading-[0.98] tracking-tight text-white md:text-5xl lg:text-6xl">
               {title}
             </h1>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm font-medium text-[var(--pmu-text-soft)] md:text-base">
-              <span className="text-[var(--pmu-text)]">{hippodrome}</span>
-              <span className="h-1 w-1 rounded-full bg-[var(--pmu-border-strong)]" />
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm font-medium text-[#888888] md:text-base">
+              <span className="text-white">{hippodrome}</span>
+              <span className="h-1 w-1 rounded-full bg-[#444444]" />
               <span>{raceMeta}</span>
             </div>
           </div>
-          <p className="max-w-2xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">{summary}</p>
-          <button type="button" onClick={onClick} className="app-button-primary">
+          <p className="max-w-2xl text-sm leading-7 text-[#888888] md:text-base">{summary}</p>
+          <button type="button" onClick={onClick} className="app-button-primary px-8 py-4 text-base font-black">
             {ctaLabel}
           </button>
         </div>
 
-        <div className="app-card-muted p-5">
-          <p className="app-label">Indice confiance</p>
-          <div className="mt-4 flex items-end gap-3">
-            <span className="text-5xl font-black tracking-tight text-[var(--pmu-primary)] md:text-6xl">
-              {Math.round(confidence * 10) / 10}
+        <div className="rounded-3xl border border-[#1E1E1E] bg-[#111111] p-6">
+          <p className="app-label text-[#888888]">Indice confiance</p>
+          <div className="mt-2 flex flex-wrap items-baseline gap-2">
+            <span className="text-6xl font-black tabular-nums leading-none tracking-tight text-[#00FF88] md:text-7xl lg:text-8xl">
+              {scoreDisplay}
             </span>
-            <span className="pb-1 text-lg font-semibold text-[var(--pmu-text-muted)]">/10</span>
+            <span className="text-2xl font-bold text-[#888888]">/10</span>
           </div>
-          <div className="mt-5">
+          <div className="mt-6">
             <ConfidenceBadge score={confidence} />
           </div>
         </div>

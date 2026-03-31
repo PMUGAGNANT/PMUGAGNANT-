@@ -22,7 +22,7 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="app-surface fixed inset-x-0 bottom-0 z-50 border-t border-[var(--pmu-border)] px-3 py-2 lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[#1E1E1E] bg-[#111111] px-3 py-2 lg:hidden">
       <div className="mx-auto grid max-w-xl grid-cols-4 gap-2">
         {(navItems ?? []).map((item) => {
           const active = isActive(pathname, item.href);
@@ -32,13 +32,11 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-3 text-[11px] font-semibold transition ${
-                active
-                  ? "bg-[rgba(13,148,136,0.12)] text-[var(--pmu-primary)]"
-                  : "text-[var(--pmu-text-muted)]"
+                active ? "bg-[rgba(0,255,136,0.12)] text-[#00FF88]" : "text-[#888888]"
               }`}
             >
               <span
-                className={`h-2 w-2 rounded-full ${active ? "bg-[var(--pmu-primary)]" : "bg-[var(--pmu-border-strong)]"}`}
+                className={`h-0.5 w-6 rounded-full ${active ? "bg-[#00FF88] shadow-[0_0_8px_#00FF88]" : "bg-[#333333]"}`}
               />
               <span>{item.label}</span>
             </Link>

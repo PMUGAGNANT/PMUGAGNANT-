@@ -6,9 +6,14 @@ import "./globals.css";
 const manrope = Manrope({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
-  title: "PMU AI - Pronostics",
-  description: "Pronostics hippiques intelligents",
+  title: "PMU Gagnant - Pronostics IA Courses Hippiques",
+  description: "Algorithme IA pour identifier les meilleures courses PMU chaque jour",
   manifest: "/manifest.json",
+  openGraph: {
+    title: "PMU Gagnant - Pronostics IA Courses Hippiques",
+    description: "Algorithme IA pour identifier les meilleures courses PMU chaque jour",
+    type: "website",
+  },
 };
 
 export const viewport: Viewport = {
@@ -16,7 +21,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#f0f4f9",
+  themeColor: "#0a0a0a",
 };
 
 export default function RootLayout({

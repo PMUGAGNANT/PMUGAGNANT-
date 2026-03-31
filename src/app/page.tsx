@@ -682,8 +682,8 @@ function PageContent() {
       </section>
 
       {error ? (
-        <section className="app-card border-[rgba(225,29,72,0.25)] p-6">
-          <p className="text-lg font-bold text-[var(--pmu-red)]">Impossible de charger la page Courses</p>
+        <section className="app-card border-[rgba(255,68,68,0.35)] p-6">
+          <p className="text-lg font-bold text-[#FF4444]">Impossible de charger la page Courses</p>
           <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">{error}</p>
         </section>
       ) : null}
@@ -691,7 +691,7 @@ function PageContent() {
       {isLoading ? (
         <section className="grid gap-5">
           {(Array.from({ length: 5 }) ?? []).map((_, index) => (
-            <div key={index} className="app-card h-52 animate-pulse bg-[linear-gradient(180deg,#eef2f7_0%,#e2e8f0_100%)]" />
+            <div key={index} className="app-card h-52 animate-pulse bg-[linear-gradient(180deg,#1a1a1a_0%,#111111_100%)]" />
           ))}
         </section>
       ) : null}
