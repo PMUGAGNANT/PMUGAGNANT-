@@ -366,6 +366,8 @@ function PageContent() {
   const [scores, setScores] = useState<RaceScore[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /** NIVEAU 5 — incrément pour forcer un re-fetch sans changer la date (retry UX) */
+  const [fetchRevision, setFetchRevision] = useState(0);
 
   useEffect(() => {
     try {
@@ -409,6 +411,7 @@ function PageContent() {
   }, [router, searchParams, selectedDate]);
 
   useEffect(() => {
+    const ac = new AbortController();
     let cancelled = false;
 
     async function loadData() {
@@ -416,16 +419,6 @@ function PageContent() {
       setError(null);
 
       try {
-        const racesResponse = await fetch(`/api/races?date=${selectedDate}`, { cache: "no-store" });
-        if (!racesResponse.ok) {
-          throw new Error("Impossible de charger le programme du jour.");
-        }
-
-        const racesJson = (await racesResponse.json()) as RacesResponse;
-        if (!racesJson.success) {
-          throw new Error("Le service courses a renvoyé une réponse invalide.");
-        }
-
         let authorization = "";
         if (hasSupabaseConfig()) {
           try {
@@ -440,10 +433,25 @@ function PageContent() {
           }
         }
 
-        const scoresResponse = await fetch(`/api/races/scores?date=${selectedDate}`, {
-          cache: "no-store",
-          headers: authorization ? { Authorization: authorization } : undefined,
-        });
+        const racesUrl = `/api/races?date=${selectedDate}`;
+        const scoresUrl = `/api/races/scores?date=${selectedDate}`;
+        const [racesResponse, scoresResponse] = await Promise.all([
+          fetch(racesUrl, { cache: "no-store", signal: ac.signal }),
+          fetch(scoresUrl, {
+            cache: "no-store",
+            signal: ac.signal,
+            headers: authorization ? { Authorization: authorization } : undefined,
+          }),
+        ]);
+
+        if (!racesResponse.ok) {
+          throw new Error("Impossible de charger le programme du jour.");
+        }
+
+        const racesJson = (await racesResponse.json()) as RacesResponse;
+        if (!racesJson.success) {
+          throw new Error("Le service courses a renvoyé une réponse invalide.");
+        }
 
         let scoresJson: ScoresResponse = { success: true, scores: [] };
         if (scoresResponse.ok) {
@@ -457,6 +465,12 @@ function PageContent() {
           );
         }
       } catch (loadError) {
+        if (cancelled) {
+          return;
+        }
+        if (loadError instanceof Error && loadError.name === "AbortError") {
+          return;
+        }
         if (!cancelled) {
           setError(loadError instanceof Error ? loadError.message : "Impossible de charger la page Courses.");
           setRaces([]);
@@ -473,8 +487,9 @@ function PageContent() {
 
     return () => {
       cancelled = true;
+      ac.abort();
     };
-  }, [selectedDate]);
+  }, [selectedDate, fetchRevision]);
 
   const featuredRaces = useMemo(() => {
     const safeScores = normalizeScoresPayload(
@@ -681,15 +696,26 @@ function PageContent() {
       </section>
 
       {error ? (
-        <section className="app-card border border-[color-mix(in_srgb,var(--pmu-red)_35%,transparent)] p-6">
+        <section
+          className="app-card border border-[color-mix(in_srgb,var(--pmu-red)_35%,transparent)] p-6"
+          role="alert"
+          aria-live="assertive"
+        >
           <p className="text-lg font-bold text-[var(--pmu-red)]">Impossible de charger la page Courses</p>
           <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">{error}</p>
+          <button
+            type="button"
+            className="app-button-primary mt-4"
+            onClick={() => setFetchRevision((revision) => revision + 1)}
+          >
+            Réessayer
+          </button>
         </section>
       ) : null}
 
       {isLoading ? (
-        <section className="grid gap-5">
-          {(Array.from({ length: 5 }) ?? []).map((_, index) => (
+        <section className="grid gap-5" aria-busy="true" aria-label="Chargement des courses">
+          {Array.from({ length: 5 }, (_, index) => (
             <div
               key={index}
               className="app-card h-52 animate-pulse bg-[linear-gradient(180deg,var(--pmu-surface-highlight)_0%,var(--pmu-surface)_100%)]"
@@ -732,9 +758,37 @@ function PageContent() {
   );
 }
 
+function HomePageSkeletonFallback() {
+  return (
+    <div
+      className="mx-auto flex w-full max-w-6xl flex-col gap-6"
+      aria-busy="true"
+      aria-label="Chargement du programme"
+    >
+      <div className="app-card h-56 animate-pulse bg-[linear-gradient(180deg,var(--pmu-surface-highlight)_0%,var(--pmu-surface)_100%)]" />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div
+            key={i}
+            className="app-card h-32 animate-pulse bg-[linear-gradient(180deg,var(--pmu-surface-highlight)_0%,var(--pmu-surface)_100%)]"
+          />
+        ))}
+      </div>
+      <div className="grid gap-5">
+        {Array.from({ length: 3 }, (_, i) => (
+          <div
+            key={i}
+            className="app-card h-52 animate-pulse bg-[linear-gradient(180deg,var(--pmu-surface-highlight)_0%,var(--pmu-surface)_100%)]"
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Page() {
   return (
-    <Suspense fallback={<div>Chargement...</div>}>
+    <Suspense fallback={<HomePageSkeletonFallback />}>
       <PageContent />
     </Suspense>
   );

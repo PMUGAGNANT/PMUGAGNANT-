@@ -33,7 +33,8 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-3 text-[11px] font-semibold transition ${
+              aria-current={active ? "page" : undefined}
+              className={`flex min-h-12 min-w-[3rem] flex-col items-center justify-center gap-1 rounded-2xl px-2 py-3 text-[11px] font-semibold transition ${
                 active ? "bg-[var(--pmu-primary-soft)] text-[var(--pmu-primary)]" : "text-[var(--pmu-text-muted)]"
               }`}
             >
