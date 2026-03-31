@@ -97,13 +97,21 @@ export async function updateSubscriptionByCustomer(
     updatePayload.is_subscribed = payload.isSubscribed;
   }
 
-  const { error } = await admin
+  const { data, error } = await admin
     .from("profiles")
     .update(updatePayload)
-    .eq("stripe_customer_id", customerId);
+    .eq("stripe_customer_id", customerId)
+    .select("id");
 
   if (error) {
     throw new Error(`Subscription update failed: ${error.message}`);
+  }
+
+  if (!data?.length) {
+    throw new Error(
+      `Subscription update matched 0 profiles for stripe_customer_id=${customerId}. ` +
+        "Verify ensureStripeCustomer saved the customer id before checkout completes."
+    );
   }
 }
 
@@ -112,12 +120,17 @@ export async function ensureStripeCustomer(
   userId: string,
   customerId: string
 ) {
-  const { error } = await client
+  const { data, error } = await client
     .from("profiles")
     .update({ stripe_customer_id: customerId })
-    .eq("id", userId);
+    .eq("id", userId)
+    .select("id");
 
   if (error) {
     throw new Error(`Stripe customer persistence failed: ${error.message}`);
+  }
+
+  if (!data?.length) {
+    throw new Error(`Stripe customer persistence failed: no profile row for user ${userId}`);
   }
 }

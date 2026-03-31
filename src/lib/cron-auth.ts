@@ -12,23 +12,34 @@ export function ensureCronAuthorized(request: NextRequest) {
   const configuredSecret = process.env.CRON_SECRET;
   const bearerToken = getBearerToken(request.headers.get("authorization"));
   const queryToken = new URL(request.url).searchParams.get("token");
-  const vercelCronHeader = request.headers.get("x-vercel-cron");
 
-  if (!configuredSecret) {
-    if (process.env.NODE_ENV !== "production" || vercelCronHeader) {
+  if (process.env.NODE_ENV === "production") {
+    if (!configuredSecret) {
+      return NextResponse.json(
+        { success: false, error: "CRON_SECRET is required in production" },
+        { status: 503 }
+      );
+    }
+    if (
+      (bearerToken && safeSecretEqual(configuredSecret, bearerToken)) ||
+      (queryToken && safeSecretEqual(configuredSecret, queryToken))
+    ) {
       return null;
     }
+    return NextResponse.json(
+      { success: false, error: "Unauthorized cron request" },
+      { status: 401 }
+    );
   }
 
-  if (
-    configuredSecret &&
-    ((bearerToken && safeSecretEqual(configuredSecret, bearerToken)) ||
-      (queryToken && safeSecretEqual(configuredSecret, queryToken)))
-  ) {
+  if (!configuredSecret) {
     return null;
   }
 
-  if (!configuredSecret && process.env.NODE_ENV !== "production") {
+  if (
+    (bearerToken && safeSecretEqual(configuredSecret, bearerToken)) ||
+    (queryToken && safeSecretEqual(configuredSecret, queryToken))
+  ) {
     return null;
   }
 
