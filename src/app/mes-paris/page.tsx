@@ -9,8 +9,10 @@ import {
   hasSupabaseConfig,
 } from "@/lib/supabase";
 
-const GREEN = "#00843D";
-const DARK = "#1A1A1A";
+const GREEN = "#00FF88";
+const DARK = "#FFFFFF";
+const CARD = "#111111";
+const BORDER = "#1E1E1E";
 
 interface Bet {
   id: string;
@@ -44,7 +46,7 @@ function MesParisFallback() {
         margin: "0 auto",
         minHeight: "100vh",
         background:
-          "radial-gradient(circle at top left, rgba(0,132,61,0.12), transparent 24%), linear-gradient(180deg, #F6F8F9 0%, #EDF2F3 100%)",
+          "radial-gradient(circle at top left, rgba(0,255,136,0.06), transparent 30%), linear-gradient(180deg, #0A0A0A 0%, #0d0d0d 100%)",
       }}
     />
   );
@@ -314,10 +316,10 @@ function MesParisContent() {
   const totalGain = bets.filter((b) => b.gain !== null).reduce((sum, b) => sum + (b.gain || 0), 0);
 
   const statusConfig: Record<string, { bg: string; color: string; label: string }> = {
-    EN_ATTENTE: { bg: "#FFF8E1", color: "#F57F17", label: "En attente" },
-    GAGNE: { bg: "#E8F5E9", color: GREEN, label: "Gagne" },
-    PLACE: { bg: "#E3F2FD", color: "#1565C0", label: "Place" },
-    PERDU: { bg: "#FFEBEE", color: "#C62828", label: "Perdu" },
+    EN_ATTENTE: { bg: "rgba(255,184,0,0.15)", color: "#FFB800", label: "En attente" },
+    GAGNE: { bg: "rgba(0,255,136,0.15)", color: GREEN, label: "Gagne" },
+    PLACE: { bg: "rgba(59,130,246,0.2)", color: "#60a5fa", label: "Place" },
+    PERDU: { bg: "rgba(255,68,68,0.15)", color: "#FF4444", label: "Perdu" },
   };
 
   return (
@@ -327,7 +329,7 @@ function MesParisContent() {
         margin: "0 auto",
         minHeight: "100vh",
         background:
-          "radial-gradient(circle at top left, rgba(0,132,61,0.12), transparent 24%), linear-gradient(180deg, #F6F8F9 0%, #EDF2F3 100%)",
+          "radial-gradient(circle at top left, rgba(0,255,136,0.06), transparent 30%), linear-gradient(180deg, #0A0A0A 0%, #0d0d0d 100%)",
         paddingBottom: 96,
       }}
     >
@@ -336,9 +338,9 @@ function MesParisContent() {
           position: "sticky",
           top: 0,
           zIndex: 50,
-          background: "rgba(18, 22, 26, 0.88)",
+          background: "rgba(10,10,10,0.92)",
           backdropFilter: "blur(18px)",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          borderBottom: `1px solid ${BORDER}`,
           height: 68,
           display: "flex",
           alignItems: "center",
@@ -373,7 +375,7 @@ function MesParisContent() {
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </div>
-        <div style={{ color: "#22c55e", fontWeight: 800, fontSize: 20, letterSpacing: "-0.3px" }}>
+        <div style={{ color: GREEN, fontWeight: 800, fontSize: 20, letterSpacing: "-0.3px" }}>
           Mes Paris
         </div>
         <div
@@ -397,8 +399,9 @@ function MesParisContent() {
         <div
           style={{
             margin: "18px 0",
-            background: "#FFF3CD",
-            color: "#856404",
+            background: "rgba(255,184,0,0.12)",
+            color: "#FFB800",
+            border: "1px solid rgba(255,184,0,0.35)",
             padding: 16,
             borderRadius: 16,
             fontSize: 14,
@@ -417,18 +420,18 @@ function MesParisContent() {
                 borderRadius: 20,
                 border: `1px solid ${
                   billingNotice.tone === "success"
-                    ? "rgba(0,132,61,0.18)"
+                    ? "rgba(0,255,136,0.35)"
                     : billingNotice.tone === "loading"
-                      ? "rgba(21,101,192,0.16)"
-                      : "rgba(245,127,23,0.16)"
+                      ? "rgba(59,130,246,0.35)"
+                      : "rgba(255,184,0,0.35)"
                 }`,
                 background:
                   billingNotice.tone === "success"
-                    ? "linear-gradient(180deg, rgba(232,245,233,0.98), rgba(243,250,244,0.96))"
+                    ? "rgba(0,255,136,0.08)"
                     : billingNotice.tone === "loading"
-                      ? "linear-gradient(180deg, rgba(227,242,253,0.98), rgba(243,248,253,0.96))"
-                      : "linear-gradient(180deg, rgba(255,248,225,0.98), rgba(255,252,244,0.96))",
-                boxShadow: "0 14px 28px rgba(15,23,42,0.06)",
+                      ? "rgba(59,130,246,0.1)"
+                      : "rgba(255,184,0,0.08)",
+                boxShadow: "0 14px 28px rgba(0,0,0,0.25)",
               }}
             >
               <div
@@ -441,8 +444,8 @@ function MesParisContent() {
                     billingNotice.tone === "success"
                       ? GREEN
                       : billingNotice.tone === "loading"
-                        ? "#1565C0"
-                        : "#C77700",
+                        ? "#60a5fa"
+                        : "#FFB800",
                   marginBottom: 8,
                 }}
               >
@@ -451,7 +454,7 @@ function MesParisContent() {
               <div style={{ fontSize: 18, fontWeight: 800, color: DARK, marginBottom: 6 }}>
                 {billingNotice.title}
               </div>
-              <div style={{ fontSize: 14, lineHeight: "21px", color: "#51606F" }}>
+              <div style={{ fontSize: 14, lineHeight: "21px", color: "#888888" }}>
                 {billingNotice.message}
               </div>
             </div>
@@ -460,12 +463,12 @@ function MesParisContent() {
           <section
             style={{
               background:
-                "radial-gradient(circle at top right, rgba(255,255,255,0.16), transparent 30%), linear-gradient(135deg, #0a8f4d, #066737)",
+                "radial-gradient(circle at top right, rgba(0,255,136,0.2), transparent 35%), linear-gradient(135deg, #0d2818, #0A0A0A)",
               borderRadius: 30,
               margin: "18px 0 16px",
               padding: 28,
               color: "#fff",
-              boxShadow: "0 24px 48px rgba(0,132,61,0.24)",
+              boxShadow: "0 24px 48px rgba(0,255,136,0.12)",
               border: "1px solid rgba(255,255,255,0.12)",
               display: "grid",
               gap: 18,
@@ -529,8 +532,8 @@ function MesParisContent() {
                   border: "none",
                   borderRadius: 999,
                   padding: "12px 16px",
-                  background: "#FFFFFF",
-                  color: DARK,
+                  background: GREEN,
+                  color: "#000000",
                   fontWeight: 800,
                   cursor: "pointer",
                 }}
@@ -592,24 +595,24 @@ function MesParisContent() {
             }}
           >
             {[
-              { label: "En attente", value: pendingCount, color: "#F57F17" },
+              { label: "En attente", value: pendingCount, color: "#FFB800" },
               { label: "Gagnes", value: wonCount, color: GREEN },
-              { label: "Places", value: placedCount, color: "#1565C0" },
+              { label: "Places", value: placedCount, color: "#60a5fa" },
               {
                 label: "P/L",
                 value: totalGain >= 0 ? `+${formatEuros(totalGain)}` : formatEuros(totalGain),
-                color: totalGain >= 0 ? GREEN : "#C62828",
+                color: totalGain >= 0 ? GREEN : "#FF4444",
               },
             ].map((item) => (
               <div
                 key={item.label}
                 style={{
-                  background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,251,0.92))",
+                  background: CARD,
                   borderRadius: 22,
                   padding: "16px 12px",
                   textAlign: "center",
-                  boxShadow: "0 14px 28px rgba(15,23,42,0.07)",
-                  border: "1px solid rgba(15,23,42,0.05)",
+                  boxShadow: "0 14px 28px rgba(0,0,0,0.3)",
+                  border: `1px solid ${BORDER}`,
                 }}
               >
                 <div style={{ fontSize: 22, fontWeight: 800, color: item.color, letterSpacing: "-0.4px" }}>
@@ -630,8 +633,8 @@ function MesParisContent() {
                   padding: 16,
                   borderRadius: 18,
                   border: "none",
-                  background: settling ? "#999" : "#FF9800",
-                  color: "#fff",
+                  background: settling ? "#444444" : "#FFB800",
+                  color: settling ? "#888888" : "#000000",
                   fontSize: 14,
                   fontWeight: 800,
                   cursor: settling ? "not-allowed" : "pointer",
@@ -655,8 +658,8 @@ function MesParisContent() {
                   padding: "48px 20px",
                   color: "#888",
                   borderRadius: 24,
-                  background: "rgba(255,255,255,0.9)",
-                  border: "1px solid rgba(15,23,42,0.05)",
+                  background: CARD,
+                  border: `1px solid ${BORDER}`,
                 }}
               >
                 <div style={{ fontSize: 48, marginBottom: 12 }}>&#127922;</div>
@@ -679,11 +682,11 @@ function MesParisContent() {
                     <div
                       key={bet.id}
                       style={{
-                        background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,251,0.92))",
+                        background: CARD,
                         borderRadius: 22,
                         padding: 18,
-                        boxShadow: "0 14px 28px rgba(15,23,42,0.07)",
-                        border: "1px solid rgba(15,23,42,0.05)",
+                        boxShadow: "0 14px 28px rgba(0,0,0,0.3)",
+                        border: `1px solid ${BORDER}`,
                       }}
                     >
                       <div
@@ -695,7 +698,7 @@ function MesParisContent() {
                           marginBottom: 10,
                         }}
                       >
-                        <div style={{ fontSize: 13, color: "#6B7280" }}>
+                        <div style={{ fontSize: 13, color: "#888888" }}>
                           R{bet.reunion}C{bet.course} · {bet.hippodrome}
                         </div>
                         <span
@@ -722,7 +725,7 @@ function MesParisContent() {
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            color: "#fff",
+                            color: "#000000",
                             fontWeight: 800,
                             fontSize: 15,
                             flexShrink: 0,
@@ -732,7 +735,7 @@ function MesParisContent() {
                         </div>
                         <div>
                           <div style={{ fontWeight: 800, fontSize: 16, color: DARK }}>{bet.cheval_nom}</div>
-                          <div style={{ fontSize: 12, color: "#6B7280", marginTop: 2 }}>
+                          <div style={{ fontSize: 12, color: "#888888", marginTop: 2 }}>
                             {bet.type_pari} · Cote {bet.cote} · Mise {formatEuros(bet.mise)}
                           </div>
                         </div>
@@ -745,12 +748,12 @@ function MesParisContent() {
                           alignItems: "center",
                           gap: 10,
                           fontSize: 12,
-                          color: "#6B7280",
+                          color: "#888888",
                         }}
                       >
                         <span>{bet.heure_depart} · {bet.date_str}</span>
                         {bet.gain !== null ? (
-                          <strong style={{ color: bet.gain >= 0 ? GREEN : "#C62828", fontSize: 15 }}>
+                          <strong style={{ color: bet.gain >= 0 ? GREEN : "#FF4444", fontSize: 15 }}>
                             {bet.gain >= 0 ? "+" : ""}
                             {formatEuros(bet.gain)}
                           </strong>
@@ -776,10 +779,10 @@ function MesParisContent() {
           width: "100%",
           maxWidth: 1180,
           zIndex: 50,
-          background: "rgba(255,255,255,0.92)",
+          background: "rgba(17,17,17,0.95)",
           backdropFilter: "blur(18px)",
-          borderTop: "1px solid rgba(15,23,42,0.08)",
-          boxShadow: "0 -14px 30px rgba(15,23,42,0.08)",
+          borderTop: `1px solid ${BORDER}`,
+          boxShadow: "0 -14px 30px rgba(0,0,0,0.4)",
           height: 70,
           display: "flex",
           alignItems: "center",

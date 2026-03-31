@@ -8,8 +8,11 @@ import {
   hasSupabaseConfig,
 } from "@/lib/supabase";
 
-const GREEN = "#00843D";
-const DARK = "#1A1A1A";
+const GREEN = "#00FF88";
+const DARK = "#FFFFFF";
+const PAGE_BG = "#0A0A0A";
+const CARD_DARK = "#111111";
+const BORDER = "#1E1E1E";
 
 function getFriendlyAuthError(message: string) {
   if (message.includes("Invalid login")) {
@@ -93,7 +96,7 @@ function LoginPageContent() {
       style={{
         minHeight: "100vh",
         background:
-          "radial-gradient(circle at top left, rgba(0,132,61,0.16), transparent 24%), radial-gradient(circle at top right, rgba(18,183,106,0.1), transparent 20%), linear-gradient(180deg, #f6f8f9 0%, #eef2f3 100%)",
+          "radial-gradient(circle at top left, rgba(0,255,136,0.08), transparent 28%), radial-gradient(circle at top right, rgba(0,255,136,0.05), transparent 24%), linear-gradient(180deg, #0A0A0A 0%, #0d0d0d 100%)",
       }}
     >
       <div
@@ -101,9 +104,9 @@ function LoginPageContent() {
           position: "sticky",
           top: 0,
           zIndex: 50,
-          background: "rgba(18,22,26,0.9)",
+          background: "rgba(10,10,10,0.92)",
           backdropFilter: "blur(18px)",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          borderBottom: "1px solid #1E1E1E",
           height: 72,
           display: "flex",
           alignItems: "center",
@@ -138,7 +141,7 @@ function LoginPageContent() {
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </div>
-        <div style={{ color: GREEN, fontWeight: 800, fontSize: 22 }}>PMU AI</div>
+        <div style={{ color: GREEN, fontWeight: 800, fontSize: 22 }}>PMU Gagnant</div>
       </div>
 
       <div
@@ -155,13 +158,14 @@ function LoginPageContent() {
             borderRadius: 32,
             padding: 28,
             background:
-              "radial-gradient(circle at top right, rgba(108,228,160,0.18), transparent 30%), linear-gradient(135deg, #132126, #18242a)",
+              "radial-gradient(circle at top right, rgba(0,255,136,0.12), transparent 35%), linear-gradient(135deg, #111111, #0d0d0d)",
             color: "#fff",
-            boxShadow: "0 28px 58px rgba(15,23,42,0.2)",
+            border: `1px solid ${BORDER}`,
+            boxShadow: "0 28px 58px rgba(0,0,0,0.45)",
             overflow: "hidden",
           }}
         >
-          <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color: "#6CE4A0", marginBottom: 10 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color: GREEN, marginBottom: 10 }}>
             {premiumIntent ? "Acces premium" : "Compte PMU AI"}
           </div>
           <div style={{ fontSize: 34, lineHeight: "36px", fontWeight: 900, letterSpacing: "-1px", marginBottom: 12 }}>
@@ -213,7 +217,7 @@ function LoginPageContent() {
               border: "1px solid rgba(255,255,255,0.08)",
             }}
           >
-            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "#6CE4A0", marginBottom: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: GREEN, marginBottom: 8 }}>
               Promesse
             </div>
             <div style={{ fontSize: 17, fontWeight: 800, lineHeight: "24px" }}>
@@ -227,9 +231,9 @@ function LoginPageContent() {
         <section
           style={{
             borderRadius: 30,
-            background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,251,0.92))",
-            border: "1px solid rgba(15,23,42,0.06)",
-            boxShadow: "0 22px 48px rgba(15,23,42,0.08)",
+            background: CARD_DARK,
+            border: `1px solid ${BORDER}`,
+            boxShadow: "0 22px 48px rgba(0,0,0,0.4)",
             padding: 26,
             overflow: "hidden",
           }}
@@ -249,7 +253,7 @@ function LoginPageContent() {
             >
               {isSignUp ? "Creer un compte" : "Se connecter"}
             </h1>
-            <p style={{ fontSize: 14, color: "#6B7280", lineHeight: "21px" }}>
+            <p style={{ fontSize: 14, color: "#888888", lineHeight: "21px" }}>
               {isSignUp
                 ? premiumIntent
                   ? "Creer ton compte pour activer l'espace premium et suivre tes tickets."
@@ -263,8 +267,9 @@ function LoginPageContent() {
           {!supabaseConfigured ? (
             <div
               style={{
-                background: "#FFF3CD",
-                color: "#856404",
+                background: "rgba(255,184,0,0.12)",
+                color: "#FFB800",
+                border: "1px solid rgba(255,184,0,0.35)",
                 padding: "12px 16px",
                 borderRadius: 14,
                 fontSize: 13,
@@ -283,7 +288,7 @@ function LoginPageContent() {
                   display: "block",
                   fontSize: 13,
                   fontWeight: 700,
-                  color: "#475467",
+                  color: "#888888",
                   marginBottom: 8,
                 }}
               >
@@ -299,13 +304,15 @@ function LoginPageContent() {
                   width: "100%",
                   padding: "15px 16px",
                   borderRadius: 14,
-                  border: "2px solid #E5E7EB",
+                  border: "2px solid #333333",
+                  background: "#161616",
+                  color: "#FFFFFF",
                   fontSize: 16,
                   outline: "none",
                   boxSizing: "border-box",
                 }}
                 onFocus={(e) => (e.target.style.borderColor = GREEN)}
-                onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
+                onBlur={(e) => (e.target.style.borderColor = "#333333")}
               />
             </div>
 
@@ -315,7 +322,7 @@ function LoginPageContent() {
                   display: "block",
                   fontSize: 13,
                   fontWeight: 700,
-                  color: "#475467",
+                  color: "#888888",
                   marginBottom: 8,
                 }}
               >
@@ -332,21 +339,24 @@ function LoginPageContent() {
                   width: "100%",
                   padding: "15px 16px",
                   borderRadius: 14,
-                  border: "2px solid #E5E7EB",
+                  border: "2px solid #333333",
+                  background: "#161616",
+                  color: "#FFFFFF",
                   fontSize: 16,
                   outline: "none",
                   boxSizing: "border-box",
                 }}
                 onFocus={(e) => (e.target.style.borderColor = GREEN)}
-                onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
+                onBlur={(e) => (e.target.style.borderColor = "#333333")}
               />
             </div>
 
             {error ? (
               <div
                 style={{
-                  background: "#FFEBEE",
-                  color: "#C62828",
+                  background: "rgba(255,68,68,0.12)",
+                  color: "#FF4444",
+                  border: "1px solid rgba(255,68,68,0.35)",
                   padding: "12px 16px",
                   borderRadius: 14,
                   fontSize: 13,
@@ -367,8 +377,8 @@ function LoginPageContent() {
                 padding: 16,
                 borderRadius: 14,
                 border: "none",
-                background: loading || !supabaseConfigured ? "#98A2B3" : GREEN,
-                color: "#fff",
+                background: loading || !supabaseConfigured ? "#444444" : GREEN,
+                color: loading || !supabaseConfigured ? "#888888" : "#000000",
                 fontSize: 16,
                 fontWeight: 800,
                 cursor: loading || !supabaseConfigured ? "not-allowed" : "pointer",
@@ -384,7 +394,7 @@ function LoginPageContent() {
             </button>
           </form>
 
-          <div style={{ textAlign: "center", marginTop: 20, fontSize: 14, color: "#667085" }}>
+          <div style={{ textAlign: "center", marginTop: 20, fontSize: 14, color: "#888888" }}>
             {isSignUp ? "Deja un compte ?" : "Pas encore de compte ?"}{" "}
             <span
               onClick={() => {
@@ -405,7 +415,8 @@ function LoginPageContent() {
             style={{
               marginTop: 20,
               borderRadius: 18,
-              background: premiumIntent ? "#E8F5E9" : "#F4F6F8",
+              border: `1px solid ${BORDER}`,
+              background: premiumIntent ? "rgba(0,255,136,0.08)" : "#161616",
               padding: 16,
               textAlign: "center",
             }}
@@ -416,7 +427,7 @@ function LoginPageContent() {
             <div style={{ fontSize: 14, fontWeight: 800, color: premiumIntent ? GREEN : DARK }}>
               {isSignUp ? "1 000 EUR offerts en bankroll fictive" : "Connexion rapide, puis acces a ton espace perso"}
             </div>
-            <div style={{ fontSize: 12, color: "#5F6B76", marginTop: 4, lineHeight: "18px" }}>
+            <div style={{ fontSize: 12, color: "#888888", marginTop: 4, lineHeight: "18px" }}>
               {isSignUp
                 ? "Tu peux tester l'outil et les tickets sans risquer d'argent reel."
                 : premiumIntent
@@ -432,7 +443,7 @@ function LoginPageContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#f6f8f9" }} />}>
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: PAGE_BG }} />}>
       <LoginPageContent />
     </Suspense>
   );

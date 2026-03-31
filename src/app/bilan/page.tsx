@@ -114,11 +114,13 @@ interface BacktestResponse {
 
 type BacktestByBetTypeRow = NonNullable<BacktestResponse["backtest"]>["byBetType"][number];
 
-const GREEN = "#00843D";
-const GREEN_DARK = "#006B31";
-const GOLD = "#D4A017";
-const RED = "#D64545";
-const DARK = "#161616";
+const GREEN = "#00FF88";
+const GREEN_DARK = "#00CC6A";
+const GOLD = "#FFB800";
+const RED = "#FF4444";
+const DARK = "#FFFFFF";
+const CARD_BG = "#111111";
+const BORDER = "#1E1E1E";
 
 function formatDisplayDate(dateStr: string) {
   return new Intl.DateTimeFormat("fr-FR", {
@@ -166,9 +168,9 @@ function getResultStyle(resultat: BilanResult["resultat"]) {
   if (resultat === "GAGNANT") {
     return {
       border: GREEN,
-      soft: "#E8F5E9",
+      soft: "rgba(0,255,136,0.12)",
       strong: GREEN,
-      badge: "#E8F5E9",
+      badge: "rgba(0,255,136,0.15)",
       badgeText: GREEN,
     };
   }
@@ -176,38 +178,38 @@ function getResultStyle(resultat: BilanResult["resultat"]) {
   if (resultat === "PLACE") {
     return {
       border: GOLD,
-      soft: "#FFF7E0",
-      strong: "#A66B00",
-      badge: "#FFF3CD",
-      badgeText: "#8A5A00",
+      soft: "rgba(255,184,0,0.1)",
+      strong: GOLD,
+      badge: "rgba(255,184,0,0.15)",
+      badgeText: GOLD,
     };
   }
 
   return {
     border: RED,
-    soft: "#FDECEA",
+    soft: "rgba(255,68,68,0.1)",
     strong: RED,
-    badge: "#FDECEA",
+    badge: "rgba(255,68,68,0.15)",
     badgeText: RED,
   };
 }
 
 function getHealthTone(successRate: number) {
   if (successRate >= 45) {
-    return { background: "linear-gradient(135deg, #0F9D58, #0B7A44)", text: "#FFFFFF", soft: "#E8F5E9" };
+    return { background: "linear-gradient(135deg, #00FF88, #00AA5C)", text: "#000000", soft: "rgba(0,255,136,0.12)" };
   }
 
   if (successRate >= 30) {
-    return { background: "linear-gradient(135deg, #E0A800, #C78F00)", text: "#FFFFFF", soft: "#FFF8E1" };
+    return { background: "linear-gradient(135deg, #FFB800, #CC9200)", text: "#000000", soft: "rgba(255,184,0,0.12)" };
   }
 
-  return { background: "linear-gradient(135deg, #D64545, #B83434)", text: "#FFFFFF", soft: "#FDECEA" };
+  return { background: "linear-gradient(135deg, #FF4444, #CC2222)", text: "#FFFFFF", soft: "rgba(255,68,68,0.12)" };
 }
 
 function getConfianceStyle(score: number) {
-  if (score >= 7.5) return { background: "#E8F5E9", color: GREEN };
-  if (score >= 5.5) return { background: "#FFF8E1", color: "#A66B00" };
-  return { background: "#FDECEA", color: RED };
+  if (score >= 7.5) return { background: "rgba(0,255,136,0.15)", color: GREEN };
+  if (score >= 5.5) return { background: "rgba(255,184,0,0.15)", color: GOLD };
+  return { background: "rgba(255,68,68,0.15)", color: RED };
 }
 
 function formatTime(heureDepart: string): string {
@@ -252,8 +254,8 @@ function DateNavigator({
         style={{
           height: 44,
           borderRadius: 16,
-          border: "1px solid rgba(15,23,42,0.08)",
-          background: "#fff",
+          border: `1px solid ${BORDER}`,
+          background: CARD_BG,
           color: DARK,
           fontSize: 18,
           fontWeight: 800,
@@ -265,10 +267,10 @@ function DateNavigator({
 
       <div
         style={{
-          background: "#fff",
+          background: CARD_BG,
           borderRadius: 20,
-          border: "1px solid rgba(15,23,42,0.06)",
-          boxShadow: "0 16px 32px rgba(15,23,42,0.06)",
+          border: `1px solid ${BORDER}`,
+          boxShadow: "0 16px 32px rgba(0,0,0,0.25)",
           padding: 12,
           display: "grid",
           gap: 8,
@@ -276,7 +278,7 @@ function DateNavigator({
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 800, color: "#7A8A9A", textTransform: "uppercase", letterSpacing: 0.4 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: "#888888", textTransform: "uppercase", letterSpacing: 0.4 }}>
               {formatRelativeDay(dateStr)}
             </div>
             <div style={{ fontSize: 16, fontWeight: 800, color: DARK }}>{formatDisplayDate(dateStr)}</div>
@@ -286,7 +288,7 @@ function DateNavigator({
             style={{
               border: "none",
               borderRadius: 999,
-              background: "#E7F8EE",
+              background: "rgba(0,255,136,0.15)",
               color: GREEN,
               padding: "8px 12px",
               fontSize: 12,
@@ -304,7 +306,8 @@ function DateNavigator({
           style={{
             width: "100%",
             borderRadius: 14,
-            border: "1px solid rgba(15,23,42,0.08)",
+            border: `1px solid ${BORDER}`,
+            background: "#161616",
             padding: "10px 12px",
             fontSize: 14,
             fontWeight: 700,
@@ -318,8 +321,8 @@ function DateNavigator({
         style={{
           height: 44,
           borderRadius: 16,
-          border: "1px solid rgba(15,23,42,0.08)",
-          background: "#fff",
+          border: `1px solid ${BORDER}`,
+          background: CARD_BG,
           color: DARK,
           fontSize: 18,
           fontWeight: 800,
@@ -343,12 +346,12 @@ function SummaryCard({
 }) {
   const colors =
     tone === "good"
-      ? { background: "#FFFFFF", value: GREEN }
+      ? { background: CARD_BG, value: GREEN }
       : tone === "warn"
-        ? { background: "#FFFFFF", value: "#B27500" }
+        ? { background: CARD_BG, value: GOLD }
         : tone === "bad"
-          ? { background: "#FFFFFF", value: RED }
-          : { background: "#FFFFFF", value: DARK };
+          ? { background: CARD_BG, value: RED }
+          : { background: CARD_BG, value: DARK };
 
   return (
     <div
@@ -356,11 +359,11 @@ function SummaryCard({
         background: colors.background,
         borderRadius: 22,
         padding: 18,
-        border: "1px solid rgba(15,23,42,0.05)",
-        boxShadow: "0 16px 32px rgba(17, 24, 39, 0.07)",
+        border: `1px solid ${BORDER}`,
+        boxShadow: "0 16px 32px rgba(0, 0, 0, 0.25)",
       }}
     >
-      <div style={{ fontSize: 12, color: "#7A7A7A", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700 }}>{label}</div>
+      <div style={{ fontSize: 12, color: "#888888", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700 }}>{label}</div>
       <div style={{ fontSize: 34, fontWeight: 800, lineHeight: "36px", color: colors.value, letterSpacing: "-0.8px" }}>{value}</div>
     </div>
   );
@@ -375,7 +378,7 @@ function SkeletonCards() {
           style={{
             height: 112,
             borderRadius: 20,
-            background: "linear-gradient(90deg, #ECECEC 25%, #F7F7F7 50%, #ECECEC 75%)",
+            background: "linear-gradient(90deg, #1a1a1a 25%, #262626 50%, #1a1a1a 75%)",
             backgroundSize: "200% 100%",
             animation: "shimmer 1.6s linear infinite",
           }}
@@ -408,10 +411,10 @@ function MiniBarChart({
                 minWidth: 16,
                 height,
                 borderRadius: 12,
-                background: positive ? "linear-gradient(180deg, #0F9D58, #0B7A44)" : "linear-gradient(180deg, #E57373, #D64545)",
+                background: positive ? "linear-gradient(180deg, #00FF88, #00AA5C)" : "linear-gradient(180deg, #FF6666, #FF4444)",
               }}
             />
-            <div style={{ fontSize: 11, color: "#7A7A7A", textAlign: "center" }}>
+            <div style={{ fontSize: 11, color: "#888888", textAlign: "center" }}>
               {point.date.slice(5)}
             </div>
           </div>
@@ -536,7 +539,7 @@ function BilanPageContent() {
       style={{
         minHeight: "100vh",
         background:
-          "radial-gradient(circle at top left, rgba(0,132,61,0.12), transparent 26%), radial-gradient(circle at top right, rgba(18,183,106,0.1), transparent 18%), #F6F7F8",
+          "radial-gradient(circle at top left, rgba(0,255,136,0.06), transparent 30%), radial-gradient(circle at top right, rgba(0,255,136,0.04), transparent 22%), #0A0A0A",
         width: "min(1180px, calc(100% - 24px))",
         margin: "0 auto",
         position: "relative",
@@ -554,9 +557,9 @@ function BilanPageContent() {
           position: "sticky",
           top: 0,
           zIndex: 100,
-          background: "rgba(18, 22, 26, 0.88)",
+          background: "rgba(10,10,10,0.92)",
           backdropFilter: "blur(18px)",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          borderBottom: `1px solid ${BORDER}`,
           minHeight: 72,
           display: "flex",
           flexDirection: "column",
@@ -655,10 +658,10 @@ function BilanPageContent() {
               <div style={{ margin: "0 16px 18px", display: "grid", gap: 14 }}>
                 <div
                   style={{
-                    background: "#FFFFFF",
+                    background: CARD_BG,
                     borderRadius: 24,
                     padding: 18,
-                    border: "1px solid rgba(15,23,42,0.05)",
+                    border: `1px solid ${BORDER}`,
                     boxShadow: "0 18px 36px rgba(15,23,42,0.08)",
                   }}
                 >
@@ -693,10 +696,10 @@ function BilanPageContent() {
 
                 <div
                   style={{
-                    background: "#FFFFFF",
+                    background: CARD_BG,
                     borderRadius: 24,
                     padding: 18,
-                    border: "1px solid rgba(15,23,42,0.05)",
+                    border: `1px solid ${BORDER}`,
                     boxShadow: "0 18px 36px rgba(15,23,42,0.08)",
                   }}
                 >
@@ -708,10 +711,10 @@ function BilanPageContent() {
 
                 <div
                   style={{
-                    background: "#FFFFFF",
+                    background: CARD_BG,
                     borderRadius: 24,
                     padding: 18,
-                    border: "1px solid rgba(15,23,42,0.05)",
+                    border: `1px solid ${BORDER}`,
                     boxShadow: "0 18px 36px rgba(15,23,42,0.08)",
                     display: "grid",
                     gap: 14,
@@ -762,7 +765,7 @@ function BilanPageContent() {
                           </span>
                         </div>
                       )) : (
-                        <div style={{ color: "#666", fontSize: 14 }}>Pas assez de signal jockey exploitable pour cette date.</div>
+                        <div style={{ color: "#888888", fontSize: 14 }}>Pas assez de signal jockey exploitable pour cette date.</div>
                       )}
                     </div>
                   </div>
@@ -774,10 +777,10 @@ function BilanPageContent() {
               <div
                 style={{
                   margin: "0 16px 18px",
-                  background: "#FFFFFF",
+                  background: CARD_BG,
                   borderRadius: 24,
                   padding: 18,
-                  border: "1px solid rgba(15,23,42,0.05)",
+                  border: `1px solid ${BORDER}`,
                   boxShadow: "0 18px 36px rgba(15,23,42,0.08)",
                   display: "grid",
                   gap: 14,
@@ -790,8 +793,8 @@ function BilanPageContent() {
                   style={{
                     borderRadius: 18,
                     padding: 16,
-                    background: backtest.totalProfit >= 0 ? "#F4FBF7" : "#FFF2F2",
-                    border: `1px solid ${backtest.totalProfit >= 0 ? "#D9F0E2" : "#F7D5D5"}`,
+                    background: backtest.totalProfit >= 0 ? "rgba(0,255,136,0.08)" : "rgba(255,68,68,0.08)",
+                    border: `1px solid ${backtest.totalProfit >= 0 ? "rgba(0,255,136,0.25)" : "rgba(255,68,68,0.25)"}`,
                     color: backtest.totalProfit >= 0 ? GREEN : RED,
                     fontSize: 16,
                     lineHeight: "22px",
@@ -827,13 +830,13 @@ function BilanPageContent() {
                         alignItems: "center",
                         borderRadius: 16,
                         padding: "12px 14px",
-                        background: "#F8FAFC",
-                        border: "1px solid #E7ECF1",
+                        background: "#161616",
+                        border: `1px solid ${BORDER}`,
                       }}
                     >
                       <div>
                         <div style={{ fontSize: 14, fontWeight: 800, color: DARK }}>{betType.betType}</div>
-                        <div style={{ fontSize: 12, color: "#666" }}>
+                        <div style={{ fontSize: 12, color: "#888888" }}>
                           {betType.betsPlaced} ticket{betType.betsPlaced > 1 ? "s" : ""} · hit {betType.hitRate}%
                         </div>
                       </div>
@@ -863,8 +866,8 @@ function BilanPageContent() {
                   style={{
                     fontSize: 12,
                     fontWeight: 700,
-                    color: winners.length > 0 ? GREEN : "#666",
-                    background: winners.length > 0 ? "#E8F5E9" : "#F0F0F0",
+                    color: winners.length > 0 ? GREEN : "#888888",
+                    background: winners.length > 0 ? "rgba(0,255,136,0.12)" : "#161616",
                     padding: "6px 10px",
                     borderRadius: 999,
                   }}
@@ -876,10 +879,10 @@ function BilanPageContent() {
               {winners.length === 0 ? (
                 <div
                   style={{
-                    background: "#FFFFFF",
+                    background: CARD_BG,
                     borderRadius: 20,
                     padding: 18,
-                    color: "#666",
+                    color: "#888888",
                     border: "1px solid rgba(0,0,0,0.05)",
                   }}
                 >
@@ -894,8 +897,8 @@ function BilanPageContent() {
                       style={{
                         width: "100%",
                         textAlign: "left",
-                        border: "1px solid rgba(15,23,42,0.05)",
-                        background: "#FFFFFF",
+                        border: `1px solid ${BORDER}`,
+                        background: CARD_BG,
                         borderRadius: 22,
                         padding: 18,
                         borderLeft: `5px solid ${GREEN}`,
@@ -917,7 +920,7 @@ function BilanPageContent() {
                         </div>
                         <span
                           style={{
-                            background: "#E8F5E9",
+                            background: "rgba(0,255,136,0.15)",
                             color: GREEN,
                             padding: "6px 10px",
                             borderRadius: 999,
@@ -930,13 +933,13 @@ function BilanPageContent() {
                         </span>
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
-                        <span style={{ background: "#F6F7F8", color: "#444", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+                        <span style={{ background: "#161616", color: "#CCCCCC", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                           PMU {formatOdds(result.favori.cotePmu)}
                         </span>
-                        <span style={{ background: "#EAF4FF", color: "#1565C0", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+                        <span style={{ background: "rgba(59,130,246,0.15)", color: "#60a5fa", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                           Cote IA {formatOdds(result.favori.coteEstimee)}
                         </span>
-                        <span style={{ background: "#F3F4F6", color: "#555", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+                        <span style={{ background: "#161616", color: "#888888", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                           Confiance {result.confiance}/10
                         </span>
                       </div>
@@ -949,13 +952,13 @@ function BilanPageContent() {
             {placed.length > 0 ? (
               <div style={{ margin: "0 16px 18px" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: "#A06A00" }}>Places utiles</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: GOLD }}>Places utiles</div>
                   <span
                     style={{
                       fontSize: 12,
                       fontWeight: 700,
-                      color: "#8A5A00",
-                      background: "#FFF3CD",
+                      color: GOLD,
+                      background: "rgba(255,184,0,0.12)",
                       padding: "6px 10px",
                       borderRadius: 999,
                     }}
@@ -972,8 +975,8 @@ function BilanPageContent() {
                       style={{
                         width: "100%",
                         textAlign: "left",
-                        border: "1px solid rgba(15,23,42,0.05)",
-                        background: "#FFFFFF",
+                        border: `1px solid ${BORDER}`,
+                        background: CARD_BG,
                         borderRadius: 22,
                         padding: 18,
                         borderLeft: "5px solid #D4A017",
@@ -983,7 +986,7 @@ function BilanPageContent() {
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: "#A06A00", marginBottom: 8 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: GOLD, marginBottom: 8 }}>
                             TICKET PLACE
                           </div>
                           <div style={{ fontSize: 20, fontWeight: 800, color: DARK, lineHeight: "24px", marginBottom: 4 }}>
@@ -995,8 +998,8 @@ function BilanPageContent() {
                         </div>
                         <span
                           style={{
-                            background: "#FFF3CD",
-                            color: "#8A5A00",
+                            background: "rgba(255,184,0,0.15)",
+                            color: GOLD,
                             padding: "6px 10px",
                             borderRadius: 999,
                             fontSize: 12,
@@ -1008,13 +1011,13 @@ function BilanPageContent() {
                         </span>
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
-                        <span style={{ background: "#F6F7F8", color: "#444", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+                        <span style={{ background: "#161616", color: "#CCCCCC", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                           PMU {formatOdds(result.favori.cotePmu)}
                         </span>
-                        <span style={{ background: "#EAF4FF", color: "#1565C0", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+                        <span style={{ background: "rgba(59,130,246,0.15)", color: "#60a5fa", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                           Cote IA {formatOdds(result.favori.coteEstimee)}
                         </span>
-                        <span style={{ background: "#F3F4F6", color: "#555", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+                        <span style={{ background: "#161616", color: "#888888", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                           Confiance {result.confiance}/10
                         </span>
                       </div>
@@ -1027,7 +1030,7 @@ function BilanPageContent() {
             <div
               style={{
                 margin: "0 16px 18px",
-                background: "#FFFFFF",
+                background: CARD_BG,
                 borderRadius: 20,
                 padding: 18,
                 boxShadow: "0 10px 28px rgba(0,0,0,0.06)",
@@ -1036,8 +1039,8 @@ function BilanPageContent() {
               <div style={{ fontSize: 18, fontWeight: 800, color: DARK, marginBottom: 12 }}>Bilan expert</div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-                <div style={{ borderRadius: 16, background: "#F8FBF9", border: "1px solid #E4EFE7", padding: 14 }}>
-                  <div style={{ fontSize: 11, color: "#78817B", textTransform: "uppercase", marginBottom: 6 }}>Discipline forte</div>
+                <div style={{ borderRadius: 16, background: "rgba(0,255,136,0.06)", border: "1px solid rgba(0,255,136,0.2)", padding: 14 }}>
+                  <div style={{ fontSize: 11, color: "#888888", textTransform: "uppercase", marginBottom: 6 }}>Discipline forte</div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: DARK }}>
                     {data.expert.bestDiscipline ? disciplineLabel(data.expert.bestDiscipline.discipline) : "Aucune"}
                   </div>
@@ -1048,8 +1051,8 @@ function BilanPageContent() {
                   )}
                 </div>
 
-                <div style={{ borderRadius: 16, background: "#FCF8F8", border: "1px solid #F3E2E2", padding: 14 }}>
-                  <div style={{ fontSize: 11, color: "#8B7D7D", textTransform: "uppercase", marginBottom: 6 }}>Discipline fragile</div>
+                <div style={{ borderRadius: 16, background: "rgba(255,68,68,0.06)", border: "1px solid rgba(255,68,68,0.2)", padding: 14 }}>
+                  <div style={{ fontSize: 11, color: "#888888", textTransform: "uppercase", marginBottom: 6 }}>Discipline fragile</div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: DARK }}>
                     {data.expert.worstDiscipline ? disciplineLabel(data.expert.worstDiscipline.discipline) : "Aucune"}
                   </div>
@@ -1060,8 +1063,8 @@ function BilanPageContent() {
                   )}
                 </div>
 
-                <div style={{ borderRadius: 16, background: "#F8FBF9", border: "1px solid #E4EFE7", padding: 14 }}>
-                  <div style={{ fontSize: 11, color: "#78817B", textTransform: "uppercase", marginBottom: 6 }}>Zone fiable</div>
+                <div style={{ borderRadius: 16, background: "rgba(0,255,136,0.06)", border: "1px solid rgba(0,255,136,0.2)", padding: 14 }}>
+                  <div style={{ fontSize: 11, color: "#888888", textTransform: "uppercase", marginBottom: 6 }}>Zone fiable</div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: DARK }}>
                     {data.expert.bestConfidenceBucket?.label ?? "Aucune"}
                   </div>
@@ -1072,8 +1075,8 @@ function BilanPageContent() {
                   )}
                 </div>
 
-                <div style={{ borderRadius: 16, background: "#FCF8F8", border: "1px solid #F3E2E2", padding: 14 }}>
-                  <div style={{ fontSize: 11, color: "#8B7D7D", textTransform: "uppercase", marginBottom: 6 }}>Zone a risque</div>
+                <div style={{ borderRadius: 16, background: "rgba(255,68,68,0.06)", border: "1px solid rgba(255,68,68,0.2)", padding: 14 }}>
+                  <div style={{ fontSize: 11, color: "#888888", textTransform: "uppercase", marginBottom: 6 }}>Zone a risque</div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: DARK }}>
                     {data.expert.worstConfidenceBucket?.label ?? "Aucune"}
                   </div>
@@ -1091,12 +1094,12 @@ function BilanPageContent() {
                     key={index}
                     style={{
                       borderRadius: 14,
-                      background: "#F7F8FA",
-                      border: "1px solid #ECEEF2",
+                      background: "#161616",
+                      border: `1px solid ${BORDER}`,
                       padding: "12px 14px",
                       fontSize: 13,
                       lineHeight: "18px",
-                      color: "#51565C",
+                      color: "#888888",
                     }}
                   >
                     {insight}
@@ -1110,16 +1113,16 @@ function BilanPageContent() {
                 Lecture complete des tickets
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                <span style={{ background: "#E8F5E9", color: GREEN, padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+                <span style={{ background: "rgba(0,255,136,0.15)", color: GREEN, padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                   Gagnants: {winners.length}
                 </span>
-                <span style={{ background: "#FFF3CD", color: "#8A5A00", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+                <span style={{ background: "rgba(255,184,0,0.15)", color: GOLD, padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                   Places: {placed.length}
                 </span>
-                <span style={{ background: "#FDECEA", color: RED, padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+                <span style={{ background: "rgba(255,68,68,0.15)", color: RED, padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                   Perdus: {misses.length}
                 </span>
-                <span style={{ background: "#F3F4F6", color: "#555", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
+                <span style={{ background: "#161616", color: "#888888", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
                   Courses finies: {resultsList.length}
                 </span>
               </div>
@@ -1142,8 +1145,8 @@ function BilanPageContent() {
                       style={{
                         width: "100%",
                         textAlign: "left",
-                        border: "1px solid rgba(15,23,42,0.05)",
-                        background: "#FFFFFF",
+                        border: `1px solid ${BORDER}`,
+                        background: CARD_BG,
                         borderRadius: 22,
                         padding: 18,
                         borderLeft: `5px solid ${tone.border}`,
@@ -1160,7 +1163,7 @@ function BilanPageContent() {
                             {result.courseInfo.nomCourse}
                           </div>
                         </div>
-                        <span style={{ fontSize: 13, color: "#777", whiteSpace: "nowrap" }}>{formatTime(result.courseInfo.heureDepart)}</span>
+                        <span style={{ fontSize: 13, color: "#888888", whiteSpace: "nowrap" }}>{formatTime(result.courseInfo.heureDepart)}</span>
                       </div>
 
                       <div style={{ fontSize: 24, fontWeight: 800, color: DARK, marginBottom: 6 }}>
@@ -1195,8 +1198,8 @@ function BilanPageContent() {
                         {result.ordreArrivee && (
                           <span
                             style={{
-                              background: "#F3F4F6",
-                              color: "#444",
+                              background: "#161616",
+                              color: "#CCCCCC",
                               padding: "6px 10px",
                               borderRadius: 999,
                               fontSize: 12,
@@ -1214,12 +1217,12 @@ function BilanPageContent() {
 
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                         <div style={{ background: tone.soft, borderRadius: 14, padding: 12 }}>
-                          <div style={{ fontSize: 11, color: "#777", marginBottom: 4 }}>Cote PMU</div>
+                          <div style={{ fontSize: 11, color: "#888888", marginBottom: 4 }}>Cote PMU</div>
                           <div style={{ fontSize: 18, fontWeight: 800, color: DARK }}>{formatOdds(result.favori.cotePmu)}</div>
                         </div>
-                        <div style={{ background: "#EEF5FF", borderRadius: 14, padding: 12 }}>
-                          <div style={{ fontSize: 11, color: "#6A7480", marginBottom: 4 }}>Cote IA</div>
-                          <div style={{ fontSize: 18, fontWeight: 800, color: "#1565C0" }}>{formatOdds(result.favori.coteEstimee)}</div>
+                        <div style={{ background: "rgba(59,130,246,0.12)", borderRadius: 14, padding: 12 }}>
+                          <div style={{ fontSize: 11, color: "#888888", marginBottom: 4 }}>Cote IA</div>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: "#60a5fa" }}>{formatOdds(result.favori.coteEstimee)}</div>
                         </div>
                       </div>
                     </button>
@@ -1239,9 +1242,9 @@ function BilanPageContent() {
           transform: "translateX(-50%)",
           width: "100%",
           maxWidth: 1180,
-          background: "rgba(255,255,255,0.94)",
+          background: "rgba(17,17,17,0.95)",
           backdropFilter: "blur(18px)",
-          borderTop: "1px solid rgba(15,23,42,0.08)",
+          borderTop: `1px solid ${BORDER}`,
           display: "grid",
           gridTemplateColumns: "1fr 1fr 1fr",
           zIndex: 200,
@@ -1260,7 +1263,7 @@ function BilanPageContent() {
               background: "transparent",
               padding: "14px 10px 16px",
               fontWeight: item.active ? 900 : 700,
-              color: item.active ? GREEN : "#5B6472",
+              color: item.active ? GREEN : "#888888",
               cursor: item.active ? "default" : "pointer",
             }}
           >
@@ -1274,7 +1277,7 @@ function BilanPageContent() {
 
 export default function BilanPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#F6F7F8" }} />}>
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#0A0A0A" }} />}>
       <BilanPageContent />
     </Suspense>
   );
