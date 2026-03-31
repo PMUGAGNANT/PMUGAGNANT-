@@ -1,10 +1,15 @@
 import type { Lisibilite, PredictionDecision, RaceSummary } from "@/lib/types";
+import {
+  CONFIDENCE_BUCKET_HIGH,
+  CONFIDENCE_BUCKET_MEDIUM,
+  getRadarStageWeight,
+  SEUIL_JOUABLE,
+  SEUIL_SURVEILLANCE,
+} from "@/lib/scoring-policy";
 
 export type HomeScoreStage = "preview_2h" | "preview_1h" | "final_30m" | "finished";
 
-/** Seuils affichage / décision UI (NIVEAU 2) */
-export const SEUIL_JOUABLE = 8.5;
-export const SEUIL_SURVEILLANCE = 6.5;
+export { SEUIL_JOUABLE, SEUIL_SURVEILLANCE } from "@/lib/scoring-policy";
 
 export type PlayTier = "jouable" | "surveillance" | "passer" | "resultat";
 
@@ -136,13 +141,13 @@ function disciplineCoherence(race: RaceSummary): { delta: number; label: string 
 function coteProxyAdjustment(api: ApiRaceScoreLite | undefined): { delta: number; label: string } {
   if (!api?.pick) return { delta: 0, label: "" };
   const conf = api.pick.confidence;
-  if (conf != null && conf >= 7.5) {
+  if (conf != null && conf >= CONFIDENCE_BUCKET_HIGH) {
     return { delta: 0.18, label: "Repère PMU fort sur le ticket" };
   }
   if (conf != null && conf >= 6.2) {
     return { delta: 0.08, label: "Repère PMU correct" };
   }
-  if (conf != null && conf < 5.5) {
+  if (conf != null && conf < CONFIDENCE_BUCKET_MEDIUM) {
     return { delta: -0.15, label: "Confiance cheval faible vs marché" };
   }
   return { delta: 0, label: "" };
@@ -221,7 +226,10 @@ export function computeClientRaceScore(
   const alloc = race.allocation ?? 0;
   const partants = Math.max(1, race.nombrePartants || 1);
   const radarRatio =
-    displayScore * Math.log10(1 + alloc / 15_000) * (12 / Math.sqrt(partants));
+    displayScore *
+    getRadarStageWeight(stage) *
+    Math.log10(1 + alloc / 15_000) *
+    (12 / Math.sqrt(partants));
 
   const radarSentence = buildRadarSentence(race, displayScore, factors, race.allocation);
 

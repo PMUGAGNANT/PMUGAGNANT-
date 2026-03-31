@@ -1,5 +1,6 @@
 import { getMinutesUntilStart } from "@/lib/date-utils";
 import { DEFAULT_ALGO_PARAMETERS } from "@/lib/config";
+import { SERVER_SCORE_NIVEAU_HAUTE, SERVER_SCORE_NIVEAU_JOUABLE } from "@/lib/scoring-policy";
 import type {
   AlgoParameters,
   BettingPlan,
@@ -1301,9 +1302,9 @@ function buildConfidenceScore(
   }
 
   const niveau =
-    score >= 7.5
+    score >= SERVER_SCORE_NIVEAU_HAUTE
       ? { label: "Haute", emoji: "HAUT" }
-      : score >= 6
+      : score >= SERVER_SCORE_NIVEAU_JOUABLE
         ? { label: "Jouable", emoji: "OK" }
         : { label: "Fragile", emoji: "RISQUE" };
 

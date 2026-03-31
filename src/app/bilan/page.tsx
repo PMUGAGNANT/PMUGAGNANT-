@@ -15,6 +15,7 @@ import {
   BILAN_DASHBOARD_HISTORY_DAYS_MAX,
   BILAN_DASHBOARD_HISTORY_DAYS_MIN,
 } from "@/lib/prediction-store";
+import { CONFIDENCE_BUCKET_HIGH, CONFIDENCE_BUCKET_MEDIUM } from "@/lib/scoring-policy";
 import { parsePositiveInteger } from "@/lib/request-utils";
 
 interface CourseInfo {
@@ -258,8 +259,12 @@ function getHealthTone(successRate: number) {
 }
 
 function getConfianceStyle(score: number) {
-  if (score >= 7.5) return { background: "color-mix(in srgb, var(--pmu-primary) 15%, transparent)", color: GREEN };
-  if (score >= 5.5) return { background: "color-mix(in srgb, var(--pmu-orange) 15%, transparent)", color: GOLD };
+  if (score >= CONFIDENCE_BUCKET_HIGH) {
+    return { background: "color-mix(in srgb, var(--pmu-primary) 15%, transparent)", color: GREEN };
+  }
+  if (score >= CONFIDENCE_BUCKET_MEDIUM) {
+    return { background: "color-mix(in srgb, var(--pmu-orange) 15%, transparent)", color: GOLD };
+  }
   return { background: "color-mix(in srgb, var(--pmu-red) 15%, transparent)", color: RED };
 }
 

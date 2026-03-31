@@ -3,6 +3,7 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { SEUIL_JOUABLE, SEUIL_SURVEILLANCE } from "@/lib/client-race-scoring";
+import { CONFIDENCE_BUCKET_HIGH, CONFIDENCE_BUCKET_MEDIUM } from "@/lib/scoring-policy";
 import { asArray } from "@/lib/array-utils";
 import { fromIsoDate, getTodayDateStr, parsePmuDate } from "@/lib/date-utils";
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
@@ -35,25 +36,25 @@ interface RaceApiResponse {
   error?: string;
 }
 
-/* ─── Palette dark premium (NIVEAU 3) ─────────────────── */
-const G = "#00FF88";
-const G_DIM = "rgba(0, 255, 136, 0.12)";
-const DARK = "#0A0A0A";
-const DARK_GLASS = "rgba(17, 17, 17, 0.92)";
-const CARD = "#111111";
-const CARD2 = "#161616";
-const CARD_HI = "#1E1E1E";
-const BORDER = "#1E1E1E";
-const BORDER_SOFT = "rgba(30, 30, 30, 0.8)";
-const MUTED = "#888888";
-const WHITE = "#FFFFFF";
-const GOLD = "#FFB800";
-const GOLD_DIM = "rgba(255, 184, 0, 0.12)";
-const RED = "#FF4444";
-const RED_DIM = "rgba(255, 68, 68, 0.12)";
-const BLUE = "#3b82f6";
-const BLUE_DIM = "rgba(59, 130, 246, 0.12)";
-const VIOLET = "#a78bfa";
+/* ─── Palette = variables thème (dark / warm) ─────────── */
+const G = "var(--pmu-primary)";
+const G_DIM = "var(--pmu-primary-soft)";
+const DARK = "var(--pmu-bg)";
+const DARK_GLASS = "color-mix(in srgb, var(--pmu-surface) 92%, transparent)";
+const CARD = "var(--pmu-surface)";
+const CARD2 = "var(--pmu-surface-2)";
+const CARD_HI = "var(--pmu-surface-highlight)";
+const BORDER = "var(--pmu-border)";
+const BORDER_SOFT = "color-mix(in srgb, var(--pmu-border) 80%, transparent)";
+const MUTED = "var(--pmu-text-muted)";
+const WHITE = "var(--pmu-text)";
+const GOLD = "var(--pmu-orange)";
+const GOLD_DIM = "color-mix(in srgb, var(--pmu-orange) 12%, transparent)";
+const RED = "var(--pmu-red)";
+const RED_DIM = "color-mix(in srgb, var(--pmu-red) 12%, transparent)";
+const BLUE = "var(--pmu-accent-blue)";
+const BLUE_DIM = "color-mix(in srgb, var(--pmu-accent-blue) 12%, transparent)";
+const VIOLET = "var(--pmu-accent-violet)";
 
 /* ─── Helpers (identiques) ─────────────────────────────── */
 function round1(v: number) { return Math.round(v * 10) / 10; }
@@ -168,8 +169,8 @@ function getActionTone(action: string, valueBet: boolean) {
 }
 
 function getConfianceStyle(s: number) {
-  if (s >= 7.5) return { color: G };
-  if (s >= 5.5) return { color: GOLD };
+  if (s >= CONFIDENCE_BUCKET_HIGH) return { color: G };
+  if (s >= CONFIDENCE_BUCKET_MEDIUM) return { color: GOLD };
   return { color: RED };
 }
 
@@ -639,7 +640,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
         </div>
         <SectionCard title="Analyse indisponible" kicker="Erreur">
           <p style={{ fontSize: 14, color: MUTED, marginBottom: 16 }}>{error || "La course n'a pas pu être chargée."}</p>
-          <button onClick={() => router.push(`/?date=${selectedDate}`)} style={{ width: "100%", padding: "14px 0", borderRadius: 8, border: "none", background: G, color: "#000000", fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+          <button onClick={() => router.push(`/?date=${selectedDate}`)} style={{ width: "100%", padding: "14px 0", borderRadius: 8, border: "none", background: G, color: "var(--pmu-on-primary)", fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
             ← Retour aux courses
           </button>
         </SectionCard>
@@ -755,7 +756,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
             )}
             <button onClick={() => router.push("/login?redirect=/mes-paris")} style={{
               width: "100%", padding: "14px 0", borderRadius: 8, border: "none",
-              background: G, color: "#000000", fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 14, cursor: "pointer",
+              background: G, color: "var(--pmu-on-primary)", fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 14, cursor: "pointer",
             }}>
               Se connecter et {"s'abonner"}
             </button>

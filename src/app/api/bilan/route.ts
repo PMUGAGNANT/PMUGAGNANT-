@@ -12,6 +12,7 @@ import {
 import { badRequest, serverError } from "@/lib/api-response";
 import { normalizeRequestedDate, parsePositiveInteger } from "@/lib/request-utils";
 import { logger } from "@/lib/server-logger";
+import { CONFIDENCE_BUCKET_HIGH, CONFIDENCE_BUCKET_MEDIUM } from "@/lib/scoring-policy";
 
 export const dynamic = "force-dynamic";
 
@@ -92,8 +93,8 @@ function createAggregate(): AggregateStats {
 }
 
 function getConfidenceBucket(score: number): ConfidenceBucketKey {
-  if (score >= 7.5) return "high";
-  if (score >= 5.5) return "medium";
+  if (score >= CONFIDENCE_BUCKET_HIGH) return "high";
+  if (score >= CONFIDENCE_BUCKET_MEDIUM) return "medium";
   return "low";
 }
 

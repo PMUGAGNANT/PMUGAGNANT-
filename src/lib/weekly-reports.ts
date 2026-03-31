@@ -1,5 +1,9 @@
 import { loadAlgoParameters } from "@/lib/config";
 import { getWeekBounds } from "@/lib/date-utils";
+import {
+  CONFIDENCE_BUCKET_HIGH,
+  SERVER_SCORE_NIVEAU_JOUABLE,
+} from "@/lib/scoring-policy";
 import { listCourseRecordsBetween, listPredictionsBetween } from "@/lib/prediction-store";
 import { getSupabaseAdminClient, getSupabaseAdminConfigError } from "@/lib/supabase";
 import {
@@ -60,8 +64,8 @@ function appendToSegment(
 }
 
 function getConfidenceBucket(score: number) {
-  if (score >= 7.5) return "HIGH";
-  if (score >= 6) return "MEDIUM";
+  if (score >= CONFIDENCE_BUCKET_HIGH) return "HIGH";
+  if (score >= SERVER_SCORE_NIVEAU_JOUABLE) return "MEDIUM";
   return "LOW";
 }
 

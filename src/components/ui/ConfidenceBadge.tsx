@@ -1,4 +1,4 @@
-import { SEUIL_JOUABLE, SEUIL_SURVEILLANCE } from "@/lib/client-race-scoring";
+import { SEUIL_JOUABLE, SEUIL_SURVEILLANCE } from "@/lib/scoring-policy";
 
 type ConfidenceBadgeProps = {
   score: number;
@@ -8,27 +8,27 @@ type ConfidenceBadgeProps = {
 function getTone(score: number) {
   if (score >= SEUIL_JOUABLE) {
     return {
-      ring: "border-[rgba(0,255,136,0.45)]",
-      bg: "bg-[rgba(0,255,136,0.1)]",
-      text: "text-[#00FF88]",
-      dot: "bg-[#00FF88]",
+      ring: "border-[color-mix(in_srgb,var(--pmu-primary)_45%,transparent)]",
+      bg: "bg-[var(--pmu-primary-soft)]",
+      text: "text-[var(--pmu-primary)]",
+      dot: "bg-[var(--pmu-primary)]",
     };
   }
 
   if (score >= SEUIL_SURVEILLANCE) {
     return {
-      ring: "border-[rgba(255,184,0,0.4)]",
-      bg: "bg-[rgba(255,184,0,0.1)]",
-      text: "text-[#FFB800]",
-      dot: "bg-[#FFB800]",
+      ring: "border-[color-mix(in_srgb,var(--pmu-orange)_40%,transparent)]",
+      bg: "bg-[color-mix(in_srgb,var(--pmu-orange)_10%,transparent)]",
+      text: "text-[var(--pmu-orange)]",
+      dot: "bg-[var(--pmu-orange)]",
     };
   }
 
   return {
-    ring: "border-[#444444]",
-    bg: "bg-[#161616]",
-    text: "text-[#888888]",
-    dot: "bg-[#666666]",
+    ring: "border-[var(--pmu-border-strong)]",
+    bg: "bg-[var(--pmu-surface-2)]",
+    text: "text-[var(--pmu-text-muted)]",
+    dot: "bg-[var(--pmu-text-soft)]",
   };
 }
 
