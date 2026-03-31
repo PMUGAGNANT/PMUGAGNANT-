@@ -126,7 +126,19 @@ export async function GET(request: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, scores });
+    const scoresList = Object.entries(scores).map(([key, entry]) => {
+      const [reunionStr, courseStr] = key.split("-");
+      const reunion = Number(reunionStr);
+      const course = Number(courseStr);
+      return {
+        dateStr: date,
+        reunion,
+        course,
+        ...entry,
+      };
+    });
+
+    return NextResponse.json({ success: true, scores: scoresList });
   } catch (error) {
     return serverError("Race scores failed", error, { date });
   }

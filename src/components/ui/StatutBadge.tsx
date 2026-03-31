@@ -11,9 +11,9 @@ const labelMap: Record<StatutBadgeType, string> = {
 };
 
 const toneMap: Record<StatutBadgeType, string> = {
-  jouable: "border-[rgba(0,255,136,0.26)] bg-[rgba(0,255,136,0.1)] text-[var(--pmu-primary)]",
-  surveillance: "border-[rgba(255,181,71,0.26)] bg-[rgba(255,181,71,0.1)] text-[var(--pmu-orange)]",
-  resultat: "border-[rgba(92,163,255,0.26)] bg-[rgba(92,163,255,0.1)] text-[var(--pmu-blue)]",
+  jouable: "border-[rgba(13,148,136,0.35)] bg-[rgba(13,148,136,0.1)] text-[var(--pmu-primary)]",
+  surveillance: "border-[rgba(217,119,6,0.3)] bg-[rgba(217,119,6,0.1)] text-[var(--pmu-orange)]",
+  resultat: "border-[rgba(37,99,235,0.28)] bg-[rgba(37,99,235,0.08)] text-[var(--pmu-blue)]",
 };
 
 export function StatutBadge({ type }: StatutBadgeProps) {

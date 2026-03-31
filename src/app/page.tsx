@@ -14,6 +14,7 @@ import {
   parsePmuDate,
   toIsoDate,
 } from "@/lib/date-utils";
+import { asArray } from "@/lib/array-utils";
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 import type { Lisibilite, PredictionDecision, RaceSummary } from "@/lib/types";
 
@@ -47,8 +48,54 @@ type RacesResponse = {
 
 type ScoresResponse = {
   success: boolean;
-  scores: RaceScore[];
+  scores?: RaceScore[] | Record<string, Omit<RaceScore, "dateStr" | "reunion" | "course">> | null;
 };
+
+function normalizeScoresPayload(
+  raw: ScoresResponse["scores"],
+  dateStr: string
+): RaceScore[] {
+  if (raw == null || typeof raw === "string" || typeof raw === "number" || typeof raw === "boolean") {
+    return [];
+  }
+
+  if (Array.isArray(raw)) {
+    return raw.filter(
+      (item): item is RaceScore =>
+        item != null &&
+        typeof item.reunion === "number" &&
+        typeof item.course === "number"
+    );
+  }
+
+  if (typeof raw === "object") {
+    return Object.entries(raw).flatMap(([key, entry]) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        return [];
+      }
+      const [reunionStr, courseStr] = key.split("-");
+      const reunion = Number(reunionStr);
+      const course = Number(courseStr);
+      if (!Number.isFinite(reunion) || !Number.isFinite(course)) {
+        return [];
+      }
+      return [
+        {
+          dateStr,
+          reunion,
+          course,
+          ...entry,
+        } satisfies RaceScore,
+      ];
+    });
+  }
+
+  return [];
+}
+
+function coerceRaceSummaries(raw: unknown): RaceSummary[] {
+  return Array.isArray(raw) ? raw : [];
+}
 
 type FeaturedRace = {
   race: RaceSummary;
@@ -231,8 +278,9 @@ function getRaceHint(race: RaceSummary, score?: RaceScore) {
   return "Base lisible. On garde la course au radar en attendant un ticket plus ferme.";
 }
 
-function buildFeaturedRaces(races: RaceSummary[], scoresMap: Map<string, RaceScore>) {
-  return (races ?? []).map((race) => {
+function buildFeaturedRaces(races: unknown, scoresMap: Map<string, RaceScore>) {
+  const list = Array.isArray(races) ? races : [];
+  return list.map((race) => {
     const key = `${race.reunion}-${race.course}`;
     const score = scoresMap.get(key);
     const scoreValue = score?.score ?? 0;
@@ -268,15 +316,16 @@ function sortFeaturedRaces(items: FeaturedRace[], sortMode: SortMode) {
 }
 
 function getRadarRace(items: FeaturedRace[]) {
-  const priorityPlayable = items.find(
+  const list = asArray<FeaturedRace>(items);
+  const priorityPlayable = list.find(
     (item) => item.status === "jouable" && item.score?.decision === "VALIDE"
   );
 
-  return priorityPlayable ?? items.find((item) => item.status !== "resultat") ?? items[0] ?? null;
+  return priorityPlayable ?? list.find((item) => item.status !== "resultat") ?? list[0] ?? null;
 }
 
 function getTopParisItems(items: FeaturedRace[], navigate: (race: RaceSummary) => void): TopParisItem[] {
-  return items
+  return asArray<FeaturedRace>(items)
     .filter((item) => item.status !== "resultat")
     .sort((a, b) => {
       if (a.status === "jouable" && b.status !== "jouable") {
@@ -399,8 +448,10 @@ function PageContent() {
         }
 
         if (!cancelled) {
-          setRaces(racesJson.races ?? []);
-          setScores(scoresJson.success ? (scoresJson.scores ?? []) : []);
+          setRaces(coerceRaceSummaries(racesJson.races));
+          setScores(
+            scoresJson.success ? normalizeScoresPayload(scoresJson.scores, selectedDate) : []
+          );
         }
       } catch (loadError) {
         if (!cancelled) {
@@ -422,12 +473,19 @@ function PageContent() {
     };
   }, [selectedDate]);
 
-  const scoresMap = useMemo(
-    () => new Map((scores ?? []).map((score) => [`${score.reunion}-${score.course}`, score])),
-    [scores]
-  );
-
-  const featuredRaces = useMemo(() => sortFeaturedRaces(buildFeaturedRaces(races, scoresMap), sortMode), [races, scoresMap, sortMode]);
+  const { scoresMap, featuredRaces } = useMemo(() => {
+    const safeScores = normalizeScoresPayload(
+      scores as unknown as ScoresResponse["scores"],
+      selectedDate
+    );
+    const map = new Map(safeScores.map((score) => [`${score.reunion}-${score.course}`, score]));
+    const safeRaces = coerceRaceSummaries(races);
+    const rows = sortFeaturedRaces(buildFeaturedRaces(safeRaces, map), sortMode);
+    return {
+      scoresMap: map,
+      featuredRaces: asArray<FeaturedRace>(rows),
+    };
+  }, [races, scores, sortMode, selectedDate]);
 
   const navigateToRace = useCallback(
     (race: RaceSummary) => {
@@ -440,12 +498,12 @@ function PageContent() {
   const topParisItems = useMemo(() => getTopParisItems(featuredRaces, navigateToRace), [featuredRaces, navigateToRace]);
 
   const summaryStats = useMemo(() => {
-    const meetings = new Set((races ?? []).map((race) => race.reunion)).size;
-    const playable = (featuredRaces ?? []).filter((item) => item.status === "jouable").length;
-    const hot = (featuredRaces ?? []).filter((item) => item.confidence >= 8).length;
-    const closingSoon = (featuredRaces ?? []).filter(
-      (item) => item.status !== "resultat" && item.minutesUntilStart <= 60
-    ).length;
+    const raceList = coerceRaceSummaries(races);
+    const meetings = new Set(raceList.map((race) => race.reunion)).size;
+    const fr = asArray<FeaturedRace>(featuredRaces);
+    const playable = fr.filter((item) => item.status === "jouable").length;
+    const hot = fr.filter((item) => item.confidence >= 8).length;
+    const closingSoon = fr.filter((item) => item.status !== "resultat" && item.minutesUntilStart <= 60).length;
 
     return { meetings, playable, hot, closingSoon };
   }, [featuredRaces, races]);
@@ -457,7 +515,7 @@ function PageContent() {
           <div className="space-y-5">
             <div className="space-y-3">
               <p className="app-kicker">Radar public + premium</p>
-              <h1 className="max-w-4xl text-4xl font-black leading-[0.94] tracking-tight text-white md:text-6xl">
+              <h1 className="max-w-4xl text-4xl font-black leading-[0.94] tracking-tight text-[var(--pmu-text)] md:text-6xl">
                 Une console nette pour repérer les bonnes courses, filtrer vite et jouer seulement quand le signal est propre.
               </h1>
               <p className="max-w-3xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
@@ -506,7 +564,7 @@ function PageContent() {
               },
             ].map((item) => (
               <div key={item.title} className="app-card-muted px-5 py-4">
-                <h2 className="text-lg font-bold text-white">{item.title}</h2>
+                <h2 className="text-lg font-bold text-[var(--pmu-text)]">{item.title}</h2>
                 <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">{item.text}</p>
               </div>
             ))}
@@ -517,12 +575,12 @@ function PageContent() {
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="app-card p-5">
           <p className="app-label">Date active</p>
-          <p className="mt-3 text-2xl font-black capitalize tracking-tight text-white">{formatRelativeDay(selectedDate)}</p>
+          <p className="mt-3 text-2xl font-black capitalize tracking-tight text-[var(--pmu-text)]">{formatRelativeDay(selectedDate)}</p>
           <p className="mt-1 text-sm text-[var(--pmu-text-muted)]">{formatDisplayDate(selectedDate)}</p>
         </div>
         <div className="app-card p-5">
           <p className="app-label">Programme</p>
-          <p className="mt-3 text-3xl font-black tracking-tight text-white">{races.length}</p>
+          <p className="mt-3 text-3xl font-black tracking-tight text-[var(--pmu-text)]">{races.length}</p>
           <p className="mt-1 text-sm text-[var(--pmu-text-muted)]">{summaryStats.meetings} réunions chargées</p>
         </div>
         <div className="app-card p-5">
@@ -532,7 +590,7 @@ function PageContent() {
         </div>
         <div className="app-card p-5">
           <p className="app-label">Départs proches</p>
-          <p className="mt-3 text-3xl font-black tracking-tight text-white">{summaryStats.closingSoon}</p>
+          <p className="mt-3 text-3xl font-black tracking-tight text-[var(--pmu-text)]">{summaryStats.closingSoon}</p>
           <p className="mt-1 text-sm text-[var(--pmu-text-muted)]">courses à moins d’une heure</p>
         </div>
       </section>
@@ -542,7 +600,7 @@ function PageContent() {
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
               <p className="app-kicker">Pilotage du jour</p>
-              <h2 className="mt-2 text-2xl font-black tracking-tight text-white md:text-3xl">{formatDisplayDate(selectedDate)}</h2>
+              <h2 className="mt-2 text-2xl font-black tracking-tight text-[var(--pmu-text)] md:text-3xl">{formatDisplayDate(selectedDate)}</h2>
               <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">
                 Change de journée sans quitter l’écran principal. Le tri et le radar se recalculent automatiquement.
               </p>
@@ -576,11 +634,11 @@ function PageContent() {
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div className="app-card-muted px-4 py-3">
               <p className="app-label">Pistes chaudes</p>
-              <p className="mt-2 text-xl font-black text-white">{summaryStats.hot}</p>
+              <p className="mt-2 text-xl font-black text-[var(--pmu-text)]">{summaryStats.hot}</p>
             </div>
             <div className="app-card-muted px-4 py-3">
               <p className="app-label">Tri actif</p>
-              <p className="mt-2 text-xl font-black text-white">
+              <p className="mt-2 text-xl font-black text-[var(--pmu-text)]">
                 {SORT_OPTIONS.find((option) => option.value === sortMode)?.label ?? "Par heure"}
               </p>
             </div>
@@ -616,7 +674,7 @@ function PageContent() {
       </section>
 
       {error ? (
-        <section className="app-card border-[rgba(255,92,92,0.26)] p-6">
+        <section className="app-card border-[rgba(225,29,72,0.25)] p-6">
           <p className="text-lg font-bold text-[var(--pmu-red)]">Impossible de charger la page Courses</p>
           <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">{error}</p>
         </section>
@@ -625,14 +683,14 @@ function PageContent() {
       {isLoading ? (
         <section className="grid gap-5">
           {(Array.from({ length: 5 }) ?? []).map((_, index) => (
-            <div key={index} className="app-card h-52 animate-pulse bg-[linear-gradient(180deg,#131313_0%,#0f0f0f_100%)]" />
+            <div key={index} className="app-card h-52 animate-pulse bg-[linear-gradient(180deg,#eef2f7_0%,#e2e8f0_100%)]" />
           ))}
         </section>
       ) : null}
 
-      {!isLoading && !error && featuredRaces.length ? (
+      {!isLoading && !error && asArray<FeaturedRace>(featuredRaces).length ? (
         <section className="grid gap-5 2xl:grid-cols-2">
-          {(featuredRaces ?? []).map((item) => (
+          {asArray<FeaturedRace>(featuredRaces).map((item) => (
             <CourseCard
               key={`${item.race.reunion}-${item.race.course}`}
               timeLabel={item.race.heureDepart}
@@ -654,7 +712,7 @@ function PageContent() {
 
       {!isLoading && !error && !featuredRaces.length ? (
         <section className="app-card p-8 text-center">
-          <p className="text-xl font-bold text-white">Aucune course exploitable pour cette date</p>
+          <p className="text-xl font-bold text-[var(--pmu-text)]">Aucune course exploitable pour cette date</p>
           <p className="mt-3 text-sm leading-6 text-[var(--pmu-text-soft)]">
             Change de journée ou recharge la page. Le moteur n’a pas encore remonté de programme utilisable.
           </p>

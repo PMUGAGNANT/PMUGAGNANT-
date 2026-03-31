@@ -6,8 +6,8 @@ type ConfidenceBadgeProps = {
 function getTone(score: number) {
   if (score >= 8) {
     return {
-      ring: "border-[rgba(0,255,136,0.28)]",
-      bg: "bg-[rgba(0,255,136,0.12)]",
+      ring: "border-[rgba(13,148,136,0.35)]",
+      bg: "bg-[rgba(13,148,136,0.1)]",
       text: "text-[var(--pmu-primary)]",
       dot: "bg-[var(--pmu-primary)]",
     };
@@ -15,16 +15,16 @@ function getTone(score: number) {
 
   if (score >= 6) {
     return {
-      ring: "border-[rgba(255,181,71,0.28)]",
-      bg: "bg-[rgba(255,181,71,0.12)]",
+      ring: "border-[rgba(217,119,6,0.3)]",
+      bg: "bg-[rgba(217,119,6,0.1)]",
       text: "text-[var(--pmu-orange)]",
       dot: "bg-[var(--pmu-orange)]",
     };
   }
 
   return {
-    ring: "border-[rgba(255,92,92,0.28)]",
-    bg: "bg-[rgba(255,92,92,0.12)]",
+    ring: "border-[rgba(225,29,72,0.28)]",
+    bg: "bg-[rgba(225,29,72,0.08)]",
     text: "text-[var(--pmu-red)]",
     dot: "bg-[var(--pmu-red)]",
   };

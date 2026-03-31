@@ -33,12 +33,12 @@ export function BottomNav() {
               href={item.href}
               className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-3 text-[11px] font-semibold transition ${
                 active
-                  ? "bg-[rgba(0,255,136,0.12)] text-[var(--pmu-primary)]"
+                  ? "bg-[rgba(13,148,136,0.12)] text-[var(--pmu-primary)]"
                   : "text-[var(--pmu-text-muted)]"
               }`}
             >
               <span
-                className={`h-2 w-2 rounded-full ${active ? "bg-[var(--pmu-primary)]" : "bg-[#111111]"}`}
+                className={`h-2 w-2 rounded-full ${active ? "bg-[var(--pmu-primary)]" : "bg-[var(--pmu-border-strong)]"}`}
               />
               <span>{item.label}</span>
             </Link>

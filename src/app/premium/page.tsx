@@ -73,23 +73,23 @@ export default function PremiumPage() {
           "radial-gradient(circle at top left, rgba(0,132,61,0.16), transparent 24%), radial-gradient(circle at top right, rgba(18,183,106,0.12), transparent 20%), linear-gradient(180deg, #f6f8f9 0%, #edf2f3 100%)",
       }}
     >
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[rgba(18,22,26,0.88)] backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-[var(--pmu-border)] bg-[rgba(255,255,255,0.92)] backdrop-blur-xl">
         <div className="app-shell flex h-[72px] items-center justify-between gap-4">
           <button
             onClick={() => router.push("/")}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xl font-black text-white transition hover:bg-white/14"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] text-xl font-black text-[var(--pmu-text)] transition hover:bg-[var(--pmu-surface-highlight)]"
           >
             {"<"}
           </button>
           <div className="text-center">
-            <div className="text-[22px] font-black tracking-[-0.03em] text-white">PMU AI Premium</div>
-            <div className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#6CE4A0]">
+            <div className="text-[22px] font-black tracking-[-0.03em] text-[var(--pmu-text)]">PMU AI Premium</div>
+            <div className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[var(--pmu-primary)]">
               Pronostics complets
             </div>
           </div>
           <Link
             href="/login?redirect=/mes-paris"
-            className="rounded-full bg-[#6CE4A0] px-4 py-2 text-xs font-black text-[#102419] transition hover:bg-[#5bd08e]"
+            className="rounded-full bg-[var(--pmu-primary)] px-4 py-2 text-xs font-black text-white transition hover:opacity-90"
           >
             Se connecter
           </Link>
@@ -97,39 +97,39 @@ export default function PremiumPage() {
       </header>
 
       <main className="app-shell grid gap-6 py-6 md:py-8">
-        <section className="grid gap-5 overflow-hidden rounded-[36px] bg-[linear-gradient(135deg,#132126,#18242a)] p-5 text-white shadow-[0_30px_60px_rgba(15,23,42,0.18)] md:grid-cols-[minmax(0,1.15fr)_minmax(0,360px)] md:p-8">
+        <section className="premium-surface grid gap-5 overflow-hidden rounded-[36px] p-5 md:grid-cols-[minmax(0,1.15fr)_minmax(0,360px)] md:p-8">
           <div className="grid gap-5">
             <div>
-              <div className="mb-3 inline-flex rounded-full bg-white/10 px-3 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#6CE4A0]">
+              <div className="mb-3 inline-flex rounded-full border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-2 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[var(--pmu-primary)]">
                 Offre premium
               </div>
-              <h1 className="max-w-3xl text-[30px] font-black leading-[0.98] tracking-[-0.05em] sm:text-[36px] md:text-[52px]">
+              <h1 className="max-w-3xl text-[30px] font-black leading-[0.98] tracking-[-0.05em] text-[var(--pmu-text)] sm:text-[36px] md:text-[52px]">
                 Tu ne paies pas pour voir plus de courses. Tu paies pour jouer moins, mais mieux.
               </h1>
-              <p className="mt-4 max-w-2xl text-[15px] leading-7 text-white/76 md:text-[17px]">
+              <p className="mt-4 max-w-2xl text-[15px] leading-7 text-[var(--pmu-text-soft)] md:text-[17px]">
                 PMU AI Premium filtre le bruit, garde les spots exploitables et transforme l&apos;analyse brute
                 en decisions claires: value bet, mise conseillee, ticket recommande et course a eviter.
               </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              <div className="rounded-[26px] border border-white/10 bg-white/8 p-4">
-                <div className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#6CE4A0]">
+              <div className="rounded-[26px] border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] p-4">
+                <div className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[var(--pmu-primary)]">
                   Ce que tu vois
                 </div>
-                <div className="mt-2 text-[18px] font-black">Value bets, tickets, mises et alertes</div>
+                <div className="mt-2 text-[18px] font-black text-[var(--pmu-text)]">Value bets, tickets, mises et alertes</div>
               </div>
-              <div className="rounded-[26px] border border-white/10 bg-white/8 p-4">
-                <div className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#6CE4A0]">
+              <div className="rounded-[26px] border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] p-4">
+                <div className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[var(--pmu-primary)]">
                   Ce que tu gagnes
                 </div>
-                <div className="mt-2 text-[18px] font-black">Moins de bruit, plus de discipline</div>
+                <div className="mt-2 text-[18px] font-black text-[var(--pmu-text)]">Moins de bruit, plus de discipline</div>
               </div>
-              <div className="rounded-[26px] border border-white/10 bg-white/8 p-4">
-                <div className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#6CE4A0]">
+              <div className="rounded-[26px] border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] p-4">
+                <div className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[var(--pmu-primary)]">
                   Ce que tu evites
                 </div>
-                <div className="mt-2 text-[18px] font-black">Les faux spots et les tickets inutiles</div>
+                <div className="mt-2 text-[18px] font-black text-[var(--pmu-text)]">Les faux spots et les tickets inutiles</div>
               </div>
             </div>
           </div>
@@ -196,16 +196,16 @@ export default function PremiumPage() {
         </section>
 
         <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.92fr)]">
-          <div className="dark-surface overflow-hidden rounded-[34px] p-6 text-white md:p-7">
-            <div className="text-[12px] font-extrabold uppercase tracking-[0.18em] text-[#6CE4A0]">
+          <div className="dark-surface overflow-hidden rounded-[34px] p-6 md:p-7">
+            <div className="text-[12px] font-extrabold uppercase tracking-[0.18em] text-[var(--pmu-primary)]">
               Pour qui
             </div>
-            <h2 className="mt-3 text-[28px] font-black leading-[1] tracking-[-0.04em] md:text-[30px]">
+            <h2 className="mt-3 text-[28px] font-black leading-[1] tracking-[-0.04em] text-[var(--pmu-text)] md:text-[30px]">
               Une offre utile si tu veux jouer avec un cadre, pas au feeling.
             </h2>
             <div className="mt-5 grid gap-3">
               {AUDIENCE_ITEMS.map((item) => (
-                <div key={item} className="rounded-[22px] border border-white/8 bg-white/8 px-4 py-3 text-sm font-semibold text-white/84">
+                <div key={item} className="rounded-[22px] border border-[var(--pmu-border)] bg-[var(--pmu-surface)] px-4 py-3 text-sm font-semibold text-[var(--pmu-text-soft)]">
                   {item}
                 </div>
               ))}
@@ -241,7 +241,7 @@ export default function PremiumPage() {
             </div>
             <Link
               href="/login?redirect=/mes-paris"
-              className="rounded-full bg-[#171b1f] px-5 py-3 text-sm font-black text-white transition hover:bg-[#242a30]"
+              className="rounded-full bg-[var(--pmu-text)] px-5 py-3 text-sm font-black text-white transition hover:opacity-90"
             >
               Continuer vers l&apos;offre
             </Link>

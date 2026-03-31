@@ -2,6 +2,7 @@
 
 import { type ReactNode, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { asArray } from "@/lib/array-utils";
 import { fromIsoDate, getTodayDateStr, parsePmuDate } from "@/lib/date-utils";
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 import type { RaceAnalysis, RaceSummary, ScoredParticipant } from "@/lib/types";
@@ -33,21 +34,25 @@ interface RaceApiResponse {
   error?: string;
 }
 
-/* ─── Palette ─────────────────────────────────────────── */
-const G = "#00C06A";        // green accent
-const G_DIM = "#00C06A22";  // green translucent
-const DARK = "#0D1117";     // page bg
-const CARD = "#161B22";     // card bg
-const CARD2 = "#1C2330";    // lighter card
-const BORDER = "#30363D";   // borders
-const MUTED = "#7D8590";    // muted text
-const WHITE = "#E6EDF3";    // primary text
-const GOLD = "#E3A000";
-const GOLD_DIM = "#E3A00020";
-const RED = "#F85149";
-const RED_DIM = "#F8514920";
-const BLUE = "#388BFD";
-const BLUE_DIM = "#388BFD20";
+/* ─── Palette (mode clair, teal pro) ─────────────────── */
+const G = "#0d9488";
+const G_DIM = "rgba(13, 148, 136, 0.12)";
+const DARK = "#f0f4f9";
+const DARK_GLASS = "rgba(255, 255, 255, 0.88)";
+const CARD = "#ffffff";
+const CARD2 = "#f8fafc";
+const CARD_HI = "#f1f5f9";
+const BORDER = "rgba(15, 23, 42, 0.1)";
+const BORDER_SOFT = "rgba(15, 23, 42, 0.06)";
+const MUTED = "#64748b";
+const WHITE = "#0f172a";
+const GOLD = "#d97706";
+const GOLD_DIM = "rgba(217, 119, 6, 0.1)";
+const RED = "#e11d48";
+const RED_DIM = "rgba(225, 29, 72, 0.1)";
+const BLUE = "#2563eb";
+const BLUE_DIM = "rgba(37, 99, 235, 0.1)";
+const VIOLET = "#7c3aed";
 
 /* ─── Helpers (identiques) ─────────────────────────────── */
 function round1(v: number) { return Math.round(v * 10) / 10; }
@@ -261,10 +266,15 @@ function buildContextHighlights(data: RaceApiResponse, analysis: RaceAnalysis | 
   return items;
 }
 
+function formatDaySignalTitle(label: string) {
+  const s = label.replaceAll("_", " ").toLowerCase();
+  return s.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 /* ─── Primitives UI ────────────────────────────────────── */
 
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800;900&family=DM+Sans:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -279,12 +289,20 @@ const css = `
     --gold: ${GOLD};
     --red: ${RED};
     --blue: ${BLUE};
-    --font-display: 'Syne', sans-serif;
-    --font-body: 'DM Sans', sans-serif;
-    --font-mono: 'DM Mono', monospace;
+    --violet: ${VIOLET};
+    --font-display: 'Outfit', system-ui, sans-serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   }
 
-  body { background: var(--dark); color: var(--white); font-family: var(--font-body); }
+  .course-detail-shell {
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse 85% 52% at 50% -28%, rgba(13, 148, 136, 0.1), transparent 56%),
+      radial-gradient(ellipse 68% 42% at 98% 8%, rgba(37, 99, 235, 0.06), transparent 52%),
+      radial-gradient(ellipse 48% 32% at 2% 88%, rgba(124, 58, 237, 0.05), transparent 48%),
+      var(--dark);
+  }
 
   .shimmer {
     background: linear-gradient(90deg, ${CARD} 25%, ${CARD2} 50%, ${CARD} 75%);
@@ -302,7 +320,7 @@ const css = `
     to   { opacity: 1; transform: translateY(0); }
   }
 
-  .fade-up { animation: fadeUp 0.4s ease forwards; }
+  .fade-up { animation: fadeUp 0.45s ease forwards; }
 
   .bar-fill {
     height: 100%;
@@ -317,10 +335,12 @@ function Tag({ children, color = WHITE, bg = CARD2, mono = false }: { children: 
   return (
     <span style={{
       display: "inline-flex", alignItems: "center",
-      padding: "5px 10px", borderRadius: 6,
-      background: bg, color, fontSize: 11, fontWeight: 700,
-      letterSpacing: "0.05em", textTransform: "uppercase",
+      padding: "5px 11px", borderRadius: 9999,
+      background: bg, color, fontSize: 10, fontWeight: 600,
+      letterSpacing: "0.06em", textTransform: "uppercase",
       fontFamily: mono ? "var(--font-mono)" : "var(--font-body)",
+      border: `1px solid ${BORDER_SOFT}`,
+      boxShadow: "0 1px 2px rgba(0,0,0,0.12)",
     }}>
       {children}
     </span>
@@ -330,10 +350,11 @@ function Tag({ children, color = WHITE, bg = CARD2, mono = false }: { children: 
 function Card({ children, accent, style }: { children: ReactNode; accent?: string; style?: React.CSSProperties }) {
   return (
     <div style={{
-      background: CARD,
-      borderRadius: 12,
+      background: `linear-gradient(165deg, ${CARD_HI}f0 0%, ${CARD} 48%, ${CARD} 100%)`,
+      borderRadius: 16,
       border: `1px solid ${accent ?? BORDER}`,
       overflow: "hidden",
+      boxShadow: `0 20px 48px rgba(2, 6, 23, 0.45), 0 0 0 1px rgba(45, 212, 191, 0.04)`,
       ...style,
     }}>
       {children}
@@ -344,17 +365,17 @@ function Card({ children, accent, style }: { children: ReactNode; accent?: strin
 function SectionCard({ title, kicker, children, accent }: { title: string; kicker?: string; children: ReactNode; accent?: string }) {
   return (
     <Card accent={accent} style={{ marginBottom: 0 }}>
-      <div style={{ padding: "20px 20px 0" }}>
+      <div style={{ padding: "22px 22px 0" }}>
         {kicker && (
-          <div style={{ fontSize: 10, fontWeight: 700, color: G, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 6 }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: G, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8, opacity: 0.95 }}>
             {kicker}
           </div>
         )}
-        <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 800, color: WHITE, marginBottom: 16, lineHeight: 1.2 }}>
+        <div style={{ fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 700, color: WHITE, marginBottom: 16, lineHeight: 1.25, letterSpacing: "-0.02em" }}>
           {title}
         </div>
       </div>
-      <div style={{ padding: "0 20px 20px" }}>
+      <div style={{ padding: "0 22px 22px" }}>
         {children}
       </div>
     </Card>
@@ -387,8 +408,8 @@ function ConfidenceBar({ score }: { score: number }) {
         <span style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "var(--font-mono)" }}>Confiance</span>
         <span style={{ fontSize: 12, fontWeight: 700, color, fontFamily: "var(--font-mono)" }}>{score}/10</span>
       </div>
-      <div style={{ height: 4, borderRadius: 999, background: BORDER, overflow: "hidden" }}>
-        <div className="bar-fill" style={{ width: getConfidenceFill(score), background: color }} />
+      <div style={{ height: 6, borderRadius: 999, background: `${DARK}cc`, border: `1px solid ${BORDER_SOFT}`, overflow: "hidden" }}>
+        <div className="bar-fill" style={{ width: getConfidenceFill(score), background: `linear-gradient(90deg, ${color}cc, ${color})` }} />
       </div>
     </div>
   );
@@ -427,9 +448,12 @@ function BetPlanRow({ label, summary }: { label: string; summary: { chevaux: num
 function RunnerBadge({ num, accent = CARD2 }: { num: number; accent?: string }) {
   return (
     <div style={{
-      width: 44, height: 44, borderRadius: 8, flexShrink: 0,
-      background: accent, display: "flex", alignItems: "center", justifyContent: "center",
-      fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 900, color: WHITE,
+      width: 46, height: 46, borderRadius: 12, flexShrink: 0,
+      background: `linear-gradient(145deg, ${accent}, ${CARD})`,
+      border: `1px solid ${BORDER}`,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 800, color: WHITE,
+      boxShadow: "0 6px 16px rgba(2,6,23,0.35)",
     }}>
       {num}
     </div>
@@ -445,9 +469,9 @@ function TicketPanel({ title, subtitle, runner, badge, accent, placeMode = false
   const actionTone = getActionTone(runner.prediction.action, runner.prediction.valueBet);
 
   return (
-    <div style={{ borderRadius: 10, border: `1px solid ${accent}66`, overflow: "hidden" }}>
+    <div style={{ borderRadius: 14, border: `1px solid ${accent}40`, overflow: "hidden", boxShadow: "0 12px 32px rgba(2,6,23,0.35)" }}>
       {/* Header strip */}
-      <div style={{ padding: "10px 14px", background: `${accent}18`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ padding: "12px 16px", background: `linear-gradient(90deg, ${accent}22, ${accent}0d)`, display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${BORDER_SOFT}` }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: accent, textTransform: "uppercase", letterSpacing: "0.1em" }}>{title}</span>
         <Tag color={accent} bg={`${accent}20`}>{badge}</Tag>
       </div>
@@ -494,9 +518,9 @@ function SecondaryRunnerCard({ title, runner, accent, placeMode = false, arrival
   const actionTone = getActionTone(runner.prediction.action, runner.prediction.valueBet);
 
   return (
-    <div style={{ padding: 14, borderRadius: 10, background: CARD2, border: `1px solid ${BORDER}` }}>
+    <div style={{ padding: 16, borderRadius: 14, background: `linear-gradient(165deg, ${CARD2}, ${CARD})`, border: `1px solid ${BORDER}`, boxShadow: "0 10px 28px rgba(2,6,23,0.32)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-        <span style={{ fontSize: 10, color: accent, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>{title}</span>
+        <span style={{ fontSize: 10, color: accent, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em" }}>{title}</span>
         {arrivalPosition !== undefined && (
           <Tag color={outcome.color} bg={outcome.bg}>{arrivalPosition ? `${outcome.label} ${formatPosition(arrivalPosition)}` : outcome.label}</Tag>
         )}
@@ -584,7 +608,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
   /* Loading skeleton */
   if (loading) {
     return (
-      <div style={{ maxWidth: 960, margin: "0 auto", minHeight: "100vh", background: DARK, padding: "0 16px" }}>
+      <div className="course-detail-shell" style={{ maxWidth: 960, margin: "0 auto", padding: "0 16px" }}>
         <style>{css}</style>
         <div style={{ height: 60, background: CARD, borderBottom: `1px solid ${BORDER}`, marginBottom: 20 }} />
         {[230, 120, 120, 180, 160].map((h, i) => (
@@ -597,14 +621,14 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
   /* Error state */
   if (error || !data) {
     return (
-      <div style={{ maxWidth: 960, margin: "0 auto", minHeight: "100vh", background: DARK, padding: "0 16px" }}>
+      <div className="course-detail-shell" style={{ maxWidth: 960, margin: "0 auto", padding: "0 16px" }}>
         <style>{css}</style>
         <div style={{ height: 60, background: CARD, borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
           <span style={{ color: WHITE, fontFamily: "var(--font-display)", fontWeight: 800 }}>Analyse course</span>
         </div>
         <SectionCard title="Analyse indisponible" kicker="Erreur">
           <p style={{ fontSize: 14, color: MUTED, marginBottom: 16 }}>{error || "La course n'a pas pu être chargée."}</p>
-          <button onClick={() => router.push(`/?date=${selectedDate}`)} style={{ width: "100%", padding: "14px 0", borderRadius: 8, border: "none", background: G, color: DARK, fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
+          <button onClick={() => router.push(`/?date=${selectedDate}`)} style={{ width: "100%", padding: "14px 0", borderRadius: 8, border: "none", background: G, color: "#ffffff", fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
             ← Retour aux courses
           </button>
         </SectionCard>
@@ -614,13 +638,13 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
 
   /* ─── Render ─── */
   return (
-    <div style={{ maxWidth: 960, margin: "0 auto", minHeight: "100vh", background: DARK, paddingBottom: 90 }}>
+    <div className="course-detail-shell" style={{ maxWidth: 960, margin: "0 auto", paddingBottom: 90 }}>
       <style>{css}</style>
 
       {/* Top nav */}
       <div style={{
         position: "sticky", top: 0, zIndex: 80, height: 60,
-        background: `${DARK}EE`, backdropFilter: "blur(18px)",
+        background: DARK_GLASS, backdropFilter: "blur(20px)",
         borderBottom: `1px solid ${BORDER}`,
         display: "flex", alignItems: "center", justifyContent: "center",
         padding: "0 16px",
@@ -632,7 +656,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
         }}>
           ←
         </button>
-        <span style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 800, color: WHITE, letterSpacing: "0.02em" }}>
+        <span style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 700, color: WHITE, letterSpacing: "-0.01em" }}>
           R{data.courseInfo.reunion}C{data.courseInfo.course} — {data.courseInfo.hippodrome}
         </span>
       </div>
@@ -645,7 +669,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
             <div style={{ fontSize: 10, fontWeight: 700, color: G, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 8 }}>
               Lecture course
             </div>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 28, fontWeight: 900, color: WHITE, lineHeight: 1.1, marginBottom: 6 }}>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 700, color: WHITE, lineHeight: 1.15, marginBottom: 6, letterSpacing: "-0.02em" }}>
               {data.courseInfo.nomCourse}
             </div>
             <div style={{ fontSize: 13, color: MUTED, marginBottom: 16 }}>
@@ -720,7 +744,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
             )}
             <button onClick={() => router.push("/login?redirect=/mes-paris")} style={{
               width: "100%", padding: "14px 0", borderRadius: 8, border: "none",
-              background: G, color: DARK, fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 14, cursor: "pointer",
+              background: G, color: "#ffffff", fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 14, cursor: "pointer",
             }}>
               Se connecter et s&apos;abonner
             </button>
@@ -792,7 +816,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                 </div>
                 {(simpleTicket.prediction.topFacteurs ?? []).length > 0 && (
                   <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", gap: 6 }}>
-                    {(simpleTicket.prediction.topFacteurs ?? []).map(f => <Tag key={f} color={G} bg={G_DIM}>{f}</Tag>)}
+                    {asArray<string>(simpleTicket.prediction.topFacteurs).map((f) => <Tag key={f} color={G} bg={G_DIM}>{f}</Tag>)}
                   </div>
                 )}
               </SectionCard>
@@ -822,8 +846,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                       border: `1px solid ${daySignal.label === "JOURNEE_FAVORABLE" ? `${G}44` : daySignal.label === "JOURNEE_DEFAVORABLE" ? `${RED}44` : BORDER}`,
                     }}>
                       <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Indicateur journée</div>
-                      <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 800, color: WHITE, marginBottom: 6 }}>
-                        {daySignal.label.replaceAll("_", " ")}
+                      <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700, color: WHITE, marginBottom: 6, letterSpacing: "-0.02em" }}>
+                        {formatDaySignalTitle(daySignal.label)}
                       </div>
                       <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: MUTED, marginBottom: 8 }}>Score {daySignal.score}/100</div>
                       {daySignal.raisons.map(r => <div key={r} style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{r}</div>)}
@@ -903,7 +927,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                     <div style={{ fontSize: 11, fontWeight: 700, color: G, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>✓ Ce qui tient</div>
                     <div style={{ display: "grid", gap: 8 }}>
                       {strengths.length > 0 ? strengths.map(p => (
-                        <div key={p} style={{ padding: "10px 12px", borderRadius: 8, background: `${DARK}88`, border: `1px solid ${G}22`, fontSize: 13, color: WHITE, lineHeight: 1.5 }}>{p}</div>
+                        <div key={p} style={{ padding: "10px 12px", borderRadius: 8, background: CARD2, border: `1px solid ${G}33`, fontSize: 13, color: WHITE, lineHeight: 1.5 }}>{p}</div>
                       )) : <div style={{ fontSize: 13, color: MUTED }}>Aucun point fort franc ne ressort du moteur.</div>}
                     </div>
                   </div>
@@ -911,7 +935,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                     <div style={{ fontSize: 11, fontWeight: 700, color: GOLD, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>⚠ Ce qui force la prudence</div>
                     <div style={{ display: "grid", gap: 8 }}>
                       {warnings.length > 0 ? warnings.map(p => (
-                        <div key={p} style={{ padding: "10px 12px", borderRadius: 8, background: `${DARK}88`, border: `1px solid ${GOLD}22`, fontSize: 13, color: WHITE, lineHeight: 1.5 }}>{p}</div>
+                        <div key={p} style={{ padding: "10px 12px", borderRadius: 8, background: CARD2, border: `1px solid ${GOLD}33`, fontSize: 13, color: WHITE, lineHeight: 1.5 }}>{p}</div>
                       )) : <div style={{ fontSize: 13, color: MUTED }}>Pas d&apos;alerte majeure remontée par le moteur.</div>}
                     </div>
                   </div>
@@ -939,7 +963,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                           </div>
                           <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
                             <Tag color={at.color} bg={at.bg}>{at.label}</Tag>
-                            {(runner.prediction.topFacteurs ?? []).map(f => <Tag key={`${runner.numPmu}-${f}`} color={MUTED}>{f}</Tag>)}
+                            {asArray<string>(runner.prediction.topFacteurs).map((f) => <Tag key={`${runner.numPmu}-${f}`} color={MUTED}>{f}</Tag>)}
                           </div>
                           <div style={{ marginTop: 8 }}><ConfidenceBar score={runner.prediction.confiance} /></div>
                         </div>
@@ -958,7 +982,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
       <div style={{
         position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
         width: "100%", maxWidth: 960, height: 64,
-        background: `${DARK}EE`, backdropFilter: "blur(18px)",
+        background: DARK_GLASS, backdropFilter: "blur(20px)",
         borderTop: `1px solid ${BORDER}`,
         display: "flex", justifyContent: "space-around", alignItems: "center", zIndex: 120,
       }}>

@@ -6,7 +6,7 @@ type KpiCardProps = {
 };
 
 const toneMap: Record<NonNullable<KpiCardProps["tone"]>, string> = {
-  default: "text-white",
+  default: "text-[var(--pmu-text)]",
   success: "text-[var(--pmu-primary)]",
   warning: "text-[var(--pmu-orange)]",
 };

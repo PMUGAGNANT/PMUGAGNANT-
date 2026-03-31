@@ -1,21 +1,27 @@
 @import "tailwindcss";
 
 :root {
-  --pmu-bg: #0a0a0a;
-  --pmu-surface: #111111;
-  --pmu-surface-2: #161616;
-  --pmu-border: #1a1a1a;
-  --pmu-border-strong: #262626;
-  --pmu-primary: #00ff88;
-  --pmu-primary-soft: rgba(0, 255, 136, 0.16);
-  --pmu-primary-fade: rgba(0, 255, 136, 0.08);
-  --pmu-text: #ffffff;
-  --pmu-text-muted: #888888;
-  --pmu-text-soft: #b3b3b3;
-  --pmu-red: #ff5c5c;
-  --pmu-orange: #ffb547;
-  --pmu-blue: #5ca3ff;
-  --pmu-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  --pmu-bg: #f0f4f9;
+  --pmu-bg-mid: #e8eef6;
+  --pmu-surface: #ffffff;
+  --pmu-surface-2: #f8fafc;
+  --pmu-surface-highlight: #e2e8f0;
+  --pmu-border: rgba(15, 23, 42, 0.08);
+  --pmu-border-strong: rgba(15, 23, 42, 0.14);
+  --pmu-primary: #0d9488;
+  --pmu-primary-bright: #14b8a6;
+  --pmu-primary-soft: rgba(13, 148, 136, 0.12);
+  --pmu-primary-fade: rgba(13, 148, 136, 0.06);
+  --pmu-accent-blue: #2563eb;
+  --pmu-accent-violet: #7c3aed;
+  --pmu-text: #0f172a;
+  --pmu-text-muted: #64748b;
+  --pmu-text-soft: #475569;
+  --pmu-red: #e11d48;
+  --pmu-orange: #d97706;
+  --pmu-blue: #2563eb;
+  --pmu-shadow: 0 20px 48px rgba(15, 23, 42, 0.07);
+  --pmu-glow: 0 0 48px rgba(13, 148, 136, 0.06);
 }
 
 * {
@@ -31,8 +37,12 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background: #0a0a0a;
-  color: #ffffff;
+  background-color: var(--pmu-bg);
+  background-image:
+    radial-gradient(ellipse 85% 50% at 50% -20%, rgba(13, 148, 136, 0.09), transparent 55%),
+    radial-gradient(ellipse 65% 40% at 100% 0%, rgba(37, 99, 235, 0.06), transparent 50%),
+    radial-gradient(ellipse 50% 35% at 0% 90%, rgba(124, 58, 237, 0.04), transparent 45%);
+  color: var(--pmu-text);
   font-family: var(--font-manrope), "Inter", ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -45,10 +55,10 @@ body::before {
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
-  background-size: 32px 32px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.5), transparent 72%);
+    linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.12), transparent 75%);
 }
 
 a {
@@ -73,8 +83,8 @@ svg {
 }
 
 ::selection {
-  background: rgba(0, 255, 136, 0.24);
-  color: #04160d;
+  background: rgba(13, 148, 136, 0.2);
+  color: var(--pmu-text);
 }
 
 ::-webkit-scrollbar {
@@ -83,11 +93,11 @@ svg {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(15, 23, 42, 0.04);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(15, 23, 42, 0.18);
   border-radius: 999px;
 }
 
@@ -103,20 +113,20 @@ svg {
 }
 
 .app-surface {
-  background: linear-gradient(180deg, rgba(17, 17, 17, 0.98), rgba(12, 12, 12, 0.98));
+  background: linear-gradient(165deg, #ffffff 0%, #f8fafc 100%);
   border: 1px solid var(--pmu-border);
-  box-shadow: var(--pmu-shadow);
+  box-shadow: var(--pmu-shadow), var(--pmu-glow);
 }
 
 .app-card {
-  background: linear-gradient(180deg, rgba(19, 19, 19, 0.98), rgba(14, 14, 14, 0.98));
+  background: linear-gradient(165deg, #ffffff 0%, #fafbfd 100%);
   border: 1px solid var(--pmu-border);
   border-radius: 1.5rem;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.06), 0 0 0 1px rgba(13, 148, 136, 0.04);
 }
 
 .app-card-muted {
-  background: linear-gradient(180deg, rgba(22, 22, 22, 0.98), rgba(17, 17, 17, 0.98));
+  background: linear-gradient(165deg, #f8fafc 0%, #f1f5f9 100%);
   border: 1px solid var(--pmu-border);
   border-radius: 1.25rem;
 }
@@ -138,7 +148,7 @@ svg {
 }
 
 .app-hairline {
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--pmu-border);
 }
 
 .app-pill {
@@ -151,15 +161,15 @@ svg {
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--pmu-text-soft);
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.85);
   transition: all 180ms ease;
 }
 
 .app-pill--active {
   border-color: var(--pmu-primary);
-  color: #04160d;
-  background: var(--pmu-primary);
-  box-shadow: 0 0 0 1px rgba(0, 255, 136, 0.16), 0 10px 30px rgba(0, 255, 136, 0.22);
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--pmu-primary-bright), var(--pmu-primary));
+  box-shadow: 0 0 0 1px rgba(13, 148, 136, 0.15), 0 10px 28px rgba(13, 148, 136, 0.18);
 }
 
 .app-panel-grid {
@@ -173,18 +183,18 @@ svg {
   justify-content: center;
   gap: 0.6rem;
   border-radius: 999px;
-  border: 1px solid rgba(0, 255, 136, 0.3);
-  background: var(--pmu-primary);
-  color: #04160d;
+  border: 1px solid rgba(13, 148, 136, 0.35);
+  background: linear-gradient(135deg, var(--pmu-primary-bright), var(--pmu-primary));
+  color: #ffffff;
   padding: 0.95rem 1.35rem;
   font-weight: 700;
   transition: transform 180ms ease, box-shadow 180ms ease;
-  box-shadow: 0 16px 32px rgba(0, 255, 136, 0.22);
+  box-shadow: 0 12px 32px rgba(13, 148, 136, 0.22);
 }
 
 .app-button-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 20px 40px rgba(0, 255, 136, 0.28);
+  box-shadow: 0 16px 40px rgba(13, 148, 136, 0.26);
 }
 
 .app-button-secondary {
@@ -194,23 +204,25 @@ svg {
   gap: 0.6rem;
   border-radius: 999px;
   border: 1px solid var(--pmu-border-strong);
-  background: rgba(255, 255, 255, 0.03);
+  background: #ffffff;
   color: var(--pmu-text);
   padding: 0.9rem 1.2rem;
   font-weight: 700;
-  transition: border-color 180ms ease, transform 180ms ease;
+  transition: border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }
 
 .app-button-secondary:hover {
   transform: translateY(-1px);
-  border-color: rgba(0, 255, 136, 0.3);
+  border-color: rgba(13, 148, 136, 0.4);
+  box-shadow: 0 6px 20px rgba(13, 148, 136, 0.1);
 }
 
 .app-input {
   width: 100%;
   border-radius: 1rem;
-  border: 1px solid var(--pmu-border);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--pmu-border-strong);
+  background: #ffffff;
   color: var(--pmu-text);
   padding: 0.9rem 1rem;
   outline: none;
@@ -218,8 +230,8 @@ svg {
 }
 
 .app-input:focus {
-  border-color: rgba(0, 255, 136, 0.45);
-  box-shadow: 0 0 0 4px rgba(0, 255, 136, 0.1);
+  border-color: rgba(13, 148, 136, 0.5);
+  box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.12);
 }
 
 .app-table {
@@ -242,7 +254,7 @@ svg {
 }
 
 .app-table tbody tr {
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--pmu-border);
 }
 
 .app-grid-shell {
@@ -290,4 +302,17 @@ svg {
     max-width: none;
     padding: 2.25rem 2rem 3rem;
   }
+}
+
+/* Pages marketing (premium, etc.) */
+.premium-surface {
+  background: var(--pmu-surface);
+  border: 1px solid var(--pmu-border);
+  box-shadow: 0 12px 36px rgba(15, 23, 42, 0.06);
+}
+
+.dark-surface {
+  background: linear-gradient(165deg, var(--pmu-surface-2) 0%, #e2e8f033 100%);
+  border: 1px solid var(--pmu-border);
+  color: var(--pmu-text);
 }

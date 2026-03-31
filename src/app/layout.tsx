@@ -16,7 +16,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#1A1A1A",
+  themeColor: "#f0f4f9",
 };
 
 export default function RootLayout({
@@ -26,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
-      <body className={`${manrope.className} bg-[#0A0A0A] text-white min-h-screen`}>
+      <body className={`${manrope.className} min-h-screen text-[var(--pmu-text)] antialiased`}>
         <AppShell>{children}</AppShell>
       </body>
     </html>

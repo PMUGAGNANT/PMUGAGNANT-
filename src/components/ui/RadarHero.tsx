@@ -20,17 +20,17 @@ export function RadarHero({
   onClick,
 }: RadarHeroProps) {
   return (
-    <section className="overflow-hidden rounded-[2rem] border border-[rgba(0,255,136,0.16)] bg-[radial-gradient(circle_at_top_right,rgba(0,255,136,0.18),transparent_30%),linear-gradient(135deg,#0d1d16_0%,#0f1411_48%,#0a0a0a_100%)] p-6 shadow-[0_28px_72px_rgba(0,0,0,0.36)] md:p-8">
+    <section className="overflow-hidden rounded-[2rem] border border-[rgba(13,148,136,0.2)] bg-[radial-gradient(ellipse_75%_55%_at_100%_0%,rgba(13,148,136,0.12),transparent_50%),radial-gradient(ellipse_55%_40%_at_0%_100%,rgba(37,99,235,0.06),transparent_50%),linear-gradient(165deg,#ffffff_0%,#f8fafc_45%,#f1f5f9_100%)] p-6 shadow-[0_20px_50px_rgba(15,23,42,0.08)] md:p-8">
       <div className="grid gap-6 lg:grid-cols-[1.6fr,0.8fr] lg:items-end">
         <div className="space-y-4">
           <p className="app-kicker">Radar du jour</p>
           <div className="space-y-3">
-            <h1 className="max-w-3xl text-3xl font-black leading-[0.98] tracking-tight text-white md:text-5xl">
+            <h1 className="max-w-3xl text-3xl font-black leading-[0.98] tracking-tight text-[var(--pmu-text)] md:text-5xl">
               {title}
             </h1>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm font-medium text-[var(--pmu-text-soft)] md:text-base">
-              <span className="text-white">{hippodrome}</span>
-              <span className="h-1 w-1 rounded-full bg-[#111111]" />
+              <span className="text-[var(--pmu-text)]">{hippodrome}</span>
+              <span className="h-1 w-1 rounded-full bg-[var(--pmu-border-strong)]" />
               <span>{raceMeta}</span>
             </div>
           </div>
