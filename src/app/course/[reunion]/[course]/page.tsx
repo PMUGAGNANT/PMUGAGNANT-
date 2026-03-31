@@ -2,6 +2,7 @@
 
 import { type ReactNode, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { SEUIL_JOUABLE, SEUIL_SURVEILLANCE } from "@/lib/client-race-scoring";
 import { asArray } from "@/lib/array-utils";
 import { fromIsoDate, getTodayDateStr, parsePmuDate } from "@/lib/date-utils";
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
@@ -223,7 +224,7 @@ function buildVerdict(response: RaceApiResponse | null, analysis: RaceAnalysis |
     if (position !== null) return { title: "Ticket manqué", subtitle: `Le ticket principal N${simpleTicket.numPmu} termine ${formatPosition(position)}.`, label: "Bilan officiel" };
   }
 
-  if (recommendation === "PARI OFFENSIF" && confidence >= 7) return { title: "Ticket offensif", subtitle: `Le ticket principal ressort proprement avec ${confidence}/10 de confiance sur une course ${lisibilite.toLowerCase()}.`, label: "Verdict moteur" };
+  if (recommendation === "PARI OFFENSIF" && confidence >= SEUIL_JOUABLE) return { title: "Ticket offensif", subtitle: `Le ticket principal ressort proprement avec ${confidence}/10 de confiance sur une course ${lisibilite.toLowerCase()}.`, label: "Verdict moteur" };
   if (placeTicket && solidity >= 68) return { title: "Base place", subtitle: "Le moteur préfère une base place solide plutôt qu'une attaque gagnante trop agressive.", label: "Verdict moteur" };
   if (lisibilite === "LOTERIE") return { title: "Course à laisser", subtitle: "La course est trop ouverte pour sortir un vrai ticket propre.", label: "Verdict moteur" };
   if (recommendation === "SURVEILLANCE ACTIVE" || lisibilite === "COMPLEXE") return { title: "Lecture prudente", subtitle: "Le favori reste jouable, mais l'écart avec ses poursuivants est trop court pour valider un ticket offensif.", label: "Verdict moteur" };
@@ -805,7 +806,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                 )}
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <Metric label="Confiance IA" value={`${analysis.scoreConfiance?.score ?? 0}/10`} hint={analysis.prediction.decisionCourse === "VALIDE" ? "Ticket jouable" : "Lecture défensive"} tone={(analysis.scoreConfiance?.score ?? 0) >= 7 ? "good" : (analysis.scoreConfiance?.score ?? 0) >= 6 ? "warn" : "bad"} />
+                  <Metric label="Confiance IA" value={`${analysis.scoreConfiance?.score ?? 0}/10`} hint={analysis.prediction.decisionCourse === "VALIDE" ? "Ticket jouable" : "Lecture défensive"} tone={(analysis.scoreConfiance?.score ?? 0) >= SEUIL_JOUABLE ? "good" : (analysis.scoreConfiance?.score ?? 0) >= SEUIL_SURVEILLANCE ? "warn" : "bad"} />
                   <Metric label="Tenue repère" value={`${round1(analysis.soliditeFavori?.score ?? 0)}/100`} hint="Solidité du repère principal" tone={(analysis.soliditeFavori?.score ?? 0) >= 72 ? "good" : (analysis.soliditeFavori?.score ?? 0) >= 62 ? "warn" : "bad"} />
                   <Metric label="Angle de jeu" value={simpleTicket.prediction.action} hint={simpleTicket.prediction.valueBet ? "Value bet confirmé" : "Pas d'edge suffisant"} tone={simpleTicket.prediction.action === "MISER" ? "good" : "bad"} />
                   <Metric label="Lisibilité" value={analysis.prediction.lisibilite} hint={describeLisibilite(analysis.prediction.lisibilite)} tone={analysis.prediction.lisibilite === "LISIBLE" ? "good" : analysis.prediction.lisibilite === "COMPLEXE" ? "warn" : "bad"} />

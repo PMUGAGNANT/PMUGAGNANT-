@@ -1,10 +1,12 @@
+import { SEUIL_JOUABLE, SEUIL_SURVEILLANCE } from "@/lib/client-race-scoring";
+
 type ConfidenceBadgeProps = {
   score: number;
   compact?: boolean;
 };
 
 function getTone(score: number) {
-  if (score >= 8) {
+  if (score >= SEUIL_JOUABLE) {
     return {
       ring: "border-[rgba(13,148,136,0.35)]",
       bg: "bg-[rgba(13,148,136,0.1)]",
@@ -13,7 +15,7 @@ function getTone(score: number) {
     };
   }
 
-  if (score >= 6) {
+  if (score >= SEUIL_SURVEILLANCE) {
     return {
       ring: "border-[rgba(217,119,6,0.3)]",
       bg: "bg-[rgba(217,119,6,0.1)]",
@@ -23,10 +25,10 @@ function getTone(score: number) {
   }
 
   return {
-    ring: "border-[rgba(225,29,72,0.28)]",
-    bg: "bg-[rgba(225,29,72,0.08)]",
-    text: "text-[var(--pmu-red)]",
-    dot: "bg-[var(--pmu-red)]",
+    ring: "border-[rgba(100,116,139,0.35)]",
+    bg: "bg-[rgba(148,163,184,0.1)]",
+    text: "text-[#64748b]",
+    dot: "bg-[#94a3b8]",
   };
 }
 
@@ -40,7 +42,9 @@ export function ConfidenceBadge({ score, compact = false }: ConfidenceBadgeProps
       }`}
     >
       <span className={`h-2.5 w-2.5 rounded-full ${tone.dot}`} />
-      <span>Confiance {score.toFixed(1)}/10</span>
+      <span>
+        Confiance {Math.round(score * 10) / 10}/10
+      </span>
     </div>
   );
 }

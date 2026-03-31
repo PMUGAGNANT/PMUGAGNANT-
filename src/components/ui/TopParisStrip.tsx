@@ -24,7 +24,7 @@ export function TopParisStrip({ items }: TopParisStripProps) {
       <div className="app-section-heading">
         <div>
           <p className="app-kicker">Top 3 Paris du jour</p>
-          <h2 className="mt-2 text-2xl font-black tracking-tight text-[var(--pmu-text)]">Execution premium</h2>
+          <h2 className="mt-2 text-2xl font-black tracking-tight text-[var(--pmu-text)]">Uniquement JOUABLE</h2>
         </div>
         <span className="app-pill text-xs">3 priorites</span>
       </div>
@@ -59,7 +59,7 @@ export function TopParisStrip({ items }: TopParisStripProps) {
 
             <div className="mt-auto pt-6">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--pmu-text-muted)]">Mise conseillee</p>
-              <p className="mt-2 text-3xl font-black tracking-tight text-[var(--pmu-text)]">{item.stake}</p>
+              <p className="mt-2 text-3xl font-black tracking-tight text-[var(--pmu-primary)]">{item.stake}</p>
             </div>
           </button>
         ))}

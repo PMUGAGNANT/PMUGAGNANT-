@@ -15,6 +15,12 @@ import {
   toIsoDate,
 } from "@/lib/date-utils";
 import { asArray } from "@/lib/array-utils";
+import {
+  computeClientRaceScore,
+  formatBetTypeLabelFr,
+  SEUIL_JOUABLE,
+  type ApiRaceScoreLite,
+} from "@/lib/client-race-scoring";
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 import type { Lisibilite, PredictionDecision, RaceSummary } from "@/lib/types";
 
@@ -104,8 +110,12 @@ type FeaturedRace = {
   minutesUntilStart: number;
   noteLabel: string;
   confidence: number;
-  status: "jouable" | "surveillance" | "resultat";
+  status: "jouable" | "surveillance" | "passer" | "resultat";
+  /** Texte carte programme */
   reason: string;
+  /** Phrase radar (confiance / contexte) */
+  radarSentence: string;
+  radarRatio: number;
 };
 
 const SORT_OPTIONS: Array<{ value: SortMode; label: string }> = [
@@ -228,20 +238,18 @@ function getStageLabel(stage?: ScoreStage) {
   }
 }
 
-function getStatusFromScore(score?: RaceScore): "jouable" | "surveillance" | "resultat" {
+function toApiRaceScoreLite(score: RaceScore | undefined): ApiRaceScoreLite | undefined {
   if (!score) {
-    return "surveillance";
+    return undefined;
   }
-
-  if (score.stage === "finished") {
-    return "resultat";
-  }
-
-  if (score.playable && score.decision === "VALIDE") {
-    return "jouable";
-  }
-
-  return "surveillance";
+  return {
+    score: score.score,
+    stage: score.stage,
+    lisibilite: score.lisibilite,
+    decision: score.decision,
+    playable: score.playable,
+    pick: score.pick ?? null,
+  };
 }
 
 function getPickLabel(score?: RaceScore) {
@@ -255,7 +263,7 @@ function getPickLabel(score?: RaceScore) {
 }
 
 function getBetTypeLabel(score?: RaceScore) {
-  return score?.pick?.betType ? score.pick.betType.replaceAll("_", " ") : "Lecture premium";
+  return formatBetTypeLabelFr(score?.pick?.betType ?? null);
 }
 
 function getRaceHint(race: RaceSummary, score?: RaceScore) {
@@ -283,18 +291,20 @@ function buildFeaturedRaces(races: unknown, scoresMap: Map<string, RaceScore>) {
   return list.map((race) => {
     const key = `${race.reunion}-${race.course}`;
     const score = scoresMap.get(key);
-    const scoreValue = score?.score ?? 0;
     const minutesUntilStart = Math.max(0, Math.round(getMinutesUntilStart(race.heureDepart, race.dateStr)));
+    const client = computeClientRaceScore(race, toApiRaceScoreLite(score), minutesUntilStart);
 
     return {
       race,
       score,
-      scoreValue,
+      scoreValue: client.displayScore,
       minutesUntilStart,
       noteLabel: getStageLabel(score?.stage),
-      confidence: scoreValue,
-      status: getStatusFromScore(score),
+      confidence: client.displayScore,
+      status: client.playTier,
       reason: getRaceHint(race, score),
+      radarSentence: client.radarSentence,
+      radarRatio: client.radarRatio,
     } satisfies FeaturedRace;
   });
 }
@@ -316,28 +326,19 @@ function sortFeaturedRaces(items: FeaturedRace[], sortMode: SortMode) {
 }
 
 function getRadarRace(items: FeaturedRace[]) {
-  const list = asArray<FeaturedRace>(items);
-  const priorityPlayable = list.find(
-    (item) => item.status === "jouable" && item.score?.decision === "VALIDE"
-  );
-
-  return priorityPlayable ?? list.find((item) => item.status !== "resultat") ?? list[0] ?? null;
+  const list = asArray<FeaturedRace>(items).filter((item) => item.status !== "resultat");
+  if (list.length === 0) {
+    return asArray<FeaturedRace>(items)[0] ?? null;
+  }
+  const jouables = list.filter((item) => item.status === "jouable");
+  const pool = jouables.length > 0 ? jouables : list;
+  return pool.reduce((best, cur) => (cur.radarRatio > best.radarRatio ? cur : best), pool[0]!);
 }
 
 function getTopParisItems(items: FeaturedRace[], navigate: (race: RaceSummary) => void): TopParisItem[] {
   return asArray<FeaturedRace>(items)
-    .filter((item) => item.status !== "resultat")
-    .sort((a, b) => {
-      if (a.status === "jouable" && b.status !== "jouable") {
-        return -1;
-      }
-
-      if (a.status !== "jouable" && b.status === "jouable") {
-        return 1;
-      }
-
-      return b.scoreValue - a.scoreValue;
-    })
+    .filter((item) => item.status === "jouable" && item.confidence >= SEUIL_JOUABLE)
+    .sort((a, b) => b.confidence - a.confidence)
     .slice(0, 3)
     .map((item, index) => ({
       rank: index + 1,
@@ -346,8 +347,8 @@ function getTopParisItems(items: FeaturedRace[], navigate: (race: RaceSummary) =
       horse: getPickLabel(item.score),
       stake: formatStake(item.score?.pick?.confidence ? Math.max(6, Math.round(item.score.pick.confidence * 2.5)) : 8),
       betType: getBetTypeLabel(item.score),
-      confidence: item.confidence || 5,
-      sourceLabel: item.score?.playable ? "Signal validé" : "Lecture auto",
+      confidence: item.confidence,
+      sourceLabel: "JOUABLE — ticket direct",
       onClick: () => navigate(item.race),
     }));
 }
@@ -502,7 +503,7 @@ function PageContent() {
     const meetings = new Set(raceList.map((race) => race.reunion)).size;
     const fr = asArray<FeaturedRace>(featuredRaces);
     const playable = fr.filter((item) => item.status === "jouable").length;
-    const hot = fr.filter((item) => item.confidence >= 8).length;
+    const hot = fr.filter((item) => item.confidence >= SEUIL_JOUABLE).length;
     const closingSoon = fr.filter((item) => item.status !== "resultat" && item.minutesUntilStart <= 60).length;
 
     return { meetings, playable, hot, closingSoon };
@@ -651,14 +652,21 @@ function PageContent() {
           title={`R${radarRace.race.reunion}C${radarRace.race.course} - ${radarRace.race.nomCourse}`}
           hippodrome={radarRace.race.hippodrome}
           raceMeta={formatRaceMeta(radarRace.race)}
-          confidence={radarRace.confidence || 5}
-          summary={radarRace.reason}
-          ctaLabel="Voir le ticket complet"
+          confidence={radarRace.confidence}
+          summary={radarRace.radarSentence}
+          ctaLabel="Voir le ticket"
           onClick={() => navigateToRace(radarRace.race)}
         />
       ) : null}
 
       {topParisItems.length ? <TopParisStrip items={topParisItems} /> : null}
+
+      {!isLoading && !error && featuredRaces.length > 0 && topParisItems.length === 0 ? (
+        <section className="app-card p-5 text-sm leading-6 text-[var(--pmu-text-soft)]">
+          Aucune course ne dépasse le seuil JOUABLE ({SEUIL_JOUABLE}/10) pour le Top 3 : les cartes « À SURVEILLER » restent candidates, ou rafraîchis après
+          les notes 1 h / 30 min.
+        </section>
+      ) : null}
 
       <section className="app-card p-5 md:p-6">
         <div className="app-section-heading">

@@ -1,18 +1,20 @@
-type StatutBadgeType = "jouable" | "surveillance" | "resultat";
+type StatutBadgeType = "jouable" | "surveillance" | "passer" | "resultat";
 
 type StatutBadgeProps = {
   type: StatutBadgeType;
 };
 
 const labelMap: Record<StatutBadgeType, string> = {
-  jouable: "Jouable",
-  surveillance: "Sous surveillance",
-  resultat: "Resultat",
+  jouable: "JOUABLE",
+  surveillance: "À SURVEILLER",
+  passer: "PASSER",
+  resultat: "RÉSULTAT",
 };
 
 const toneMap: Record<StatutBadgeType, string> = {
   jouable: "border-[rgba(13,148,136,0.35)] bg-[rgba(13,148,136,0.1)] text-[var(--pmu-primary)]",
   surveillance: "border-[rgba(217,119,6,0.3)] bg-[rgba(217,119,6,0.1)] text-[var(--pmu-orange)]",
+  passer: "border-[rgba(100,116,139,0.35)] bg-[rgba(148,163,184,0.12)] text-[#64748b]",
   resultat: "border-[rgba(37,99,235,0.28)] bg-[rgba(37,99,235,0.08)] text-[var(--pmu-blue)]",
 };
 

@@ -9,7 +9,7 @@ type CourseCardProps = {
   horseLabel: string;
   betTypeLabel: string;
   confidence: number;
-  status: "jouable" | "surveillance" | "resultat";
+  status: "jouable" | "surveillance" | "passer" | "resultat";
   noteLabel?: string;
   allocationLabel?: string;
   summary: string;
