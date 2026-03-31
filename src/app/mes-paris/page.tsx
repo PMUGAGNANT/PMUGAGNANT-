@@ -9,10 +9,10 @@ import {
   hasSupabaseConfig,
 } from "@/lib/supabase";
 
-const GREEN = "#00FF88";
-const DARK = "#FFFFFF";
-const CARD = "#111111";
-const BORDER = "#1E1E1E";
+const GREEN = "var(--pmu-primary)";
+const DARK = "var(--pmu-text)";
+const CARD = "var(--pmu-surface)";
+const BORDER = "var(--pmu-border)";
 
 interface Bet {
   id: string;
@@ -45,8 +45,7 @@ function MesParisFallback() {
         width: "min(1180px, calc(100% - 24px))",
         margin: "0 auto",
         minHeight: "100vh",
-        background:
-          "radial-gradient(circle at top left, rgba(0,255,136,0.06), transparent 30%), linear-gradient(180deg, #0A0A0A 0%, #0d0d0d 100%)",
+        background: `radial-gradient(circle at top left, var(--pmu-primary-fade), transparent 30%), linear-gradient(180deg, var(--pmu-bg) 0%, var(--pmu-bg-mid) 100%)`,
       }}
     />
   );
@@ -316,10 +315,18 @@ function MesParisContent() {
   const totalGain = bets.filter((b) => b.gain !== null).reduce((sum, b) => sum + (b.gain || 0), 0);
 
   const statusConfig: Record<string, { bg: string; color: string; label: string }> = {
-    EN_ATTENTE: { bg: "rgba(255,184,0,0.15)", color: "#FFB800", label: "En attente" },
-    GAGNE: { bg: "rgba(0,255,136,0.15)", color: GREEN, label: "Gagne" },
-    PLACE: { bg: "rgba(59,130,246,0.2)", color: "#60a5fa", label: "Place" },
-    PERDU: { bg: "rgba(255,68,68,0.15)", color: "#FF4444", label: "Perdu" },
+    EN_ATTENTE: {
+      bg: "color-mix(in srgb, var(--pmu-orange) 15%, transparent)",
+      color: "var(--pmu-orange)",
+      label: "En attente",
+    },
+    GAGNE: { bg: "color-mix(in srgb, var(--pmu-primary) 15%, transparent)", color: GREEN, label: "Gagne" },
+    PLACE: {
+      bg: "color-mix(in srgb, var(--pmu-accent-blue) 20%, transparent)",
+      color: "var(--pmu-accent-blue)",
+      label: "Place",
+    },
+    PERDU: { bg: "color-mix(in srgb, var(--pmu-red) 15%, transparent)", color: "var(--pmu-red)", label: "Perdu" },
   };
 
   return (
@@ -328,8 +335,7 @@ function MesParisContent() {
         width: "min(1180px, calc(100% - 24px))",
         margin: "0 auto",
         minHeight: "100vh",
-        background:
-          "radial-gradient(circle at top left, rgba(0,255,136,0.06), transparent 30%), linear-gradient(180deg, #0A0A0A 0%, #0d0d0d 100%)",
+        background: `radial-gradient(circle at top left, var(--pmu-primary-fade), transparent 30%), linear-gradient(180deg, var(--pmu-bg) 0%, var(--pmu-bg-mid) 100%)`,
         paddingBottom: 96,
       }}
     >
@@ -338,7 +344,7 @@ function MesParisContent() {
           position: "sticky",
           top: 0,
           zIndex: 50,
-          background: "rgba(10,10,10,0.92)",
+          background: "color-mix(in srgb, var(--pmu-bg) 92%, transparent)",
           backdropFilter: "blur(18px)",
           borderBottom: `1px solid ${BORDER}`,
           height: 68,
@@ -359,7 +365,7 @@ function MesParisContent() {
             width: 36,
             height: 36,
             borderRadius: "50%",
-            background: "rgba(255,255,255,0.1)",
+            background: "color-mix(in srgb, var(--pmu-text) 12%, transparent)",
           }}
         >
           <svg
@@ -367,7 +373,7 @@ function MesParisContent() {
             height="20"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#fff"
+            stroke="var(--pmu-text)"
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -383,7 +389,7 @@ function MesParisContent() {
           style={{
             position: "absolute",
             right: 16,
-            color: "rgba(255,255,255,0.68)",
+            color: "color-mix(in srgb, var(--pmu-text) 68%, transparent)",
             fontSize: 12,
             cursor: "pointer",
             fontWeight: 700,
@@ -394,14 +400,14 @@ function MesParisContent() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: 60, color: "#888" }}>Chargement...</div>
+        <div style={{ textAlign: "center", padding: 60, color: "var(--pmu-text-muted)" }}>Chargement...</div>
       ) : error ? (
         <div
           style={{
             margin: "18px 0",
-            background: "rgba(255,184,0,0.12)",
-            color: "#FFB800",
-            border: "1px solid rgba(255,184,0,0.35)",
+            background: "color-mix(in srgb, var(--pmu-orange) 12%, transparent)",
+            color: "var(--pmu-orange)",
+            border: "1px solid color-mix(in srgb, var(--pmu-orange) 35%, transparent)",
             padding: 16,
             borderRadius: 16,
             fontSize: 14,
@@ -420,18 +426,18 @@ function MesParisContent() {
                 borderRadius: 20,
                 border: `1px solid ${
                   billingNotice.tone === "success"
-                    ? "rgba(0,255,136,0.35)"
+                    ? "color-mix(in srgb, var(--pmu-primary) 35%, transparent)"
                     : billingNotice.tone === "loading"
-                      ? "rgba(59,130,246,0.35)"
-                      : "rgba(255,184,0,0.35)"
+                      ? "color-mix(in srgb, var(--pmu-accent-blue) 35%, transparent)"
+                      : "color-mix(in srgb, var(--pmu-orange) 35%, transparent)"
                 }`,
                 background:
                   billingNotice.tone === "success"
-                    ? "rgba(0,255,136,0.08)"
+                    ? "var(--pmu-primary-fade)"
                     : billingNotice.tone === "loading"
-                      ? "rgba(59,130,246,0.1)"
-                      : "rgba(255,184,0,0.08)",
-                boxShadow: "0 14px 28px rgba(0,0,0,0.25)",
+                      ? "color-mix(in srgb, var(--pmu-accent-blue) 10%, transparent)"
+                      : "color-mix(in srgb, var(--pmu-orange) 8%, transparent)",
+                boxShadow: "var(--pmu-shadow)",
               }}
             >
               <div
@@ -444,8 +450,8 @@ function MesParisContent() {
                     billingNotice.tone === "success"
                       ? GREEN
                       : billingNotice.tone === "loading"
-                        ? "#60a5fa"
-                        : "#FFB800",
+                        ? "var(--pmu-accent-blue)"
+                        : "var(--pmu-orange)",
                   marginBottom: 8,
                 }}
               >
@@ -454,7 +460,7 @@ function MesParisContent() {
               <div style={{ fontSize: 18, fontWeight: 800, color: DARK, marginBottom: 6 }}>
                 {billingNotice.title}
               </div>
-              <div style={{ fontSize: 14, lineHeight: "21px", color: "#888888" }}>
+              <div style={{ fontSize: 14, lineHeight: "21px", color: "var(--pmu-text-muted)" }}>
                 {billingNotice.message}
               </div>
             </div>
@@ -462,14 +468,13 @@ function MesParisContent() {
 
           <section
             style={{
-              background:
-                "radial-gradient(circle at top right, rgba(0,255,136,0.2), transparent 35%), linear-gradient(135deg, #0d2818, #0A0A0A)",
+              background: `radial-gradient(circle at top right, var(--pmu-primary-soft), transparent 35%), linear-gradient(135deg, color-mix(in srgb, var(--pmu-primary) 12%, var(--pmu-bg-mid)), var(--pmu-bg))`,
               borderRadius: 30,
               margin: "18px 0 16px",
               padding: 28,
-              color: "#fff",
-              boxShadow: "0 24px 48px rgba(0,255,136,0.12)",
-              border: "1px solid rgba(255,255,255,0.12)",
+              color: "var(--pmu-text)",
+              boxShadow: "var(--pmu-glow), var(--pmu-shadow)",
+              border: "1px solid var(--pmu-border)",
               display: "grid",
               gap: 18,
               gridTemplateColumns: "minmax(0,1.4fr) minmax(240px,0.9fr)",
@@ -487,8 +492,8 @@ function MesParisContent() {
             <div
               style={{
                 borderRadius: 24,
-                background: "rgba(0,0,0,0.16)",
-                border: "1px solid rgba(255,255,255,0.12)",
+                background: "color-mix(in srgb, var(--pmu-surface-2) 84%, transparent)",
+                border: "1px solid var(--pmu-border)",
                 padding: 18,
                 display: "grid",
                 gap: 12,
@@ -513,14 +518,14 @@ function MesParisContent() {
                   width: "fit-content",
                   padding: "10px 14px",
                   borderRadius: 999,
-                  background: "rgba(255,255,255,0.16)",
+                  background: "color-mix(in srgb, var(--pmu-text) 14%, transparent)",
                   fontSize: 12,
                   fontWeight: 800,
                 }}
               >
                 {isSubscribed ? `Abonnement ${subscriptionStatus}` : "Compte gratuit"}
               </div>
-              <div style={{ fontSize: 13, lineHeight: "19px", color: "rgba(255,255,255,0.78)" }}>
+              <div style={{ fontSize: 13, lineHeight: "19px", color: "color-mix(in srgb, var(--pmu-text) 78%, transparent)" }}>
                 {isSubscribed
                   ? "Ton espace premium est actif: pronostics complets, mises et tickets detailles."
                   : "Passe premium pour debloquer les value bets filtres, les mises Kelly et les tickets optimises."}
@@ -533,7 +538,7 @@ function MesParisContent() {
                   borderRadius: 999,
                   padding: "12px 16px",
                   background: GREEN,
-                  color: "#000000",
+                  color: "var(--pmu-on-primary)",
                   fontWeight: 800,
                   cursor: "pointer",
                 }}
@@ -548,11 +553,11 @@ function MesParisContent() {
                 <button
                   onClick={() => router.push("/premium")}
                   style={{
-                    border: "1px solid rgba(255,255,255,0.18)",
+                    border: "1px solid color-mix(in srgb, var(--pmu-text) 22%, transparent)",
                     borderRadius: 999,
                     padding: "12px 16px",
                     background: "transparent",
-                    color: "#fff",
+                    color: "var(--pmu-text)",
                     fontWeight: 800,
                     cursor: "pointer",
                   }}
@@ -573,7 +578,7 @@ function MesParisContent() {
                       style={{
                         padding: "8px 10px",
                         borderRadius: 999,
-                        background: "rgba(255,255,255,0.12)",
+                        background: "color-mix(in srgb, var(--pmu-text) 12%, transparent)",
                         fontSize: 11,
                         fontWeight: 800,
                       }}
@@ -595,13 +600,13 @@ function MesParisContent() {
             }}
           >
             {[
-              { label: "En attente", value: pendingCount, color: "#FFB800" },
+              { label: "En attente", value: pendingCount, color: "var(--pmu-orange)" },
               { label: "Gagnes", value: wonCount, color: GREEN },
-              { label: "Places", value: placedCount, color: "#60a5fa" },
+              { label: "Places", value: placedCount, color: "var(--pmu-accent-blue)" },
               {
                 label: "P/L",
                 value: totalGain >= 0 ? `+${formatEuros(totalGain)}` : formatEuros(totalGain),
-                color: totalGain >= 0 ? GREEN : "#FF4444",
+                color: totalGain >= 0 ? GREEN : "var(--pmu-red)",
               },
             ].map((item) => (
               <div
@@ -611,14 +616,14 @@ function MesParisContent() {
                   borderRadius: 22,
                   padding: "16px 12px",
                   textAlign: "center",
-                  boxShadow: "0 14px 28px rgba(0,0,0,0.3)",
+                  boxShadow: "var(--pmu-shadow)",
                   border: `1px solid ${BORDER}`,
                 }}
               >
                 <div style={{ fontSize: 22, fontWeight: 800, color: item.color, letterSpacing: "-0.4px" }}>
                   {item.value}
                 </div>
-                <div style={{ fontSize: 11, color: "#888", marginTop: 3 }}>{item.label}</div>
+                <div style={{ fontSize: 11, color: "var(--pmu-text-muted)", marginTop: 3 }}>{item.label}</div>
               </div>
             ))}
           </section>
@@ -633,12 +638,12 @@ function MesParisContent() {
                   padding: 16,
                   borderRadius: 18,
                   border: "none",
-                  background: settling ? "#444444" : "#FFB800",
-                  color: settling ? "#888888" : "#000000",
+                  background: settling ? "var(--pmu-border-strong)" : "var(--pmu-orange)",
+                  color: settling ? "var(--pmu-text-muted)" : "var(--pmu-on-primary)",
                   fontSize: 14,
                   fontWeight: 800,
                   cursor: settling ? "not-allowed" : "pointer",
-                  boxShadow: "0 16px 28px rgba(255,152,0,0.24)",
+                  boxShadow: "0 16px 28px color-mix(in srgb, var(--pmu-orange) 28%, transparent)",
                 }}
               >
                 {settling ? "Verification..." : `Verifier les resultats (${pendingCount} en attente)`}
@@ -656,7 +661,7 @@ function MesParisContent() {
                 style={{
                   textAlign: "center",
                   padding: "48px 20px",
-                  color: "#888",
+                  color: "var(--pmu-text-muted)",
                   borderRadius: 24,
                   background: CARD,
                   border: `1px solid ${BORDER}`,
@@ -685,7 +690,7 @@ function MesParisContent() {
                         background: CARD,
                         borderRadius: 22,
                         padding: 18,
-                        boxShadow: "0 14px 28px rgba(0,0,0,0.3)",
+                        boxShadow: "var(--pmu-shadow)",
                         border: `1px solid ${BORDER}`,
                       }}
                     >
@@ -698,7 +703,7 @@ function MesParisContent() {
                           marginBottom: 10,
                         }}
                       >
-                        <div style={{ fontSize: 13, color: "#888888" }}>
+                        <div style={{ fontSize: 13, color: "var(--pmu-text-muted)" }}>
                           R{bet.reunion}C{bet.course} · {bet.hippodrome}
                         </div>
                         <span
@@ -725,7 +730,7 @@ function MesParisContent() {
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            color: "#000000",
+                            color: "var(--pmu-on-primary)",
                             fontWeight: 800,
                             fontSize: 15,
                             flexShrink: 0,
@@ -735,7 +740,7 @@ function MesParisContent() {
                         </div>
                         <div>
                           <div style={{ fontWeight: 800, fontSize: 16, color: DARK }}>{bet.cheval_nom}</div>
-                          <div style={{ fontSize: 12, color: "#888888", marginTop: 2 }}>
+                          <div style={{ fontSize: 12, color: "var(--pmu-text-muted)", marginTop: 2 }}>
                             {bet.type_pari} · Cote {bet.cote} · Mise {formatEuros(bet.mise)}
                           </div>
                         </div>
@@ -748,12 +753,12 @@ function MesParisContent() {
                           alignItems: "center",
                           gap: 10,
                           fontSize: 12,
-                          color: "#888888",
+                          color: "var(--pmu-text-muted)",
                         }}
                       >
                         <span>{bet.heure_depart} · {bet.date_str}</span>
                         {bet.gain !== null ? (
-                          <strong style={{ color: bet.gain >= 0 ? GREEN : "#FF4444", fontSize: 15 }}>
+                          <strong style={{ color: bet.gain >= 0 ? GREEN : "var(--pmu-red)", fontSize: 15 }}>
                             {bet.gain >= 0 ? "+" : ""}
                             {formatEuros(bet.gain)}
                           </strong>
@@ -779,10 +784,10 @@ function MesParisContent() {
           width: "100%",
           maxWidth: 1180,
           zIndex: 50,
-          background: "rgba(17,17,17,0.95)",
+          background: "color-mix(in srgb, var(--pmu-bg) 95%, transparent)",
           backdropFilter: "blur(18px)",
           borderTop: `1px solid ${BORDER}`,
-          boxShadow: "0 -14px 30px rgba(0,0,0,0.4)",
+          boxShadow: "0 -14px 30px color-mix(in srgb, var(--pmu-text) 12%, transparent)",
           height: 70,
           display: "flex",
           alignItems: "center",
@@ -801,7 +806,7 @@ function MesParisContent() {
           }}
         >
           <span style={{ fontSize: 22 }}>&#127943;</span>
-          <span style={{ fontSize: 11, fontWeight: 600, color: "#999" }}>Courses</span>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--pmu-text-muted)" }}>Courses</span>
         </div>
         <div
           style={{
@@ -830,7 +835,7 @@ function MesParisContent() {
           }}
         >
           <span style={{ fontSize: 22 }}>&#128202;</span>
-          <span style={{ fontSize: 11, fontWeight: 600, color: "#999" }}>Bilan</span>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--pmu-text-muted)" }}>Bilan</span>
         </div>
       </div>
     </div>

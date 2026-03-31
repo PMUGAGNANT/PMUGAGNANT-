@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
+import { ThemeToggle } from "./ThemeToggle";
 
 type NavItem = {
   href: string;
@@ -60,11 +61,12 @@ function isActive(pathname: string, href: string) {
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [connexionLabel, setConnexionLabel] = useState("…");
+  const [connexionLabel, setConnexionLabel] = useState(() =>
+    !hasSupabaseConfig() ? "Invité (sans compte)" : "…"
+  );
 
   useEffect(() => {
     if (!hasSupabaseConfig()) {
-      setConnexionLabel("Invité (sans compte)");
       return;
     }
 
@@ -90,15 +92,18 @@ export function Sidebar() {
   }, []);
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-[#1E1E1E] bg-[#0A0A0A] lg:flex">
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-[var(--pmu-border)] bg-[var(--pmu-bg)] lg:flex">
       <div className="flex h-full w-full flex-col px-4 py-6">
-        <Link href="/" className="flex items-center gap-3 rounded-2xl px-2 py-2 transition hover:bg-[#111111]">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[rgba(0,255,136,0.35)] bg-[rgba(0,255,136,0.08)] text-sm font-black text-[#00FF88] shadow-[0_0_24px_rgba(0,255,136,0.12)]">
+        <Link
+          href="/"
+          className="flex items-center gap-3 rounded-2xl px-2 py-2 transition hover:bg-[var(--pmu-surface-2)]"
+        >
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--pmu-primary)]/40 bg-[var(--pmu-primary-soft)] text-sm font-black text-[var(--pmu-primary)] shadow-[var(--pmu-glow)]">
             PG
           </div>
           <div className="min-w-0">
-            <p className="truncate text-lg font-black tracking-tight text-white">PMU GAGNANT</p>
-            <p className="truncate text-[10px] font-bold uppercase tracking-[0.2em] text-[#888888]">
+            <p className="truncate text-lg font-black tracking-tight text-[var(--pmu-text)]">PMU GAGNANT</p>
+            <p className="truncate text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--pmu-text-muted)]">
               Pronostics IA
             </p>
           </div>
@@ -114,12 +119,14 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 className={`group relative flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-semibold transition ${
-                  active ? "bg-[#111111] text-[#00FF88]" : "text-[#888888] hover:bg-[#111111] hover:text-white"
+                  active
+                    ? "bg-[var(--pmu-surface-2)] text-[var(--pmu-primary)]"
+                    : "text-[var(--pmu-text-muted)] hover:bg-[var(--pmu-surface-2)] hover:text-[var(--pmu-text)]"
                 }`}
               >
                 <span
                   className={`absolute left-0 top-1/2 h-9 w-1 -translate-y-1/2 rounded-full transition ${
-                    active ? "bg-[#00FF88] shadow-[0_0_12px_#00FF88]" : "bg-transparent"
+                    active ? "bg-[var(--pmu-primary)] shadow-[0_0_12px_var(--pmu-primary)]" : "bg-transparent"
                   }`}
                 />
                 <Icon />
@@ -129,13 +136,14 @@ export function Sidebar() {
           })}
         </nav>
 
-        <div className="mt-auto border-t border-[#1E1E1E] pt-4">
-          <div className="rounded-2xl border border-[#1E1E1E] bg-[#111111] p-4">
+        <div className="mt-auto space-y-3 border-t border-[var(--pmu-border)] pt-4">
+          <ThemeToggle />
+          <div className="rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] p-4">
             <p className="app-kicker text-[10px]">Session</p>
-            <p className="mt-2 truncate text-xs font-semibold text-[#888888]" title={connexionLabel}>
+            <p className="mt-2 truncate text-xs font-semibold text-[var(--pmu-text-muted)]" title={connexionLabel}>
               {connexionLabel}
             </p>
-            <p className="mt-2 text-xs leading-5 text-[#666666]">
+            <p className="mt-2 text-xs leading-5 text-[var(--pmu-text-soft)]">
               Connexion utilisateur et accès premium synchronisés avec Supabase.
             </p>
           </div>

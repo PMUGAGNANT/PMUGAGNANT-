@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
+import Script from "next/script";
 import { AppShell } from "@/components/ui/AppShell";
+import { ThemeMetaColor } from "@/components/ui/ThemeMetaColor";
+import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import "./globals.css";
 
 const manrope = Manrope({ subsets: ["latin"], display: "swap" });
@@ -21,7 +24,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#0a0a0a",
+  themeColor: "#060606",
 };
 
 export default function RootLayout({
@@ -32,7 +35,16 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body className={`${manrope.className} min-h-screen text-[var(--pmu-text)] antialiased`}>
-        <AppShell>{children}</AppShell>
+        <a href="#main-content" className="pmu-skip-link">
+          Aller au contenu
+        </a>
+        <Script id="pmu-theme-init" strategy="beforeInteractive">
+          {`(function(){try{var k='pmu-theme';var v=localStorage.getItem(k);if(v==='warm'||v==='dark')document.documentElement.setAttribute('data-theme',v);}catch(e){}})();`}
+        </Script>
+        <ThemeProvider>
+          <ThemeMetaColor />
+          <AppShell>{children}</AppShell>
+        </ThemeProvider>
       </body>
     </html>
   );

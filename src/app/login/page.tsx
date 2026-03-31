@@ -7,12 +7,7 @@ import {
   getSupabaseConfigError,
   hasSupabaseConfig,
 } from "@/lib/supabase";
-
-const GREEN = "#00FF88";
-const DARK = "#FFFFFF";
-const PAGE_BG = "#0A0A0A";
-const CARD_DARK = "#111111";
-const BORDER = "#1E1E1E";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 function getFriendlyAuthError(message: string) {
   if (message.includes("Invalid login")) {
@@ -95,8 +90,7 @@ function LoginPageContent() {
       className="app-shell"
       style={{
         minHeight: "100vh",
-        background:
-          "radial-gradient(circle at top left, rgba(0,255,136,0.08), transparent 28%), radial-gradient(circle at top right, rgba(0,255,136,0.05), transparent 24%), linear-gradient(180deg, #0A0A0A 0%, #0d0d0d 100%)",
+        background: `radial-gradient(circle at top left, var(--pmu-primary-fade), transparent 28%), radial-gradient(circle at top right, var(--pmu-primary-soft), transparent 26%), linear-gradient(180deg, var(--pmu-bg) 0%, var(--pmu-bg-mid) 100%)`,
       }}
     >
       <div
@@ -104,9 +98,9 @@ function LoginPageContent() {
           position: "sticky",
           top: 0,
           zIndex: 50,
-          background: "rgba(10,10,10,0.92)",
+          background: "color-mix(in srgb, var(--pmu-bg) 92%, transparent)",
           backdropFilter: "blur(18px)",
-          borderBottom: "1px solid #1E1E1E",
+          borderBottom: "1px solid var(--pmu-border)",
           height: 72,
           display: "flex",
           alignItems: "center",
@@ -125,7 +119,7 @@ function LoginPageContent() {
             width: 36,
             height: 36,
             borderRadius: "50%",
-            background: "rgba(255,255,255,0.1)",
+            background: "color-mix(in srgb, var(--pmu-text) 12%, transparent)",
           }}
         >
           <svg
@@ -133,7 +127,7 @@ function LoginPageContent() {
             height="20"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#fff"
+            stroke="var(--pmu-text)"
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -141,7 +135,10 @@ function LoginPageContent() {
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </div>
-        <div style={{ color: GREEN, fontWeight: 800, fontSize: 22 }}>PMU Gagnant</div>
+        <div style={{ color: "var(--pmu-primary)", fontWeight: 800, fontSize: 22 }}>PMU Gagnant</div>
+        <div style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", maxWidth: 148 }}>
+          <ThemeToggle compact className="!w-auto !px-3" />
+        </div>
       </div>
 
       <div
@@ -157,15 +154,23 @@ function LoginPageContent() {
           style={{
             borderRadius: 32,
             padding: 28,
-            background:
-              "radial-gradient(circle at top right, rgba(0,255,136,0.12), transparent 35%), linear-gradient(135deg, #111111, #0d0d0d)",
-            color: "#fff",
-            border: `1px solid ${BORDER}`,
-            boxShadow: "0 28px 58px rgba(0,0,0,0.45)",
+            background: `radial-gradient(circle at top right, var(--pmu-primary-soft), transparent 35%), linear-gradient(135deg, var(--pmu-surface), var(--pmu-bg-mid))`,
+            color: "var(--pmu-text)",
+            border: "1px solid var(--pmu-border)",
+            boxShadow: "var(--pmu-shadow)",
             overflow: "hidden",
           }}
         >
-          <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color: GREEN, marginBottom: 10 }}>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 800,
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              color: "var(--pmu-primary)",
+              marginBottom: 10,
+            }}
+          >
             {premiumIntent ? "Acces premium" : "Compte PMU AI"}
           </div>
           <div style={{ fontSize: 34, lineHeight: "36px", fontWeight: 900, letterSpacing: "-1px", marginBottom: 12 }}>
@@ -173,7 +178,7 @@ function LoginPageContent() {
               ? "Connecte-toi pour debloquer les pronostics complets."
               : "Connecte-toi pour suivre tes paris et ton bilan reel."}
           </div>
-          <div style={{ fontSize: 15, lineHeight: "24px", color: "rgba(255,255,255,0.76)", maxWidth: 640 }}>
+          <div style={{ fontSize: 15, lineHeight: "24px", color: "var(--pmu-text-soft)", maxWidth: 640, opacity: 0.92 }}>
             {premiumIntent
               ? "Le premium sert a filtrer les courses, ne garder que les spots utiles et afficher des tickets vraiment exploitables."
               : "Ton compte centralise la bankroll, les tickets, le suivi de performance et l'acces a l'offre premium."}
@@ -198,12 +203,12 @@ function LoginPageContent() {
                 style={{
                   borderRadius: 22,
                   padding: 16,
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "var(--pmu-surface-2)",
+                  border: "1px solid var(--pmu-border)",
                 }}
               >
                 <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 6 }}>{title}</div>
-                <div style={{ fontSize: 13, lineHeight: "19px", color: "rgba(255,255,255,0.72)" }}>{text}</div>
+                <div style={{ fontSize: 13, lineHeight: "19px", color: "var(--pmu-text-muted)" }}>{text}</div>
               </div>
             ))}
           </div>
@@ -213,11 +218,20 @@ function LoginPageContent() {
               marginTop: 18,
               borderRadius: 22,
               padding: 18,
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              background: "var(--pmu-surface-2)",
+              border: "1px solid var(--pmu-border)",
             }}
           >
-            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: GREEN, marginBottom: 8 }}>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 800,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                color: "var(--pmu-primary)",
+                marginBottom: 8,
+              }}
+            >
               Promesse
             </div>
             <div style={{ fontSize: 17, fontWeight: 800, lineHeight: "24px" }}>
@@ -231,29 +245,36 @@ function LoginPageContent() {
         <section
           style={{
             borderRadius: 30,
-            background: CARD_DARK,
-            border: `1px solid ${BORDER}`,
-            boxShadow: "0 22px 48px rgba(0,0,0,0.4)",
+            background: "var(--pmu-surface)",
+            border: "1px solid var(--pmu-border)",
+            boxShadow: "var(--pmu-shadow)",
             padding: 26,
             overflow: "hidden",
           }}
         >
           <div style={{ textAlign: "center", marginBottom: 26 }}>
-            <div style={{ fontSize: 40, marginBottom: 10, fontWeight: 900, color: premiumIntent ? GREEN : DARK }}>
+            <div
+              style={{
+                fontSize: 40,
+                marginBottom: 10,
+                fontWeight: 900,
+                color: premiumIntent ? "var(--pmu-primary)" : "var(--pmu-text)",
+              }}
+            >
               {premiumIntent ? "PREMIUM" : "COMPTE"}
             </div>
             <h1
               style={{
                 fontSize: 28,
                 fontWeight: 900,
-                color: DARK,
+                color: "var(--pmu-text)",
                 marginBottom: 8,
                 letterSpacing: "-0.8px",
               }}
             >
               {isSignUp ? "Creer un compte" : "Se connecter"}
             </h1>
-            <p style={{ fontSize: 14, color: "#888888", lineHeight: "21px" }}>
+            <p style={{ fontSize: 14, color: "var(--pmu-text-muted)", lineHeight: "21px" }}>
               {isSignUp
                 ? premiumIntent
                   ? "Creer ton compte pour activer l'espace premium et suivre tes tickets."
@@ -267,9 +288,9 @@ function LoginPageContent() {
           {!supabaseConfigured ? (
             <div
               style={{
-                background: "rgba(255,184,0,0.12)",
-                color: "#FFB800",
-                border: "1px solid rgba(255,184,0,0.35)",
+                background: "color-mix(in srgb, var(--pmu-orange) 14%, transparent)",
+                color: "var(--pmu-orange)",
+                border: "1px solid color-mix(in srgb, var(--pmu-orange) 35%, transparent)",
                 padding: "12px 16px",
                 borderRadius: 14,
                 fontSize: 13,
@@ -288,7 +309,7 @@ function LoginPageContent() {
                   display: "block",
                   fontSize: 13,
                   fontWeight: 700,
-                  color: "#888888",
+                  color: "var(--pmu-text-muted)",
                   marginBottom: 8,
                 }}
               >
@@ -304,15 +325,17 @@ function LoginPageContent() {
                   width: "100%",
                   padding: "15px 16px",
                   borderRadius: 14,
-                  border: "2px solid #333333",
-                  background: "#161616",
-                  color: "#FFFFFF",
+                  border: "2px solid var(--pmu-border-strong)",
+                  background: "var(--pmu-surface-2)",
+                  color: "var(--pmu-text)",
                   fontSize: 16,
                   outline: "none",
                   boxSizing: "border-box",
                 }}
-                onFocus={(e) => (e.target.style.borderColor = GREEN)}
-                onBlur={(e) => (e.target.style.borderColor = "#333333")}
+                onFocus={(e) => (e.target.style.borderColor = "var(--pmu-primary)")}
+                onBlur={(e) => {
+                  e.target.style.borderColor = "var(--pmu-border-strong)";
+                }}
               />
             </div>
 
@@ -322,7 +345,7 @@ function LoginPageContent() {
                   display: "block",
                   fontSize: 13,
                   fontWeight: 700,
-                  color: "#888888",
+                  color: "var(--pmu-text-muted)",
                   marginBottom: 8,
                 }}
               >
@@ -339,24 +362,26 @@ function LoginPageContent() {
                   width: "100%",
                   padding: "15px 16px",
                   borderRadius: 14,
-                  border: "2px solid #333333",
-                  background: "#161616",
-                  color: "#FFFFFF",
+                  border: "2px solid var(--pmu-border-strong)",
+                  background: "var(--pmu-surface-2)",
+                  color: "var(--pmu-text)",
                   fontSize: 16,
                   outline: "none",
                   boxSizing: "border-box",
                 }}
-                onFocus={(e) => (e.target.style.borderColor = GREEN)}
-                onBlur={(e) => (e.target.style.borderColor = "#333333")}
+                onFocus={(e) => (e.target.style.borderColor = "var(--pmu-primary)")}
+                onBlur={(e) => {
+                  e.target.style.borderColor = "var(--pmu-border-strong)";
+                }}
               />
             </div>
 
             {error ? (
               <div
                 style={{
-                  background: "rgba(255,68,68,0.12)",
-                  color: "#FF4444",
-                  border: "1px solid rgba(255,68,68,0.35)",
+                  background: "color-mix(in srgb, var(--pmu-red) 12%, transparent)",
+                  color: "var(--pmu-red)",
+                  border: "1px solid color-mix(in srgb, var(--pmu-red) 35%, transparent)",
                   padding: "12px 16px",
                   borderRadius: 14,
                   fontSize: 13,
@@ -377,8 +402,8 @@ function LoginPageContent() {
                 padding: 16,
                 borderRadius: 14,
                 border: "none",
-                background: loading || !supabaseConfigured ? "#444444" : GREEN,
-                color: loading || !supabaseConfigured ? "#888888" : "#000000",
+                background: loading || !supabaseConfigured ? "var(--pmu-border-strong)" : "var(--pmu-primary)",
+                color: loading || !supabaseConfigured ? "var(--pmu-text-muted)" : "var(--pmu-on-primary)",
                 fontSize: 16,
                 fontWeight: 800,
                 cursor: loading || !supabaseConfigured ? "not-allowed" : "pointer",
@@ -394,7 +419,7 @@ function LoginPageContent() {
             </button>
           </form>
 
-          <div style={{ textAlign: "center", marginTop: 20, fontSize: 14, color: "#888888" }}>
+          <div style={{ textAlign: "center", marginTop: 20, fontSize: 14, color: "var(--pmu-text-muted)" }}>
             {isSignUp ? "Deja un compte ?" : "Pas encore de compte ?"}{" "}
             <span
               onClick={() => {
@@ -402,7 +427,7 @@ function LoginPageContent() {
                 setError("");
               }}
               style={{
-                color: GREEN,
+                color: "var(--pmu-primary)",
                 fontWeight: 700,
                 cursor: "pointer",
               }}
@@ -415,19 +440,28 @@ function LoginPageContent() {
             style={{
               marginTop: 20,
               borderRadius: 18,
-              border: `1px solid ${BORDER}`,
-              background: premiumIntent ? "rgba(0,255,136,0.08)" : "#161616",
+              border: "1px solid var(--pmu-border)",
+              background: premiumIntent ? "var(--pmu-primary-fade)" : "var(--pmu-surface-2)",
               padding: 16,
               textAlign: "center",
             }}
           >
-            <div style={{ fontSize: 24, marginBottom: 6, fontWeight: 900, color: premiumIntent ? GREEN : DARK }}>
+            <div
+              style={{
+                fontSize: 24,
+                marginBottom: 6,
+                fontWeight: 900,
+                color: premiumIntent ? "var(--pmu-primary)" : "var(--pmu-text)",
+              }}
+            >
               {isSignUp ? "BANKROLL" : "ACCES"}
             </div>
-            <div style={{ fontSize: 14, fontWeight: 800, color: premiumIntent ? GREEN : DARK }}>
+            <div
+              style={{ fontSize: 14, fontWeight: 800, color: premiumIntent ? "var(--pmu-primary)" : "var(--pmu-text)" }}
+            >
               {isSignUp ? "1 000 EUR offerts en bankroll fictive" : "Connexion rapide, puis acces a ton espace perso"}
             </div>
-            <div style={{ fontSize: 12, color: "#888888", marginTop: 4, lineHeight: "18px" }}>
+            <div style={{ fontSize: 12, color: "var(--pmu-text-muted)", marginTop: 4, lineHeight: "18px" }}>
               {isSignUp
                 ? "Tu peux tester l'outil et les tickets sans risquer d'argent reel."
                 : premiumIntent
@@ -443,7 +477,7 @@ function LoginPageContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: PAGE_BG }} />}>
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "var(--pmu-bg)" }} />}>
       <LoginPageContent />
     </Suspense>
   );

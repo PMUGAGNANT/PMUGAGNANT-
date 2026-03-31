@@ -16,13 +16,19 @@ export function AppShell({ children }: AppShellProps) {
   const shellDisabled = shellDisabledRoutes.has(pathname);
 
   if (shellDisabled) {
-    return <>{children}</>;
+    return (
+      <div id="main-content" tabIndex={-1}>
+        {children}
+      </div>
+    );
   }
 
   return (
     <div className="app-shell">
       <Sidebar />
-      <div className="app-shell__content">{children}</div>
+      <div id="main-content" className="app-shell__content" tabIndex={-1}>
+        {children}
+      </div>
       <BottomNav />
     </div>
   );

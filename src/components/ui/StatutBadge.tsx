@@ -12,10 +12,12 @@ const labelMap: Record<StatutBadgeType, string> = {
 };
 
 const toneMap: Record<StatutBadgeType, string> = {
-  jouable: "border-[rgba(0,255,136,0.45)] bg-[rgba(0,255,136,0.1)] text-[#00FF88]",
-  surveillance: "border-[rgba(255,184,0,0.45)] bg-[rgba(255,184,0,0.1)] text-[#FFB800]",
-  passer: "border-[#333333] bg-[#161616] text-[#888888]",
-  resultat: "border-[#333333] bg-[#1a1a1a] text-[#888888]",
+  jouable:
+    "border-[color-mix(in_srgb,var(--pmu-primary)_45%,transparent)] bg-[var(--pmu-primary-soft)] text-[var(--pmu-primary)]",
+  surveillance:
+    "border-[color-mix(in_srgb,var(--pmu-orange)_45%,transparent)] bg-[color-mix(in_srgb,var(--pmu-orange)_10%,transparent)] text-[var(--pmu-orange)]",
+  passer: "border-[var(--pmu-border-strong)] bg-[var(--pmu-surface-2)] text-[var(--pmu-text-muted)]",
+  resultat: "border-[var(--pmu-border-strong)] bg-[var(--pmu-surface-highlight)] text-[var(--pmu-text-muted)]",
 };
 
 export function StatutBadge({ type }: StatutBadgeProps) {
