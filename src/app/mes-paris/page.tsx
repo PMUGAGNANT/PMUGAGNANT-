@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { asArray } from "@/lib/array-utils";
 import {
   getSupabaseBrowserClient,
   getSupabaseConfigError,
@@ -75,31 +76,45 @@ function MesParisContent() {
       return;
     }
 
-    const supabase = getSupabaseBrowserClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session) {
-      router.push("/login?redirect=/mes-paris");
-      return;
-    }
-
-    setUser({ email: session.user.email });
+    setLoading(true);
+    setError("");
 
     try {
+      const supabase = getSupabaseBrowserClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        router.push("/login?redirect=/mes-paris");
+        return;
+      }
+
+      setUser({ email: session.user?.email ?? undefined });
+
       const res = await fetch("/api/bets", {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      const data = await res.json();
-      if (data.success) {
-        setBets(data.bets);
-        setSolde(data.solde);
-        setIsSubscribed(Boolean(data.isSubscribed));
-        setSubscriptionStatus(data.subscriptionStatus ?? "FREE");
+      const payload: {
+        success?: boolean;
+        bets?: Bet[];
+        solde?: number;
+        isSubscribed?: boolean;
+        subscriptionStatus?: string;
+        error?: string;
+      } = await res.json();
+
+      if (!res.ok || !payload.success) {
+        throw new Error(payload.error ?? "Réponse paris invalide.");
       }
-    } catch {
-      setError("Impossible de charger l'espace paris.");
+
+      setBets(asArray<Bet>(payload.bets));
+      setSolde(typeof payload.solde === "number" && Number.isFinite(payload.solde) ? payload.solde : 1000);
+      setIsSubscribed(Boolean(payload.isSubscribed));
+      setSubscriptionStatus(payload.subscriptionStatus ?? "FREE");
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Impossible de charger l'espace paris.");
+      setBets([]);
     } finally {
       setLoading(false);
     }
@@ -221,17 +236,18 @@ function MesParisContent() {
     }
 
     setSettling(true);
-    const supabase = getSupabaseBrowserClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session) {
-      setSettling(false);
-      return;
-    }
 
     try {
+      const supabase = getSupabaseBrowserClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        setSettling(false);
+        return;
+      }
+
       await fetch("/api/bets/settle", {
         method: "POST",
         headers: { Authorization: `Bearer ${session.access_token}` },

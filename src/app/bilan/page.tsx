@@ -1,7 +1,8 @@
-﻿"use client";
+"use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { asArray } from "@/lib/array-utils";
 import {
   formatDateToPmu,
   fromIsoDate,
@@ -80,6 +81,9 @@ interface BilanData {
   results: BilanResult[];
 }
 
+type BilanTimelinePoint = BilanData["dashboard"]["timeline"][number];
+type BilanDashboardStatRow = BilanData["dashboard"]["bestTracks"][number];
+
 interface BacktestResponse {
   success: boolean;
   cached?: boolean;
@@ -107,6 +111,8 @@ interface BacktestResponse {
     }>;
   };
 }
+
+type BacktestByBetTypeRow = NonNullable<BacktestResponse["backtest"]>["byBetType"][number];
 
 const GREEN = "#00843D";
 const GREEN_DARK = "#006B31";
@@ -288,7 +294,7 @@ function DateNavigator({
               cursor: "pointer",
             }}
           >
-            Aujourd&apos;hui
+            {"Aujourd'hui"}
           </button>
         </div>
         <input
@@ -384,13 +390,14 @@ function MiniBarChart({
 }: {
   timeline: BilanData["dashboard"]["timeline"];
 }) {
-  if (timeline.length === 0) return null;
+  const points = asArray<BilanTimelinePoint>(timeline);
+  if (points.length === 0) return null;
 
-  const maxAbs = Math.max(...timeline.map((point) => Math.abs(point.cumulativeProfit)), 1);
+  const maxAbs = Math.max(...points.map((point) => Math.abs(point.cumulativeProfit)), 1);
 
   return (
     <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 160 }}>
-      {timeline.map((point) => {
+      {points.map((point) => {
         const height = `${Math.max((Math.abs(point.cumulativeProfit) / maxAbs) * 100, 8)}%`;
         const positive = point.cumulativeProfit >= 0;
         return (
@@ -429,46 +436,86 @@ function BilanPageContent() {
   }, [urlDate]);
 
   useEffect(() => {
-    setLoading(true);
-    setError(false);
+    let cancelled = false;
 
-    fetch(`/api/bilan?date=${selectedDate}`, { cache: "no-store" })
-      .then((res) => res.json())
-      .then((json) => {
+    async function loadBilan() {
+      setLoading(true);
+      setError(false);
+
+      try {
+        const res = await fetch(`/api/bilan?date=${selectedDate}`, { cache: "no-store" });
+        const json = (await res.json()) as BilanData;
+        if (cancelled) return;
         if (json.success) {
           setData(json);
         } else {
           setError(true);
         }
-      })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
+      } catch {
+        if (!cancelled) setError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void loadBilan();
+    return () => {
+      cancelled = true;
+    };
   }, [selectedDate]);
 
   useEffect(() => {
-    fetch("/api/backtest?days=90", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((json: BacktestResponse) => {
-        if (json.success && json.backtest) {
+    let cancelled = false;
+
+    async function loadBacktest() {
+      try {
+        const res = await fetch("/api/backtest?days=90", { cache: "no-store" });
+        const json = (await res.json()) as BacktestResponse;
+        if (!cancelled && json.success && json.backtest) {
           setBacktest(json.backtest);
         }
-      })
-      .catch(() => {
-        setBacktest(null);
-      });
+      } catch {
+        if (!cancelled) setBacktest(null);
+      }
+    }
+
+    void loadBacktest();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
+  const resultsList = useMemo(() => asArray<BilanResult>(data?.results), [data]);
+
   const winners = useMemo(
-    () => data?.results.filter((result) => result.resultat === "GAGNANT") ?? [],
-    [data]
+    () => resultsList.filter((result) => result.resultat === "GAGNANT"),
+    [resultsList]
   );
   const placed = useMemo(
-    () => data?.results.filter((result) => result.resultat === "PLACE") ?? [],
-    [data]
+    () => resultsList.filter((result) => result.resultat === "PLACE"),
+    [resultsList]
   );
   const misses = useMemo(
-    () => data?.results.filter((result) => result.resultat === "PERDU") ?? [],
+    () => resultsList.filter((result) => result.resultat === "PERDU"),
+    [resultsList]
+  );
+
+  const bestTracksRows = useMemo(
+    () => asArray<BilanDashboardStatRow>(data?.dashboard?.bestTracks),
     [data]
+  );
+  const bestBetTypesRows = useMemo(
+    () => asArray<BilanDashboardStatRow>(data?.dashboard?.bestBetTypes),
+    [data]
+  );
+  const bestJockeysRows = useMemo(
+    () => asArray<BilanDashboardStatRow>(data?.dashboard?.bestJockeys),
+    [data]
+  );
+  const expertInsights = useMemo(() => asArray<string>(data?.expert?.insights), [data]);
+  const backtestByBetTypeRows = useMemo(
+    () => asArray<BacktestByBetTypeRow>(backtest?.byBetType),
+    [backtest]
   );
 
   const successRate = data?.summary.successRate ?? 0;
@@ -601,7 +648,7 @@ function BilanPageContent() {
               <SummaryCard label="Tickets gagnants" value={data.summary.wins} tone="good" />
               <SummaryCard label="Tickets places" value={data.summary.places} tone="warn" />
               <SummaryCard label="Tickets perdus" value={data.summary.losses} tone={data.summary.losses > data.summary.wins + data.summary.places ? "bad" : "default"} />
-              <SummaryCard label="Courses finies" value={data.results.length} />
+              <SummaryCard label="Courses finies" value={resultsList.length} />
             </div>
 
             {data.dashboard.available ? (
@@ -656,7 +703,7 @@ function BilanPageContent() {
                   <div style={{ fontSize: 18, fontWeight: 800, color: DARK, marginBottom: 12 }}>
                     Gains / pertes dans le temps
                   </div>
-                  <MiniBarChart timeline={data.dashboard.timeline} />
+                  <MiniBarChart timeline={asArray<BilanTimelinePoint>(data.dashboard?.timeline)} />
                 </div>
 
                 <div
@@ -675,7 +722,7 @@ function BilanPageContent() {
                       Meilleurs hippodromes
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {data.dashboard.bestTracks.map((track) => (
+                      {bestTracksRows.map((track) => (
                         <div key={track.label} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 14 }}>
                           <span style={{ color: DARK, fontWeight: 700 }}>{track.label}</span>
                           <span style={{ color: track.roi >= 0 ? GREEN : RED, fontWeight: 800 }}>
@@ -691,7 +738,7 @@ function BilanPageContent() {
                       Taux par type de pari
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {data.dashboard.bestBetTypes.map((betType) => (
+                      {bestBetTypesRows.map((betType) => (
                         <div key={betType.label} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 14 }}>
                           <span style={{ color: DARK, fontWeight: 700 }}>{betType.label}</span>
                           <span style={{ color: betType.roi >= 0 ? GREEN : RED, fontWeight: 800 }}>
@@ -707,7 +754,7 @@ function BilanPageContent() {
                       Jockeys detectes
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {data.dashboard.bestJockeys.length > 0 ? data.dashboard.bestJockeys.map((jockey) => (
+                      {bestJockeysRows.length > 0 ? bestJockeysRows.map((jockey) => (
                         <div key={jockey.label} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 14 }}>
                           <span style={{ color: DARK, fontWeight: 700 }}>{jockey.label}</span>
                           <span style={{ color: jockey.roi >= 0 ? GREEN : RED, fontWeight: 800 }}>
@@ -770,7 +817,7 @@ function BilanPageContent() {
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {backtest.byBetType.map((betType) => (
+                  {backtestByBetTypeRows.map((betType) => (
                     <div
                       key={betType.betType}
                       style={{
@@ -1039,7 +1086,7 @@ function BilanPageContent() {
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {data.expert.insights.map((insight, index) => (
+                {expertInsights.map((insight, index) => (
                   <div
                     key={index}
                     style={{
@@ -1073,18 +1120,18 @@ function BilanPageContent() {
                   Perdus: {misses.length}
                 </span>
                 <span style={{ background: "#F3F4F6", color: "#555", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
-                  Courses finies: {data.results.length}
+                  Courses finies: {resultsList.length}
                 </span>
               </div>
             </div>
 
-            {data.results.length === 0 ? (
+            {resultsList.length === 0 ? (
               <div style={{ textAlign: "center", padding: "40px 24px", color: "#666" }}>
                 Pas encore de resultats termines pour cette date.
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "0 16px" }}>
-                {data.results.map((result, index) => {
+                {resultsList.map((result, index) => {
                   const tone = getResultStyle(result.resultat);
                   const confianceTone = getConfianceStyle(result.confiance);
 

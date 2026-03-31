@@ -217,7 +217,9 @@ function LoginPageContent() {
               Promesse
             </div>
             <div style={{ fontSize: 17, fontWeight: 800, lineHeight: "24px" }}>
-              L&apos;objectif n&apos;est pas de te faire jouer plus. L&apos;objectif est de t&apos;aider a jouer moins, mais mieux.
+              {
+                "L'objectif n'est pas de te faire jouer plus. L'objectif est de t'aider a jouer moins, mais mieux."
+              }
             </div>
           </div>
         </section>

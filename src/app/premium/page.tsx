@@ -107,8 +107,8 @@ export default function PremiumPage() {
                 Tu ne paies pas pour voir plus de courses. Tu paies pour jouer moins, mais mieux.
               </h1>
               <p className="mt-4 max-w-2xl text-[15px] leading-7 text-[var(--pmu-text-soft)] md:text-[17px]">
-                PMU AI Premium filtre le bruit, garde les spots exploitables et transforme l&apos;analyse brute
-                en decisions claires: value bet, mise conseillee, ticket recommande et course a eviter.
+                PMU AI Premium filtre le bruit, garde les spots exploitables et transforme {"l'analyse brute"} en decisions
+                claires: value bet, mise conseillee, ticket recommande et course a eviter.
               </p>
             </div>
 
@@ -144,7 +144,7 @@ export default function PremiumPage() {
                 <span className="pb-2 text-[16px] font-black">EUR / mois</span>
               </div>
               <p className="mt-2 text-sm leading-6 text-[#5B6472]">
-                Acces aux pronostics complets, aux mises recommandees et au suivi reel de l&apos;algo.
+                Acces aux pronostics complets, aux mises recommandees et au suivi reel de {"l'algo"}.
               </p>
             </div>
 
@@ -172,7 +172,7 @@ export default function PremiumPage() {
               href="/bilan"
               className="rounded-full border border-[rgba(15,23,42,0.08)] bg-white px-5 py-4 text-center text-sm font-black text-[#171b1f] transition hover:bg-[#F8FAFB]"
             >
-              Voir le bilan de l&apos;algo
+              {`Voir le bilan de l'algo`}
             </Link>
             <div className="text-center text-xs font-semibold leading-5 text-[#7A8A9A]">
               Paiement securise via Stripe. Le premium te donne une lecture plus exploitable, pas une promesse magique.
@@ -214,10 +214,10 @@ export default function PremiumPage() {
 
           <div className="premium-surface overflow-hidden rounded-[34px] p-6 md:p-7">
             <div className="text-[12px] font-extrabold uppercase tracking-[0.18em] text-[#D64545]">
-              Ce n&apos;est pas pour toi si
+              {"Ce n'est pas pour toi si"}
             </div>
             <h2 className="mt-3 text-[28px] font-black leading-[1] tracking-[-0.04em] text-[#171b1f] md:text-[30px]">
-              Tu cherches une promesse fantasmee plutot qu&apos;un outil de discipline.
+              Tu cherches une promesse fantasmee plutot {"qu'un outil"} de discipline.
             </h2>
             <div className="mt-5 grid gap-3">
               {NOT_FOR_YOU_ITEMS.map((item) => (
@@ -236,14 +236,14 @@ export default function PremiumPage() {
                 Questions frequentes
               </div>
               <h2 className="mt-2 text-[28px] font-black leading-[1] tracking-[-0.04em] text-[#171b1f] md:text-[32px]">
-                Ce que tu dois savoir avant de t&apos;abonner
+                {`Ce que tu dois savoir avant de t'abonner`}
               </h2>
             </div>
             <Link
               href="/login?redirect=/mes-paris"
               className="rounded-full bg-[var(--pmu-text)] px-5 py-3 text-sm font-black text-white transition hover:opacity-90"
             >
-              Continuer vers l&apos;offre
+              {`Continuer vers l'offre`}
             </Link>
           </div>
 

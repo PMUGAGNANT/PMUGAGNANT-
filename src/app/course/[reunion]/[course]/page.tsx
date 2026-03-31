@@ -431,9 +431,9 @@ function BetPlanRow({ label, summary }: { label: string; summary: { chevaux: num
           </Tag>
         </div>
         <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{summary.raison}</div>
-        {summary.chevaux.length > 0 && (
+        {asArray<number>(summary.chevaux).length > 0 && (
           <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {summary.chevaux.map(n => (
+            {asArray<number>(summary.chevaux).map((n) => (
               <span key={n} style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, padding: "3px 7px", borderRadius: 4, background: CARD2, color: WHITE }}>
                 N{n}
               </span>
@@ -571,20 +571,27 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
     if (!reunion || !course) return;
     let cancelled = false;
     async function loadRace() {
-      let headers: HeadersInit | undefined;
-      if (hasSupabaseConfig()) {
-        const supabase = getSupabaseBrowserClient();
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) headers = { Authorization: `Bearer ${session.access_token}` };
+      try {
+        let headers: HeadersInit | undefined;
+        if (hasSupabaseConfig()) {
+          const supabase = getSupabaseBrowserClient();
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          if (session?.access_token) headers = { Authorization: `Bearer ${session.access_token}` };
+        }
+        const r = await fetch(`/api/race/${reunion}/${course}?date=${selectedDate}`, { headers });
+        const json = (await r.json()) as RaceApiResponse;
+        if (!r.ok || !json.success) throw new Error(json.error || "Course introuvable");
+        if (!cancelled) setData(json);
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Analyse indisponible");
+          setData(null);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      fetch(`/api/race/${reunion}/${course}?date=${selectedDate}`, { headers })
-        .then(async r => {
-          const json = (await r.json()) as RaceApiResponse;
-          if (!r.ok || !json.success) throw new Error(json.error || "Course introuvable");
-          if (!cancelled) setData(json);
-        })
-        .catch(e => { if (!cancelled) { setError(e instanceof Error ? e.message : "Analyse indisponible"); setData(null); } })
-        .finally(() => { if (!cancelled) setLoading(false); });
     }
     void loadRace();
     return () => { cancelled = true; };
@@ -598,12 +605,15 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
   const verdictTone = getVerdictTone(verdict.title);
   const strengths = buildStrengths(analysis, technicalFavorite, placeBase);
   const warnings = buildWarnings(analysis, technicalFavorite);
-  const technicalFavoritePosition = getArrivalPosition(technicalFavorite?.numPmu, data?.officialArrival ?? []);
-  const simpleTicketPosition = getArrivalPosition(simpleTicket?.numPmu, data?.officialArrival ?? []);
-  const placeBasePosition = getArrivalPosition(placeBase?.numPmu, data?.officialArrival ?? []);
+  const officialArrivalRows = asArray<ArrivalRow>(data?.officialArrival);
+  const technicalFavoritePosition = getArrivalPosition(technicalFavorite?.numPmu, officialArrivalRows);
+  const simpleTicketPosition = getArrivalPosition(simpleTicket?.numPmu, officialArrivalRows);
+  const placeBasePosition = getArrivalPosition(placeBase?.numPmu, officialArrivalRows);
   const readableDate = formatDateLabel(selectedDate);
   const contextHighlights = data ? buildContextHighlights(data, analysis) : [];
   const daySignal = analysis?.prediction.journeeSignal ?? null;
+  const alertesList = asArray<string>(analysis?.alertes);
+  const top5Runners = asArray<ScoredParticipant>(analysis?.top5);
 
   /* Loading skeleton */
   if (loading) {
@@ -719,7 +729,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
           <SectionCard title="Lecture à venir" kicker="Tempo moteur">
             <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>
               Le moteur ouvrira sa lecture détaillée 30 minutes avant le départ officiel.
-              Pour cette course, l&apos;analyse sera visible {formatRevealTime(data.minutesUntilStart).toLowerCase()}.
+              Pour cette course, {"l'analyse"} sera visible {formatRevealTime(data.minutesUntilStart).toLowerCase()}.
             </p>
           </SectionCard>
         )}
@@ -728,8 +738,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
         {data.paywall?.required && !analysis && (
           <SectionCard title="Pronostic réservé aux abonnés" kicker="PMU AI Premium">
             <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6, marginBottom: 14 }}>
-              La page d&apos;accueil reste gratuite, mais le classement complet, les value bets,
-              les mises Kelly et les tickets détaillés sont réservés aux abonnés.
+              {"La page d'accueil"} reste gratuite, mais le classement complet, les value bets, les mises Kelly et les tickets
+              détaillés sont réservés aux abonnés.
             </p>
             {data.paywall.preview?.favori && (
               <div style={{ padding: 14, borderRadius: 10, background: CARD2, border: `1px solid ${BORDER}`, marginBottom: 14 }}>
@@ -746,7 +756,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
               width: "100%", padding: "14px 0", borderRadius: 8, border: "none",
               background: G, color: "#ffffff", fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 14, cursor: "pointer",
             }}>
-              Se connecter et s&apos;abonner
+              Se connecter et {"s'abonner"}
             </button>
           </SectionCard>
         )}
@@ -850,14 +860,18 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                         {formatDaySignalTitle(daySignal.label)}
                       </div>
                       <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: MUTED, marginBottom: 8 }}>Score {daySignal.score}/100</div>
-                      {daySignal.raisons.map(r => <div key={r} style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{r}</div>)}
+                      {asArray<string>(daySignal.raisons).map((r) => (
+                        <div key={r} style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{r}</div>
+                      ))}
                     </div>
                   )}
-                  {analysis.alertes.length > 0 ? analysis.alertes.map(a => (
-                    <div key={a} style={{ padding: "10px 14px", borderRadius: 8, background: GOLD_DIM, border: `1px solid ${GOLD}44`, fontSize: 13, color: GOLD, lineHeight: 1.5 }}>
-                      {a}
-                    </div>
-                  )) : (
+                  {alertesList.length > 0 ? (
+                    alertesList.map((a) => (
+                      <div key={a} style={{ padding: "10px 14px", borderRadius: 8, background: GOLD_DIM, border: `1px solid ${GOLD}44`, fontSize: 13, color: GOLD, lineHeight: 1.5 }}>
+                        {a}
+                      </div>
+                    ))
+                  ) : (
                     <div style={{ fontSize: 13, color: MUTED }}>Aucune alerte additionnelle sur cette course.</div>
                   )}
                 </div>
@@ -887,10 +901,10 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
             </div>
 
             {/* ── Debrief officiel ── */}
-            {data.isFinished && data.officialArrival.length > 0 && (
+            {data.isFinished && officialArrivalRows.length > 0 && (
               <SectionCard title="Débrief officiel" kicker="Arrivée course">
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
-                  {data.officialArrival.slice(0, 3).map(r => (
+                  {officialArrivalRows.slice(0, 3).map((r) => (
                     <Tag key={`${r.position}-${r.numPmu}`} color={WHITE} bg={CARD2}>
                       {formatPosition(r.position)} N{r.numPmu} {r.nom}
                     </Tag>
@@ -936,7 +950,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                     <div style={{ display: "grid", gap: 8 }}>
                       {warnings.length > 0 ? warnings.map(p => (
                         <div key={p} style={{ padding: "10px 12px", borderRadius: 8, background: CARD2, border: `1px solid ${GOLD}33`, fontSize: 13, color: WHITE, lineHeight: 1.5 }}>{p}</div>
-                      )) : <div style={{ fontSize: 13, color: MUTED }}>Pas d&apos;alerte majeure remontée par le moteur.</div>}
+                      )) : <div style={{ fontSize: 13, color: MUTED }}>{`Pas d'alerte majeure remontée par le moteur.`}</div>}
                     </div>
                   </div>
                 </div>
@@ -945,8 +959,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
               {/* Radar top 5 */}
               <SectionCard title="Radar top 5" kicker="Classement du moteur">
                 <div style={{ display: "grid", gap: 10 }}>
-                  {analysis.top5.map((runner, index) => {
-                    const position = data.isFinished ? getArrivalPosition(runner.numPmu, data.officialArrival) : null;
+                  {top5Runners.map((runner, index) => {
+                    const position = data.isFinished ? getArrivalPosition(runner.numPmu, officialArrivalRows) : null;
                     const at = getActionTone(runner.prediction.action, runner.prediction.valueBet);
                     return (
                       <div key={runner.numPmu} style={{
