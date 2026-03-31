@@ -287,6 +287,8 @@ function LoginPageContent() {
 
           {!supabaseConfigured ? (
             <div
+              role="alert"
+              aria-live="polite"
               style={{
                 background: "color-mix(in srgb, var(--pmu-orange) 14%, transparent)",
                 color: "var(--pmu-orange)",
@@ -302,7 +304,7 @@ function LoginPageContent() {
             </div>
           ) : null}
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} aria-busy={loading}>
             <div style={{ marginBottom: 16 }}>
               <label
                 style={{
@@ -378,6 +380,8 @@ function LoginPageContent() {
 
             {error ? (
               <div
+                role="alert"
+                aria-live="assertive"
                 style={{
                   background: "color-mix(in srgb, var(--pmu-red) 12%, transparent)",
                   color: "var(--pmu-red)",

@@ -18,6 +18,10 @@ import {
 import { CONFIDENCE_BUCKET_HIGH, CONFIDENCE_BUCKET_MEDIUM } from "@/lib/scoring-policy";
 import { parsePositiveInteger } from "@/lib/request-utils";
 
+function isAbortError(value: unknown): boolean {
+  return value instanceof Error && value.name === "AbortError";
+}
+
 interface CourseInfo {
   dateStr: string;
   reunion: number;
@@ -495,63 +499,88 @@ function BilanPageContent() {
   const [data, setData] = useState<BilanData | null>(null);
   const [backtest, setBacktest] = useState<BacktestResponse["backtest"] | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fetchRevision, setFetchRevision] = useState(0);
 
   useEffect(() => {
     setSelectedDate(urlDate);
   }, [urlDate]);
 
   useEffect(() => {
+    const ac = new AbortController();
     let cancelled = false;
 
     async function loadBilan() {
       setLoading(true);
-      setError(false);
+      setError(null);
 
       try {
         const qs = new URLSearchParams({
           date: selectedDate,
           dashboard_days: String(historyWindowDays),
         });
-        const res = await fetch(`/api/bilan?${qs.toString()}`, { cache: "no-store" });
+        const res = await fetch(`/api/bilan?${qs.toString()}`, {
+          cache: "no-store",
+          signal: ac.signal,
+        });
         const json = (await res.json()) as BilanData;
         if (cancelled) return;
+        if (!res.ok) {
+          setData(null);
+          setError("Le serveur n'a pas pu renvoyer le bilan.");
+          return;
+        }
         if (json.success) {
           setData(json);
         } else {
-          setError(true);
+          setData(null);
+          setError("Réponse bilan invalide.");
         }
-      } catch {
-        if (!cancelled) setError(true);
+      } catch (loadError) {
+        if (cancelled) return;
+        if (isAbortError(loadError)) return;
+        setData(null);
+        setError(loadError instanceof Error ? loadError.message : "Impossible de charger le bilan.");
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && !ac.signal.aborted) {
+          setLoading(false);
+        }
       }
     }
 
     void loadBilan();
     return () => {
       cancelled = true;
+      ac.abort();
     };
-  }, [selectedDate, historyWindowDays]);
+  }, [selectedDate, historyWindowDays, fetchRevision]);
 
   useEffect(() => {
+    const ac = new AbortController();
     let cancelled = false;
 
     async function loadBacktest() {
       try {
-        const res = await fetch("/api/backtest?days=90", { cache: "no-store" });
+        const res = await fetch("/api/backtest?days=90", {
+          cache: "no-store",
+          signal: ac.signal,
+        });
         const json = (await res.json()) as BacktestResponse;
-        if (!cancelled && json.success && json.backtest) {
+        if (cancelled) return;
+        if (json.success && json.backtest) {
           setBacktest(json.backtest);
         }
-      } catch {
-        if (!cancelled) setBacktest(null);
+      } catch (loadError) {
+        if (cancelled) return;
+        if (isAbortError(loadError)) return;
+        setBacktest(null);
       }
     }
 
     void loadBacktest();
     return () => {
       cancelled = true;
+      ac.abort();
     };
   }, []);
 
@@ -661,10 +690,42 @@ function BilanPageContent() {
         <DateNavigator dateStr={selectedDate} onChange={updateDate} />
 
         {loading ? (
-          <SkeletonCards />
+          <div role="status" aria-busy="true" aria-label="Chargement du bilan">
+            <SkeletonCards />
+          </div>
         ) : error || !data ? (
-          <div style={{ textAlign: "center", padding: 48, color: RED }}>
-            Impossible de charger le bilan.
+          <div
+            role="alert"
+            aria-live="assertive"
+            style={{
+              margin: "16px",
+              textAlign: "center",
+              padding: 32,
+              borderRadius: 22,
+              background: CARD_BG,
+              border: `1px solid color-mix(in srgb, var(--pmu-red) 35%, transparent)`,
+              color: DARK,
+            }}
+          >
+            <p style={{ fontWeight: 800, color: RED, marginBottom: 8 }}>Impossible de charger le bilan</p>
+            {error ? (
+              <p style={{ fontSize: 14, color: "var(--pmu-text-soft)", marginBottom: 16 }}>{error}</p>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setFetchRevision((revision) => revision + 1)}
+              style={{
+                border: "none",
+                borderRadius: 999,
+                padding: "12px 20px",
+                background: GREEN,
+                color: "var(--pmu-on-primary)",
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              Réessayer
+            </button>
           </div>
         ) : (
           <>

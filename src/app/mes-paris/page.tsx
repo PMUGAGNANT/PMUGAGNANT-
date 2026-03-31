@@ -69,61 +69,86 @@ function MesParisContent() {
     title: string;
     message: string;
   } | null>(null);
+  const [fetchRevision, setFetchRevision] = useState(0);
 
-  const fetchBets = useCallback(async () => {
-    if (!supabaseConfigured) {
-      setError(getSupabaseConfigError());
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const supabase = getSupabaseBrowserClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) {
-        router.push("/login?redirect=/mes-paris");
+  const fetchBets = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!supabaseConfigured) {
+        setError(getSupabaseConfigError());
+        setLoading(false);
         return;
       }
 
-      setUser({ email: session.user?.email ?? undefined });
+      setLoading(true);
+      setError("");
 
-      const res = await fetch("/api/bets", {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      const payload: {
-        success?: boolean;
-        bets?: Bet[];
-        solde?: number;
-        isSubscribed?: boolean;
-        subscriptionStatus?: string;
-        error?: string;
-      } = await res.json();
+      try {
+        const supabase = getSupabaseBrowserClient();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-      if (!res.ok || !payload.success) {
-        throw new Error(payload.error ?? "Réponse paris invalide.");
+        if (signal?.aborted) {
+          return;
+        }
+
+        if (!session) {
+          router.push("/login?redirect=/mes-paris");
+          return;
+        }
+
+        setUser({ email: session.user?.email ?? undefined });
+
+        const res = await fetch("/api/bets", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+          signal,
+        });
+        const payload: {
+          success?: boolean;
+          bets?: Bet[];
+          solde?: number;
+          isSubscribed?: boolean;
+          subscriptionStatus?: string;
+          error?: string;
+        } = await res.json();
+
+        if (signal?.aborted) {
+          return;
+        }
+
+        if (!res.ok || !payload.success) {
+          throw new Error(payload.error ?? "Réponse paris invalide.");
+        }
+
+        setBets(asArray<Bet>(payload.bets));
+        setSolde(typeof payload.solde === "number" && Number.isFinite(payload.solde) ? payload.solde : 1000);
+        setIsSubscribed(Boolean(payload.isSubscribed));
+        setSubscriptionStatus(payload.subscriptionStatus ?? "FREE");
+      } catch (loadError) {
+        if (signal?.aborted) {
+          return;
+        }
+        if (loadError instanceof Error && loadError.name === "AbortError") {
+          return;
+        }
+        setError(loadError instanceof Error ? loadError.message : "Impossible de charger l'espace paris.");
+        setBets([]);
+      } finally {
+        if (!signal?.aborted) {
+          setLoading(false);
+        }
       }
-
-      setBets(asArray<Bet>(payload.bets));
-      setSolde(typeof payload.solde === "number" && Number.isFinite(payload.solde) ? payload.solde : 1000);
-      setIsSubscribed(Boolean(payload.isSubscribed));
-      setSubscriptionStatus(payload.subscriptionStatus ?? "FREE");
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Impossible de charger l'espace paris.");
-      setBets([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [router, supabaseConfigured]);
+    },
+    [router, supabaseConfigured]
+  );
 
   useEffect(() => {
-    void fetchBets();
-  }, [fetchBets]);
+    const ac = new AbortController();
+    void fetchBets(ac.signal);
+    return () => {
+      ac.abort();
+    };
+  }, [fetchBets, fetchRevision]);
 
   useEffect(() => {
     let cancelled = false;
@@ -400,9 +425,18 @@ function MesParisContent() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: 60, color: "var(--pmu-text-muted)" }}>Chargement...</div>
+        <div
+          role="status"
+          aria-busy="true"
+          aria-label="Chargement de vos paris"
+          style={{ textAlign: "center", padding: 60, color: "var(--pmu-text-muted)" }}
+        >
+          Chargement...
+        </div>
       ) : error ? (
         <div
+          role="alert"
+          aria-live="assertive"
           style={{
             margin: "18px 0",
             background: "color-mix(in srgb, var(--pmu-orange) 12%, transparent)",
@@ -414,7 +448,22 @@ function MesParisContent() {
             fontWeight: 500,
           }}
         >
-          {error}
+          <p style={{ margin: 0, marginBottom: 12 }}>{error}</p>
+          <button
+            type="button"
+            onClick={() => setFetchRevision((revision) => revision + 1)}
+            style={{
+              border: "none",
+              borderRadius: 999,
+              padding: "10px 18px",
+              background: GREEN,
+              color: "var(--pmu-on-primary)",
+              fontWeight: 800,
+              cursor: "pointer",
+            }}
+          >
+            Réessayer
+          </button>
         </div>
       ) : (
         <>
