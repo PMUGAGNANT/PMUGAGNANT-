@@ -245,6 +245,7 @@ function toApiRaceScoreLite(score: RaceScore | undefined): ApiRaceScoreLite | un
   }
   return {
     score: score.score,
+    scoreDetailsLocked: score.scoreLocked === true,
     stage: score.stage,
     lisibilite: score.lisibilite,
     decision: score.decision,

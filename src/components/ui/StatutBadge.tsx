@@ -22,7 +22,9 @@ const toneMap: Record<StatutBadgeType, string> = {
 
 export function StatutBadge({ type }: StatutBadgeProps) {
   return (
-    <span className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] ${toneMap[type]}`}>
+    <span
+      className={`pmu-statut-badge inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] ${toneMap[type]}`}
+    >
       {labelMap[type]}
     </span>
   );

@@ -49,7 +49,7 @@ export function RadarHero({
           </button>
         </div>
 
-        <div className="rounded-3xl border border-[var(--pmu-border)] bg-[var(--pmu-surface)] p-6">
+        <div className="pmu-radar-panel rounded-3xl border border-[var(--pmu-border)] bg-[var(--pmu-surface)] p-6">
           <p className="app-label text-[var(--pmu-text-muted)]">Indice confiance</p>
           <div className="mt-2 flex flex-wrap items-baseline gap-2">
             <span className="pmu-radar-score text-6xl font-black tabular-nums leading-none tracking-tight text-[var(--pmu-primary)] md:text-7xl lg:text-8xl">

@@ -2,6 +2,10 @@ import type { Lisibilite, PredictionDecision, RaceSummary } from "@/lib/types";
 import {
   CONFIDENCE_BUCKET_HIGH,
   CONFIDENCE_BUCKET_MEDIUM,
+  COTE_PROXY_MID_THRESHOLD,
+  DECISION_REJET_DELTA_FULL,
+  DECISION_REJET_DELTA_SOFT,
+  getRadarQuinteWeight,
   getRadarStageWeight,
   SEUIL_JOUABLE,
   SEUIL_SURVEILLANCE,
@@ -16,6 +20,8 @@ export type PlayTier = "jouable" | "surveillance" | "passer" | "resultat";
 /** Données scores issues de /api/races/scores (champs utiles au client). */
 export interface ApiRaceScoreLite {
   score: number | null | undefined;
+  /** True quand l’API masque le détail (abonnement) : REJET peut être artificiel */
+  scoreDetailsLocked?: boolean;
   stage: HomeScoreStage;
   lisibilite: Lisibilite;
   decision: PredictionDecision;
@@ -120,6 +126,14 @@ function distanceAdjustment(distance: number): { delta: number; label: string } 
   return { delta: 0, label: "" };
 }
 
+/** NIVEAU 2 — Quinté : pénalité légère score consolidé (variance naturelle) */
+function quinteAdjustment(race: RaceSummary): { delta: number; label: string } {
+  if (!race.estQuinte) {
+    return { delta: 0, label: "" };
+  }
+  return { delta: -0.14, label: "Quinté : variance plus haute sur la combinaison" };
+}
+
 /** Spécialité approximative vs type de course (sans fiche cheval complète). */
 function disciplineCoherence(race: RaceSummary): { delta: number; label: string } {
   const d = (race.discipline || "").toLowerCase();
@@ -144,7 +158,7 @@ function coteProxyAdjustment(api: ApiRaceScoreLite | undefined): { delta: number
   if (conf != null && conf >= CONFIDENCE_BUCKET_HIGH) {
     return { delta: 0.18, label: "Repère PMU fort sur le ticket" };
   }
-  if (conf != null && conf >= 6.2) {
+  if (conf != null && conf >= COTE_PROXY_MID_THRESHOLD) {
     return { delta: 0.08, label: "Repère PMU correct" };
   }
   if (conf != null && conf < CONFIDENCE_BUCKET_MEDIUM) {
@@ -162,7 +176,17 @@ function decisionAdjustment(api: ApiRaceScoreLite | undefined): { delta: number;
     return { delta: -0.05, label: "Surveillance moteur" };
   }
   if (api.decision === "REJET") {
-    return { delta: -0.55, label: "Rejet moteur" };
+    const softPaywall =
+      api.scoreDetailsLocked === true &&
+      api.score == null &&
+      (api.lisibilite === "LISIBLE" || api.lisibilite === "COMPLEXE");
+    if (softPaywall) {
+      return {
+        delta: DECISION_REJET_DELTA_SOFT,
+        label: "Accès score limité — rejet affiché conservateur",
+      };
+    }
+    return { delta: DECISION_REJET_DELTA_FULL, label: "Rejet moteur" };
   }
   return { delta: 0, label: "" };
 }
@@ -209,6 +233,7 @@ export function computeClientRaceScore(
     lisibiliteAdjustment(api?.lisibilite ?? "COMPLEXE"),
     distanceAdjustment(race.distance),
     disciplineCoherence(race),
+    quinteAdjustment(race),
     coteProxyAdjustment(api),
     decisionAdjustment(api),
   ];
@@ -228,6 +253,7 @@ export function computeClientRaceScore(
   const radarRatio =
     displayScore *
     getRadarStageWeight(stage) *
+    getRadarQuinteWeight(race.estQuinte) *
     Math.log10(1 + alloc / 15_000) *
     (12 / Math.sqrt(partants));
 

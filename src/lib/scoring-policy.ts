@@ -20,6 +20,14 @@ export const CONFIDENCE_BUCKET_MEDIUM = 5.5;
 export const SERVER_SCORE_NIVEAU_HAUTE = 7.5;
 export const SERVER_SCORE_NIVEAU_JOUABLE = 6;
 
+/** NIVEAU 2 — seuil intermédiaire proxy cote (client) */
+export const COTE_PROXY_MID_THRESHOLD = 6.2;
+
+/** NIVEAU 2 — ajustement décision REJET (client) */
+export const DECISION_REJET_DELTA_FULL = -0.55;
+/** Paywall + lisibilité correcte : ne pas traiter comme un rejet moteur complet */
+export const DECISION_REJET_DELTA_SOFT = -0.28;
+
 /** NIVEAU 2 — pondération radar : privilégier le vivant vs courses terminées */
 export function getRadarStageWeight(stage: string): number {
   switch (stage) {
@@ -34,4 +42,9 @@ export function getRadarStageWeight(stage: string): number {
     default:
       return 1;
   }
+}
+
+/** NIVEAU 2 — Quinté : plus de variance ⇒ légère décote du ratio radar uniquement */
+export function getRadarQuinteWeight(isQuinte: boolean): number {
+  return isQuinte ? 0.9 : 1;
 }

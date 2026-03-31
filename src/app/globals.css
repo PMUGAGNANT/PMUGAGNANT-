@@ -219,6 +219,39 @@ svg {
   }
 }
 
+/* NIVEAU 3 — badges statut / confiance (cohérence motion) */
+.pmu-statut-badge {
+  transition: border-color 0.35s var(--pmu-ease-out), box-shadow 0.4s var(--pmu-ease-out),
+    color 0.3s ease, transform 0.25s var(--pmu-ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pmu-statut-badge {
+    transition: none;
+  }
+}
+
+.pmu-confidence-badge {
+  transition: border-color 0.35s var(--pmu-ease-out), box-shadow 0.4s var(--pmu-ease-out),
+    color 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pmu-confidence-badge {
+    transition: none;
+  }
+}
+
+.pmu-radar-panel {
+  box-shadow: var(--pmu-card-inset), 0 0 0 1px color-mix(in srgb, var(--pmu-primary) 8%, transparent),
+    var(--pmu-shadow-sm);
+}
+
+[data-theme="warm"] .pmu-radar-panel {
+  box-shadow: var(--pmu-card-inset), 0 0 0 1px color-mix(in srgb, var(--pmu-primary) 10%, transparent),
+    var(--pmu-shadow-sm);
+}
+
 .app-shell {
   min-height: 100vh;
 }
