@@ -3,7 +3,11 @@ import { getAllRaces, getParticipants, getTodayDateStr } from "@/lib/pmu-api";
 import { analyzeRaceWithParameters, getMinutesUntilStart } from "@/lib/analysis";
 import { attachFaultRates } from "@/lib/horse-faults";
 import { loadAlgoParameters } from "@/lib/config";
-import { listCourseRecordsBetween, listPredictionsBetween } from "@/lib/prediction-store";
+import {
+  getBilanDashboardHistoryRange,
+  listCourseRecordsBetween,
+  listPredictionsBetween,
+} from "@/lib/prediction-store";
 import { badRequest, serverError } from "@/lib/api-response";
 import { normalizeRequestedDate } from "@/lib/request-utils";
 import { logger } from "@/lib/server-logger";
@@ -458,9 +462,10 @@ export async function GET(request: Request) {
     };
 
     try {
+      const { startIso, endIso } = getBilanDashboardHistoryRange();
       const [historicalPredictions, historicalCourses] = await Promise.all([
-        listPredictionsBetween("2020-01-01", "2100-01-01"),
-        listCourseRecordsBetween("2020-01-01", "2100-01-01"),
+        listPredictionsBetween(startIso, endIso),
+        listCourseRecordsBetween(startIso, endIso),
       ]);
       dashboard = buildHistoricalDashboard(historicalPredictions, historicalCourses, results);
     } catch (dashboardError) {

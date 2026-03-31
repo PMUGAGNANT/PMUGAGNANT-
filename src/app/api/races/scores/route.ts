@@ -27,8 +27,9 @@ export async function GET(request: Request) {
     const scores: Record<
       string,
       {
-        score: number;
-        stage: 'preview_2h' | 'preview_1h' | 'final_30m' | 'finished';
+        score: number | null;
+        scoreLocked: boolean;
+        stage: "preview_2h" | "preview_1h" | "final_30m" | "finished";
         lisibilite: Lisibilite;
         decision: PredictionDecision;
         playable: boolean;
@@ -38,7 +39,7 @@ export async function GET(request: Request) {
               numPmu: number;
               nom: string;
               decision: PredictionDecision;
-              betType: "GAGNANT" | "PLACE";
+              betType: string;
               confidence: number;
             }
           | null;
@@ -81,9 +82,13 @@ export async function GET(request: Request) {
 
           const allowFullScore = subscriptionState.isSubscribed || stage === "finished";
 
+          const score = allowFullScore ? analysis.scoreConfiance?.score ?? null : null;
+          const scoreLocked = !allowFullScore;
+
           return {
             key,
-            score: allowFullScore ? analysis.scoreConfiance?.score ?? null : null,
+            score,
+            scoreLocked,
             stage,
             lisibilite: analysis.prediction.lisibilite,
             decision: allowFullScore ? analysis.prediction.decisionCourse : "REJET",
@@ -94,28 +99,31 @@ export async function GET(request: Request) {
               analysis.prediction.decisionCourse !== "REJET" &&
               Boolean(analysis.recommandation?.vautLeCoup),
             recommendation: allowFullScore ? analysis.recommandation?.decision ?? null : null,
-            pick: allowFullScore && analysis.favori
-              ? {
-                  numPmu: analysis.favori.numPmu,
-                  nom: analysis.favori.nom,
-                  decision: analysis.favori.prediction.decision,
-                  betType: analysis.favori.prediction.typePariConseille,
-                  confidence: analysis.favori.prediction.confiance,
-                }
-              : null,
+            pick:
+              allowFullScore && analysis.favori
+                ? {
+                    numPmu: analysis.favori.numPmu,
+                    nom: analysis.favori.nom,
+                    decision: analysis.favori.prediction.decision,
+                    betType: analysis.favori.prediction.typePariConseille,
+                    confidence: analysis.favori.prediction.confiance,
+                  }
+                : null,
           };
         })
       );
       for (const result of results) {
-        if (result.status === 'fulfilled' && result.value.score !== null) {
-          scores[result.value.key] = {
-            score: result.value.score,
-            stage: result.value.stage,
-            lisibilite: result.value.lisibilite,
-            decision: result.value.decision,
-            playable: result.value.playable,
-            recommendation: result.value.recommendation,
-            pick: result.value.pick,
+        if (result.status === "fulfilled") {
+          const v = result.value;
+          scores[v.key] = {
+            score: v.score,
+            scoreLocked: v.scoreLocked,
+            stage: v.stage,
+            lisibilite: v.lisibilite,
+            decision: v.decision,
+            playable: v.playable,
+            recommendation: v.recommendation,
+            pick: v.pick,
           };
         } else if (result.status === "rejected") {
           logger.warn("race_scores.batch_item_failed", {

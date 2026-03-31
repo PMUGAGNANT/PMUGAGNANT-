@@ -201,3 +201,14 @@ export async function listCourseRecordsBetween(startIso: string, endIso: string)
 
   return (data ?? []) as CourseRecordRow[];
 }
+
+/** Fenêtre glissante pour le dashboard historique du bilan (évite listPredictionsBetween sur des décennies). */
+export const BILAN_DASHBOARD_HISTORY_DAYS = 548;
+
+export function getBilanDashboardHistoryRange(now: Date = new Date()): { startIso: string; endIso: string } {
+  const endIso = now.toISOString().slice(0, 10);
+  const start = new Date(now.getTime());
+  start.setUTCDate(start.getUTCDate() - BILAN_DASHBOARD_HISTORY_DAYS);
+  const startIso = start.toISOString().slice(0, 10);
+  return { startIso, endIso };
+}
