@@ -1279,8 +1279,12 @@ function buildConfidenceScore(
 ): ConfidenceScore | null {
   if (!favori) return null;
 
-  const base = favori.prediction.confiance;
-  const solidityBoost = solidite ? clamp((solidite.score - 60) / 25, -1.2, 1.2) : 0;
+  const rawConfiance = favori.prediction.confiance;
+  const base = Number.isFinite(rawConfiance) ? rawConfiance : 0;
+  const solidityBoost =
+    solidite && Number.isFinite(solidite.score)
+      ? clamp((solidite.score - 60) / 25, -1.2, 1.2)
+      : 0;
   const lisibiliteBoost = lisibilite === "LISIBLE" ? 0.6 : lisibilite === "COMPLEXE" ? -0.4 : -2;
   const score = round1(clamp(base + solidityBoost + lisibiliteBoost, 0, 10));
 
