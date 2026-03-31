@@ -4,12 +4,13 @@ import { analyzeRaceWithParameters, getMinutesUntilStart } from "@/lib/analysis"
 import { attachFaultRates } from "@/lib/horse-faults";
 import { loadAlgoParameters } from "@/lib/config";
 import {
+  BILAN_DASHBOARD_HISTORY_DAYS_DEFAULT,
   getBilanDashboardHistoryRange,
   listCourseRecordsBetween,
   listPredictionsBetween,
 } from "@/lib/prediction-store";
 import { badRequest, serverError } from "@/lib/api-response";
-import { normalizeRequestedDate } from "@/lib/request-utils";
+import { normalizeRequestedDate, parsePositiveInteger } from "@/lib/request-utils";
 import { logger } from "@/lib/server-logger";
 
 export const dynamic = "force-dynamic";
@@ -263,6 +264,11 @@ export async function GET(request: Request) {
     return badRequest("Invalid date format. Expected DDMMYYYY.");
   }
 
+  const dashboardDaysRaw = searchParams.get("dashboard_days");
+  const dashboardDaysRequested =
+    parsePositiveInteger(dashboardDaysRaw) ?? BILAN_DASHBOARD_HISTORY_DAYS_DEFAULT;
+  const dashboardHistoryMeta = getBilanDashboardHistoryRange(new Date(), dashboardDaysRequested);
+
   try {
     const algoParameters = await loadAlgoParameters();
     const races = await getAllRaces(date);
@@ -462,7 +468,7 @@ export async function GET(request: Request) {
     };
 
     try {
-      const { startIso, endIso } = getBilanDashboardHistoryRange();
+      const { startIso, endIso } = dashboardHistoryMeta;
       const [historicalPredictions, historicalCourses] = await Promise.all([
         listPredictionsBetween(startIso, endIso),
         listCourseRecordsBetween(startIso, endIso),
@@ -478,6 +484,11 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       date,
+      dashboardHistory: {
+        days: dashboardHistoryMeta.historyDaysUsed,
+        startIso: dashboardHistoryMeta.startIso,
+        endIso: dashboardHistoryMeta.endIso,
+      },
       summary: {
         totalRaces: races.length,
         totalPlayed,

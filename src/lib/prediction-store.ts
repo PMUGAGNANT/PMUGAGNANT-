@@ -203,12 +203,23 @@ export async function listCourseRecordsBetween(startIso: string, endIso: string)
 }
 
 /** Fenêtre glissante pour le dashboard historique du bilan (évite listPredictionsBetween sur des décennies). */
-export const BILAN_DASHBOARD_HISTORY_DAYS = 548;
+export const BILAN_DASHBOARD_HISTORY_DAYS_DEFAULT = 548;
+/** @deprecated alias — utiliser BILAN_DASHBOARD_HISTORY_DAYS_DEFAULT */
+export const BILAN_DASHBOARD_HISTORY_DAYS = BILAN_DASHBOARD_HISTORY_DAYS_DEFAULT;
+export const BILAN_DASHBOARD_HISTORY_DAYS_MIN = 30;
+export const BILAN_DASHBOARD_HISTORY_DAYS_MAX = 1095;
 
-export function getBilanDashboardHistoryRange(now: Date = new Date()): { startIso: string; endIso: string } {
+export function getBilanDashboardHistoryRange(
+  now: Date = new Date(),
+  requestedDays: number = BILAN_DASHBOARD_HISTORY_DAYS_DEFAULT
+): { startIso: string; endIso: string; historyDaysUsed: number } {
+  const historyDaysUsed = Math.min(
+    BILAN_DASHBOARD_HISTORY_DAYS_MAX,
+    Math.max(BILAN_DASHBOARD_HISTORY_DAYS_MIN, Math.floor(Math.abs(requestedDays)))
+  );
   const endIso = now.toISOString().slice(0, 10);
   const start = new Date(now.getTime());
-  start.setUTCDate(start.getUTCDate() - BILAN_DASHBOARD_HISTORY_DAYS);
+  start.setUTCDate(start.getUTCDate() - historyDaysUsed);
   const startIso = start.toISOString().slice(0, 10);
-  return { startIso, endIso };
+  return { startIso, endIso, historyDaysUsed };
 }
