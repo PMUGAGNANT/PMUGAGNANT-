@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { CourseCard } from "@/components/ui/CourseCard";
 import { FilterPills } from "@/components/ui/FilterPills";
 import { RadarHero } from "@/components/ui/RadarHero";
+import { RecentResults } from "@/components/ui/RecentResults";
+import { TelegramCTA } from "@/components/ui/TelegramCTA";
 import { TopParisStrip, type TopParisItem } from "@/components/ui/TopParisStrip";
 import {
   formatDateToPmu,
@@ -18,6 +20,7 @@ import { asArray } from "@/lib/array-utils";
 import {
   computeClientRaceScore,
   formatBetTypeLabelFr,
+  getRaceProfile,
   SEUIL_JOUABLE,
   type ApiRaceScoreLite,
 } from "@/lib/client-race-scoring";
@@ -162,18 +165,6 @@ function formatRelativeDay(dateStr: string) {
   return formatDisplayDate(dateStr);
 }
 
-function formatCompactCurrency(value?: number | null) {
-  if (!value) {
-    return "Allocation n.c.";
-  }
-
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
 function formatStake(value?: number | null) {
   if (!value) {
     return "8 €";
@@ -210,30 +201,16 @@ function formatCourseMeta(race: RaceSummary) {
     .join(" • ");
 }
 
-function formatMinutesLabel(minutesUntilStart: number) {
-  if (minutesUntilStart <= 0) {
-    return "Départ proche ou course déjà lancée";
-  }
-
-  if (minutesUntilStart < 60) {
-    return `Départ dans ${minutesUntilStart} min`;
-  }
-
-  const hours = Math.floor(minutesUntilStart / 60);
-  const minutes = minutesUntilStart % 60;
-  return minutes === 0 ? `Départ dans ${hours} h` : `Départ dans ${hours} h ${minutes}`;
-}
-
 function getStageLabel(stage?: ScoreStage) {
   switch (stage) {
     case "preview_2h":
-      return "Note 2h";
+      return "Fenêtre 2 h";
     case "preview_1h":
-      return "Note 1h";
+      return "Signal dans 1h";
     case "final_30m":
-      return "Note 30 min";
+      return "🔴 Signal actif";
     case "finished":
-      return "Résultat";
+      return "🏁 Résultat";
     default:
       return "Analyse";
   }
@@ -350,7 +327,7 @@ function getTopParisItems(items: FeaturedRace[], navigate: (race: RaceSummary) =
       stake: formatStake(item.score?.pick?.confidence ? Math.max(6, Math.round(item.score.pick.confidence * 2.5)) : 8),
       betType: getBetTypeLabel(item.score),
       confidence: item.confidence,
-      sourceLabel: "JOUABLE — ticket direct",
+      sourceLabel: "✅ Jouable — exécution directe",
       onClick: () => navigate(item.race),
     }));
 }
@@ -510,6 +487,23 @@ function PageContent() {
   );
 
   const radarRace = useMemo(() => getRadarRace(featuredRaces), [featuredRaces]);
+  const radarProfile = useMemo(
+    () =>
+      radarRace
+        ? getRaceProfile({
+            race: radarRace.race,
+            displayScore: radarRace.scoreValue,
+            pick: radarRace.score?.pick
+              ? {
+                  numPmu: radarRace.score.pick.numPmu,
+                  cote: null,
+                  confidence: radarRace.score.pick.confidence,
+                }
+              : null,
+          })
+        : null,
+    [radarRace]
+  );
   const topParisItems = useMemo(() => getTopParisItems(featuredRaces, navigateToRace), [featuredRaces, navigateToRace]);
 
   const summaryStats = useMemo(() => {
@@ -529,13 +523,12 @@ function PageContent() {
         <div className="grid gap-6 xl:grid-cols-[1.15fr,0.85fr] xl:items-start">
           <div className="space-y-5">
             <div className="space-y-3">
-              <p className="app-kicker">Radar public + premium</p>
+              <p className="app-kicker">Signal public + exécution</p>
               <h1 className="max-w-4xl text-4xl font-black leading-[0.94] tracking-tight text-[var(--pmu-text)] md:text-6xl">
-                Une console nette pour repérer les bonnes courses, filtrer vite et jouer seulement quand le signal est propre.
+                Un système qui détecte les erreurs du marché — pour décider vite, sans bruit.
               </h1>
               <p className="max-w-3xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
-                La page Courses doit faire un travail simple et dense : montrer le radar du jour, les trois tickets prioritaires,
-                puis dérouler le programme sans bruit inutile. Le premium sert ensuite à exécuter avec discipline.
+                Signal du jour, top 3, puis le programme trié. Chaque écran pousse une décision claire.
               </p>
             </div>
 
@@ -550,11 +543,11 @@ function PageContent() {
 
             <div className="flex flex-wrap gap-2 text-xs font-semibold text-[var(--pmu-text-soft)]">
               {[
-                "Radar du jour",
+                "Signal du jour",
                 "Top 3 exécutables",
                 "Value bets filtrées",
                 "Mises bankroll",
-                "Lecture réservée aux vraies opportunités",
+                "Opportunités réelles seulement",
               ].map((label) => (
                 <span key={label} className="app-pill text-xs">
                   {label}
@@ -566,16 +559,16 @@ function PageContent() {
           <div className="grid gap-3">
             {[
               {
-                title: "Lecture publique",
-                text: "Le radar, les priorités du jour et le tri moteur doivent être lisibles en quelques secondes.",
+                title: "Accès gratuit",
+                text: "Le signal du jour, les priorités et le tri moteur sont lisibles en quelques secondes.",
               },
               {
-                title: "Exécution premium",
-                text: "On n’ouvre les tickets bankroll et les value bets filtrées que quand il y a une vraie fenêtre de jeu.",
+                title: "Jouer avec discipline",
+                text: "Tickets bankroll et value bets uniquement quand la fenêtre de jeu est réelle.",
               },
               {
                 title: "Après course",
-                text: "Le bilan sert à savoir si le moteur aide réellement, pas à raconter une histoire flatteuse.",
+                text: "Le bilan vérifie si le moteur aide, sans storytelling.",
               },
             ].map((item) => (
               <div key={item.title} className="app-card-muted px-5 py-4">
@@ -661,24 +654,29 @@ function PageContent() {
         </div>
       </section>
 
-      {radarRace ? (
+      {radarRace && radarProfile ? (
         <RadarHero
-          title={`R${radarRace.race.reunion}C${radarRace.race.course} - ${radarRace.race.nomCourse}`}
+          raceTitle={`R${radarRace.race.reunion}C${radarRace.race.course} - ${radarRace.race.nomCourse}`}
           hippodrome={radarRace.race.hippodrome}
           raceMeta={formatRaceMeta(radarRace.race)}
-          confidence={radarRace.confidence}
-          summary={radarRace.radarSentence}
-          ctaLabel="Voir le ticket"
+          displayScore={radarRace.scoreValue}
+          profile={radarProfile}
+          heureDepart={radarRace.race.heureDepart}
+          dateStr={radarRace.race.dateStr}
           onClick={() => navigateToRace(radarRace.race)}
         />
       ) : null}
 
+      <TelegramCTA />
+
       {topParisItems.length ? <TopParisStrip items={topParisItems} /> : null}
+
+      <RecentResults />
 
       {!isLoading && !error && featuredRaces.length > 0 && topParisItems.length === 0 ? (
         <section className="app-card p-5 text-sm leading-6 text-[var(--pmu-text-soft)]">
-          Aucune course ne dépasse le seuil JOUABLE ({SEUIL_JOUABLE}/10) pour le Top 3 : les cartes « À SURVEILLER » restent candidates, ou rafraîchis après
-          les notes 1 h / 30 min.
+          Aucune course ne dépasse le seuil JOUABLE ({SEUIL_JOUABLE}/10) pour le Top 3 : les cartes « ⚠️ À surveiller » restent candidates, ou rafraîchis après
+          le signal 1 h / 🔴 Signal actif.
         </section>
       ) : null}
 
@@ -686,10 +684,10 @@ function PageContent() {
         <div className="app-section-heading">
           <div>
             <p className="app-kicker">Programme trié</p>
-            <h2 className="app-section-title">Courses à suivre</h2>
+            <h2 className="app-section-title">Opportunités détectées</h2>
           </div>
           <p className="max-w-2xl text-sm leading-6 text-[var(--pmu-text-soft)]">
-            Un affichage plus sobre, plus dense et mieux hiérarchisé. Chaque carte doit pouvoir être lue rapidement sans transformer la page en mur de blocs.
+            Chaque carte = une décision. Trie par heure, note, urgence ou enjeu.
           </p>
         </div>
         <FilterPills options={SORT_OPTIONS} value={sortMode} onChange={setSortMode} />
@@ -726,23 +724,31 @@ function PageContent() {
 
       {!isLoading && !error && asArray<FeaturedRace>(featuredRaces).length ? (
         <section className="grid auto-rows-fr items-stretch gap-5 2xl:grid-cols-2">
-          {asArray<FeaturedRace>(featuredRaces).map((item) => (
-            <CourseCard
-              key={`${item.race.reunion}-${item.race.course}`}
-              timeLabel={item.race.heureDepart}
-              hippodrome={item.race.hippodrome}
-              raceTitle={`R${item.race.reunion}C${item.race.course} - ${item.race.nomCourse}`}
-              raceMeta={formatCourseMeta(item.race)}
-              horseLabel={getPickLabel(item.score)}
-              betTypeLabel={getBetTypeLabel(item.score)}
-              confidence={item.confidence || 5}
-              status={item.status}
-              noteLabel={item.noteLabel}
-              allocationLabel={formatCompactCurrency(item.race.allocation)}
-              summary={`${item.reason} ${formatMinutesLabel(item.minutesUntilStart)}.`}
-              onClick={() => navigateToRace(item.race)}
-            />
-          ))}
+          {asArray<FeaturedRace>(featuredRaces).map((item) => {
+            const profile = getRaceProfile({
+              race: item.race,
+              displayScore: item.scoreValue,
+              pick: item.score?.pick
+                ? {
+                    numPmu: item.score.pick.numPmu,
+                    cote: null,
+                    confidence: item.score.pick.confidence,
+                  }
+                : null,
+            });
+            return (
+              <CourseCard
+                key={`${item.race.reunion}-${item.race.course}`}
+                raceTitle={`R${item.race.reunion}C${item.race.course} - ${item.race.nomCourse}`}
+                subtitleLine={[item.race.hippodrome, formatCourseMeta(item.race)].join(" • ")}
+                timeLabel={item.race.heureDepart}
+                minutesUntilStart={item.minutesUntilStart}
+                displayScore={item.scoreValue}
+                profile={profile}
+                onClick={() => navigateToRace(item.race)}
+              />
+            );
+          })}
         </section>
       ) : null}
 

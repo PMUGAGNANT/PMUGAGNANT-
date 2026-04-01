@@ -467,7 +467,7 @@ function LoginPageContent() {
             </div>
             <div style={{ fontSize: 12, color: "var(--pmu-text-muted)", marginTop: 4, lineHeight: "18px" }}>
               {isSignUp
-                ? "Tu peux tester l'outil et les tickets sans risquer d'argent reel."
+                ? "Tu peux tester le système qui détecte les erreurs du marché et les tickets sans risquer d'argent reel."
                 : premiumIntent
                   ? "Une fois connecte, tu pourras gerer l'abonnement directement depuis Mes Paris."
                   : "Retrouve ton historique, ton solde, tes tickets et ton bilan."}

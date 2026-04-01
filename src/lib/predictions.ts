@@ -1305,7 +1305,7 @@ function buildConfidenceScore(
     score >= SERVER_SCORE_NIVEAU_HAUTE
       ? { label: "Haute", emoji: "HAUT" }
       : score >= SERVER_SCORE_NIVEAU_JOUABLE
-        ? { label: "Jouable", emoji: "OK" }
+        ? { label: "✅ Jouable", emoji: "OK" }
         : { label: "Fragile", emoji: "RISQUE" };
 
   return { score, niveau, facteurs };

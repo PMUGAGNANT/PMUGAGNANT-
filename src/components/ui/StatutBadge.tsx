@@ -5,10 +5,10 @@ type StatutBadgeProps = {
 };
 
 const labelMap: Record<StatutBadgeType, string> = {
-  jouable: "JOUABLE",
-  surveillance: "À SURVEILLER",
+  jouable: "✅ JOUABLE",
+  surveillance: "⚠️ À surveiller",
   passer: "PASSER",
-  resultat: "RÉSULTAT",
+  resultat: "🏁 Résultat",
 };
 
 const toneMap: Record<StatutBadgeType, string> = {

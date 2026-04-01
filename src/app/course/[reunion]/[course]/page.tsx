@@ -229,7 +229,7 @@ function buildVerdict(response: RaceApiResponse | null, analysis: RaceAnalysis |
   if (placeTicket && solidity >= 68) return { title: "Base place", subtitle: "Le moteur préfère une base place solide plutôt qu'une attaque gagnante trop agressive.", label: "Verdict moteur" };
   if (lisibilite === "LOTERIE") return { title: "Course à laisser", subtitle: "La course est trop ouverte pour sortir un vrai ticket propre.", label: "Verdict moteur" };
   if (recommendation === "SURVEILLANCE ACTIVE" || lisibilite === "COMPLEXE") return { title: "Lecture prudente", subtitle: "Le favori reste jouable, mais l'écart avec ses poursuivants est trop court pour valider un ticket offensif.", label: "Verdict moteur" };
-  if (technicalFavorite && solidity >= 70) return { title: "Sous surveillance", subtitle: "Le favori tient encore, mais la course demande plus de prudence que d'engagement.", label: "Verdict moteur" };
+  if (technicalFavorite && solidity >= 70) return { title: "⚠️ À surveiller", subtitle: "Le favori tient encore, mais la course demande plus de prudence que d'engagement.", label: "Verdict moteur" };
   return { title: "Lecture réservée", subtitle: "Le moteur préfère rester défensif plutôt que d'insister sur un ticket peu clair.", label: "Verdict moteur" };
 }
 
@@ -429,7 +429,7 @@ function BetPlanRow({ label, summary }: { label: string; summary: { chevaux: num
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 4 }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: WHITE }}>{label}</span>
           <Tag color={summary.eligible ? G : MUTED} bg={summary.eligible ? G_DIM : CARD2}>
-            {summary.eligible ? "Jouable" : "Bloqué"}
+            {summary.eligible ? "✅ Jouable" : "Bloqué"}
           </Tag>
         </div>
         <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{summary.raison}</div>
@@ -710,7 +710,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                   color={data.isFinished ? MUTED : data.pronoAvailable ? G : MUTED}
                   bg={data.isFinished ? CARD2 : data.pronoAvailable ? G_DIM : CARD2}
                 >
-                  {data.isFinished ? "Résultat disponible" : data.pronoAvailable ? "Lecture active" : "T-30"}
+                  {data.isFinished ? "🏁 Résultat dispo" : data.pronoAvailable ? "Lecture active" : "🔴 Signal actif"}
                 </Tag>
                 {!data.isFinished && (
                   <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: GOLD }}>{formatCountdown(data.minutesUntilStart)}</span>
