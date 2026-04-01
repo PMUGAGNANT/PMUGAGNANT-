@@ -1,3 +1,4 @@
+import { asArray } from "@/lib/array-utils";
 import type { Lisibilite, PredictionDecision, RaceSummary } from "@/lib/types";
 import {
   CONFIDENCE_BUCKET_HIGH,
@@ -276,4 +277,210 @@ export function formatBetTypeLabelFr(betType: string | null | undefined): string
   if (u === "COUPLE" || u === "COUPLED") return "Couplé";
   if (u === "TRIO") return "Trio";
   return betType.replaceAll("_", " ");
+}
+
+/** Partant minimal pour le profil psychologique (course / ticket). */
+export interface RaceProfileRunnerLite {
+  numPmu: number;
+  cote?: number | null;
+  horseScore?: number | null;
+  /** Si défini, prime sur l’heuristique cote ≥ 8 */
+  outsider?: boolean;
+}
+
+export type RacePsychologicalStatus =
+  | "FAVORI_DANGEREUX"
+  | "OPPORTUNITE_CACHEE"
+  | "COURSE_PIEGE"
+  | "A_EVITER"
+  | "SIGNAL_FORT"
+  | "NEUTRE";
+
+export interface RaceProfile {
+  status: RacePsychologicalStatus;
+  label: string;
+  color: string;
+  emoji: string;
+  /** Numéro du favori si cote basse mais score cheval faible */
+  favoriFragileNum: number | null;
+  /** Numéro au meilleur rapport score/cote */
+  valueBetNum: number | null;
+  /** Top 3 par score cheval décroissant (sinon pick seul si dispo) */
+  ticketNums: number[];
+}
+
+function normalizeRunners(
+  runners: RaceProfileRunnerLite[] | undefined,
+  pick?: {
+    numPmu?: number | null;
+    cote?: number | null;
+    confidence?: number | null;
+  } | null
+): RaceProfileRunnerLite[] {
+  const fromRunners = asArray<RaceProfileRunnerLite>(runners).filter(
+    (r) => r != null && Number.isFinite(r.numPmu)
+  );
+  if (fromRunners.length > 0) {
+    return fromRunners;
+  }
+  const n = pick?.numPmu;
+  if (n == null || !Number.isFinite(Number(n))) {
+    return [];
+  }
+  const cote = pick?.cote;
+  const horseScore = pick?.confidence;
+  const outsider = cote != null && Number.isFinite(cote) && cote >= 8;
+  return [{ numPmu: Number(n), cote, horseScore, outsider }];
+}
+
+type FavoriteResolved = { runner: RaceProfileRunnerLite; cote: number };
+
+function pickFavorite(runners: RaceProfileRunnerLite[]): FavoriteResolved | null {
+  type R = RaceProfileRunnerLite & { coteNum: number };
+  const withCote: R[] = [];
+  for (const r of runners) {
+    const c = r.cote;
+    if (c != null && Number.isFinite(c) && c > 0) {
+      withCote.push({ ...r, coteNum: c });
+    }
+  }
+  if (withCote.length === 0) {
+    return null;
+  }
+  withCote.sort((a, b) => a.coteNum - b.coteNum);
+  const fav = withCote[0];
+  return { runner: fav, cote: fav.coteNum };
+}
+
+function isOutsiderRunner(r: RaceProfileRunnerLite): boolean {
+  if (r.outsider === true) return true;
+  const c = r.cote;
+  return c != null && Number.isFinite(c) && c >= 8;
+}
+
+function computeValueBetNum(runners: RaceProfileRunnerLite[]): number | null {
+  let bestNum: number | null = null;
+  let bestRatio = -1;
+  for (const r of runners) {
+    const score = r.horseScore;
+    const cote = r.cote;
+    if (score == null || !Number.isFinite(score) || cote == null || !Number.isFinite(cote) || cote <= 0) {
+      continue;
+    }
+    const ratio = score / cote;
+    if (ratio > bestRatio) {
+      bestRatio = ratio;
+      bestNum = r.numPmu;
+    }
+  }
+  return bestNum;
+}
+
+function computeTicketNums(runners: RaceProfileRunnerLite[], pickNum: number | null): number[] {
+  const scored = runners.filter(
+    (r) => r.horseScore != null && Number.isFinite(Number(r.horseScore))
+  );
+  if (scored.length > 0) {
+    return [...scored]
+      .sort((a, b) => Number(b.horseScore) - Number(a.horseScore))
+      .slice(0, 3)
+      .map((r) => r.numPmu);
+  }
+  if (pickNum != null && Number.isFinite(pickNum)) {
+    return [pickNum];
+  }
+  return [];
+}
+
+function computeFavoriFragileNum(fav: FavoriteResolved | null): number | null {
+  if (!fav) return null;
+  const hs = fav.runner.horseScore;
+  const lowScore = hs == null || !Number.isFinite(hs) ? false : hs < 6;
+  if (fav.cote < 2.5 && lowScore) {
+    return fav.runner.numPmu;
+  }
+  return null;
+}
+
+/**
+ * Profil psychologique d’une course (badges carte, radar, CTA).
+ * Utilise le score consolidé client + partants + partants légers (ou pick seul).
+ */
+export function getRaceProfile(input: {
+  race: RaceSummary;
+  displayScore: number;
+  runners?: RaceProfileRunnerLite[];
+  pick?: {
+    numPmu?: number | null;
+    cote?: number | null;
+    confidence?: number | null;
+  } | null;
+}): RaceProfile {
+  const { race, displayScore, pick } = input;
+  const runners = normalizeRunners(input.runners, pick);
+  const partants = Math.max(0, race.nombrePartants || 0);
+  const pickNum =
+    pick?.numPmu != null && Number.isFinite(Number(pick.numPmu)) ? Number(pick.numPmu) : null;
+
+  const fav = pickFavorite(runners);
+  const favoriCote = fav?.cote ?? null;
+  const favoriDanger =
+    favoriCote != null && favoriCote < 2.5 && displayScore < 6;
+
+  const hasOutsiderUpside = runners.some(
+    (r) => isOutsiderRunner(r) && r.horseScore != null && Number(r.horseScore) > 7.5
+  );
+
+  const coursePiege =
+    partants > 15 && displayScore >= 5 && displayScore < 7.5;
+
+  let status: RacePsychologicalStatus = "NEUTRE";
+  let label = "SIGNAL";
+  let color = "var(--pmu-text-muted)";
+  let emoji = "•";
+
+  if (displayScore < 4.5) {
+    status = "A_EVITER";
+    label = "À ÉVITER";
+    color = "#9CA3AF";
+    emoji = "❌";
+  } else if (displayScore > 8.5 && partants > 0 && partants < 10) {
+    status = "SIGNAL_FORT";
+    label = "SIGNAL FORT";
+    color = "#00FF88";
+    emoji = "🔥";
+  } else if (favoriDanger) {
+    status = "FAVORI_DANGEREUX";
+    label = "FAVORI DANGEREUX";
+    color = "#FF4444";
+    emoji = "🚨";
+  } else if (coursePiege) {
+    status = "COURSE_PIEGE";
+    label = "COURSE PIÈGE";
+    color = "#FFB800";
+    emoji = "⚠️";
+  } else if (hasOutsiderUpside) {
+    status = "OPPORTUNITE_CACHEE";
+    label = "OPPORTUNITÉ CACHÉE";
+    color = "#00CC66";
+    emoji = "💎";
+  } else {
+    label = "SUIVI";
+    color = "#94A3B8";
+    emoji = "◇";
+  }
+
+  const favoriFragileNum = computeFavoriFragileNum(fav);
+  const valueBetNum = computeValueBetNum(runners);
+  const ticketNums = computeTicketNums(runners, pickNum);
+
+  return {
+    status,
+    label,
+    color,
+    emoji,
+    favoriFragileNum,
+    valueBetNum,
+    ticketNums,
+  };
 }
