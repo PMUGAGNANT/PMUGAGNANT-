@@ -48,3 +48,47 @@ export function getRadarStageWeight(stage: string): number {
 export function getRadarQuinteWeight(isQuinte: boolean): number {
   return isQuinte ? 0.9 : 1;
 }
+
+/** Libellé, couleurs et CTA selon le score de décision (0–10) */
+export function interpretScore(score: number): {
+  label: string;
+  color: string;
+  bgColor: string;
+  emoji: string;
+  action: string;
+} {
+  if (score >= 9) {
+    return {
+      label: "GROS SIGNAL",
+      color: "#00FF88",
+      bgColor: "#00FF8820",
+      emoji: "🔥",
+      action: "JOUER MAINTENANT",
+    };
+  }
+  if (score >= 7) {
+    return {
+      label: "JOUABLE",
+      color: "#00CC66",
+      bgColor: "#00CC6620",
+      emoji: "✅",
+      action: "VOIR QUOI JOUER",
+    };
+  }
+  if (score >= 5) {
+    return {
+      label: "RISQUÉ",
+      color: "#FFB800",
+      bgColor: "#FFB80020",
+      emoji: "⚠️",
+      action: "ANALYSER",
+    };
+  }
+  return {
+    label: "À ÉVITER",
+    color: "#FF4444",
+    bgColor: "#FF444420",
+    emoji: "❌",
+    action: "PASSER",
+  };
+}
