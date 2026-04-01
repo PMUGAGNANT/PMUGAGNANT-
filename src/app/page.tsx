@@ -3,10 +3,12 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { ComparatifIA } from "@/components/ui/ComparatifIA";
 import { CourseCard } from "@/components/ui/CourseCard";
 import { FilterPills } from "@/components/ui/FilterPills";
 import { RadarHero } from "@/components/ui/RadarHero";
 import { RecentResults } from "@/components/ui/RecentResults";
+import { SagesseFoules } from "@/components/ui/SagesseFoules";
 import { TelegramCTA } from "@/components/ui/TelegramCTA";
 import { TopParisStrip, type TopParisItem } from "@/components/ui/TopParisStrip";
 import {
@@ -25,6 +27,7 @@ import {
   type ApiRaceScoreLite,
 } from "@/lib/client-race-scoring";
 import { estimateEloProfileForProgrammeCard } from "@/lib/elo-scoring";
+import { estimateIndiceOuvertureListe } from "@/lib/ouverture";
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 import type { Lisibilite, PredictionDecision, RaceSummary } from "@/lib/types";
 
@@ -507,6 +510,11 @@ function PageContent() {
   );
   const topParisItems = useMemo(() => getTopParisItems(featuredRaces, navigateToRace), [featuredRaces, navigateToRace]);
 
+  const quinteDuJour = useMemo(() => {
+    const list = asArray<FeaturedRace>(featuredRaces);
+    return list.find((f) => f.race.estQuinte) ?? null;
+  }, [featuredRaces]);
+
   const summaryStats = useMemo(() => {
     const raceList = coerceRaceSummaries(races);
     const meetings = new Set(raceList.map((race) => race.reunion)).size;
@@ -672,6 +680,21 @@ function PageContent() {
 
       {topParisItems.length ? <TopParisStrip items={topParisItems} /> : null}
 
+      {quinteDuJour ? (
+        <section className="grid gap-4 lg:grid-cols-2">
+          <SagesseFoules
+            raceId={`${selectedDate}-R${quinteDuJour.race.reunion}C${quinteDuJour.race.course}`}
+            raceLabel={`${quinteDuJour.race.nomCourse} (R${quinteDuJour.race.reunion}C${quinteDuJour.race.course})`}
+          />
+          <ComparatifIA
+            dateStr={selectedDate}
+            reunion={quinteDuJour.race.reunion}
+            course={quinteDuJour.race.course}
+            nomCourse={quinteDuJour.race.nomCourse}
+          />
+        </section>
+      ) : null}
+
       <RecentResults />
 
       {!isLoading && !error && featuredRaces.length > 0 && topParisItems.length === 0 ? (
@@ -737,6 +760,12 @@ function PageContent() {
                   }
                 : null,
             });
+            const eloProfile = estimateEloProfileForProgrammeCard(item.score?.pick?.confidence);
+            const indiceListe = estimateIndiceOuvertureListe({
+              displayScore: item.scoreValue,
+              partants: item.race.nombrePartants,
+              sigmaPct: eloProfile.sigma,
+            });
             return (
               <CourseCard
                 key={`${item.race.reunion}-${item.race.course}`}
@@ -746,7 +775,8 @@ function PageContent() {
                 minutesUntilStart={item.minutesUntilStart}
                 displayScore={item.scoreValue}
                 profile={profile}
-                eloProfile={estimateEloProfileForProgrammeCard(item.score?.pick?.confidence)}
+                eloProfile={eloProfile}
+                indiceOuverture={indiceListe}
                 onClick={() => navigateToRace(item.race)}
               />
             );

@@ -1,11 +1,16 @@
 "use client";
 
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { SEUIL_JOUABLE, SEUIL_SURVEILLANCE } from "@/lib/client-race-scoring";
-import { buildEloProfileFromParticipant } from "@/lib/elo-scoring";
+import { buildEloProfileFromParticipant, computeSigmaFromRunCount } from "@/lib/elo-scoring";
+import { computeIndiceOuverture } from "@/lib/ouverture";
+import { getSynergie } from "@/lib/synergie";
 import { CONFIDENCE_BUCKET_HIGH, CONFIDENCE_BUCKET_MEDIUM } from "@/lib/scoring-policy";
+import { ChevalStats } from "@/components/ui/ChevalStats";
+import { EnjeuxPMU } from "@/components/ui/EnjeuxPMU";
 import { EloBars } from "@/components/ui/EloBars";
+import { SynergieCallout } from "@/components/ui/SynergieCallout";
 import { asArray } from "@/lib/array-utils";
 import { fromIsoDate, getTodayDateStr, parsePmuDate } from "@/lib/date-utils";
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
@@ -618,6 +623,57 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
   const daySignal = analysis?.prediction.journeeSignal ?? null;
   const alertesList = asArray<string>(analysis?.alertes);
   const top5Runners = asArray<ScoredParticipant>(analysis?.top5);
+  const rankingAll = useMemo(
+    () => asArray<ScoredParticipant>(analysis?.ranking),
+    [analysis]
+  );
+
+  const medianScoreAlgo = useMemo(() => {
+    const arr = rankingAll
+      .map((r) => r.scoreAlgo)
+      .filter((n): n is number => Number.isFinite(n))
+      .sort((a, b) => a - b);
+    if (arr.length === 0) return 0;
+    const mid = Math.floor(arr.length / 2);
+    return arr.length % 2 ? arr[mid]! : (arr[mid - 1]! + arr[mid]!) / 2;
+  }, [rankingAll]);
+
+  const sigmaMoyenPct = useMemo(() => {
+    const rr = rankingAll.slice(0, 16);
+    if (rr.length === 0) return 50;
+    const s = rr.map((r) => computeSigmaFromRunCount(r.nombreCourses));
+    return s.reduce((a, b) => a + b, 0) / s.length;
+  }, [rankingAll]);
+
+  const indiceOuvertureCourse = useMemo(() => {
+    if (rankingAll.length === 0 || !data) return null;
+    const first = rankingAll[0]?.scoreAlgo ?? 0;
+    const second = rankingAll[1]?.scoreAlgo ?? first * 0.92;
+    return computeIndiceOuverture({
+      scoreFirst: first,
+      scoreSecond: second,
+      partants: data.courseInfo.nombrePartants,
+      sigmaMoyenPct,
+    });
+  }, [rankingAll, data, sigmaMoyenPct]);
+
+  const enjeuxRunners = useMemo(
+    () =>
+      rankingAll.slice(0, 14).map((r) => ({
+        numPmu: r.numPmu,
+        nom: r.nom,
+        cote: r.cote,
+        iaScore: r.prediction?.confiance ?? null,
+      })),
+    [rankingAll]
+  );
+
+  const synergieResult = useMemo(() => {
+    if (!simpleTicket || !data) return null;
+    const pilot = (data.courseInfo.estTrot ? simpleTicket.driver : simpleTicket.jockey) || "—";
+    const chevalId = `${simpleTicket.numPmu}|${simpleTicket.nom}`;
+    return getSynergie(pilot, chevalId, []);
+  }, [simpleTicket, data]);
 
   /* Loading skeleton */
   if (loading) {
@@ -697,6 +753,15 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                 <Tag color={GOLD} bg={GOLD_DIM}>Alloc. {formatCurrency(data.courseInfo.allocation)}</Tag>
               )}
             </div>
+
+            {indiceOuvertureCourse && analysis ? (
+              <div style={{ marginBottom: 16, padding: 12, borderRadius: 10, border: `1px solid ${BORDER}`, background: CARD2 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: indiceOuvertureCourse.color, letterSpacing: "0.04em" }}>
+                  {indiceOuvertureCourse.emoji} Indice ouverture — {indiceOuvertureCourse.label} · {indiceOuvertureCourse.score}/10
+                </div>
+                <div style={{ fontSize: 12, color: MUTED, marginTop: 4, lineHeight: 1.5 }}>{indiceOuvertureCourse.conseil}</div>
+              </div>
+            ) : null}
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
               <div>
@@ -820,6 +885,31 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
             <div style={{ marginBottom: 16 }}>
               <EloBars profile={buildEloProfileFromParticipant(simpleTicket)} />
             </div>
+
+            {analysis && simpleTicket ? (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                  gap: 16,
+                  marginBottom: 16,
+                }}
+              >
+                {enjeuxRunners.length > 0 ? (
+                  <div style={{ minWidth: 0 }}>
+                    <EnjeuxPMU runners={enjeuxRunners} />
+                  </div>
+                ) : null}
+                {synergieResult ? <SynergieCallout result={synergieResult} /> : null}
+                <div style={{ minWidth: 0 }}>
+                  <ChevalStats
+                    runner={simpleTicket}
+                    medianFieldScoreAlgo={medianScoreAlgo}
+                    estTrot={data.courseInfo.estTrot}
+                  />
+                </div>
+              </div>
+            ) : null}
 
             {/* ── 2-col grid ── */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>

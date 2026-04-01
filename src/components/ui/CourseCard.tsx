@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import type { RaceProfile } from "@/lib/client-race-scoring";
 import type { EloProfile } from "@/lib/elo-scoring";
 import { getEloGlobalBadgeStyle } from "@/lib/elo-scoring";
+import type { IndiceOuverture } from "@/lib/ouverture";
 import { interpretScore } from "@/lib/scoring-policy";
 
 export type CourseCardProps = {
@@ -15,6 +16,8 @@ export type CourseCardProps = {
   profile: RaceProfile;
   eloProfile: EloProfile;
   onClick: () => void;
+  /** Indice programme (proxy lisibilité) */
+  indiceOuverture?: IndiceOuverture | null;
 };
 
 function formatCountdown(minutes: number): string {
@@ -41,6 +44,7 @@ export function CourseCard({
   profile,
   eloProfile,
   onClick,
+  indiceOuverture = null,
 }: CourseCardProps) {
   const interpreted = useMemo(() => interpretScore(displayScore), [displayScore]);
   const eloBadge = useMemo(() => getEloGlobalBadgeStyle(eloProfile.eloGlobal), [eloProfile.eloGlobal]);
@@ -141,6 +145,13 @@ export function CourseCard({
             {interpreted.label} {interpreted.emoji}
           </span>
         </div>
+        {indiceOuverture ? (
+          <p className="text-[11px] font-bold leading-snug text-[var(--pmu-text-soft)]">
+            <span style={{ color: indiceOuverture.color }}>{indiceOuverture.emoji}</span>{" "}
+            <span className="uppercase tracking-wide text-[var(--pmu-text-muted)]">Ouverture</span> ·{" "}
+            {indiceOuverture.label} ({indiceOuverture.score}/10)
+          </p>
+        ) : null}
       </div>
 
       <button
