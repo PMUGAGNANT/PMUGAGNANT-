@@ -3,7 +3,9 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { SEUIL_JOUABLE, SEUIL_SURVEILLANCE } from "@/lib/client-race-scoring";
+import { buildEloProfileFromParticipant } from "@/lib/elo-scoring";
 import { CONFIDENCE_BUCKET_HIGH, CONFIDENCE_BUCKET_MEDIUM } from "@/lib/scoring-policy";
+import { EloBars } from "@/components/ui/EloBars";
 import { asArray } from "@/lib/array-utils";
 import { fromIsoDate, getTodayDateStr, parsePmuDate } from "@/lib/date-utils";
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
@@ -814,6 +816,10 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                 </div>
               </div>
             </Card>
+
+            <div style={{ marginBottom: 16 }}>
+              <EloBars profile={buildEloProfileFromParticipant(simpleTicket)} />
+            </div>
 
             {/* ── 2-col grid ── */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>

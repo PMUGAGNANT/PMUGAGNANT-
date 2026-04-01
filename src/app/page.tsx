@@ -24,6 +24,7 @@ import {
   SEUIL_JOUABLE,
   type ApiRaceScoreLite,
 } from "@/lib/client-race-scoring";
+import { estimateEloProfileForProgrammeCard } from "@/lib/elo-scoring";
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 import type { Lisibilite, PredictionDecision, RaceSummary } from "@/lib/types";
 
@@ -745,6 +746,7 @@ function PageContent() {
                 minutesUntilStart={item.minutesUntilStart}
                 displayScore={item.scoreValue}
                 profile={profile}
+                eloProfile={estimateEloProfileForProgrammeCard(item.score?.pick?.confidence)}
                 onClick={() => navigateToRace(item.race)}
               />
             );

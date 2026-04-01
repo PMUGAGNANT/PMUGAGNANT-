@@ -2,6 +2,8 @@
 
 import { useMemo } from "react";
 import type { RaceProfile } from "@/lib/client-race-scoring";
+import type { EloProfile } from "@/lib/elo-scoring";
+import { getEloGlobalBadgeStyle } from "@/lib/elo-scoring";
 import { interpretScore } from "@/lib/scoring-policy";
 
 export type CourseCardProps = {
@@ -11,6 +13,7 @@ export type CourseCardProps = {
   minutesUntilStart: number;
   displayScore: number;
   profile: RaceProfile;
+  eloProfile: EloProfile;
   onClick: () => void;
 };
 
@@ -36,9 +39,11 @@ export function CourseCard({
   minutesUntilStart,
   displayScore,
   profile,
+  eloProfile,
   onClick,
 }: CourseCardProps) {
   const interpreted = useMemo(() => interpretScore(displayScore), [displayScore]);
+  const eloBadge = useMemo(() => getEloGlobalBadgeStyle(eloProfile.eloGlobal), [eloProfile.eloGlobal]);
   const progressPct = Math.min(100, Math.max(0, (displayScore / 10) * 100));
   const countdownUrgent = minutesUntilStart > 0 && minutesUntilStart < 30;
 
@@ -87,6 +92,26 @@ export function CourseCard({
       <div>
         <h3 className="text-xl font-black leading-tight tracking-tight text-[var(--pmu-text)] md:text-2xl">{raceTitle}</h3>
         <p className="mt-1 text-sm font-semibold text-[var(--pmu-text-soft)]">{subtitleLine}</p>
+      </div>
+
+      <div
+        className="flex flex-col gap-1 rounded-xl border px-3 py-2"
+        style={{ borderColor: eloBadge.color + "55", background: eloBadge.bg }}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-[11px] font-black uppercase tracking-wider text-[var(--pmu-text-muted)]">
+            ELO global
+          </span>
+          <span
+            className="rounded-full px-2 py-0.5 text-xs font-black tabular-nums"
+            style={{ color: eloBadge.color, background: "color-mix(in srgb, white 8%, transparent)" }}
+          >
+            {Math.round(eloProfile.eloGlobal * 10) / 10} · {eloBadge.label}
+          </span>
+        </div>
+        <p className="text-[11px] font-semibold tabular-nums text-[var(--pmu-text-soft)]">
+          Fiabilité σ {eloProfile.sigma}%
+        </p>
       </div>
 
       <ul className="grid gap-1.5 text-sm">
