@@ -99,7 +99,7 @@ function getConfidenceBucket(score: number): ConfidenceBucketKey {
 }
 
 function getConfidenceBucketLabel(bucket: ConfidenceBucketKey): string {
-  if (bucket === "high") return "Confiance elevee";
+  if (bucket === "high") return "Confiance élevée";
   if (bucket === "medium") return "Confiance moyenne";
   return "Confiance faible";
 }
@@ -262,7 +262,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const date = normalizeRequestedDate(searchParams.get("date"), getTodayDateStr());
   if (!date) {
-    return badRequest("Invalid date format. Expected DDMMYYYY.");
+    return badRequest("Format de date invalide. Attendu : DDMMYYYY.");
   }
 
   const dashboardDaysRaw = searchParams.get("dashboard_days");
@@ -426,16 +426,16 @@ export async function GET(request: Request) {
     const totalPlayed = playedResults.length;
     const successRate = totalPlayed > 0 ? Math.round(((wins + places) / totalPlayed) * 100) : 0;
 
-    let healthLabel = "Journee neutre";
-    if (successRate >= 45) healthLabel = "Journee solide";
-    else if (successRate >= 30) healthLabel = "Journee correcte";
-    else if (successRate >= 20) healthLabel = "Journee fragile";
-    else healthLabel = "Journee difficile";
+    let healthLabel = "Journée neutre";
+    if (successRate >= 45) healthLabel = "Journée solide";
+    else if (successRate >= 30) healthLabel = "Journée correcte";
+    else if (successRate >= 20) healthLabel = "Journée fragile";
+    else healthLabel = "Journée difficile";
 
     const insights: string[] = [];
     if (bestDiscipline) {
       insights.push(
-        `Le meilleur terrain du jour est ${bestDiscipline.discipline} (${bestDiscipline.rate}% de reussite sur ${bestDiscipline.played} courses).`
+        `Le meilleur terrain du jour est ${bestDiscipline.discipline} (${bestDiscipline.rate}% de réussite sur ${bestDiscipline.played} courses).`
       );
     }
     if (worstDiscipline && worstDiscipline !== bestDiscipline) {
@@ -445,12 +445,12 @@ export async function GET(request: Request) {
     }
     if (bestConfidenceBucket) {
       insights.push(
-        `${bestConfidenceBucket.label} est la zone la plus fiable (${bestConfidenceBucket.rate}% de reussite).`
+        `${bestConfidenceBucket.label} est la zone la plus fiable (${bestConfidenceBucket.rate}% de réussite).`
       );
     }
     if (worstConfidenceBucket && worstConfidenceBucket !== bestConfidenceBucket) {
       insights.push(
-        `${worstConfidenceBucket.label} reste la zone la plus risquee (${worstConfidenceBucket.rate}% de reussite).`
+        `${worstConfidenceBucket.label} reste la zone la plus risquée (${worstConfidenceBucket.rate}% de réussite).`
       );
     }
 
@@ -512,6 +512,6 @@ export async function GET(request: Request) {
       results,
     });
   } catch (error) {
-    return serverError("Bilan failed", error, { date });
+    return serverError("Échec du chargement du bilan.", error, { date });
   }
 }

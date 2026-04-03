@@ -26,16 +26,16 @@ type EloBarsProps = {
   title?: string;
 };
 
-export function EloBars({ profile, title = "Indice ELO (ticket principal)" }: EloBarsProps) {
+export function EloBars({ profile, title = "Fiabilité du ticket principal" }: EloBarsProps) {
   return (
     <div className="space-y-4 rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] p-4">
       <p className="text-xs font-black uppercase tracking-wider text-[var(--pmu-primary)]">{title}</p>
       <p className="text-[11px] leading-relaxed text-[var(--pmu-text-soft)]">
-        Cheval (carrière PMU), jockey et entraineur (taux de réussite). Global = 50 % / 30 % / 20 %.
+        Lecture cheval / jockey ou driver / entraîneur. Pondération globale : 50 % / 30 % / 20 %.
       </p>
       <Bar label="Cheval" elo={profile.eloCheval} />
       <Bar label="Jockey / driver" elo={profile.eloJockey} />
-      <Bar label="Entraineur" elo={profile.eloEntraineur} />
+      <Bar label="Entraîneur" elo={profile.eloEntraineur} />
     </div>
   );
 }

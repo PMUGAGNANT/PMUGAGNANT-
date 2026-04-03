@@ -61,7 +61,7 @@ const navItems: NavItem[] = [
   { href: "/mes-paris", label: "Mes Paris", Icon: IconParis },
   { href: "/bilan", label: "Bilan", Icon: IconBilan },
   { href: "/blog", label: "Blog", Icon: IconBlog },
-  { href: "/premium", label: "Profil", Icon: IconProfil },
+  { href: "/premium", label: "Premium", Icon: IconProfil },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -75,7 +75,7 @@ function isActive(pathname: string, href: string) {
 export function Sidebar() {
   const pathname = usePathname();
   const [connexionLabel, setConnexionLabel] = useState(() =>
-    !hasSupabaseConfig() ? "Invité (sans compte)" : "…"
+    !hasSupabaseConfig() ? "Invité (sans compte)" : "Chargement..."
   );
 
   useEffect(() => {
@@ -117,7 +117,7 @@ export function Sidebar() {
           <div className="min-w-0">
             <p className="truncate text-lg font-black tracking-tight text-[var(--pmu-text)]">PMU GAGNANT</p>
             <p className="truncate text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--pmu-text-muted)]">
-              Pronostics IA
+              Pronostics & discipline
             </p>
           </div>
         </Link>
@@ -157,7 +157,7 @@ export function Sidebar() {
               {connexionLabel}
             </p>
             <p className="mt-2 text-xs leading-5 text-[var(--pmu-text-soft)]">
-              Connexion utilisateur et accès premium synchronisés avec Supabase.
+              Connexion et accès premium synchronisés avec Supabase.
             </p>
           </div>
         </div>

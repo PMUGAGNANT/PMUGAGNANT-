@@ -6,6 +6,12 @@ import type { EloProfile } from "@/lib/elo-scoring";
 import { getEloGlobalBadgeStyle } from "@/lib/elo-scoring";
 import type { IndiceOuverture } from "@/lib/ouverture";
 import { interpretScore } from "@/lib/scoring-policy";
+import {
+  interpretScoreForBeginner,
+  eloForBeginner,
+  translateFactors,
+} from "@/lib/beginner-labels";
+import { WhyThisHorse } from "@/components/ui/WhyThisHorse";
 
 export type CourseCardProps = {
   raceTitle: string;
@@ -18,6 +24,12 @@ export type CourseCardProps = {
   onClick: () => void;
   /** Indice programme (proxy lisibilité) */
   indiceOuverture?: IndiceOuverture | null;
+  /** Pick data for WhyThisHorse */
+  pickNum?: number | null;
+  pickNom?: string | null;
+  pickConfidence?: number | null;
+  pickBetType?: string | null;
+  topFacteurs?: string[];
 };
 
 function formatCountdown(minutes: number): string {
@@ -28,9 +40,9 @@ function formatCountdown(minutes: number): string {
   return m === 0 ? `${h} h` : `${h} h ${m}`;
 }
 
-function ctaLabel(score: number, action: string): string {
-  if (score >= 9) return `${action} 🔥`;
-  if (score >= 7) return "VOIR QUOI JOUER →";
+function ctaLabel(score: number): string {
+  if (score >= 9) return "VOIR LE COUP SÛR 🔥";
+  if (score >= 7) return "VOIR L'OPPORTUNITÉ →";
   if (score >= 5) return "ANALYSER ⚠️";
   return "PASSER ❌";
 }
@@ -45,21 +57,43 @@ export function CourseCard({
   eloProfile,
   onClick,
   indiceOuverture = null,
+  pickNum,
+  pickNom,
+  pickConfidence,
+  pickBetType,
+  topFacteurs,
 }: CourseCardProps) {
   const interpreted = useMemo(() => interpretScore(displayScore), [displayScore]);
+  const beginnerLabel = useMemo(() => interpretScoreForBeginner(displayScore), [displayScore]);
+  const eloLabel = useMemo(() => eloForBeginner(eloProfile.eloGlobal), [eloProfile.eloGlobal]);
   const eloBadge = useMemo(() => getEloGlobalBadgeStyle(eloProfile.eloGlobal), [eloProfile.eloGlobal]);
   const progressPct = Math.min(100, Math.max(0, (displayScore / 10) * 100));
   const countdownUrgent = minutesUntilStart > 0 && minutesUntilStart < 30;
 
-  const lines: Array<{ label: string; value: string }> = [];
+  const translatedFactors = useMemo(
+    () => translateFactors(topFacteurs ?? []),
+    [topFacteurs]
+  );
+
+  const lines: Array<{ label: string; value: string; tooltip?: string }> = [];
   if (profile.favoriFragileNum != null) {
-    lines.push({ label: "FAVORI FRAGILE", value: String(profile.favoriFragileNum) });
+    lines.push({
+      label: "⚠️ FAVORI FRAGILE",
+      value: `N°${profile.favoriFragileNum}`,
+      tooltip: "Ce favori est surévalué par le public",
+    });
   }
   if (profile.valueBetNum != null) {
-    lines.push({ label: "VALUE BET", value: String(profile.valueBetNum) });
+    lines.push({
+      label: "💎 BONNE AFFAIRE",
+      value: `N°${profile.valueBetNum}`,
+      tooltip: "Cote plus haute que sa vraie valeur",
+    });
   }
-  const ticketStr = profile.ticketNums.length ? profile.ticketNums.join(" - ") : "—";
-  lines.push({ label: "TICKET", value: ticketStr });
+  const ticketStr = profile.ticketNums.length
+    ? profile.ticketNums.map((n) => `N°${n}`).join(" · ")
+    : "—";
+  lines.push({ label: "🎯 NOS CHEVAUX", value: ticketStr });
 
   const buttonStyle =
     displayScore >= 9
@@ -76,13 +110,13 @@ export function CourseCard({
         <div
           className="inline-flex max-w-[70%] items-center gap-2 rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-wide"
           style={{
-            color: profile.color,
-            backgroundColor: `${profile.color}22`,
-            border: `1px solid ${profile.color}55`,
+            color: beginnerLabel.color,
+            backgroundColor: `${beginnerLabel.color}18`,
+            border: `1px solid ${beginnerLabel.color}44`,
           }}
         >
-          <span aria-hidden>{profile.emoji}</span>
-          <span>{profile.label}</span>
+          <span aria-hidden>{beginnerLabel.emoji}</span>
+          <span>{beginnerLabel.label}</span>
         </div>
         <div
           className={`font-mono text-sm font-black tabular-nums ${countdownUrgent ? "text-red-500" : "text-[var(--pmu-text-muted)]"}`}
@@ -98,35 +132,50 @@ export function CourseCard({
         <p className="mt-1 text-sm font-semibold text-[var(--pmu-text-soft)]">{subtitleLine}</p>
       </div>
 
+      {/* ELO simplifié pour débutant */}
       <div
         className="flex flex-col gap-1 rounded-xl border px-3 py-2"
         style={{ borderColor: eloBadge.color + "55", background: eloBadge.bg }}
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-[11px] font-black uppercase tracking-wider text-[var(--pmu-text-muted)]">
-            ELO global
+            Fiabilité de l'analyse
           </span>
           <span
-            className="rounded-full px-2 py-0.5 text-xs font-black tabular-nums"
+            className="rounded-full px-2 py-0.5 text-xs font-black"
             style={{ color: eloBadge.color, background: "color-mix(in srgb, white 8%, transparent)" }}
           >
-            {Math.round(eloProfile.eloGlobal * 10) / 10} · {eloBadge.label}
+            {eloLabel.label}
           </span>
         </div>
-        <p className="text-[11px] font-semibold tabular-nums text-[var(--pmu-text-soft)]">
-          Fiabilité σ {eloProfile.sigma}%
+        <p className="text-[11px] font-semibold text-[var(--pmu-text-soft)]">
+          {eloLabel.tooltip}
         </p>
       </div>
 
+      {/* Infos clés simplifiées */}
       <ul className="grid gap-1.5 text-sm">
         {lines.map((row) => (
           <li key={row.label} className="flex justify-between gap-3">
-            <span className="font-bold uppercase tracking-wider text-[var(--pmu-text-muted)]">{row.label}</span>
+            <span className="font-bold text-[var(--pmu-text-muted)]">{row.label}</span>
             <span className="font-black text-[var(--pmu-text)]">{row.value}</span>
           </li>
         ))}
       </ul>
 
+      {/* WhyThisHorse compact */}
+      {pickNum && translatedFactors.length > 0 && (
+        <WhyThisHorse
+          horseName={pickNom ?? ""}
+          horseNum={pickNum}
+          topFacteurs={translatedFactors}
+          confidence={pickConfidence ?? displayScore}
+          betType={pickBetType}
+          mode="compact"
+        />
+      )}
+
+      {/* Barre de score */}
       <div className="space-y-2">
         <div className="h-2.5 w-full overflow-hidden rounded-full bg-[var(--pmu-surface-2)]">
           <div
@@ -142,13 +191,13 @@ export function CourseCard({
             {Math.round(displayScore * 10) / 10}/10
           </span>
           <span className="text-sm font-black" style={{ color: interpreted.color }}>
-            {interpreted.label} {interpreted.emoji}
+            {beginnerLabel.label} {beginnerLabel.emoji}
           </span>
         </div>
         {indiceOuverture ? (
           <p className="text-[11px] font-bold leading-snug text-[var(--pmu-text-soft)]">
             <span style={{ color: indiceOuverture.color }}>{indiceOuverture.emoji}</span>{" "}
-            <span className="uppercase tracking-wide text-[var(--pmu-text-muted)]">Ouverture</span> ·{" "}
+            <span className="uppercase tracking-wide text-[var(--pmu-text-muted)]">Lisibilité</span> ·{" "}
             {indiceOuverture.label} ({indiceOuverture.score}/10)
           </p>
         ) : null}
@@ -160,7 +209,7 @@ export function CourseCard({
         className="w-full shrink-0 rounded-xl py-3.5 text-center text-sm font-black uppercase tracking-wide transition hover:opacity-92"
         style={buttonStyle}
       >
-        {ctaLabel(displayScore, interpreted.action)}
+        {ctaLabel(displayScore)}
       </button>
     </article>
   );

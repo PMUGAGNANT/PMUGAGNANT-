@@ -1,15 +1,18 @@
 # PMU Gagnant
 
-Application Next.js de pronostics PMU avec moteur de scoring, suivi des meilleures courses du jour, pipeline cron et stockage Supabase.
+Application Next.js de pronostics PMU orientée décision, avec moteur de scoring, sélection des meilleures courses du jour, pipeline cron et stockage Supabase.
 
-## Ce que fait le projet
+## Positionnement
 
-- analyse les courses du jour via les donnees PMU
-- calcule un score de confiance et une lisibilite de course
-- met en avant les 3 meilleures courses jouables du jour
-- propose un resume "Mes 3 paris du jour"
-- synchronise les resultats et suit la performance dans Supabase
-- peut envoyer des alertes Telegram
+Le projet sert à :
+
+- analyser le programme PMU du jour à partir des données courses et participants ;
+- calculer une lisibilité de course et un score de confiance exploitable ;
+- mettre en avant les réunions et courses les plus jouables ;
+- proposer un ticket principal et des angles de jeu simples à lire ;
+- synchroniser les résultats officiels et suivre la performance dans Supabase ;
+- diffuser des alertes via Telegram ;
+- monétiser l’accès premium via Stripe.
 
 ## Stack
 
@@ -21,57 +24,60 @@ Application Next.js de pronostics PMU avec moteur de scoring, suivi des meilleur
 - GitHub Actions
 - Telegram Bot API
 - Stripe
-- Resend (optionnel pour les emails de confirmation)
+- Resend pour les emails transactionnels
 
-## Fonctionnalites principales
+## Fonctionnalités principales
 
-- page d'accueil avec:
-  - radar du jour
-  - top 3 des courses jouables
-  - mes 3 paris du jour
-  - bouton de copie pour Telegram / WhatsApp
-- moteur de prediction avec:
-  - score cheval
-  - lisibilite `LISIBLE`, `COMPLEXE`, `LOTERIE`
-  - validation `VALIDE`, `SURVEILLANCE`, `REJET`
-  - gestion outsiders
-  - seconde passe T-10
-- pipeline cron avec:
-  - scan matinal
-  - mise a jour pre-course
-  - sync resultats
-  - rapport hebdomadaire
+### Front produit
+
+- page d’accueil avec radar du jour ;
+- top 3 des courses jouables ;
+- bloc de tickets prioritaires ;
+- programme trié par heure, score, urgence ou enjeux ;
+- pages détail course avec verdict, value, bankroll, top 5 et débrief officiel.
+
+### Moteur PMU
+
+- scoring cheval multi-signaux ;
+- lisibilité de course : `LISIBLE`, `COMPLEXE`, `LOTERIE` ;
+- décision course : `VALIDE`, `SURVEILLANCE`, `REJET` ;
+- gestion des outsiders ;
+- calcul de value bet et mise type Kelly ;
+- seconde passe pré-course à T-10 ;
+- règlement post-course à partir des rapports officiels.
+
+### Exécution automatique
+
+- scan matinal ;
+- mise à jour pré-course ;
+- synchronisation des résultats ;
+- rapport hebdomadaire avec ajustements automatiques des paramètres.
 
 ## Arborescence utile
 
-- `src/app/page.tsx`
-  page d'accueil et experience principale
-- `src/app/api/races/scores/route.ts`
-  score des courses du jour et picks principaux
-- `src/app/api/cron/route.ts`
-  dispatcher cron unifie
-- `src/lib/predictions.ts`
-  moteur de scoring et recommandations
-- `src/lib/prediction-pipeline.ts`
-  pipeline complet matin / T-10 / resultats
-- `src/lib/prediction-store.ts`
-  persistance Supabase
-- `src/lib/date-utils.ts`
-  gestion fiable des dates Europe/Paris
-- `supabase-setup.sql`
-  schema de base de donnees
+- `src/app/page.tsx` : page d’accueil et expérience principale.
+- `src/app/course/[reunion]/[course]/page.tsx` : détail d’une course.
+- `src/app/api/races/route.ts` : programme du jour.
+- `src/app/api/races/scores/route.ts` : scores, tickets et déverrouillage premium.
+- `src/app/api/cron/route.ts` : dispatcher cron unifié.
+- `src/lib/predictions.ts` : moteur de scoring et de recommandation.
+- `src/lib/prediction-pipeline.ts` : pipeline matin, T-10 et résultats.
+- `src/lib/prediction-store.ts` : persistance Supabase.
+- `src/lib/pmu-api.ts` : intégration PMU.
+- `src/lib/weekly-reports.ts` : bilan hebdomadaire et recalibrage.
+- `supabase-setup.sql` : schéma initial.
 
 ## Installation locale
 
-### 1. Installer les dependances
+### 1. Installer les dépendances
 
 ```bash
 npm install
 ```
 
-### 2. Configurer l'environnement
+### 2. Configurer l’environnement
 
-Dupliquer `.env.local.example` en `.env.local` puis renseigner:
+Copier `.env.local.example` vers `.env.local`, puis renseigner :
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
@@ -91,13 +97,13 @@ SUPPORT_EMAIL=
 
 ### 3. Initialiser Supabase
 
-Executer le script:
+Exécuter le script :
 
 ```bash
 supabase-setup.sql
 ```
 
-Il cree notamment les tables:
+Il crée notamment les tables suivantes :
 
 - `profiles`
 - `bets`
@@ -108,7 +114,7 @@ Il cree notamment les tables:
 - `predictions`
 - `weekly_reports`
 
-### 4. Lancer l'application
+### 4. Lancer l’application
 
 ```bash
 npm run dev
@@ -119,13 +125,16 @@ npm run dev
 ```bash
 npm run lint
 npm run build
+npm run test
 npm run cron:morning
 npm run cron:prerace
 npm run cron:results
 npm run cron:weekly
+npm run cron:backtest
+npm run cron:calibration
 ```
 
-Exemples:
+Exemples :
 
 ```bash
 npm run cron:prerace -- --date=18032026 --reunion=3 --course=1
@@ -134,33 +143,33 @@ npm run cron:weekly -- --date=2026-03-22
 
 ## Cron et automatisation
 
-Le projet expose un dispatcher cron unifie:
+Le projet expose un dispatcher principal :
 
 - `/api/cron`
 
-Le dispatcher decide ensuite quoi executer selon l'heure de Paris:
+Ce dispatcher décide quoi lancer selon l’heure de Paris :
 
-- matin vers `07:00`
-- pre-course toutes les 5 minutes
-- resultats toutes les 10 minutes
-- hebdo le dimanche vers `19:00`
+- matin vers `07:00` ;
+- pré-course toutes les 5 minutes ;
+- résultats toutes les 10 minutes ;
+- hebdomadaire le dimanche vers `19:00`.
 
-### Mode recommande en Vercel Hobby
+### Configuration recommandée sur Vercel Hobby
 
-Le plan Hobby Vercel ne permet pas les crons frequents toutes les 5 minutes.
+Le plan Hobby de Vercel ne permet pas les crons fréquents toutes les 5 minutes.
 
-La configuration recommandee est donc:
+Le montage recommandé est donc :
 
-- Vercel pour heberger l'application
-- GitHub Actions pour appeler les routes cron frequentes
+- Vercel pour l’hébergement de l’application ;
+- GitHub Actions pour appeler les routes cron fréquentes.
 
-Le workflow existe deja ici:
+Workflow déjà présent :
 
 - `.github/workflows/cron-jobs.yml`
 
-## Deploiement Vercel
+## Déploiement Vercel
 
-### Variables a definir dans Vercel
+### Variables à définir dans Vercel
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -174,56 +183,68 @@ Le workflow existe deja ici:
 - `STRIPE_PRICE_ID`
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
-- `SUPPORT_EMAIL` (optionnel mais recommande)
+- `SUPPORT_EMAIL`
 
-### Etapes
+### Étapes
 
-1. importer le repo GitHub dans Vercel
-2. renseigner les variables d'environnement
-3. deployer
-4. configurer les variables GitHub Actions si tu utilises les crons frequents
-5. verifier que l'application repond bien en production
-
-## Email et delivrabilite
-
-Pour les confirmations d'abonnement:
-
-- `RESEND_FROM_EMAIL` peut etre par exemple `TurfEdge <no-reply@turfedge.fr>`
-- `SUPPORT_EMAIL` peut etre par exemple `support@turfedge.fr`
-- le domaine d'envoi doit etre verifie dans Resend avec SPF, DKIM et DMARC
-
-Sur un domaine neuf, Gmail peut classer les premiers emails en spam pendant un temps. Pour ameliorer la delivrabilite:
-
-- garder un expéditeur stable
-- utiliser une adresse support reelle en reply-to
-- eviter les objets trop promotionnels
-- marquer les premiers emails comme `Not spam` dans Gmail
+1. Importer le dépôt GitHub dans Vercel.
+2. Renseigner les variables d’environnement.
+3. Déployer.
+4. Configurer les secrets GitHub Actions si les crons fréquents sont utilisés.
+5. Vérifier le bon fonctionnement en production.
 
 ### Secrets GitHub Actions requis
 
 - `APP_URL`
 - `CRON_SECRET`
 
-## Verifications avant mise en ligne
+## Emails et délivrabilité
+
+Pour les confirmations d’abonnement :
+
+- `RESEND_FROM_EMAIL` peut être par exemple `TurfEdge <no-reply@turfedge.fr>` ;
+- `SUPPORT_EMAIL` peut être par exemple `support@turfedge.fr` ;
+- le domaine d’envoi doit être vérifié dans Resend avec SPF, DKIM et DMARC.
+
+Sur un domaine neuf, Gmail peut classer les premiers messages en spam pendant un temps. Pour limiter cela :
+
+- garder un expéditeur stable ;
+- utiliser une vraie adresse support en reply-to ;
+- éviter les objets trop promotionnels ;
+- marquer les premiers emails comme `Not spam` dans Gmail.
+
+## Encodage et hygiène du dépôt
+
+Le dépôt est désormais cadré pour éviter les retours de faux mojibake ou de fichiers mélangés :
+
+- encodage texte en UTF-8 via `.editorconfig` ;
+- fins de ligne LF via `.editorconfig` et `.gitattributes` ;
+- fichiers binaires explicitement marqués dans `.gitattributes`.
+
+Si un terminal Windows affiche encore mal les accents, le problème vient en général de la console et non des fichiers du projet.
+
+## Vérifications avant mise en ligne
 
 ```bash
 npm run lint
 npm run build
+npm run test
 ```
 
-## Etat actuel
+## État actuel
 
-Le projet est operationnel avec:
+Le projet couvre déjà :
 
-- top 3 des meilleures courses jouables
-- bloc "Mes 3 paris du jour"
-- bouton "Copier mes 3 paris"
-- mode Vercel Hobby compatible avec GitHub Actions pour les crons
-- correction des calculs de date sur fuseau `Europe/Paris`
+- sélection des meilleures courses jouables ;
+- tickets prioritaires et radar du jour ;
+- pipeline matin, pré-course et résultats ;
+- mode premium avec Stripe ;
+- compatibilité Vercel Hobby + GitHub Actions ;
+- gestion fiable des dates sur `Europe/Paris`.
 
-## Suite recommandee
+## Suite recommandée
 
-- ajout d'un bouton de partage Telegram
-- tests unitaires sur le moteur de prediction
-- dashboard admin de performance
-- deploiement Vercel avec domaine et monitoring
+- renforcer les tests autour du moteur TypeScript moderne ;
+- ajouter un vrai tableau de bord d’analyse de performance ;
+- consolider la documentation produit et opérationnelle ;
+- finaliser le monitoring de production.

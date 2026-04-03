@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ComparatifIA } from "@/components/ui/ComparatifIA";
 import { CourseCard } from "@/components/ui/CourseCard";
 import { FilterPills } from "@/components/ui/FilterPills";
+import { HowItWorks } from "@/components/ui/HowItWorks";
+import { PronoHero } from "@/components/ui/PronoHero";
 import { RadarHero } from "@/components/ui/RadarHero";
 import { RecentResults } from "@/components/ui/RecentResults";
 import { SagesseFoules } from "@/components/ui/SagesseFoules";
@@ -19,6 +21,7 @@ import {
   toIsoDate,
 } from "@/lib/date-utils";
 import { asArray } from "@/lib/array-utils";
+import { translateFactors } from "@/lib/beginner-labels";
 import {
   computeClientRaceScore,
   formatBetTypeLabelFr,
@@ -51,6 +54,7 @@ type RaceScore = {
     decision?: string | null;
     betType?: string | null;
     confidence?: number | null;
+    topFacteurs?: string[];
   } | null;
 };
 
@@ -331,7 +335,7 @@ function getTopParisItems(items: FeaturedRace[], navigate: (race: RaceSummary) =
       stake: formatStake(item.score?.pick?.confidence ? Math.max(6, Math.round(item.score.pick.confidence * 2.5)) : 8),
       betType: getBetTypeLabel(item.score),
       confidence: item.confidence,
-      sourceLabel: "✅ Jouable — exécution directe",
+      sourceLabel: "Jouable",
       onClick: () => navigate(item.race),
     }));
 }
@@ -532,12 +536,12 @@ function PageContent() {
         <div className="grid gap-6 xl:grid-cols-[1.15fr,0.85fr] xl:items-start">
           <div className="space-y-5">
             <div className="space-y-3">
-              <p className="app-kicker">Signal public + exécution</p>
+              <p className="app-kicker">Décision claire, exécution disciplinée</p>
               <h1 className="max-w-4xl text-4xl font-black leading-[0.94] tracking-tight text-[var(--pmu-text)] md:text-6xl">
-                Un système qui détecte les erreurs du marché — pour décider vite, sans bruit.
+                Un moteur qui repère les erreurs du marché pour décider vite, sans bruit.
               </h1>
               <p className="max-w-3xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
-                Signal du jour, top 3, puis le programme trié. Chaque écran pousse une décision claire.
+                Radar du jour, top 3, puis programme trié. Chaque écran pousse une décision claire.
               </p>
             </div>
 
@@ -552,11 +556,11 @@ function PageContent() {
 
             <div className="flex flex-wrap gap-2 text-xs font-semibold text-[var(--pmu-text-soft)]">
               {[
-                "Signal du jour",
-                "Top 3 exécutables",
-                "Value bets filtrées",
+                "Radar du jour",
+                "Top 3 jouables",
+                "Opportunités value",
                 "Mises bankroll",
-                "Opportunités réelles seulement",
+                "Courses vraiment jouables",
               ].map((label) => (
                 <span key={label} className="app-pill text-xs">
                   {label}
@@ -569,15 +573,15 @@ function PageContent() {
             {[
               {
                 title: "Accès gratuit",
-                text: "Le signal du jour, les priorités et le tri moteur sont lisibles en quelques secondes.",
+                text: "Le radar du jour, les priorités et le tri du moteur sont lisibles en quelques secondes.",
               },
               {
-                title: "Jouer avec discipline",
-                text: "Tickets bankroll et value bets uniquement quand la fenêtre de jeu est réelle.",
+                title: "Jouer avec cadre",
+                text: "Tickets bankroll et opportunités value uniquement quand la fenêtre de jeu est réelle.",
               },
               {
-                title: "Après course",
-                text: "Le bilan vérifie si le moteur aide, sans storytelling.",
+                title: "Après la course",
+                text: "Le bilan vérifie si le moteur aide, sans enjoliver les résultats.",
               },
             ].map((item) => (
               <div key={item.title} className="app-card-muted px-5 py-4">
@@ -663,7 +667,23 @@ function PageContent() {
         </div>
       </section>
 
-      {radarRace && radarProfile ? (
+      {radarRace && radarRace.score?.pick?.numPmu && radarRace.score?.pick?.nom ? (
+        <PronoHero
+          horseName={radarRace.score.pick.nom}
+          horseNum={radarRace.score.pick.numPmu}
+          confidence={radarRace.confidence}
+          hippodrome={radarRace.race.hippodrome}
+          heureDepart={radarRace.race.heureDepart}
+          courseName={radarRace.race.nomCourse}
+          reunion={radarRace.race.reunion}
+          course={radarRace.race.course}
+          betType={radarRace.score.pick.betType}
+          cote={null}
+          topFacteurs={translateFactors(radarRace.score.pick.topFacteurs ?? [])}
+          lisibilite={radarRace.score?.lisibilite}
+          onClick={() => navigateToRace(radarRace.race)}
+        />
+      ) : radarRace && radarProfile ? (
         <RadarHero
           raceTitle={`R${radarRace.race.reunion}C${radarRace.race.course} - ${radarRace.race.nomCourse}`}
           hippodrome={radarRace.race.hippodrome}
@@ -677,6 +697,7 @@ function PageContent() {
       ) : null}
 
       <TelegramCTA />
+      <HowItWorks />
 
       {topParisItems.length ? <TopParisStrip items={topParisItems} /> : null}
 
@@ -777,6 +798,11 @@ function PageContent() {
                 profile={profile}
                 eloProfile={eloProfile}
                 indiceOuverture={indiceListe}
+                pickNum={item.score?.pick?.numPmu}
+                pickNom={item.score?.pick?.nom}
+                pickConfidence={item.score?.pick?.confidence}
+                pickBetType={item.score?.pick?.betType}
+                topFacteurs={item.score?.pick?.topFacteurs}
                 onClick={() => navigateToRace(item.race)}
               />
             );

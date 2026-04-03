@@ -66,7 +66,20 @@ function createCalibrationBuckets() {
 }
 
 function formatBetTypeLabel(betType: BetTypeKey) {
-  return betType;
+  switch (betType) {
+    case "SIMPLE_GAGNANT":
+      return "Simple gagnant";
+    case "COUPLE":
+      return "Couplé";
+    case "TRIO":
+      return "Trio";
+    case "QUINTE":
+      return "Quinté";
+    case "MULTI":
+      return "Multi";
+    default:
+      return betType;
+  }
 }
 
 function getBinIndex(probability: number) {
@@ -372,8 +385,8 @@ export async function runBacktest(days = 90, referenceDate = new Date()): Promis
     roi,
     summarySentence:
       totalProfit >= 0
-        ? `Si tu avais suivi l'algo tu aurais gagne ${totalProfit} EUR sur ${days} jours.`
-        : `Si tu avais suivi l'algo tu aurais perdu ${Math.abs(totalProfit)} EUR sur ${days} jours.`,
+        ? `En suivant le moteur, tu aurais gagné ${totalProfit} EUR sur ${days} jours.`
+        : `En suivant le moteur, tu aurais perdu ${Math.abs(totalProfit)} EUR sur ${days} jours.`,
     byBetType,
     calibration: toCalibrationBins(calibrationBuckets),
   };

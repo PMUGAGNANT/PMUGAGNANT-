@@ -179,10 +179,10 @@ function formatRelativeDay(dateStr: string) {
   const target = parsePmuDate(dateStr);
   const diff = Math.round((target.getTime() - today.getTime()) / 86400000);
 
-  if (diff === 0) return "Aujourd'hui";
+  if (diff === 0) return "Aujourd’hui";
   if (diff === -1) return "Hier";
   if (diff === 1) return "Demain";
-  return "Selection";
+  return "Sélection";
 }
 
 function shiftDate(dateStr: string, delta: number) {
@@ -192,8 +192,8 @@ function shiftDate(dateStr: string, delta: number) {
 }
 
 function disciplineLabel(discipline: string): string {
-  if (discipline.includes("TROT_ATTELE")) return "Trot Attele";
-  if (discipline.includes("TROT_MONTE")) return "Trot Monte";
+  if (discipline.includes("TROT_ATTELE")) return "Trot attelé";
+  if (discipline.includes("TROT_MONTE")) return "Trot monté";
   if (discipline === "PLAT") return "Plat";
   if (discipline.includes("OBSTACLE") || discipline.includes("HAIES") || discipline.includes("STEEPLE")) {
     return "Obstacle";
@@ -203,7 +203,7 @@ function disciplineLabel(discipline: string): string {
 
 function resultLabel(resultat: BilanResult["resultat"]): string {
   if (resultat === "GAGNANT") return "Ticket gagnant";
-  if (resultat === "PLACE") return "Ticket place";
+  if (resultat === "PLACE") return "Ticket placé";
   if (resultat === "PERDU") return "Perdu";
   return "En attente";
 }
@@ -356,7 +356,7 @@ function DateNavigator({
               cursor: "pointer",
             }}
           >
-            {"Aujourd'hui"}
+            {"Aujourd’hui"}
           </button>
         </div>
         <input
@@ -740,12 +740,12 @@ function BilanPageContent() {
                 border: "1px solid color-mix(in srgb, var(--pmu-on-primary) 22%, transparent)",
               }}
             >
-              <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 8 }}>Lecture de la seance</div>
+              <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 8 }}>Lecture de la séance</div>
               <div style={{ fontSize: 28, lineHeight: "30px", fontWeight: 800, marginBottom: 10 }}>
                 {data.expert.healthLabel}
               </div>
               <div style={{ fontSize: 14, lineHeight: "20px", opacity: 0.92, marginBottom: 14 }}>
-                {successRate}% de reussite sur {data.summary.totalPlayed} predictions analysees pour cette date.
+                {successRate}% de réussite sur {data.summary.totalPlayed} prédictions analysées pour cette date.
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {data.expert.bestDiscipline && (
@@ -788,7 +788,7 @@ function BilanPageContent() {
               <SummaryCard label="Tickets lus" value={data.summary.totalPlayed} />
               <SummaryCard label="Taux global" value={`${successRate}%`} tone={successRate >= 40 ? "good" : successRate >= 25 ? "warn" : "bad"} />
               <SummaryCard label="Tickets gagnants" value={data.summary.wins} tone="good" />
-              <SummaryCard label="Tickets places" value={data.summary.places} tone="warn" />
+              <SummaryCard label="Tickets placés" value={data.summary.places} tone="warn" />
               <SummaryCard label="Tickets perdus" value={data.summary.losses} tone={data.summary.losses > data.summary.wins + data.summary.places ? "bad" : "default"} />
               <SummaryCard label="Courses finies" value={resultsList.length} />
             </div>
@@ -865,12 +865,12 @@ function BilanPageContent() {
                       tone={data.dashboard.globalRoi >= 0 ? "good" : "bad"}
                     />
                     <SummaryCard
-                      label="Hasard estime"
+                      label="Hasard estimé"
                       value={`${data.dashboard.randomSuccessRate.toFixed(1)}%`}
                       tone="default"
                     />
                     <SummaryCard
-                      label="Algo reussite"
+                      label="Réussite algo"
                       value={`${data.dashboard.algoSuccessRate.toFixed(1)}%`}
                       tone={data.dashboard.algoSuccessRate >= data.dashboard.randomSuccessRate ? "good" : "warn"}
                     />
@@ -944,7 +944,7 @@ function BilanPageContent() {
 
                   <div>
                     <div style={{ fontSize: 18, fontWeight: 800, color: DARK, marginBottom: 10 }}>
-                      Jockeys detectes
+                      Jockeys détectés
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       {bestJockeysRows.length > 0 ? bestJockeysRows.map((jockey) => (
@@ -1268,7 +1268,7 @@ function BilanPageContent() {
                   </div>
                   {data.expert.bestDiscipline && (
                     <div style={{ fontSize: 12, color: GREEN, marginTop: 4 }}>
-                      {data.expert.bestDiscipline.rate}% de reussite
+                      {data.expert.bestDiscipline.rate}% de réussite
                     </div>
                   )}
                 </div>
@@ -1287,7 +1287,7 @@ function BilanPageContent() {
                   </div>
                   {data.expert.worstDiscipline && (
                     <div style={{ fontSize: 12, color: RED, marginTop: 4 }}>
-                      {data.expert.worstDiscipline.rate}% de reussite
+                      {data.expert.worstDiscipline.rate}% de réussite
                     </div>
                   )}
                 </div>
@@ -1306,7 +1306,7 @@ function BilanPageContent() {
                   </div>
                   {data.expert.bestConfidenceBucket && (
                     <div style={{ fontSize: 12, color: GREEN, marginTop: 4 }}>
-                      {data.expert.bestConfidenceBucket.rate}% de reussite
+                      {data.expert.bestConfidenceBucket.rate}% de réussite
                     </div>
                   )}
                 </div>
@@ -1319,13 +1319,13 @@ function BilanPageContent() {
                     padding: 14,
                   }}
                 >
-                  <div style={{ fontSize: 11, color: "var(--pmu-text-muted)", textTransform: "uppercase", marginBottom: 6 }}>Zone a risque</div>
+                  <div style={{ fontSize: 11, color: "var(--pmu-text-muted)", textTransform: "uppercase", marginBottom: 6 }}>Zone à risque</div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: DARK }}>
                     {data.expert.worstConfidenceBucket?.label ?? "Aucune"}
                   </div>
                   {data.expert.worstConfidenceBucket && (
                     <div style={{ fontSize: 12, color: RED, marginTop: 4 }}>
-                      {data.expert.worstConfidenceBucket.rate}% de reussite
+                      {data.expert.worstConfidenceBucket.rate}% de réussite
                     </div>
                   )}
                 </div>
@@ -1353,7 +1353,7 @@ function BilanPageContent() {
 
             <div style={{ padding: "0 16px", marginBottom: 8 }}>
               <div style={{ fontSize: 22, fontWeight: 800, color: DARK, marginBottom: 10 }}>
-                Lecture complete des tickets
+                Lecture complète des tickets
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 <span
@@ -1400,7 +1400,7 @@ function BilanPageContent() {
 
             {resultsList.length === 0 ? (
               <div style={{ textAlign: "center", padding: "40px 24px", color: "var(--pmu-text-soft)" }}>
-                Pas encore de resultats termines pour cette date.
+                Pas encore de résultats terminés pour cette date.
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "0 16px" }}>
@@ -1560,4 +1560,3 @@ export default function BilanPage() {
     </Suspense>
   );
 }
-

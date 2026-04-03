@@ -26,7 +26,7 @@ type BetRow = {
 
 function dayLabelForPmuDate(dateStr: string): string {
   const today = getTodayDateStr();
-  if (dateStr === today) return "Aujourd'hui";
+  if (dateStr === today) return "Aujourd’hui";
   if (dateStr === addDaysPmu(today, -1)) return "Hier";
   if (dateStr === addDaysPmu(today, -2)) return "Avant-hier";
   const d = parsePmuDate(dateStr);
@@ -37,10 +37,10 @@ function dayLabelForPmuDate(dateStr: string): string {
 }
 
 function outcomeLabel(statut: string): { text: string; className: string } {
-  if (statut === "GAGNE") return { text: "GAGNÉ ✅", className: "text-emerald-500" };
-  if (statut === "PLACE") return { text: "PLACÉ ✅", className: "text-emerald-500" };
-  if (statut === "PERDU") return { text: "PERDU ❌", className: "text-red-500" };
-  return { text: "⏳ Attente", className: "text-[var(--pmu-text-muted)]" };
+  if (statut === "GAGNE") return { text: "Gagné", className: "text-emerald-500" };
+  if (statut === "PLACE") return { text: "Placé", className: "text-emerald-500" };
+  if (statut === "PERDU") return { text: "Perdu", className: "text-red-500" };
+  return { text: "En attente", className: "text-[var(--pmu-text-muted)]" };
 }
 
 function weekRoiPct(bets: BetRow[]): number | null {
@@ -103,7 +103,7 @@ export function RecentResults() {
         }))
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      setError(e instanceof Error ? e.message : "Erreur inconnue.");
       setBets([]);
     } finally {
       setLoading(false);
@@ -121,8 +121,8 @@ export function RecentResults() {
     <section className="app-card p-5 md:p-6">
       <div className="app-section-heading mb-4">
         <div>
-          <p className="app-kicker">📊 RÉSULTATS RÉCENTS</p>
-          <h2 className="app-section-title mt-1">Transparence totale</h2>
+          <p className="app-kicker">Résultats récents</p>
+          <h2 className="app-section-title mt-1">Suivi transparent</h2>
         </div>
       </div>
 
@@ -134,7 +134,7 @@ export function RecentResults() {
         <p className="text-sm text-[var(--pmu-text-soft)]">{error}</p>
       ) : displayRows.length === 0 ? (
         <p className="text-sm text-[var(--pmu-text-soft)]">
-          Connecte-toi et joue un ticket pour afficher tes 5 derniers résultats ici.
+          Connecte-toi et joue un ticket pour afficher ici tes 5 derniers résultats.
         </p>
       ) : (
         <ul className="space-y-3">
@@ -161,7 +161,7 @@ export function RecentResults() {
 
       {roi != null && displayRows.length > 0 ? (
         <p className="mt-5 text-lg font-black text-[var(--pmu-text)]">
-          ROI cette semaine : {roi >= 0 ? "+" : ""}
+          ROI sur 7 jours : {roi >= 0 ? "+" : ""}
           {roi.toFixed(0)}% {roi >= 0 ? "📈" : "📉"}
         </p>
       ) : null}

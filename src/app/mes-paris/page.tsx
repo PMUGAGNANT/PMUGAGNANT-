@@ -160,8 +160,8 @@ function MesParisContent() {
       if (subscriptionFlag === "cancel") {
         setBillingNotice({
           tone: "warning",
-          title: "Paiement annule",
-          message: "Le paiement a ete interrompu. Ton compte reste sur l'offre gratuite tant que l'abonnement n'est pas confirme.",
+          title: "Paiement annulé",
+          message: "Le paiement a été interrompu. Ton compte reste sur l’offre gratuite tant que l’abonnement n’est pas confirmé.",
         });
         router.replace("/mes-paris");
         return;
@@ -173,16 +173,16 @@ function MesParisContent() {
 
       setBillingNotice({
         tone: "loading",
-        title: "Verification du paiement",
-        message: "Nous confirmons ton abonnement premium avec Stripe avant d'ouvrir l'acces complet.",
+        title: "Vérification du paiement",
+        message: "Nous confirmons ton abonnement premium avec Stripe avant d’ouvrir l’accès complet.",
       });
 
       if (!sessionId || !supabaseConfigured) {
         if (!cancelled) {
           setBillingNotice({
             tone: "warning",
-            title: "Retour paiement detecte",
-            message: "Le paiement est revenu de Stripe, mais la confirmation automatique est incomplete. Recharge la page dans quelques secondes.",
+            title: "Retour paiement détecté",
+            message: "Le paiement est revenu de Stripe, mais la confirmation automatique est incomplète. Recharge la page dans quelques secondes.",
           });
         }
         router.replace("/mes-paris");
@@ -224,11 +224,11 @@ function MesParisContent() {
               ? {
                   tone: "success",
                   title: "Abonnement actif",
-                  message: "Paiement confirme. Ton abonnement premium est maintenant actif et tes acces ont bien ete ouverts.",
+                  message: "Paiement confirmé. Ton abonnement premium est maintenant actif et tes accès ont bien été ouverts.",
                 }
               : {
                   tone: "loading",
-                  title: "Paiement recu",
+                  title: "Paiement reçu",
                   message: "Le paiement est revenu, mais l'activation finale est encore en cours. Recharge la page dans quelques secondes.",
                 }
           );
@@ -242,7 +242,7 @@ function MesParisContent() {
             message:
               confirmationError instanceof Error
                 ? confirmationError.message
-                : "Le paiement est revenu de Stripe, mais la confirmation automatique a echoue.",
+                : "Le paiement est revenu de Stripe, mais la confirmation automatique a échoué.",
           });
         }
       }
@@ -280,7 +280,7 @@ function MesParisContent() {
       });
       await fetchBets();
     } catch {
-      setError("La verification des resultats a echoue.");
+      setError("La vérification des résultats a échoué.");
     } finally {
       setSettling(false);
     }
@@ -345,7 +345,7 @@ function MesParisContent() {
       color: "var(--pmu-orange)",
       label: "En attente",
     },
-    GAGNE: { bg: "color-mix(in srgb, var(--pmu-primary) 15%, transparent)", color: GREEN, label: "Gagne" },
+    GAGNE: { bg: "color-mix(in srgb, var(--pmu-primary) 15%, transparent)", color: GREEN, label: "Gagné" },
     PLACE: {
       bg: "color-mix(in srgb, var(--pmu-accent-blue) 20%, transparent)",
       color: "var(--pmu-accent-blue)",
@@ -420,7 +420,7 @@ function MesParisContent() {
             fontWeight: 700,
           }}
         >
-          Deconnexion
+          Déconnexion
         </div>
       </div>
 
@@ -535,7 +535,7 @@ function MesParisContent() {
                 {formatEuros(solde)}
               </div>
               <div style={{ fontSize: 14, opacity: 0.92, fontWeight: 600 }}>
-                {bets.length} paris · {wonCount} gagnes · {placedCount} places
+                {bets.length} paris · {wonCount} gagnés · {placedCount} placés
               </div>
             </div>
             <div
@@ -576,8 +576,8 @@ function MesParisContent() {
               </div>
               <div style={{ fontSize: 13, lineHeight: "19px", color: "color-mix(in srgb, var(--pmu-text) 78%, transparent)" }}>
                 {isSubscribed
-                  ? "Ton espace premium est actif: pronostics complets, mises et tickets detailles."
-                  : "Passe premium pour debloquer les value bets filtres, les mises Kelly et les tickets optimises."}
+                  ? "Ton espace premium est actif : pronostics complets, mises et tickets détaillés."
+                  : "Passe en premium pour débloquer les opportunités value filtrées, les mises Kelly et les tickets optimisés."}
               </div>
               <button
                 onClick={() => handleBilling(isSubscribed ? "portal" : "checkout")}
@@ -595,8 +595,8 @@ function MesParisContent() {
                 {billingLoading
                   ? "Ouverture..."
                   : isSubscribed
-                    ? "Gerer l'abonnement"
-                    : "Debloquer les pronostics premium"}
+                    ? "Gérer l’abonnement"
+                    : "Débloquer les pronostics premium"}
               </button>
               {!isSubscribed ? (
                 <button
@@ -611,16 +611,16 @@ function MesParisContent() {
                     cursor: "pointer",
                   }}
                 >
-                  {"Voir le detail de l'offre"}
+                  {"Voir le détail de l’offre"}
                 </button>
               ) : null}
               {!isSubscribed ? (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                   {[
                     "Top 5 complet",
-                    "Value bet confirme",
+                    "Opportunité value confirmée",
                     "Mise bankroll",
-                    "Bilan reel de l'algo",
+                    "Bilan réel du moteur",
                   ].map((item) => (
                     <div
                       key={item}
@@ -650,7 +650,7 @@ function MesParisContent() {
           >
             {[
               { label: "En attente", value: pendingCount, color: "var(--pmu-orange)" },
-              { label: "Gagnes", value: wonCount, color: GREEN },
+              { label: "Gagnés", value: wonCount, color: GREEN },
               { label: "Places", value: placedCount, color: "var(--pmu-accent-blue)" },
               {
                 label: "P/L",
@@ -695,7 +695,7 @@ function MesParisContent() {
                   boxShadow: "0 16px 28px color-mix(in srgb, var(--pmu-orange) 28%, transparent)",
                 }}
               >
-                {settling ? "Verification..." : `Verifier les resultats (${pendingCount} en attente)`}
+                {settling ? "Vérification..." : `Vérifier les résultats (${pendingCount} en attente)`}
               </button>
             </div>
           ) : null}
@@ -812,7 +812,7 @@ function MesParisContent() {
                             {formatEuros(bet.gain)}
                           </strong>
                         ) : (
-                          <span>Resultat en attente</span>
+                          <span>Résultat en attente</span>
                         )}
                       </div>
                     </div>

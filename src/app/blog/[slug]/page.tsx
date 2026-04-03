@@ -48,7 +48,7 @@ export default async function BlogArticlePage({ params }: Props) {
   return (
     <article className="mx-auto w-full max-w-3xl px-4 py-10 md:px-6">
       <Link href="/blog" className="text-sm font-bold text-[var(--pmu-primary)] hover:underline">
-        ← Blog
+        ← Retour au blog
       </Link>
       <header className="mt-6">
         <p className="app-kicker">{post.keywords.join(" · ")}</p>

@@ -23,8 +23,8 @@ export function TopParisStrip({ items }: TopParisStripProps) {
     <section className="app-card p-4 md:p-5">
       <div className="app-section-heading">
         <div>
-          <p className="app-kicker">Top 3 Paris du jour</p>
-          <h2 className="mt-2 text-2xl font-black tracking-tight text-[var(--pmu-text)]">✅ Jouable seulement</h2>
+          <p className="app-kicker">Top 3 du jour</p>
+          <h2 className="mt-2 text-2xl font-black tracking-tight text-[var(--pmu-text)]">À jouer en priorité</h2>
         </div>
         <span className="rounded-full border border-[var(--pmu-border-strong)] bg-transparent px-3 py-1.5 text-xs font-semibold text-[var(--pmu-text-muted)]">
           #1 · #2 · #3
@@ -62,7 +62,7 @@ export function TopParisStrip({ items }: TopParisStripProps) {
             </div>
 
             <div className="mt-auto pt-6">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--pmu-text-muted)]">Mise conseillee</p>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--pmu-text-muted)]">Mise conseillée</p>
               <p className="mt-2 text-3xl font-black tracking-tight text-[var(--pmu-primary)]">{item.stake}</p>
             </div>
           </button>

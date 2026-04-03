@@ -19,7 +19,7 @@ function aggregateRows(rows: { cheval_num: number }[] | null): { cheval_num: num
 export async function GET(request: NextRequest) {
   const raceId = request.nextUrl.searchParams.get("race_id");
   if (!raceId?.trim()) {
-    return NextResponse.json({ success: false, error: "race_id requis" }, { status: 400 });
+    return NextResponse.json({ success: false, error: "Le paramètre `race_id` est requis." }, { status: 400 });
   }
 
   const admin = getSupabaseAdminClient();
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ success: false, error: "JSON invalide" }, { status: 400 });
+    return NextResponse.json({ success: false, error: "Corps JSON invalide." }, { status: 400 });
   }
 
   const rec = body as Record<string, unknown>;
@@ -52,13 +52,13 @@ export async function POST(request: NextRequest) {
   const chevalNum = parsePositiveInteger(String(rec.cheval_num ?? ""));
 
   if (!raceId || chevalNum == null) {
-    return NextResponse.json({ success: false, error: "race_id et cheval_num requis" }, { status: 400 });
+    return NextResponse.json({ success: false, error: "Les champs `race_id` et `cheval_num` sont requis." }, { status: 400 });
   }
 
   const admin = getSupabaseAdminClient();
   if (!admin) {
     return NextResponse.json(
-      { success: false, error: "Votes non disponibles (Supabase admin requis)" },
+      { success: false, error: "Votes indisponibles : accès Supabase admin requis." },
       { status: 503 }
     );
   }

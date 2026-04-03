@@ -18,14 +18,14 @@ export type RadarHeroProps = {
 
 function radarMessage(minutes: number): string {
   if (minutes <= 0) return "Course en cours";
-  if (minutes < 30) return "🔴 SIGNAL ACTIF — Jouer maintenant";
-  if (minutes <= 60) return `Analyse finale dans ${minutes} minutes`;
-  return "Signal optimisé à T-30 minutes";
+  if (minutes < 30) return "Signal actif : fenêtre de jeu ouverte";
+  if (minutes <= 60) return `Signal final dans ${minutes} min`;
+  return "Fenêtre optimale à T-30";
 }
 
 function ctaFromScore(score: number, action: string): string {
   if (score >= 9) return `${action} 🔥`;
-  if (score >= 7) return "VOIR QUOI JOUER MAINTENANT →";
+  if (score >= 7) return "VOIR LE TICKET →";
   if (score >= 5) return "ANALYSER ⚠️";
   return "PASSER ❌";
 }
@@ -55,22 +55,22 @@ export function RadarHero({
   void tick;
   const msg = radarMessage(minutesUntilStart);
 
-  const ticketStr = profile.ticketNums.length ? profile.ticketNums.join(" - ") : "—";
+  const ticketStr = profile.ticketNums.length ? profile.ticketNums.join(" · ") : "—";
 
   const lines: Array<{ k: string; v: string }> = [];
   if (profile.favoriFragileNum != null) {
-    lines.push({ k: "FAVORI FRAGILE", v: String(profile.favoriFragileNum) });
+    lines.push({ k: "Favori fragile", v: String(profile.favoriFragileNum) });
   }
   if (profile.valueBetNum != null) {
-    lines.push({ k: "VALUE BET", v: String(profile.valueBetNum) });
+    lines.push({ k: "Opportunité value", v: String(profile.valueBetNum) });
   }
-  lines.push({ k: "TICKET", v: ticketStr });
+  lines.push({ k: "Chevaux à suivre", v: ticketStr });
 
   const neon = scoreRounded >= 8.5 ? "#00FF88" : interpreted.color;
 
   return (
     <section className="w-full overflow-hidden rounded-[2rem] border border-[var(--pmu-border)] bg-[var(--pmu-surface)] p-6 shadow-[var(--pmu-shadow)] md:p-10">
-      <p className="app-kicker text-[var(--pmu-text-muted)]">SIGNAL DU JOUR</p>
+      <p className="app-kicker text-[var(--pmu-text-muted)]">Radar du jour</p>
 
       <div className="mt-6 flex flex-col items-center text-center">
         <p
@@ -101,7 +101,7 @@ export function RadarHero({
       </ul>
 
       <p className="mt-6 text-center text-sm font-bold text-[var(--pmu-text-soft)]">
-        ⏱️ {msg}
+        {msg}
       </p>
 
       <div className="mt-8 flex justify-center">

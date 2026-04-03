@@ -35,7 +35,7 @@ export type EnjeuxPMUProps = {
 };
 
 export function EnjeuxPMU({
-  title = "ARGENT DU MARCHÉ",
+  title = "Lecture du marché",
   runners,
   volumeNominalEuro = 17_742,
 }: EnjeuxPMUProps) {
@@ -66,7 +66,7 @@ export function EnjeuxPMU({
   if (rows.length === 0) {
     return (
       <section className="rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] p-4 text-sm text-[var(--pmu-text-muted)]">
-        Répartition des enjeux : cotes indisponibles pour cette course.
+        Lecture du marché indisponible : cotes non disponibles pour cette course.
       </section>
     );
   }
@@ -75,9 +75,9 @@ export function EnjeuxPMU({
 
   return (
     <section className="rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] p-4">
-      <p className="text-xs font-black uppercase tracking-wider text-[var(--pmu-primary)]">💰 {title}</p>
+      <p className="text-xs font-black uppercase tracking-wider text-[var(--pmu-primary)]">Marché PMU</p>
       <p className="mt-1 text-[11px] text-[var(--pmu-text-soft)]">
-        Parts implicites depuis les cotes PMU (proxy du marché).
+        {title} à partir des cotes PMU.
       </p>
       <ul className="mt-4 space-y-3">
         {rows.map((r) => {
@@ -91,7 +91,7 @@ export function EnjeuxPMU({
                 </span>
                 {tag === "value" ? (
                   <span className="rounded-full bg-[color-mix(in_srgb,#00c853_22%,transparent)] px-2 py-0.5 text-[10px] font-black text-[#00c853]">
-                    💎 VALUE BET DÉTECTÉ
+                    💎 OPPORTUNITÉ VALUE
                   </span>
                 ) : tag === "fauxf" ? (
                   <span className="rounded-full bg-[color-mix(in_srgb,#ff9800_22%,transparent)] px-2 py-0.5 text-[10px] font-black text-[#ff9800]">
@@ -116,7 +116,7 @@ export function EnjeuxPMU({
         })}
       </ul>
       <p className="mt-4 text-xs font-semibold text-[var(--pmu-text-muted)]">
-        Volume total affiché :{" "}
+        Volume indicatif affiché :{" "}
         {new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(volumeNominalEuro)} €
       </p>
     </section>

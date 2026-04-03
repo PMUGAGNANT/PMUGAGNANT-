@@ -129,16 +129,16 @@ function formatTicketType(t: string | null | undefined) {
   if (!t) return "Lecture prudente";
   switch (t) {
     case "GAGNANT": return "Simple gagnant";
-    case "PLACE": return "Simple place";
-    case "COUPLE_GAGNANT": return "Couple gagnant";
-    case "COUPLE_PLACE": return "Couple place";
+    case "PLACE": return "Simple placé";
+    case "COUPLE_GAGNANT": return "Couplé gagnant";
+    case "COUPLE_PLACE": return "Couplé placé";
     default: return t;
   }
 }
 
 function describeLisibilite(l: string) {
   switch (l) {
-    case "LISIBLE": return "Course propre, hiérarchie plus fiable.";
+    case "LISIBLE": return "Course lisible, hiérarchie plus fiable.";
     case "COMPLEXE": return "Course ouverte, écarts plus serrés.";
     default: return "Course trop diffuse pour une lecture nette.";
   }
@@ -155,10 +155,10 @@ function formatObjective(o: ScoredParticipant["prediction"]["objective"] | null 
 
 function describeTicketIntent(r: ScoredParticipant) {
   if (r.prediction.typePariConseille === "PLACE") {
-    if (r.prediction.objective === "TOP5") return "Cheval surtout solide pour accrocher une place élargie plutôt qu'une gagne sèche.";
-    return "Le moteur le préfère en couverture place, plus fiable que franchement offensif.";
+    if (r.prediction.objective === "TOP5") return "Cheval surtout solide pour accrocher une place élargie plutôt qu’un ticket gagnant sec.";
+    return "Le moteur le préfère en couverture placée, plus fiable qu’une attaque trop offensive.";
   }
-  if (r.prediction.objective === "GAGNE") return "Le moteur voit ici un vrai ticket de gagne, avec suffisamment de tenue pour l'assumer.";
+  if (r.prediction.objective === "GAGNE") return "Le moteur voit ici un vrai ticket gagnant, avec suffisamment de tenue pour l’assumer.";
   return "Lecture offensive mesurée : ticket jouable si la course ne se resserre pas davantage.";
 }
 
@@ -171,7 +171,7 @@ function formatVariation(v: number | null | undefined) {
 function getConfidenceFill(s: number) { return `${Math.max(0, Math.min(s, 10)) * 10}%`; }
 
 function getActionTone(action: string, valueBet: boolean) {
-  if (action === "MISER" && valueBet) return { bg: G_DIM, color: G, label: "VALUE BET ✅" };
+  if (action === "MISER" && valueBet) return { bg: G_DIM, color: G, label: "OPPORTUNITÉ VALUE ✅" };
   return { bg: RED_DIM, color: RED, label: "ÉVITER ❌" };
 }
 
@@ -213,7 +213,7 @@ function getOutcomeTone(position: number | null, placeMode = false) {
 
 function getVerdictTone(label: string) {
   if (label === "Ticket gagnant" || label === "Pari fort") return { bg: G_DIM, color: G };
-  if (label === "Ticket place" || label === "Base prudente" || label === "Course ouverte") return { bg: GOLD_DIM, color: GOLD };
+  if (label === "Ticket placé" || label === "Base placée" || label === "Course ouverte") return { bg: GOLD_DIM, color: GOLD };
   return { bg: RED_DIM, color: RED };
 }
 
@@ -228,13 +228,13 @@ function buildVerdict(response: RaceApiResponse | null, analysis: RaceAnalysis |
   if (response?.isFinished && response.officialArrival.length > 0 && simpleTicket) {
     const position = getArrivalPosition(simpleTicket.numPmu, response.officialArrival);
     if (position === 1) return { title: "Ticket gagnant", subtitle: `Le ticket principal N${simpleTicket.numPmu} a gagné la course.`, label: "Bilan officiel" };
-    if (position !== null && position <= 3) return { title: "Ticket place", subtitle: `Le ticket principal N${simpleTicket.numPmu} termine ${formatPosition(position)}.`, label: "Bilan officiel" };
+    if (position !== null && position <= 3) return { title: "Ticket placé", subtitle: `Le ticket principal N${simpleTicket.numPmu} termine ${formatPosition(position)}.`, label: "Bilan officiel" };
     if (position !== null) return { title: "Ticket manqué", subtitle: `Le ticket principal N${simpleTicket.numPmu} termine ${formatPosition(position)}.`, label: "Bilan officiel" };
   }
 
   if (recommendation === "PARI OFFENSIF" && confidence >= SEUIL_JOUABLE) return { title: "Ticket offensif", subtitle: `Le ticket principal ressort proprement avec ${confidence}/10 de confiance sur une course ${lisibilite.toLowerCase()}.`, label: "Verdict moteur" };
-  if (placeTicket && solidity >= 68) return { title: "Base place", subtitle: "Le moteur préfère une base place solide plutôt qu'une attaque gagnante trop agressive.", label: "Verdict moteur" };
-  if (lisibilite === "LOTERIE") return { title: "Course à laisser", subtitle: "La course est trop ouverte pour sortir un vrai ticket propre.", label: "Verdict moteur" };
+  if (placeTicket && solidity >= 68) return { title: "Base placée", subtitle: "Le moteur préfère une base placée solide plutôt qu’une attaque gagnante trop agressive.", label: "Verdict moteur" };
+  if (lisibilite === "LOTERIE") return { title: "Course à laisser de côté", subtitle: "La course est trop ouverte pour sortir un vrai ticket propre.", label: "Verdict moteur" };
   if (recommendation === "SURVEILLANCE ACTIVE" || lisibilite === "COMPLEXE") return { title: "Lecture prudente", subtitle: "Le favori reste jouable, mais l'écart avec ses poursuivants est trop court pour valider un ticket offensif.", label: "Verdict moteur" };
   if (technicalFavorite && solidity >= 70) return { title: "⚠️ À surveiller", subtitle: "Le favori tient encore, mais la course demande plus de prudence que d'engagement.", label: "Verdict moteur" };
   return { title: "Lecture réservée", subtitle: "Le moteur préfère rester défensif plutôt que d'insister sur un ticket peu clair.", label: "Verdict moteur" };
@@ -249,7 +249,7 @@ function buildStrengths(analysis: RaceAnalysis | null, favorite: ScoredParticipa
   if (favorite.signaux.victoire >= 8) points.push("Signal de victoire présent dans le moteur.");
   if (favorite.signaux.podium >= 8) points.push("Base podium solide pour sécuriser la course.");
   if ((favorite.stalle ?? favorite.placeCorde ?? 99) <= 4 && analysis.courseInfo.estPlat) points.push("Bon numéro de stalle pour le parcours.");
-  if (placeBase && placeBase.numPmu !== favorite.numPmu) points.push(`Base place complémentaire : N${placeBase.numPmu} ${placeBase.nom}.`);
+  if (placeBase && placeBase.numPmu !== favorite.numPmu) points.push(`Base placée complémentaire : N${placeBase.numPmu} ${placeBase.nom}.`);
   if (solidity?.score && solidity.score >= 72) points.push(`Solidité correcte du favori (${round1(solidity.score)}/100).`);
   return points.slice(0, 4);
 }
@@ -262,7 +262,7 @@ function buildWarnings(analysis: RaceAnalysis | null, favorite: ScoredParticipan
   if (analysis.prediction.lisibilite === "LOTERIE") warnings.push("Course trop ouverte pour une validation propre.");
   if (solidity && solidity.ecartScore <= 2.5) warnings.push(`Écart faible avec le 2e : ${round1(solidity.ecartScore)} pts.`);
   if (favorite.signaux.risque >= 8) warnings.push("Risque technique élevé dans le profil du favori.");
-  if (favorite.prediction.typePariConseille === "PLACE") warnings.push("Le moteur voit surtout une base place, pas une vraie gagne sèche.");
+  if (favorite.prediction.typePariConseille === "PLACE") warnings.push("Le moteur voit surtout une base placée, pas un vrai ticket gagnant sec.");
   return warnings.slice(0, 3);
 }
 
@@ -757,7 +757,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
             {indiceOuvertureCourse && analysis ? (
               <div style={{ marginBottom: 16, padding: 12, borderRadius: 10, border: `1px solid ${BORDER}`, background: CARD2 }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: indiceOuvertureCourse.color, letterSpacing: "0.04em" }}>
-                  {indiceOuvertureCourse.emoji} Indice ouverture — {indiceOuvertureCourse.label} · {indiceOuvertureCourse.score}/10
+                  {indiceOuvertureCourse.emoji} Indice d'ouverture — {indiceOuvertureCourse.label} · {indiceOuvertureCourse.score}/10
                 </div>
                 <div style={{ fontSize: 12, color: MUTED, marginTop: 4, lineHeight: 1.5 }}>{indiceOuvertureCourse.conseil}</div>
               </div>
@@ -807,7 +807,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
         {data.paywall?.required && !analysis && (
           <SectionCard title="Pronostic réservé aux abonnés" kicker="PMU AI Premium">
             <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6, marginBottom: 14 }}>
-              {"La page d'accueil"} reste gratuite, mais le classement complet, les value bets, les mises Kelly et les tickets
+              {"La page d'accueil"} reste gratuite, mais le classement complet, les opportunités value, les mises Kelly et les tickets
               détaillés sont réservés aux abonnés.
             </p>
             {data.paywall.preview?.favori && (
@@ -876,7 +876,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <Metric label="Confiance IA" value={`${analysis.scoreConfiance?.score ?? 0}/10`} hint={analysis.prediction.decisionCourse === "VALIDE" ? "Ticket jouable" : "Lecture défensive"} tone={(analysis.scoreConfiance?.score ?? 0) >= SEUIL_JOUABLE ? "good" : (analysis.scoreConfiance?.score ?? 0) >= SEUIL_SURVEILLANCE ? "warn" : "bad"} />
                   <Metric label="Tenue repère" value={`${round1(analysis.soliditeFavori?.score ?? 0)}/100`} hint="Solidité du repère principal" tone={(analysis.soliditeFavori?.score ?? 0) >= 72 ? "good" : (analysis.soliditeFavori?.score ?? 0) >= 62 ? "warn" : "bad"} />
-                  <Metric label="Angle de jeu" value={simpleTicket.prediction.action} hint={simpleTicket.prediction.valueBet ? "Value bet confirmé" : "Pas d'edge suffisant"} tone={simpleTicket.prediction.action === "MISER" ? "good" : "bad"} />
+                  <Metric label="Angle de jeu" value={simpleTicket.prediction.action} hint={simpleTicket.prediction.valueBet ? "Opportunité value confirmée" : "Pas d'edge suffisant"} tone={simpleTicket.prediction.action === "MISER" ? "good" : "bad"} />
                   <Metric label="Lisibilité" value={analysis.prediction.lisibilite} hint={describeLisibilite(analysis.prediction.lisibilite)} tone={analysis.prediction.lisibilite === "LISIBLE" ? "good" : analysis.prediction.lisibilite === "COMPLEXE" ? "warn" : "bad"} />
                 </div>
               </div>
@@ -920,7 +920,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                   <Metric label="Cote actuelle" value={formatOdds(simpleTicket.cote)} hint="Cote PMU au moment de l'analyse" />
                   <Metric label="Proba réelle" value={formatPercent(simpleTicket.prediction.probaEstimee)} hint={`Marché ${formatPercent(simpleTicket.prediction.probabiliteImplicite)}`} tone={simpleTicket.prediction.valueBet ? "good" : "warn"} />
                   <Metric label="Mise Kelly" value={formatCurrency(simpleTicket.prediction.miseBase100) ?? "0 EUR"} hint={`Cap bankroll ${Math.round(simpleTicket.prediction.bankrollPct * 100)}%`} tone={simpleTicket.prediction.action === "MISER" ? "good" : "bad"} />
-                  <Metric label="Décision" value={simpleTicket.prediction.action} hint={simpleTicket.prediction.valueBet ? "Value bet : proba > cote × 1.15" : "Aucun value bet"} tone={simpleTicket.prediction.action === "MISER" ? "good" : "bad"} />
+                  <Metric label="Décision" value={simpleTicket.prediction.action} hint={simpleTicket.prediction.valueBet ? "Opportunité value : proba > cote × 1.15" : "Aucune opportunité value"} tone={simpleTicket.prediction.action === "MISER" ? "good" : "bad"} />
                 </div>
                 {(simpleTicket.prediction.topFacteurs ?? []).length > 0 && (
                   <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -930,10 +930,10 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
               </SectionCard>
 
               {/* Paris optimisés */}
-              <SectionCard title="Paris optimisés" kicker="Simple · Couple · Trio · Quinte · Multi">
+              <SectionCard title="Paris optimisés" kicker="Simple · Couplé · Trio · Quinté · Multi">
                 <div>
                   <BetPlanRow label="Simple gagnant" summary={analysis.bettingPlan.simpleGagnant} />
-                  <BetPlanRow label="Couple" summary={analysis.bettingPlan.couple} />
+                  <BetPlanRow label="Couplé" summary={analysis.bettingPlan.couple} />
                   <BetPlanRow label="Trio" summary={analysis.bettingPlan.trio} />
                   <BetPlanRow label="Quinte" summary={analysis.bettingPlan.quinte} />
                   <BetPlanRow label="Multi" summary={analysis.bettingPlan.multi} />
@@ -988,7 +988,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                 {(placeBase && placeBase.numPmu !== simpleTicket.numPmu) || (technicalFavorite && technicalFavorite.numPmu !== simpleTicket.numPmu) ? (
                   <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
                     {placeBase && placeBase.numPmu !== simpleTicket.numPmu && (
-                      <SecondaryRunnerCard title="Base place de secours" runner={placeBase} accent={GOLD} placeMode arrivalPosition={data.isFinished ? placeBasePosition : undefined} humanReference={getHumanReference(placeBase, data.courseInfo.estPlat)} />
+                      <SecondaryRunnerCard title="Base placée de secours" runner={placeBase} accent={GOLD} placeMode arrivalPosition={data.isFinished ? placeBasePosition : undefined} humanReference={getHumanReference(placeBase, data.courseInfo.estPlat)} />
                     )}
                     {technicalFavorite && technicalFavorite.numPmu !== simpleTicket.numPmu && (
                       <SecondaryRunnerCard title="Favori technique moteur" runner={technicalFavorite} accent={BLUE} arrivalPosition={data.isFinished ? technicalFavoritePosition : undefined} humanReference={getHumanReference(technicalFavorite, data.courseInfo.estPlat)} />
@@ -1018,7 +1018,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                   </div>
                   {placeBase && placeBase.numPmu !== simpleTicket.numPmu && (
                     <div style={{ padding: 14, borderRadius: 10, background: CARD2, border: `1px solid ${BORDER}` }}>
-                      <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Base place</div>
+                      <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Base placée</div>
                       <div style={{ fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 800, color: WHITE, marginBottom: 8 }}>N{placeBase.numPmu} {placeBase.nom}</div>
                       <Tag color={getOutcomeTone(placeBasePosition, true).color} bg={getOutcomeTone(placeBasePosition, true).bg}>
                         {placeBasePosition ? `${getOutcomeTone(placeBasePosition, true).label} (${formatPosition(placeBasePosition)})` : "Résultat indisponible"}

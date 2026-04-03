@@ -9,60 +9,60 @@ import {
 
 const INCLUDED_FEATURES = [
   {
-    title: "Value bets filtres",
-    text: "Tu ne vois pas une liste brute. Tu vois seulement les spots ou l'algo detecte un vrai edge contre le marche.",
+    title: "Opportunités value filtrées",
+    text: "Tu ne vois pas une liste brute. Tu vois seulement les courses où le moteur détecte un vrai décalage avec le marché.",
   },
   {
     title: "Mises Kelly lisibles",
-    text: "Chaque pari affiche une mise conseillee, capee et exploitable sur une bankroll simple.",
+    text: "Chaque pari affiche une mise conseillée, plafonnée et directement exploitable sur une bankroll simple.",
   },
   {
-    title: "Tickets optimises",
-    text: "Simple, couple, trio et quinte ne sortent que si la configuration de course le justifie vraiment.",
+    title: "Tickets optimisés",
+    text: "Simple, couplé, trio et quinté ne sortent que si la configuration de course le justifie vraiment.",
   },
   {
-    title: "Lecture complete de course",
-    text: "Classement detaille, score de confiance, raisons du score, value ou eviter, et plan d'action net.",
+    title: "Lecture complète de course",
+    text: "Classement détaillé, score de confiance, facteurs clés, ticket conseillé et plan d’action clair.",
   },
   {
-    title: "Suivi reel de performance",
-    text: "Backtesting, ROI, comparaison contre le hasard et bilan concret de la rentabilite de l'algo.",
+    title: "Suivi réel de performance",
+    text: "Backtesting, ROI, comparaison contre le hasard et bilan concret de la rentabilité du moteur.",
   },
   {
-    title: "Flux discipline",
-    text: "L'objectif n'est pas de te faire jouer plus. L'objectif est de te faire eliminer le bruit plus vite.",
+    title: "Cadre de jeu",
+    text: "L’objectif n’est pas de te faire jouer plus. L’objectif est de t’aider à éliminer le bruit plus vite et à rester discipliné.",
   },
 ];
 
 const FAQ_ITEMS = [
   {
-    title: "A qui sert l'abonnement ?",
-    text: "A quelqu'un qui veut une lecture actionnable: savoir quoi jouer, quoi ignorer et combien miser sans perdre du temps a trier 40 courses.",
+    title: "À qui sert l’abonnement ?",
+    text: "À quelqu’un qui veut une lecture actionnable : savoir quoi jouer, quoi ignorer et combien miser sans perdre du temps à trier 40 courses.",
   },
   {
     title: "Est-ce que tout devient premium ?",
-    text: "Non. La home reste publique. Le premium debloque la lecture complete, les tickets detailles, les value bets et les mises recommandees.",
+    text: "Non. La page d’accueil reste publique. Le premium débloque la lecture complète, les tickets détaillés, les opportunités value et les mises recommandées.",
   },
   {
     title: "Est-ce que l'abonnement garantit un gain ?",
-    text: "Non. Le premium vend de la discipline, du filtrage et un moteur plus clair, pas une promesse irreelle de gains automatiques.",
+    text: "Non. Le premium vend de la discipline, du filtrage et un moteur plus clair, pas une promesse irréelle de gains automatiques.",
   },
   {
-    title: "Peut-on arreter a tout moment ?",
-    text: "Oui. Le portail Stripe permet de gerer ou stopper l'abonnement proprement.",
+    title: "Peut-on arrêter à tout moment ?",
+    text: "Oui. Le portail Stripe permet de gérer ou stopper l’abonnement proprement.",
   },
 ];
 
 const AUDIENCE_ITEMS = [
-  "Tu veux des tickets lisibles et pas une usine a gaz.",
+  "Tu veux des tickets lisibles et pas une usine à gaz.",
   "Tu veux jouer moins de courses, mais avec plus de conviction.",
-  "Tu veux une mise recommandee claire sur bankroll simple.",
-  "Tu veux mesurer si l'algo apporte vraiment quelque chose.",
+  "Tu veux une mise recommandée claire sur bankroll simple.",
+  "Tu veux mesurer si le moteur apporte vraiment quelque chose.",
 ];
 
 const NOT_FOR_YOU_ITEMS = [
-  "Tu veux un tipster miracle qui promet de gagner a tous les coups.",
-  "Tu veux jouer chaque course de la journee sans filtre.",
+  "Tu veux un tipster miracle qui promet de gagner à tous les coups.",
+  "Tu veux jouer chaque course de la journée sans filtre.",
   "Tu ne veux ni bankroll, ni discipline, ni suivi.",
 ];
 
@@ -85,7 +85,7 @@ export default function PremiumPage() {
             {"<"}
           </button>
           <div className="text-center">
-            <div className="text-[22px] font-black tracking-[-0.03em] text-[var(--pmu-text)]">PMU AI Premium</div>
+            <div className="text-[22px] font-black tracking-[-0.03em] text-[var(--pmu-text)]">PMU Gagnant Premium</div>
             <div className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[var(--pmu-primary)]">
               Pronostics complets
             </div>
@@ -107,8 +107,8 @@ export default function PremiumPage() {
                 Tu ne paies pas pour voir plus de courses. Tu paies pour jouer moins, mais mieux.
               </h1>
               <p className="mt-4 max-w-2xl text-[15px] leading-7 text-[var(--pmu-text-soft)] md:text-[17px]">
-                PMU AI Premium filtre le bruit, garde les spots exploitables et transforme {"l'analyse brute"} en decisions
-                claires: value bet, mise conseillee, ticket recommande et course a eviter.
+                PMU Gagnant Premium filtre le bruit, garde les spots exploitables et transforme l’analyse brute en
+                décisions claires : opportunité value, mise conseillée, ticket recommandé et courses à laisser.
               </p>
             </div>
 
@@ -117,7 +117,7 @@ export default function PremiumPage() {
                 <div className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[var(--pmu-primary)]">
                   Ce que tu vois
                 </div>
-                <div className="mt-2 text-[18px] font-black text-[var(--pmu-text)]">Value bets, tickets, mises et alertes</div>
+                <div className="mt-2 text-[18px] font-black text-[var(--pmu-text)]">Pronostics complets, tickets et mises</div>
               </div>
               <div className="rounded-[26px] border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] p-4">
                 <div className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[var(--pmu-primary)]">
@@ -127,7 +127,7 @@ export default function PremiumPage() {
               </div>
               <div className="rounded-[26px] border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] p-4">
                 <div className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[var(--pmu-primary)]">
-                  Ce que tu evites
+                  Ce que tu évites
                 </div>
                 <div className="mt-2 text-[18px] font-black text-[var(--pmu-text)]">Les faux spots et les tickets inutiles</div>
               </div>
@@ -144,16 +144,16 @@ export default function PremiumPage() {
                 <span className="pb-2 text-[16px] font-black">{PREMIUM_MONTHLY_PRICE_CURRENCY_SUFFIX}</span>
               </div>
               <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-muted)]">
-                Acces aux pronostics complets, aux mises recommandees et au suivi reel de {"l'algo"}.
+                Accès aux pronostics complets, aux mises recommandées et au suivi réel du moteur.
               </p>
             </div>
 
             <div className="grid gap-2 rounded-[24px] border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] p-4">
               {[
-                "Page d'accueil publique conservee",
-                "Pronostics complets reserves aux abonnes",
+                "Page d’accueil publique conservée",
+                "Pronostics complets réservés aux abonnés",
                 "Gestion d'abonnement via Stripe",
-                "Arret possible a tout moment",
+                "Arrêt possible à tout moment",
               ].map((item) => (
                 <div key={item} className="flex items-start gap-2 text-sm font-semibold text-[var(--pmu-text-soft)]">
                   <span className="mt-[2px] text-[var(--pmu-primary)]">+</span>
@@ -172,10 +172,10 @@ export default function PremiumPage() {
               href="/bilan"
               className="rounded-full border border-[var(--pmu-border-strong)] bg-[var(--pmu-surface)] px-5 py-4 text-center text-sm font-black text-[var(--pmu-text)] transition hover:border-[color-mix(in_srgb,var(--pmu-primary)_40%,transparent)]"
             >
-              {`Voir le bilan de l'algo`}
+              {`Voir le bilan du moteur`}
             </Link>
             <div className="text-center text-xs font-semibold leading-5 text-[var(--pmu-text-muted)]">
-              Paiement securise via Stripe. Le premium te donne une lecture plus exploitable, pas une promesse magique.
+              Paiement sécurisé via Stripe. Le premium t’apporte un cadre de décision plus clair, jamais une promesse de gain.
             </div>
           </aside>
         </section>
@@ -215,7 +215,7 @@ export default function PremiumPage() {
               {"Ce n'est pas pour toi si"}
             </div>
             <h2 className="mt-3 text-[28px] font-black leading-[1] tracking-[-0.04em] text-white md:text-[30px]">
-              Tu cherches une promesse fantasmee plutot {"qu'un outil"} de discipline.
+              Tu cherches une promesse fantasmée plutôt qu’un outil de discipline.
             </h2>
             <div className="mt-5 grid gap-3">
               {NOT_FOR_YOU_ITEMS.map((item) => (
@@ -234,17 +234,17 @@ export default function PremiumPage() {
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
             <div>
               <div className="text-[12px] font-extrabold uppercase tracking-[0.18em] text-[var(--pmu-primary)]">
-                Questions frequentes
+                Questions fréquentes
               </div>
               <h2 className="mt-2 text-[28px] font-black leading-[1] tracking-[-0.04em] text-[var(--pmu-text)] md:text-[32px]">
-                {`Ce que tu dois savoir avant de t'abonner`}
+                {`Ce que tu dois savoir avant de t’abonner`}
               </h2>
             </div>
             <Link
               href="/login?redirect=/mes-paris"
               className="app-button-primary rounded-full px-5 py-3 text-sm transition hover:opacity-90"
             >
-              {`Continuer vers l'offre`}
+              {`Continuer vers l’offre`}
             </Link>
           </div>
 

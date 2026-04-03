@@ -32,6 +32,7 @@ export interface ApiRaceScoreLite {
     nom?: string | null;
     confidence?: number | null;
     betType?: string | null;
+    topFacteurs?: string[] | null;
   } | null;
 }
 
@@ -270,11 +271,11 @@ export function computeClientRaceScore(
 }
 
 export function formatBetTypeLabelFr(betType: string | null | undefined): string {
-  if (!betType) return "Lecture premium";
+  if (!betType) return "Type à confirmer";
   const u = betType.toUpperCase();
   if (u === "GAGNANT") return "Simple gagnant";
   if (u === "PLACE") return "Simple placé";
-  if (u === "COUPLE" || u === "COUPLED") return "Couplé";
+  if (u === "COUPLE" || u === "COUPLED" || u === "COUPLE_GAGNANT" || u === "COUPLE_PLACE") return "Couplé";
   if (u === "TRIO") return "Trio";
   return betType.replaceAll("_", " ");
 }

@@ -1004,8 +1004,8 @@ function buildBettingPlan(
             strongest.prediction.confiance > 7 &&
             strongest.prediction.typePariConseille === "GAGNANT",
           strongest.prediction.action === "MISER" && strongest.prediction.confiance > 7
-            ? "Simple gagnant retenu: confiance > 7/10 et value bet confirme."
-            : "Simple gagnant refuse: confiance insuffisante ou value bet non confirme."
+            ? "Simple gagnant retenu : confiance > 7/10 et opportunité value confirmée."
+            : "Simple gagnant refusé : confiance insuffisante ou opportunité value non confirmée."
         )
       : null;
 
@@ -1016,8 +1016,8 @@ function buildBettingPlan(
       top2.every((runner) => runner.prediction.confiance >= 6) &&
       lisibilite !== "LOTERIE",
     top2.length === 2
-      ? "Couple construit sur les 2 meilleurs scores de confiance."
-      : "Couple indisponible faute de deux profils solides."
+      ? "Couplé construit sur les 2 meilleurs scores de confiance."
+      : "Couplé indisponible faute de deux profils solides."
   );
 
   const trio = buildCompositeBetPlan(
@@ -1027,7 +1027,7 @@ function buildBettingPlan(
       top3.filter((runner) => runner.prediction.confiance >= 6).length === 3 &&
       lisibilite !== "LOTERIE",
     top3.length === 3
-      ? "Trio base sur le top 3 du moteur."
+      ? "Trio basé sur le top 3 du moteur."
       : "Trio indisponible faute de trois profils fiables."
   );
 
@@ -1038,7 +1038,7 @@ function buildBettingPlan(
       valueBets.filter((runner) => top5.some((topRunner) => topRunner.numPmu === runner.numPmu))
         .length >= 3,
     top5.length === 5
-      ? "Quinte propose uniquement si le top 5 contient au moins 3 value bets confirmes."
+      ? "Quinté proposé uniquement si le top 5 contient au moins 3 opportunités value confirmées."
       : "Quinte indisponible faute de top 5 complet."
   );
 
@@ -1046,7 +1046,7 @@ function buildBettingPlan(
     "MULTI",
     top4OrTop5(top5, lisibilite),
     false,
-    "Multi desactive tant que le ROI historique par type n'est pas confirme au-dessus de 15%."
+    "Multi désactivé tant que le ROI historique par type n'est pas confirmé au-dessus de 15%."
   );
 
   return {
@@ -1073,16 +1073,16 @@ function buildRaceAlerts(
   const overloaded = ranked.filter((runner) => runner.nombreCourses >= 45).length;
 
   if (valueBets.length >= 3) {
-    alerts.push("Opportunite forte: au moins 3 value bets confirmes dans cette course.");
+    alerts.push("Opportunité forte : au moins 3 opportunités value confirmées dans cette course.");
   }
   if (lisibilite === "LOTERIE") {
-    alerts.push("Course a eviter: lisibilite trop faible.");
+    alerts.push("Course à éviter : lisibilité trop faible.");
   }
   if (overRested >= 3) {
-    alerts.push("Plusieurs chevaux reviennent apres une longue absence.");
+    alerts.push("Plusieurs chevaux reviennent après une longue absence.");
   }
   if (overloaded >= 3) {
-    alerts.push("Peloton use: plusieurs chevaux tres sollicites ces derniers mois.");
+    alerts.push("Peloton usé : plusieurs chevaux très sollicités ces derniers mois.");
   }
 
   return alerts;
@@ -1114,8 +1114,8 @@ function buildDaySignal(
       label: "JOURNEE_FAVORABLE",
       score,
       raisons: [
-        `${valueCount} value bet(s) confirme(s) sur la course.`,
-        `Confiance moyenne top 5: ${round1(averageConfidence)}/10.`,
+        `${valueCount} opportunité(s) value confirmée(s) sur la course.`,
+        `Confiance moyenne du top 5 : ${round1(averageConfidence)}/10.`,
       ],
     };
   }
@@ -1128,11 +1128,11 @@ function buildDaySignal(
     };
   }
 
-  return {
-    label: "JOURNEE_NEUTRE",
-    score,
-    raisons: [
-      `${valueCount} value bet(s) confirme(s).`,
+    return {
+      label: "JOURNEE_NEUTRE",
+      score,
+      raisons: [
+      `${valueCount} opportunité(s) value confirmée(s).`,
       lisibilite === "COMPLEXE"
         ? "La course reste jouable mais demande de la discipline."
         : "Signaux corrects sans avantage massif.",
@@ -1154,7 +1154,7 @@ function buildFavoriteSolidity(
   const alertes: string[] = [];
 
   if (favori.musicStats?.nbVictoires) {
-    pointsPositifs.push("Victoire recente dans la musique");
+    pointsPositifs.push("Victoire récente dans la musique");
   }
   if ((favori.musicStats?.trend ?? 0) > 0.5) {
     pointsPositifs.push("Forme en progression");
@@ -1229,7 +1229,7 @@ function buildRecommendation(
       emoji: "FORT",
       vautLeCoup: true,
       raisonnement: [
-        "Le ticket coche les seuils de qualite et de confiance.",
+        "Le ticket coche les seuils de qualité et de confiance.",
         "Le profil est assez propre pour viser la gagne sans surjouer le risque.",
       ],
     };
@@ -1244,7 +1244,7 @@ function buildRecommendation(
       emoji: "PLACE",
       vautLeCoup: true,
       raisonnement: [
-        "Le moteur voit surtout une base pour les places plutot qu'un vrai coup de gagne.",
+        "Le moteur voit surtout une base pour les places plutôt qu'un vrai coup de gagne.",
         "La lecture reste exploitable tant que la course ne se tend pas davantage.",
       ],
     };
@@ -1256,8 +1256,8 @@ function buildRecommendation(
       emoji: "WATCH",
       vautLeCoup: true,
       raisonnement: [
-        "Le profil principal ressort encore, mais la course demande une confirmation supplementaire.",
-        "Le ticket est jouable si le marche ne se degrade pas avant le depart.",
+        "Le profil principal ressort encore, mais la course demande une confirmation supplémentaire.",
+        "Le ticket est jouable si le marché ne se dégrade pas avant le départ.",
       ],
     };
   }
@@ -1267,8 +1267,8 @@ function buildRecommendation(
     emoji: "STOP",
     vautLeCoup: false,
     raisonnement: [
-      "Le couple confiance / lisibilite reste trop juste pour un ticket sain.",
-      "Mieux vaut laisser passer cette course que surinterpreter un signal faible.",
+      "Le couple confiance / lisibilité reste trop juste pour un ticket sain.",
+      "Mieux vaut laisser passer cette course que surinterpréter un signal faible.",
     ],
   };
 }
@@ -1657,4 +1657,3 @@ export function getRaceStatus(heureDepart: string, dateStr?: string): RaceStatus
   if (minutesUntil <= 30) return "prono_available";
   return "upcoming";
 }
-

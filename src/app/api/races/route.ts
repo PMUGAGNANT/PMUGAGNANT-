@@ -9,13 +9,13 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const date = normalizeRequestedDate(searchParams.get('date'), getTodayDateStr());
   if (!date) {
-    return badRequest('Invalid date format. Expected DDMMYYYY.');
+    return badRequest('Format de date invalide. Attendu : DDMMYYYY.');
   }
 
   try {
     const races = await getAllRaces(date);
     return NextResponse.json({ success: true, date, races });
   } catch (error) {
-    return serverError('Failed to fetch races', error, { date });
+    return serverError('Échec du chargement des courses.', error, { date });
   }
 }

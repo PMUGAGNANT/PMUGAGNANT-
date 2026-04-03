@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Manrope } from "next/font/google";
 import Script from "next/script";
 import { AppShell } from "@/components/ui/AppShell";
+import { GlossaryPanel } from "@/components/ui/Glossary";
+import { OnboardingModal } from "@/components/ui/OnboardingModal";
 import { ThemeMetaColor } from "@/components/ui/ThemeMetaColor";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import "./globals.css";
@@ -9,12 +11,12 @@ import "./globals.css";
 const manrope = Manrope({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
-  title: "PMU Gagnant - Pronostics IA Courses Hippiques",
-  description: "Algorithme IA pour identifier les meilleures courses PMU chaque jour",
+  title: "PMU Gagnant - Pronostics PMU assistés par IA",
+  description: "PMU Gagnant aide à repérer les meilleures courses PMU chaque jour avec une lecture claire et disciplinée.",
   manifest: "/manifest.json",
   openGraph: {
-    title: "PMU Gagnant - Pronostics IA Courses Hippiques",
-    description: "Algorithme IA pour identifier les meilleures courses PMU chaque jour",
+    title: "PMU Gagnant - Pronostics PMU assistés par IA",
+    description: "PMU Gagnant aide à repérer les meilleures courses PMU chaque jour avec une lecture claire et disciplinée.",
     type: "website",
   },
 };
@@ -43,6 +45,8 @@ export default function RootLayout({
         <ThemeProvider>
           <ThemeMetaColor />
           <AppShell>{children}</AppShell>
+          <OnboardingModal />
+          <GlossaryPanel />
         </ThemeProvider>
       </body>
     </html>

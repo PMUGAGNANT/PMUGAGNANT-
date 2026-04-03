@@ -123,7 +123,7 @@ function buildAdjustments(
           parameterKey: "validation",
           previousValue: parameters.validation,
           nextValue,
-          reason: "ROI SURVEILLANCE solide, seuil de confiance legerement assoupli",
+          reason: "ROI SURVEILLANCE solide, seuil de confiance légèrement assoupli",
         });
       }
     }
@@ -175,16 +175,16 @@ function buildAdjustments(
     }
 
     if (nextCap !== current) {
-      adjustments.push({
-        parameterKey: "value",
-        previousValue: parameters.value,
-        nextValue: {
-          ...parameters.value,
-          maxCap: nextCap,
-        },
-        reason: "Ajustement du plafond de value selon le ROI des tickets a forte value",
-      });
-    }
+        adjustments.push({
+          parameterKey: "value",
+          previousValue: parameters.value,
+          nextValue: {
+            ...parameters.value,
+            maxCap: nextCap,
+          },
+          reason: "Ajustement du plafond value selon le ROI des tickets à forte value",
+        });
+      }
   }
 
   return adjustments;
@@ -296,22 +296,22 @@ export async function runWeeklyReport(referenceDate?: Date) {
   const insights: string[] = [];
   if (bestDecision) {
     insights.push(
-      `La meilleure decision de la semaine est ${bestDecision.key} (${round2(bestDecision.roi)}% sur ${bestDecision.count} tickets).`
+      `La meilleure décision de la semaine est ${bestDecision.key} (${round2(bestDecision.roi)}% sur ${bestDecision.count} tickets).`
     );
   }
   if (bestDiscipline) {
     insights.push(
-      `Discipline la plus forte: ${bestDiscipline.key} (${round2(bestDiscipline.roi)}%).`
+      `Discipline la plus forte : ${bestDiscipline.key} (${round2(bestDiscipline.roi)}%).`
     );
   }
   if (bestConfidence) {
     insights.push(
-      `Zone de confiance la plus rentable: ${bestConfidence.key} (${round2(bestConfidence.roi)}%).`
+      `Zone de confiance la plus rentable : ${bestConfidence.key} (${round2(bestConfidence.roi)}%).`
     );
   }
   if (bestPari) {
     insights.push(
-      `Type de pari le plus fort: ${bestPari.key} (${round2(bestPari.roi)}% sur ${bestPari.count} tickets).`
+      `Type de pari le plus fort : ${bestPari.key} (${round2(bestPari.roi)}% sur ${bestPari.count} tickets).`
     );
   }
 

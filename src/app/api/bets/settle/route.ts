@@ -21,11 +21,11 @@ export async function POST(req: NextRequest) {
 
   const { data: { user }, error: authError } = await client.auth.getUser();
   if (authError) {
-    return serverError("Authentication failed", authError);
+    return serverError("Échec de l'authentification.", authError);
   }
 
   if (!user) {
-    return unauthorized("Non connecte");
+    return unauthorized("Non connecté.");
   }
 
   const { data: pendingBets, error: betsError } = await client
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     .eq("statut", "EN_ATTENTE");
 
   if (betsError) {
-    return serverError("Failed to fetch pending bets", betsError, { userId: user.id });
+    return serverError("Impossible de récupérer les paris en attente.", betsError, { userId: user.id });
   }
 
   if (!pendingBets || pendingBets.length === 0) {
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (profileError) {
-    return serverError("Failed to fetch profile balance", profileError, { userId: user.id });
+    return serverError("Impossible de récupérer le solde du profil.", profileError, { userId: user.id });
   }
 
   let settledCount = 0;
@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
       .eq("id", user.id);
 
     if (updateProfileError) {
-      return serverError("Failed to update profile balance", updateProfileError, { userId: user.id });
+      return serverError("Impossible de mettre à jour le solde du profil.", updateProfileError, { userId: user.id });
     }
   }
 

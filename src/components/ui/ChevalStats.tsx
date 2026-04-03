@@ -4,7 +4,7 @@ import type { ScoredParticipant } from "@/lib/types";
 
 type ChevalStatsProps = {
   runner: ScoredParticipant;
-  /** Score algo médian du peloton pour approx. IMDC */
+  /** Score médian du peloton pour situer le cheval */
   medianFieldScoreAlgo: number;
   estTrot: boolean;
 };
@@ -27,12 +27,12 @@ function formatImdc(runner: ScoredParticipant, median: number): { text: string; 
   const delta = runner.scoreAlgo - median;
   const rounded = Math.round(delta * 10) / 10;
   if (rounded > 0.5) {
-    return { text: `+${rounded}`, hint: "Monte de catégorie / champ plus relevé — ⚠️" };
+    return { text: `+${rounded}`, hint: "Au-dessus du niveau moyen du peloton." };
   }
   if (rounded < -0.5) {
-    return { text: `${rounded}`, hint: "Descend de catégorie — engagement plus favorable ✅" };
+    return { text: `${rounded}`, hint: "Engagement plus favorable que la moyenne du peloton." };
   }
-  return { text: `${rounded >= 0 ? "+" : ""}${rounded}`, hint: "Niveau cohérent avec le peloton" };
+  return { text: `${rounded >= 0 ? "+" : ""}${rounded}`, hint: "Niveau proche du peloton." };
 }
 
 function recentFromMusic(runner: ScoredParticipant): { codes: string[]; emojis: string[] } {
@@ -142,7 +142,7 @@ export function ChevalStats({ runner, medianFieldScoreAlgo, estTrot }: ChevalSta
           </span>
         </p>
         <p>
-          <span className="text-[var(--pmu-text-muted)]">IMDC (vs peloton) </span>
+          <span className="text-[var(--pmu-text-muted)]">Écart niveau peloton </span>
           <span className="font-black text-[var(--pmu-text)]">{imdc.text}</span>{" "}
           <span className="text-[var(--pmu-text-soft)]">{imdc.hint}</span>
         </p>

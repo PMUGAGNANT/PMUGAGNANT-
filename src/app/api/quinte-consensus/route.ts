@@ -105,12 +105,12 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const date = normalizeRequestedDate(searchParams.get("date"), getTodayDateStr());
   if (!date) {
-    return NextResponse.json({ success: false, error: "date invalide" }, { status: 400 });
+    return NextResponse.json({ success: false, error: "Date invalide." }, { status: 400 });
   }
   const reunion = parsePositiveInteger(searchParams.get("reunion"));
   const course = parsePositiveInteger(searchParams.get("course"));
   if (reunion == null || course == null) {
-    return NextResponse.json({ success: false, error: "reunion et course requis" }, { status: 400 });
+    return NextResponse.json({ success: false, error: "Les paramètres `reunion` et `course` sont requis." }, { status: 400 });
   }
 
   const raceKey = `${date}-${reunion}-${course}`;
@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
     const races = await getAllRaces(date);
     const race = races.find((r) => r.reunion === reunion && r.course === course) as RaceSummary | undefined;
     if (!race) {
-      throw new Error("Course introuvable");
+      throw new Error("Course introuvable.");
     }
     const participants = await attachFaultRates(await getParticipants(date, reunion, course));
     const algo = await loadAlgoParameters();

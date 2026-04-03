@@ -26,7 +26,7 @@ export async function sendTelegramMessage(text: string) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TELEGRAM_TIMEOUT_MS);
   const safeText = text.length > MAX_TELEGRAM_MESSAGE_LENGTH
-    ? `${text.slice(0, MAX_TELEGRAM_MESSAGE_LENGTH - 12)}\n\n[message coupe]`
+    ? `${text.slice(0, MAX_TELEGRAM_MESSAGE_LENGTH - 12)}\n\n[message coupé]`
     : text;
 
   try {
@@ -69,9 +69,9 @@ export function formatMorningTelegram(
     decision: string;
   }>
 ) {
-  const header = [`PMU AI v9.2`, `Analyse matinale ${date}`];
+  const header = [`PMU Gagnant`, `Analyse du matin ${date}`];
   if (rows.length === 0) {
-    return [...header, "Aucun pari valide ce matin."].join("\n");
+    return [...header, "Aucun ticket validé ce matin."].join("\n");
   }
 
   const lines = rows
@@ -97,7 +97,7 @@ export function formatPreRaceTelegram(
     extra: string[];
   }>
 ) {
-  const header = [`PMU AI v9.2`, `Mise a jour T-10 ${date}`];
+  const header = [`PMU Gagnant`, `Mise à jour T-10 ${date}`];
   if (rows.length === 0) {
     return [...header, "Aucun signal T-10 notable."].join("\n");
   }
@@ -106,7 +106,7 @@ export function formatPreRaceTelegram(
     .slice(0, 12)
     .map((row) => {
       const variationLabel =
-        row.variation === null ? "var n/a" : `var ${row.variation > 0 ? "+" : ""}${row.variation}%`;
+        row.variation === null ? "variation n/d" : `variation ${row.variation > 0 ? "+" : ""}${row.variation}%`;
       const details = row.extra.length > 0 ? ` - ${row.extra.join(", ")}` : "";
       return `R${row.reunion}C${row.course} #${row.chevalNum} ${row.chevalNom}: ${row.decision}, confiance ${row.confiance}/10, ${variationLabel}${details}`;
     });
@@ -122,16 +122,16 @@ export function formatWeeklyTelegram(
   const bestPari = Object.entries(report.roi_by_pari ?? {})
     .sort((left, right) => right[1] - left[1])[0] ?? null;
   const header = [
-    "PMU AI v9.2",
+    "PMU Gagnant",
     `Rapport hebdo ${report.week_start} -> ${report.week_end}`,
-    `ROI total: ${report.roi_total}%`,
-    `Echantillon: ${report.sample_size} predictions`,
-    ...(bestPari ? [`Meilleur type de pari: ${bestPari[0]} (${bestPari[1]}%)`] : []),
+    `ROI total : ${report.roi_total}%`,
+    `Échantillon : ${report.sample_size} prédictions`,
+    ...(bestPari ? [`Meilleur type de pari : ${bestPari[0]} (${bestPari[1]}%)`] : []),
   ];
 
-  const insightLines = insights.length > 0 ? ["Insights:", ...insights] : [];
+  const insightLines = insights.length > 0 ? ["Points clés :", ...insights] : [];
   const adjustmentLines =
-    adjustments.length > 0 ? ["Auto-ajustements:", ...adjustments] : ["Auto-ajustements: aucun"];
+    adjustments.length > 0 ? ["Auto-ajustements :", ...adjustments] : ["Auto-ajustements : aucun"];
 
   return [...header, ...insightLines, ...adjustmentLines].join("\n");
 }

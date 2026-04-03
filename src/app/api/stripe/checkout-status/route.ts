@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (state.stripeCustomerId && state.stripeCustomerId !== customerId) {
-      return unauthorized("Cette session Stripe ne correspond pas au compte connecte.");
+      return unauthorized("Cette session Stripe ne correspond pas au compte connecté.");
     }
 
     const subscription =
@@ -68,6 +68,6 @@ export async function GET(request: NextRequest) {
       customerId,
     });
   } catch (error) {
-    return serverError("Stripe checkout status failed", error, { sessionId });
+    return serverError("Échec de vérification du paiement Stripe.", error, { sessionId });
   }
 }

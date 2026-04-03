@@ -15,19 +15,19 @@ function getFriendlyAuthError(message: string) {
   }
 
   if (message.includes("already registered")) {
-    return "Cet email est deja utilise. Connecte-toi a la place.";
+    return "Cet email est déjà utilisé. Connecte-toi à la place.";
   }
 
   if (message.includes("Password should be")) {
-    return "Le mot de passe doit contenir au moins 6 caracteres.";
+    return "Le mot de passe doit contenir au moins 6 caractères.";
   }
 
   if (message.includes("Invalid API key")) {
-    return "La cle publique Supabase de production est invalide. Remplace NEXT_PUBLIC_SUPABASE_ANON_KEY dans Vercel par la vraie anon key de Supabase puis redeploie.";
+    return "La clé publique Supabase de production est invalide. Remplace NEXT_PUBLIC_SUPABASE_ANON_KEY dans Vercel par la vraie anon key de Supabase, puis redéploie.";
   }
 
   if (message.includes("fetch") || message.includes("Failed to fetch")) {
-    return "Impossible de joindre Supabase pour le moment. Verifie NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY sur Vercel.";
+    return "Impossible de joindre Supabase pour le moment. Vérifie NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY sur Vercel.";
   }
 
   return message;
@@ -171,17 +171,17 @@ function LoginPageContent() {
               marginBottom: 10,
             }}
           >
-            {premiumIntent ? "Acces premium" : "Compte PMU AI"}
+            {premiumIntent ? "Accès premium" : "Compte PMU Gagnant"}
           </div>
           <div style={{ fontSize: 34, lineHeight: "36px", fontWeight: 900, letterSpacing: "-1px", marginBottom: 12 }}>
             {premiumIntent
-              ? "Connecte-toi pour debloquer les pronostics complets."
-              : "Connecte-toi pour suivre tes paris et ton bilan reel."}
+              ? "Connecte-toi pour débloquer les pronostics complets."
+              : "Connecte-toi pour suivre tes paris et ton bilan réel."}
           </div>
           <div style={{ fontSize: 15, lineHeight: "24px", color: "var(--pmu-text-soft)", maxWidth: 640, opacity: 0.92 }}>
             {premiumIntent
-              ? "Le premium sert a filtrer les courses, ne garder que les spots utiles et afficher des tickets vraiment exploitables."
-              : "Ton compte centralise la bankroll, les tickets, le suivi de performance et l'acces a l'offre premium."}
+              ? "Le premium sert à filtrer les courses, ne garder que les vraies opportunités et afficher des tickets vraiment exploitables."
+              : "Ton compte centralise la bankroll, les tickets, le suivi de performance et l’accès à l’offre premium."}
           </div>
 
           <div
@@ -193,10 +193,10 @@ function LoginPageContent() {
             }}
           >
             {[
-              ["Value bets", "Seulement quand le moteur detecte un edge reel contre le marche."],
-              ["Mises Kelly", "Mise conseillee claire, capee bankroll, directement exploitable."],
-              ["Tickets optimises", "Simple, couple, trio et combinaisons seulement si elles sont justifiees."],
-              ["Suivi reel", "Backtest 90 jours, ROI, historique et bilan concret de l'algo."],
+              ["Opportunités value", "Seulement quand le moteur détecte un vrai décalage avec le marché."],
+              ["Mises Kelly", "Mise conseillée claire, plafonnée par la bankroll et directement exploitable."],
+              ["Tickets optimisés", "Simple, couplé, trio et combinaisons seulement si elles sont justifiées."],
+              ["Suivi réel", "Backtest 90 jours, ROI, historique et bilan concret du moteur."],
             ].map(([title, text]) => (
               <div
                 key={title}
@@ -236,7 +236,7 @@ function LoginPageContent() {
             </div>
             <div style={{ fontSize: 17, fontWeight: 800, lineHeight: "24px" }}>
               {
-                "L'objectif n'est pas de te faire jouer plus. L'objectif est de t'aider a jouer moins, mais mieux."
+                "L’objectif n’est pas de te faire jouer plus. L’objectif est de t’aider à mieux choisir tes paris."
               }
             </div>
           </div>
@@ -272,15 +272,15 @@ function LoginPageContent() {
                 letterSpacing: "-0.8px",
               }}
             >
-              {isSignUp ? "Creer un compte" : "Se connecter"}
+              {isSignUp ? "Créer un compte" : "Se connecter"}
             </h1>
             <p style={{ fontSize: 14, color: "var(--pmu-text-muted)", lineHeight: "21px" }}>
               {isSignUp
                 ? premiumIntent
-                  ? "Creer ton compte pour activer l'espace premium et suivre tes tickets."
-                  : "Creer ton compte pour acceder a ton espace bankroll et au suivi de l'algo."
+                  ? "Crée ton compte pour activer l’espace premium et suivre tes tickets."
+                  : "Crée ton compte pour accéder à ton espace bankroll et au suivi du moteur."
                 : premiumIntent
-                  ? "Connecte-toi pour passer a l'offre premium et debloquer les pronostics complets."
+                  ? "Connecte-toi pour passer à l’offre premium et débloquer les pronostics complets."
                   : "Connecte-toi pour retrouver tes tickets, ton solde et ton historique."}
             </p>
           </div>
@@ -359,7 +359,7 @@ function LoginPageContent() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
-                placeholder="6 caracteres minimum"
+                placeholder="6 caractères minimum"
                 style={{
                   width: "100%",
                   padding: "15px 16px",
@@ -416,15 +416,15 @@ function LoginPageContent() {
               {loading
                 ? "Chargement..."
                 : isSignUp
-                  ? "Creer mon compte"
+                  ? "Créer mon compte"
                   : premiumIntent
-                    ? "Continuer vers l'offre premium"
+                    ? "Continuer vers l’offre premium"
                     : "Se connecter"}
             </button>
           </form>
 
           <div style={{ textAlign: "center", marginTop: 20, fontSize: 14, color: "var(--pmu-text-muted)" }}>
-            {isSignUp ? "Deja un compte ?" : "Pas encore de compte ?"}{" "}
+            {isSignUp ? "Déjà un compte ?" : "Pas encore de compte ?"}{" "}
             <span
               onClick={() => {
                 setIsSignUp(!isSignUp);
@@ -436,7 +436,7 @@ function LoginPageContent() {
                 cursor: "pointer",
               }}
             >
-              {isSignUp ? "Se connecter" : "Creer un compte"}
+              {isSignUp ? "Se connecter" : "Créer un compte"}
             </span>
           </div>
 
@@ -458,18 +458,18 @@ function LoginPageContent() {
                 color: premiumIntent ? "var(--pmu-primary)" : "var(--pmu-text)",
               }}
             >
-              {isSignUp ? "BANKROLL" : "ACCES"}
+              {isSignUp ? "BANKROLL" : "ACCÈS"}
             </div>
             <div
               style={{ fontSize: 14, fontWeight: 800, color: premiumIntent ? "var(--pmu-primary)" : "var(--pmu-text)" }}
             >
-              {isSignUp ? "1 000 EUR offerts en bankroll fictive" : "Connexion rapide, puis acces a ton espace perso"}
+              {isSignUp ? "1 000 EUR offerts en bankroll fictive" : "Connexion rapide, puis accès à ton espace personnel"}
             </div>
             <div style={{ fontSize: 12, color: "var(--pmu-text-muted)", marginTop: 4, lineHeight: "18px" }}>
               {isSignUp
-                ? "Tu peux tester le système qui détecte les erreurs du marché et les tickets sans risquer d'argent reel."
+                ? "Tu peux tester le moteur qui détecte les erreurs du marché sans risquer d’argent réel."
                 : premiumIntent
-                  ? "Une fois connecte, tu pourras gerer l'abonnement directement depuis Mes Paris."
+                  ? "Une fois connecté, tu pourras gérer l’abonnement directement depuis Mes Paris."
                   : "Retrouve ton historique, ton solde, tes tickets et ton bilan."}
             </div>
           </div>

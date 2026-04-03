@@ -12,11 +12,11 @@ export function hasStripeConfig() {
 }
 
 export function getStripeConfigError() {
-  return "Stripe n'est pas configure. Ajoutez STRIPE_SECRET_KEY et STRIPE_PRICE_ID.";
+  return "Stripe n'est pas configuré. Ajoutez STRIPE_SECRET_KEY et STRIPE_PRICE_ID.";
 }
 
 export function getStripeWebhookConfigError() {
-  return "Stripe webhook n'est pas configure. Ajoutez STRIPE_WEBHOOK_SECRET.";
+  return "Le webhook Stripe n'est pas configuré. Ajoutez STRIPE_WEBHOOK_SECRET.";
 }
 
 export function getStripePriceId() {

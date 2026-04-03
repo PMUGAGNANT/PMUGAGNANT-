@@ -54,11 +54,11 @@ async function getAuthenticatedUserClient(req: NextRequest) {
 
   const { data: { user }, error } = await client.auth.getUser();
   if (error) {
-    return { errorResponse: serverError("Authentication failed", error) };
+    return { errorResponse: serverError("Échec de l'authentification.", error) };
   }
 
   if (!user) {
-    return { errorResponse: unauthorized("Non connecte") };
+    return { errorResponse: unauthorized("Non connecté.") };
   }
 
   return { client, user };
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
     .order("created_at", { ascending: false });
 
   if (error) {
-    return serverError("Failed to list bets", error, { userId: user.id });
+    return serverError("Impossible de lister les paris.", error, { userId: user.id });
   }
 
   const { data: profile, error: profileError } = await client
@@ -115,36 +115,36 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch (error) {
-    return badRequest("Invalid JSON payload", {
+    return badRequest("Corps JSON invalide.", {
       detail: error instanceof Error ? error.message : String(error),
     });
   }
 
   const payload = normalizeBetPayload(body);
   if (!payload) {
-    return badRequest("Invalid payload");
+    return badRequest("Données de pari invalides.");
   }
 
   const { date_str, reunion, course, hippodrome, heure_depart, cheval_num, cheval_nom, type_pari, mise, cote } = payload;
 
   if (!date_str || !reunion || !course || !cheval_num || !cheval_nom || !type_pari || mise === null || cote === null) {
-    return badRequest("Donnees manquantes");
+    return badRequest("Données manquantes.");
   }
 
   if (!isValidPmuDate(date_str)) {
-    return badRequest("Format de date invalide. Attendu: DDMMYYYY");
+    return badRequest("Format de date invalide. Attendu : DDMMYYYY.");
   }
 
   if (mise < 1 || mise > 50) {
-    return badRequest("Mise entre 1 et 50");
+    return badRequest("La mise doit être comprise entre 1 et 50.");
   }
 
   if (cote <= 1 || cote > 200) {
-    return badRequest("Cote invalide");
+    return badRequest("Cote invalide.");
   }
 
   if (!["GAGNANT", "PLACE"].includes(type_pari)) {
-    return badRequest("Type de pari invalide");
+    return badRequest("Type de pari invalide.");
   }
 
   const { data: profile, error: profileError } = await client
@@ -154,12 +154,12 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (profileError) {
-    return serverError("Failed to fetch profile balance", profileError, { userId: user.id });
+    return serverError("Impossible de récupérer le solde du profil.", profileError, { userId: user.id });
   }
 
   const solde = profile?.solde ?? 1000;
   if (solde < mise) {
-    return badRequest("Solde insuffisant");
+    return badRequest("Solde insuffisant.");
   }
 
   const { data: existing, error: duplicateCheckError } = await client
@@ -172,11 +172,11 @@ export async function POST(req: NextRequest) {
     .limit(1);
 
   if (duplicateCheckError) {
-    return serverError("Failed to check duplicate bet", duplicateCheckError, { userId: user.id, date_str, reunion, course });
+    return serverError("Impossible de vérifier le doublon de pari.", duplicateCheckError, { userId: user.id, date_str, reunion, course });
   }
 
   if (existing && existing.length > 0) {
-    return badRequest("Vous avez deja parie sur cette course");
+    return badRequest("Vous avez déjà parié sur cette course.");
   }
 
   const { data: insertedBet, error: betError } = await client
@@ -200,7 +200,7 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (betError) {
-    return serverError("Bet insert failed", betError, { userId: user.id, date_str, reunion, course });
+    return serverError("Échec de création du pari.", betError, { userId: user.id, date_str, reunion, course });
   }
 
   const { error: profileUpdateError } = await client
@@ -214,7 +214,7 @@ export async function POST(req: NextRequest) {
       await client.from("bets").delete().eq("id", insertedBet.id);
     }
 
-    return serverError("Profile update failed", profileUpdateError, { userId: user.id });
+    return serverError("Échec de mise à jour du profil.", profileUpdateError, { userId: user.id });
   }
 
   return NextResponse.json({

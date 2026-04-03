@@ -83,7 +83,7 @@ export async function updateSubscriptionByCustomer(
 ) {
   const admin = getSupabaseAdminClient();
   if (!admin) {
-    throw new Error("Supabase admin n'est pas configure. Ajoutez SUPABASE_SERVICE_ROLE_KEY.");
+    throw new Error("Supabase admin n'est pas configuré. Ajoutez SUPABASE_SERVICE_ROLE_KEY.");
   }
 
   const updatePayload: Record<string, unknown> = {};

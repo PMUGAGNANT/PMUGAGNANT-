@@ -13,12 +13,12 @@ export async function GET(request: Request) {
   const days = daysRaw ? parsePositiveInteger(daysRaw) : 90;
 
   if (!days || days < 1 || days > 120) {
-    return badRequest("Invalid days parameter. Expected 1-120.");
+    return badRequest("Paramètre `days` invalide. Valeur attendue : 1 à 120.");
   }
 
   const referenceDate = referenceDateRaw ? new Date(referenceDateRaw) : new Date();
   if (Number.isNaN(referenceDate.getTime())) {
-    return badRequest("Invalid date parameter. Expected ISO date.");
+    return badRequest("Paramètre `date` invalide. Format attendu : date ISO.");
   }
 
   try {
@@ -35,6 +35,6 @@ export async function GET(request: Request) {
     await persistBacktest(days, summary);
     return NextResponse.json({ success: true, backtest: summary, cached: false });
   } catch (error) {
-    return serverError("Backtest failed", error, { days, date: referenceDateRaw ?? null });
+    return serverError("Échec du chargement du backtest.", error, { days, date: referenceDateRaw ?? null });
   }
 }
