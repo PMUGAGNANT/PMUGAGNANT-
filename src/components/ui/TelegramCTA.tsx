@@ -1,8 +1,22 @@
 "use client";
 
+import { useState } from "react";
+
 const TELEGRAM_URL = "https://t.me/+L5YPZoscEeMxMjM0";
 
 export function TelegramCTA() {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(TELEGRAM_URL);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  }
+
   return (
     <section
       className="app-card overflow-hidden border border-[color-mix(in_srgb,#0088CC_35%,transparent)] p-6 md:p-8"
@@ -17,16 +31,33 @@ export function TelegramCTA() {
           <p className="mt-1 text-sm font-semibold text-[var(--pmu-text-soft)]">
             Rejoins le canal Telegram gratuit
           </p>
+          <p className="mt-2 max-w-2xl text-xs leading-6 text-[var(--pmu-text-soft)]">
+            Si Telegram ne s'ouvre pas automatiquement, copie le lien puis colle-le dans l'app Telegram.
+          </p>
         </div>
-        <a
-          href={TELEGRAM_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex shrink-0 items-center justify-center rounded-xl px-6 py-3.5 text-center text-sm font-black uppercase tracking-wide text-white transition hover:opacity-90"
-          style={{ background: "#0088CC" }}
-        >
-          OUVRIR LE CANAL →
-        </a>
+        <div className="flex shrink-0 flex-col gap-3 md:items-end">
+          <a
+            href={TELEGRAM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center rounded-xl px-6 py-3.5 text-center text-sm font-black uppercase tracking-wide text-white transition hover:opacity-90"
+            style={{ background: "#0088CC" }}
+          >
+            OUVRIR LE CANAL →
+          </a>
+          <button
+            type="button"
+            onClick={() => void handleCopy()}
+            className="inline-flex items-center justify-center rounded-xl border px-5 py-3 text-center text-xs font-black uppercase tracking-wide transition hover:opacity-90"
+            style={{
+              borderColor: "color-mix(in srgb, #0088CC 45%, transparent)",
+              color: "var(--pmu-text)",
+              background: "color-mix(in srgb, #0088CC 10%, var(--pmu-surface))",
+            }}
+          >
+            {copied ? "LIEN COPIÉ" : "COPIER LE LIEN"}
+          </button>
+        </div>
       </div>
     </section>
   );
