@@ -25,9 +25,9 @@ function radarMessage(minutes: number): string {
 
 function ctaFromScore(score: number, action: string): string {
   if (score >= 9) return `${action} 🔥`;
-  if (score >= 7) return "VOIR LE TICKET →";
-  if (score >= 5) return "ANALYSER ⚠️";
-  return "PASSER ❌";
+  if (score >= 7) return "VOIR LA SÉLECTION";
+  if (score >= 5) return "SURVEILLER LA COURSE";
+  return "COURSE À ÉVITER";
 }
 
 export function RadarHero({
@@ -64,7 +64,7 @@ export function RadarHero({
   if (profile.valueBetNum != null) {
     lines.push({ k: "Opportunité value", v: String(profile.valueBetNum) });
   }
-  lines.push({ k: "Chevaux à suivre", v: ticketStr });
+  lines.push({ k: "Sélection", v: ticketStr });
 
   const neon = scoreRounded >= 8.5 ? "#00FF88" : interpreted.color;
 

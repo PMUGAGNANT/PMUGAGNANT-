@@ -93,7 +93,7 @@ Quand vous ouvrez PMU Gagnant, chaque course a une couleur :
 🟢 **Coup sûr** — Notre meilleure opportunité du jour. On joue.
 🟡 **Bonne opportunité** — Intéressant mais moins certain. À jouer avec prudence.
 🔵 **À surveiller** — On attend le signal final avant de décider.
-⚪ **On passe** — Trop de risque, on ne joue pas.
+⚪ **Course à éviter** — Trop de risque, on ne joue pas.
 
 ## La barre de confiance
 

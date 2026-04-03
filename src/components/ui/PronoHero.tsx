@@ -87,7 +87,7 @@ export function PronoHero({
       {/* Prono principal */}
       <div className="px-6 pb-2 pt-5 text-center">
         <p className="text-sm font-bold uppercase tracking-wide text-[var(--pmu-text-muted)]">
-          Prono du jour
+          Cheval du jour
         </p>
         <h2
           className="mt-3 text-3xl font-black tracking-tight md:text-4xl"
@@ -108,7 +108,7 @@ export function PronoHero({
       <div className="mx-auto max-w-sm px-6 pt-4">
         <div className="flex items-center justify-between text-sm">
           <span className="font-bold text-[var(--pmu-text-muted)]">
-            Notre confiance
+            Confiance du moteur
           </span>
           <span
             className="font-black tabular-nums"
@@ -135,7 +135,7 @@ export function PronoHero({
           style={{ background: "var(--pmu-surface-2)" }}
         >
           <p className="text-[11px] font-black uppercase tracking-wider text-[var(--pmu-text-muted)]">
-            Conseil
+            Pari conseillé
           </p>
           <p className="mt-1 text-lg font-black text-[var(--pmu-text)]">
             {betLabel.label}
@@ -169,7 +169,7 @@ export function PronoHero({
       {topFacteurs.length > 0 && (
         <div className="mx-auto mt-4 max-w-sm px-6">
           <p className="text-[11px] font-black uppercase tracking-wider text-[var(--pmu-text-muted)]">
-            Pourquoi lui ?
+            Pourquoi ce cheval ?
           </p>
           <ul className="mt-2 space-y-1.5">
             {topFacteurs.slice(0, 3).map((f, i) => (
@@ -192,7 +192,7 @@ export function PronoHero({
           onClick={onClick}
           className="app-button-primary w-full max-w-sm py-4 text-base font-black"
         >
-          Voir le détail complet →
+          Voir l'analyse complète →
         </button>
       </div>
 

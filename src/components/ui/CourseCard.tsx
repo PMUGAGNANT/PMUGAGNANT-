@@ -41,10 +41,10 @@ function formatCountdown(minutes: number): string {
 }
 
 function ctaLabel(score: number): string {
-  if (score >= 9) return "VOIR LE COUP SÛR 🔥";
-  if (score >= 7) return "VOIR L'OPPORTUNITÉ →";
-  if (score >= 5) return "ANALYSER ⚠️";
-  return "PASSER ❌";
+  if (score >= 9) return "VOIR LE DÉTAIL DU SIGNAL";
+  if (score >= 7) return "VOIR LA SÉLECTION";
+  if (score >= 5) return "SURVEILLER LA COURSE";
+  return "COURSE À ÉVITER";
 }
 
 export function CourseCard({
@@ -93,7 +93,10 @@ export function CourseCard({
   const ticketStr = profile.ticketNums.length
     ? profile.ticketNums.map((n) => `N°${n}`).join(" · ")
     : "—";
-  lines.push({ label: "🎯 NOS CHEVAUX", value: ticketStr });
+  lines.push({
+    label: profile.ticketNums.length > 1 ? "🎯 SÉLECTION" : "🎯 CHEVAL RETENU",
+    value: ticketStr,
+  });
 
   const buttonStyle =
     displayScore >= 9
@@ -139,7 +142,7 @@ export function CourseCard({
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-[11px] font-black uppercase tracking-wider text-[var(--pmu-text-muted)]">
-            Fiabilité de l'analyse
+            Confiance sur la course
           </span>
           <span
             className="rounded-full px-2 py-0.5 text-xs font-black"

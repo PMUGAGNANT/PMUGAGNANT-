@@ -21,7 +21,7 @@ const STEPS: Step[] = [
   {
     emoji: "🚦",
     title: "Comprendre nos signaux",
-    body: "Chaque course est évaluée avec un code couleur simple :\n\n🟢 Coup sûr — Notre meilleure opportunité\n🟡 Bonne opportunité — Intéressant, à jouer avec prudence\n🔵 À surveiller — On attend le signal final\n⚪ On passe — Trop de risque",
+    body: "Chaque course est évaluée avec un code couleur simple :\n\n🟢 Coup sûr — Notre meilleure opportunité\n🟡 Bonne opportunité — Intéressant, à jouer avec prudence\n🔵 À surveiller — On attend le signal final\n⚪ Course à éviter — Trop de risque",
   },
   {
     emoji: "🐴",

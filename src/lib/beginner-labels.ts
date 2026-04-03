@@ -44,10 +44,10 @@ export function interpretScoreForBeginner(score: number): BeginnerScoreLabel {
     };
   }
   return {
-    label: "On passe",
+    label: "Course à éviter",
     emoji: "⚪",
-    explanation: "Trop de risque, on ne joue pas aujourd'hui.",
-    advice: "Mieux vaut garder sa mise pour une meilleure opportunité.",
+    explanation: "Le risque est trop élevé pour engager un ticket propre.",
+    advice: "Mieux vaut attendre une course plus lisible.",
     color: "#9CA3AF",
   };
 }
@@ -62,10 +62,10 @@ export function lisibiliteForBeginner(lis: string): {
   switch (lis) {
     case "LISIBLE":
       return {
-        label: "Course claire",
+        label: "Course lisible",
         emoji: "🟢",
         tooltip:
-          "Les favoris sont identifiables, le résultat est plus prévisible que la moyenne.",
+          "Les repères de course sont nets. Le scénario est plus lisible que la moyenne.",
       };
     case "COMPLEXE":
       return {
@@ -113,9 +113,9 @@ export function decisionForBeginner(decision: string): {
       };
     case "REJET":
       return {
-        label: "On passe",
+        label: "Course à éviter",
         emoji: "⛔",
-        tooltip: "Trop de risque. Gardez votre mise pour une meilleure course.",
+        tooltip: "Trop de risque pour jouer dans de bonnes conditions.",
       };
     default:
       return {
@@ -354,7 +354,7 @@ export function eloForBeginner(eloGlobal: number): {
   if (eloGlobal >= 8) {
     return {
       label: "Très fiable",
-      tooltip: "Notre analyse est très sûre d'elle sur cette course.",
+      tooltip: "Confiance élevée sur cette course.",
     };
   }
   if (eloGlobal >= 6) {
