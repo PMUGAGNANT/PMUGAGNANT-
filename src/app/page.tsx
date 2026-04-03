@@ -8,6 +8,7 @@ import { CourseCard } from "@/components/ui/CourseCard";
 import { FilterPills } from "@/components/ui/FilterPills";
 import { HowItWorks } from "@/components/ui/HowItWorks";
 import { PronoHero } from "@/components/ui/PronoHero";
+import { PromoVideoSection } from "@/components/ui/PromoVideoSection";
 import { RadarHero } from "@/components/ui/RadarHero";
 import { RecentResults } from "@/components/ui/RecentResults";
 import { SagesseFoules } from "@/components/ui/SagesseFoules";
@@ -592,6 +593,8 @@ function PageContent() {
           </div>
         </div>
       </section>
+
+      <PromoVideoSection />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="app-card p-5">
