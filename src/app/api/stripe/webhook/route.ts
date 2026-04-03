@@ -4,6 +4,7 @@ import {
   getStripeServerClient,
   getStripeWebhookConfigError,
   getStripeWebhookSecret,
+  hasStripeWebhookConfig,
 } from "@/lib/stripe";
 import { sendSubscriptionActivatedEmail } from "@/lib/email";
 import { logger } from "@/lib/server-logger";
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
   const signature = request.headers.get("stripe-signature");
   const webhookSecret = getStripeWebhookSecret();
 
-  if (!signature || !webhookSecret) {
+  if (!signature || !webhookSecret || !hasStripeWebhookConfig()) {
     return serverError(getStripeWebhookConfigError());
   }
 

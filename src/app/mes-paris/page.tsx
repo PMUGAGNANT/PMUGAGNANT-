@@ -70,6 +70,8 @@ function MesParisContent() {
     message: string;
   } | null>(null);
   const [fetchRevision, setFetchRevision] = useState(0);
+  const [autoCheckoutStarted, setAutoCheckoutStarted] = useState(false);
+  const autoCheckoutRequested = searchParams.get("billing") === "checkout";
 
   const fetchBets = useCallback(
     async (signal?: AbortSignal) => {
@@ -93,7 +95,8 @@ function MesParisContent() {
         }
 
         if (!session) {
-          router.push("/login?redirect=/mes-paris");
+          const redirectTarget = autoCheckoutRequested ? "/mes-paris?billing=checkout" : "/mes-paris";
+          router.push(`/login?redirect=${encodeURIComponent(redirectTarget)}`);
           return;
         }
 
@@ -139,7 +142,7 @@ function MesParisContent() {
         }
       }
     },
-    [router, supabaseConfigured]
+    [autoCheckoutRequested, router, supabaseConfigured]
   );
 
   useEffect(() => {
@@ -297,42 +300,75 @@ function MesParisContent() {
     router.push("/");
   }
 
-  async function handleBilling(action: "checkout" | "portal") {
-    if (!supabaseConfigured) {
-      setError(getSupabaseConfigError());
-      return;
-    }
-
-    setBillingLoading(true);
-    const supabase = getSupabaseBrowserClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session) {
-      router.push("/login?redirect=/mes-paris");
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        action === "checkout" ? "/api/stripe/checkout" : "/api/stripe/portal",
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        }
-      );
-      const payload = await response.json();
-      if (!response.ok || !payload.url) {
-        throw new Error(payload.error || "Billing indisponible");
+  const handleBilling = useCallback(
+    async (action: "checkout" | "portal") => {
+      if (!supabaseConfigured) {
+        setError(getSupabaseConfigError());
+        return;
       }
-      window.location.href = payload.url;
-    } catch (billingError) {
-      setError(billingError instanceof Error ? billingError.message : "Billing indisponible");
-    } finally {
-      setBillingLoading(false);
+
+      setBillingLoading(true);
+      const supabase = getSupabaseBrowserClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        const redirectTarget = action === "checkout" ? "/mes-paris?billing=checkout" : "/mes-paris";
+        router.push(`/login?redirect=${encodeURIComponent(redirectTarget)}`);
+        setBillingLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          action === "checkout" ? "/api/stripe/checkout" : "/api/stripe/portal",
+          {
+            method: "POST",
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }
+        );
+        const payload = await response.json();
+        if (!response.ok || !payload.url) {
+          throw new Error(payload.error || "Billing indisponible");
+        }
+        window.location.href = payload.url;
+      } catch (billingError) {
+        setError(billingError instanceof Error ? billingError.message : "Billing indisponible");
+      } finally {
+        setBillingLoading(false);
+      }
+    },
+    [router, supabaseConfigured]
+  );
+
+  useEffect(() => {
+    if (!autoCheckoutRequested || autoCheckoutStarted || loading || billingLoading || !user) {
+      return;
     }
-  }
+
+    if (isSubscribed) {
+      router.replace("/mes-paris");
+      return;
+    }
+
+    setBillingNotice({
+      tone: "loading",
+      title: "Ouverture du paiement",
+      message: "Redirection vers Stripe pour activer l'abonnement premium.",
+    });
+    setAutoCheckoutStarted(true);
+    void handleBilling("checkout");
+  }, [
+    autoCheckoutRequested,
+    autoCheckoutStarted,
+    billingLoading,
+    handleBilling,
+    isSubscribed,
+    loading,
+    router,
+    user,
+  ]);
 
   const pendingCount = bets.filter((b) => b.statut === "EN_ATTENTE").length;
   const wonCount = bets.filter((b) => b.statut === "GAGNE").length;

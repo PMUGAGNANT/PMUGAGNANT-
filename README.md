@@ -178,6 +178,7 @@ Workflow déjà présent :
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
 - `NEXT_PUBLIC_SITE_URL`
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
 - `STRIPE_PRICE_ID`
@@ -192,6 +193,14 @@ Workflow déjà présent :
 3. Déployer.
 4. Configurer les secrets GitHub Actions si les crons fréquents sont utilisés.
 5. Vérifier le bon fonctionnement en production.
+
+### Stripe live
+
+- `NEXT_PUBLIC_SITE_URL` doit pointer vers l'URL publique de production.
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` doit commencer par `pk_live_`.
+- `STRIPE_SECRET_KEY` doit commencer par `sk_live_`.
+- `STRIPE_PRICE_ID` doit venir du produit live Stripe.
+- `STRIPE_WEBHOOK_SECRET` doit être celui du webhook live sur `/api/stripe/webhook`.
 
 ### Secrets GitHub Actions requis
 

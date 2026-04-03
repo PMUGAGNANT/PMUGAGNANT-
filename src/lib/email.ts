@@ -1,4 +1,5 @@
 import { logger } from "@/lib/server-logger";
+import { getSiteUrl } from "@/lib/stripe";
 
 const resendApiKey = process.env.RESEND_API_KEY;
 const resendFromEmail = process.env.RESEND_FROM_EMAIL;
@@ -56,7 +57,7 @@ export async function sendSubscriptionActivatedEmail({
 }: {
   to: string;
 }) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const siteUrl = getSiteUrl();
   const premiumUrl = `${siteUrl}/mes-paris`;
   const subject = "Confirmation de ton abonnement PMU Gagnant";
   const html = `

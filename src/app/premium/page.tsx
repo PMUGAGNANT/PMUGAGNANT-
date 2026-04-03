@@ -68,6 +68,8 @@ const NOT_FOR_YOU_ITEMS = [
 
 export default function PremiumPage() {
   const router = useRouter();
+  const premiumCheckoutRedirect = encodeURIComponent("/mes-paris?billing=checkout");
+  const premiumCheckoutHref = `/login?redirect=${premiumCheckoutRedirect}`;
 
   return (
     <div
@@ -90,7 +92,7 @@ export default function PremiumPage() {
               Pronostics complets
             </div>
           </div>
-          <Link href="/login?redirect=/mes-paris" className="app-button-primary rounded-full px-4 py-2 text-xs transition hover:opacity-90">
+          <Link href={premiumCheckoutHref} className="app-button-primary rounded-full px-4 py-2 text-xs transition hover:opacity-90">
             Se connecter
           </Link>
         </div>
@@ -163,10 +165,10 @@ export default function PremiumPage() {
             </div>
 
             <Link
-              href="/login?redirect=/mes-paris"
+              href={premiumCheckoutHref}
               className="app-button-primary block rounded-full px-5 py-4 text-center text-sm transition hover:opacity-90"
             >
-              Activer le premium
+              Se connecter puis payer
             </Link>
             <Link
               href="/bilan"
@@ -241,10 +243,10 @@ export default function PremiumPage() {
               </h2>
             </div>
             <Link
-              href="/login?redirect=/mes-paris"
+              href={premiumCheckoutHref}
               className="app-button-primary rounded-full px-5 py-3 text-sm transition hover:opacity-90"
             >
-              {`Continuer vers l’offre`}
+              {`Se connecter puis payer`}
             </Link>
           </div>
 
