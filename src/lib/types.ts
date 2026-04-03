@@ -398,7 +398,7 @@ export interface CourseRecordRow {
 export type RaceStatus = "upcoming" | "prono_available" | "live" | "finished";
 
 export interface BacktestBetTypeResult {
-  betType: "SIMPLE_GAGNANT" | "COUPLE" | "TRIO" | "QUINTE" | "MULTI";
+  betType: string;
   betsPlaced: number;
   winningBets: number;
   totalStake: number;
