@@ -656,6 +656,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
   const [data, setData] = useState<RaceApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const selectedDate = normalizeSelectedDate(searchParams.get("date"));
 
@@ -1038,6 +1039,40 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
               </SectionCard>
             )}
 
+            <Card accent={`${BORDER_SOFT}`}>
+              <div style={{ padding: 18, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: G, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>
+                    Lecture experte
+                  </div>
+                  <div style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 700, color: WHITE, lineHeight: 1.2, letterSpacing: "-0.02em" }}>
+                    Analyse complète
+                  </div>
+                  <div style={{ marginTop: 8, fontSize: 13, color: MUTED, lineHeight: 1.55, maxWidth: 560 }}>
+                    Marché PMU, bankroll, radar moteur et détails avancés. Ouvre seulement si tu veux creuser la course.
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowAdvanced((current) => !current)}
+                  style={{
+                    border: `1px solid ${showAdvanced ? `${G}55` : BORDER}`,
+                    background: showAdvanced ? G_DIM : CARD2,
+                    color: showAdvanced ? G : WHITE,
+                    borderRadius: 999,
+                    padding: "11px 16px",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    flexShrink: 0,
+                  }}
+                >
+                  {showAdvanced ? "Masquer l'analyse complète" : "Voir l'analyse complète"}
+                </button>
+              </div>
+            </Card>
+
+            {showAdvanced && (
+              <>
             <DetailFold
               title="Repères avancés"
               kicker="Lecture du ticket"
@@ -1203,6 +1238,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                 </SectionCard>
               </div>
             </DetailFold>
+              </>
+            )}
 
           </>
         )}
