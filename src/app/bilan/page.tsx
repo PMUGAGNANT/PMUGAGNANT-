@@ -501,6 +501,7 @@ function BilanPageContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fetchRevision, setFetchRevision] = useState(0);
+  const [showBottomNav, setShowBottomNav] = useState(false);
 
   useEffect(() => {
     setSelectedDate(urlDate);
@@ -581,6 +582,18 @@ function BilanPageContent() {
     return () => {
       cancelled = true;
       ac.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    function syncBottomNavVisibility() {
+      setShowBottomNav(window.innerWidth < 1024);
+    }
+
+    syncBottomNavVisibility();
+    window.addEventListener("resize", syncBottomNavVisibility);
+    return () => {
+      window.removeEventListener("resize", syncBottomNavVisibility);
     };
   }, []);
 
@@ -686,7 +699,7 @@ function BilanPageContent() {
         </div>
       </div>
 
-      <div style={{ paddingBottom: 92 }}>
+      <div style={{ paddingBottom: showBottomNav ? 92 : 28 }}>
         <DateNavigator dateStr={selectedDate} onChange={updateDate} />
 
         {loading ? (
@@ -1512,43 +1525,45 @@ function BilanPageContent() {
         )}
       </div>
 
-      <div
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "100%",
-          maxWidth: 1180,
-          background: "color-mix(in srgb, var(--pmu-bg) 95%, transparent)",
-          backdropFilter: "blur(18px)",
-          borderTop: `1px solid ${BORDER}`,
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr",
-          zIndex: 200,
-        }}
-      >
-        {[
-          { label: "Courses", active: false, href: `/?date=${selectedDate}` },
-          { label: "Mes Paris", active: false, href: "/mes-paris" },
-          { label: "Bilan", active: true, href: `/bilan?date=${selectedDate}` },
-        ].map((item) => (
-          <button
-            key={item.label}
-            onClick={() => !item.active && router.push(item.href)}
-            style={{
-              border: "none",
-              background: "transparent",
-              padding: "14px 10px 16px",
-              fontWeight: item.active ? 900 : 700,
-              color: item.active ? GREEN : "var(--pmu-text-muted)",
-              cursor: item.active ? "default" : "pointer",
-            }}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+      {showBottomNav ? (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 0,
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "100%",
+            maxWidth: 1180,
+            background: "color-mix(in srgb, var(--pmu-bg) 95%, transparent)",
+            backdropFilter: "blur(18px)",
+            borderTop: `1px solid ${BORDER}`,
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr 1fr",
+            zIndex: 200,
+          }}
+        >
+          {[
+            { label: "Courses", active: false, href: `/?date=${selectedDate}` },
+            { label: "Mes Paris", active: false, href: "/mes-paris" },
+            { label: "Bilan", active: true, href: `/bilan?date=${selectedDate}` },
+          ].map((item) => (
+            <button
+              key={item.label}
+              onClick={() => !item.active && router.push(item.href)}
+              style={{
+                border: "none",
+                background: "transparent",
+                padding: "14px 10px 16px",
+                fontWeight: item.active ? 900 : 700,
+                color: item.active ? GREEN : "var(--pmu-text-muted)",
+                cursor: item.active ? "default" : "pointer",
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

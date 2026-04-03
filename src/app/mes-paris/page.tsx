@@ -71,6 +71,7 @@ function MesParisContent() {
   } | null>(null);
   const [fetchRevision, setFetchRevision] = useState(0);
   const [autoCheckoutStarted, setAutoCheckoutStarted] = useState(false);
+  const [showBottomNav, setShowBottomNav] = useState(false);
   const autoCheckoutRequested = searchParams.get("billing") === "checkout";
 
   const fetchBets = useCallback(
@@ -152,6 +153,18 @@ function MesParisContent() {
       ac.abort();
     };
   }, [fetchBets, fetchRevision]);
+
+  useEffect(() => {
+    function syncBottomNavVisibility() {
+      setShowBottomNav(window.innerWidth < 1024);
+    }
+
+    syncBottomNavVisibility();
+    window.addEventListener("resize", syncBottomNavVisibility);
+    return () => {
+      window.removeEventListener("resize", syncBottomNavVisibility);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -397,7 +410,7 @@ function MesParisContent() {
         margin: "0 auto",
         minHeight: "100vh",
         background: `radial-gradient(circle at top left, var(--pmu-primary-fade), transparent 30%), linear-gradient(180deg, var(--pmu-bg) 0%, var(--pmu-bg-mid) 100%)`,
-        paddingBottom: 96,
+        paddingBottom: showBottomNav ? 96 : 32,
       }}
     >
       <div
@@ -860,69 +873,71 @@ function MesParisContent() {
         </>
       )}
 
-      <div
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "100%",
-          maxWidth: 1180,
-          zIndex: 50,
-          background: "color-mix(in srgb, var(--pmu-bg) 95%, transparent)",
-          backdropFilter: "blur(18px)",
-          borderTop: `1px solid ${BORDER}`,
-          boxShadow: "0 -14px 30px color-mix(in srgb, var(--pmu-text) 12%, transparent)",
-          height: 70,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-around",
-        }}
-      >
-        <div
-          onClick={() => router.push("/")}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 2,
-            cursor: "pointer",
-            paddingTop: 8,
-          }}
-        >
-          <span style={{ fontSize: 22 }}>&#127943;</span>
-          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--pmu-text-muted)" }}>Courses</span>
-        </div>
+      {showBottomNav ? (
         <div
           style={{
+            position: "fixed",
+            bottom: 0,
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "100%",
+            maxWidth: 1180,
+            zIndex: 50,
+            background: "color-mix(in srgb, var(--pmu-bg) 95%, transparent)",
+            backdropFilter: "blur(18px)",
+            borderTop: `1px solid ${BORDER}`,
+            boxShadow: "0 -14px 30px color-mix(in srgb, var(--pmu-text) 12%, transparent)",
+            height: 70,
             display: "flex",
-            flexDirection: "column",
             alignItems: "center",
-            gap: 2,
-            cursor: "pointer",
-            paddingTop: 8,
-            position: "relative",
+            justifyContent: "space-around",
           }}
         >
-          <div style={{ width: 4, height: 4, borderRadius: "50%", background: GREEN, position: "absolute", top: 0 }} />
-          <span style={{ fontSize: 22 }}>&#128176;</span>
-          <span style={{ fontSize: 11, fontWeight: 600, color: GREEN }}>Mes Paris</span>
+          <div
+            onClick={() => router.push("/")}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 2,
+              cursor: "pointer",
+              paddingTop: 8,
+            }}
+          >
+            <span style={{ fontSize: 22 }}>&#127943;</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "var(--pmu-text-muted)" }}>Courses</span>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 2,
+              cursor: "pointer",
+              paddingTop: 8,
+              position: "relative",
+            }}
+          >
+            <div style={{ width: 4, height: 4, borderRadius: "50%", background: GREEN, position: "absolute", top: 0 }} />
+            <span style={{ fontSize: 22 }}>&#128176;</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: GREEN }}>Mes Paris</span>
+          </div>
+          <div
+            onClick={() => router.push("/bilan")}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 2,
+              cursor: "pointer",
+              paddingTop: 8,
+            }}
+          >
+            <span style={{ fontSize: 22 }}>&#128202;</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "var(--pmu-text-muted)" }}>Bilan</span>
+          </div>
         </div>
-        <div
-          onClick={() => router.push("/bilan")}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 2,
-            cursor: "pointer",
-            paddingTop: 8,
-          }}
-        >
-          <span style={{ fontSize: 22 }}>&#128202;</span>
-          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--pmu-text-muted)" }}>Bilan</span>
-        </div>
-      </div>
+      ) : null}
     </div>
   );
 }

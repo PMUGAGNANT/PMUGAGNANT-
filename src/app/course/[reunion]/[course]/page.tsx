@@ -657,6 +657,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showBottomNav, setShowBottomNav] = useState(false);
 
   const selectedDate = normalizeSelectedDate(searchParams.get("date"));
 
@@ -699,6 +700,18 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
     void loadRace();
     return () => { cancelled = true; };
   }, [course, reunion, selectedDate]);
+
+  useEffect(() => {
+    function syncBottomNavVisibility() {
+      setShowBottomNav(window.innerWidth < 1024);
+    }
+
+    syncBottomNavVisibility();
+    window.addEventListener("resize", syncBottomNavVisibility);
+    return () => {
+      window.removeEventListener("resize", syncBottomNavVisibility);
+    };
+  }, []);
 
   const analysis = data?.analysis ?? null;
   const technicalFavorite = analysis?.favori ?? null;
@@ -803,7 +816,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
 
   /* ─── Render ─── */
   return (
-    <div className="course-detail-shell" style={{ maxWidth: 960, margin: "0 auto", paddingBottom: 90 }}>
+    <div className="course-detail-shell" style={{ maxWidth: 960, margin: "0 auto", paddingBottom: showBottomNav ? 90 : 28 }}>
       <style>{css}</style>
 
       {/* Top nav */}
@@ -1246,27 +1259,29 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
       </div>
 
       {/* Bottom nav */}
-      <div style={{
-        position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
-        width: "100%", maxWidth: 960, height: 64,
-        background: DARK_GLASS, backdropFilter: "blur(20px)",
-        borderTop: `1px solid ${BORDER}`,
-        display: "flex", justifyContent: "space-around", alignItems: "center", zIndex: 120,
-      }}>
-        {[
-          { label: "Courses", path: `/?date=${selectedDate}`, active: true },
-          { label: "Mes Paris", path: "/mes-paris", active: false },
-          { label: "Bilan", path: `/bilan?date=${selectedDate}`, active: false },
-        ].map(item => (
-          <button key={item.label} onClick={() => router.push(item.path)} style={{
-            border: "none", background: "transparent", cursor: "pointer",
-            fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 700,
-            color: item.active ? G : MUTED, padding: "8px 16px",
-          }}>
-            {item.label}
-          </button>
-        ))}
-      </div>
+      {showBottomNav ? (
+        <div style={{
+          position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
+          width: "100%", maxWidth: 960, height: 64,
+          background: DARK_GLASS, backdropFilter: "blur(20px)",
+          borderTop: `1px solid ${BORDER}`,
+          display: "flex", justifyContent: "space-around", alignItems: "center", zIndex: 120,
+        }}>
+          {[
+            { label: "Courses", path: `/?date=${selectedDate}`, active: true },
+            { label: "Mes Paris", path: "/mes-paris", active: false },
+            { label: "Bilan", path: `/bilan?date=${selectedDate}`, active: false },
+          ].map(item => (
+            <button key={item.label} onClick={() => router.push(item.path)} style={{
+              border: "none", background: "transparent", cursor: "pointer",
+              fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 700,
+              color: item.active ? G : MUTED, padding: "8px 16px",
+            }}>
+              {item.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
