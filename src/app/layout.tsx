@@ -3,6 +3,7 @@ import { Manrope } from "next/font/google";
 import Script from "next/script";
 import { AppShell } from "@/components/ui/AppShell";
 import { GlossaryPanel } from "@/components/ui/Glossary";
+import { LiveStatsBanner } from "@/components/ui/LiveStatsBanner";
 import { OnboardingModal } from "@/components/ui/OnboardingModal";
 import { ThemeMetaColor } from "@/components/ui/ThemeMetaColor";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
@@ -39,6 +40,7 @@ export default function RootLayout({
         <a href="#main-content" className="pmu-skip-link">
           Aller au contenu
         </a>
+        <LiveStatsBanner />
         <Script id="pmu-theme-init" strategy="beforeInteractive">
           {`(function(){try{var k='pmu-theme';var v=localStorage.getItem(k);if(v==='warm'||v==='dark')document.documentElement.setAttribute('data-theme',v);}catch(e){}})();`}
         </Script>

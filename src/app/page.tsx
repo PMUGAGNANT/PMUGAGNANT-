@@ -7,6 +7,7 @@ import { ComparatifIA } from "@/components/ui/ComparatifIA";
 import { CourseCard } from "@/components/ui/CourseCard";
 import { FilterPills } from "@/components/ui/FilterPills";
 import { HowItWorks } from "@/components/ui/HowItWorks";
+import { PerformanceProof } from "@/components/ui/PerformanceProof";
 import { PronoHero } from "@/components/ui/PronoHero";
 import { PromoVideoSection } from "@/components/ui/PromoVideoSection";
 import { RadarHero } from "@/components/ui/RadarHero";
@@ -593,6 +594,8 @@ function PageContent() {
           </div>
         </div>
       </section>
+
+      <PerformanceProof />
 
       <PromoVideoSection />
 
