@@ -8,6 +8,7 @@ import {
   getSupabaseConfigError,
   hasSupabaseConfig,
 } from "@/lib/supabase";
+import { UserStreakCard } from "@/components/ui/UserStreakCard";
 
 const GREEN = "var(--pmu-primary)";
 const DARK = "var(--pmu-text)";
@@ -563,6 +564,10 @@ function MesParisContent() {
               </div>
             </div>
           ) : null}
+
+          <div style={{ marginBottom: 18 }}>
+            <UserStreakCard />
+          </div>
 
           <section
             style={{

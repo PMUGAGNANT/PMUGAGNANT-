@@ -15,6 +15,7 @@ import { RecentResults } from "@/components/ui/RecentResults";
 import { SagesseFoules } from "@/components/ui/SagesseFoules";
 import { TelegramCTA } from "@/components/ui/TelegramCTA";
 import { TopParisStrip, type TopParisItem } from "@/components/ui/TopParisStrip";
+import { UserStreakCard } from "@/components/ui/UserStreakCard";
 import {
   formatDateToPmu,
   getMinutesUntilStart,
@@ -596,6 +597,7 @@ function PageContent() {
       </section>
 
       <PerformanceProof />
+      <UserStreakCard />
 
       <PromoVideoSection />
 

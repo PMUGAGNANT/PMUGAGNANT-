@@ -1,0 +1,64 @@
+import type { NextRequest } from "next/server";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
+import {
+  createSupabaseRequestClient,
+  getSupabaseConfigError,
+} from "@/lib/supabase";
+import { getBearerToken } from "@/lib/request-utils";
+import { serverError, unauthorized } from "@/lib/api-response";
+
+export function getSupabaseRequestClientFromRequest(req: NextRequest) {
+  const token = getBearerToken(req.headers.get("authorization"));
+  return createSupabaseRequestClient(token);
+}
+
+export async function getOptionalRequestUser(
+  req: NextRequest
+): Promise<{ client: SupabaseClient | null; user: User | null; errorResponse?: ReturnType<typeof serverError> }> {
+  const client = getSupabaseRequestClientFromRequest(req);
+
+  if (!client) {
+    return {
+      client: null,
+      user: null,
+      errorResponse: serverError(getSupabaseConfigError()),
+    };
+  }
+
+  const {
+    data: { user },
+    error,
+  } = await client.auth.getUser();
+
+  if (error) {
+    return {
+      client,
+      user: null,
+      errorResponse: serverError("Echec de l'authentification.", error),
+    };
+  }
+
+  return { client, user };
+}
+
+export async function getAuthenticatedRequestUser(
+  req: NextRequest
+): Promise<
+  | { client: SupabaseClient; user: User }
+  | { errorResponse: ReturnType<typeof unauthorized> | ReturnType<typeof serverError> }
+> {
+  const auth = await getOptionalRequestUser(req);
+
+  if (auth.errorResponse) {
+    return { errorResponse: auth.errorResponse };
+  }
+
+  if (!auth.client || !auth.user) {
+    return { errorResponse: unauthorized("Connexion requise.") };
+  }
+
+  return {
+    client: auth.client,
+    user: auth.user,
+  };
+}
