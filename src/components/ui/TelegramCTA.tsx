@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 
-const TELEGRAM_URL = "https://t.me/+L5YPZoscEeMxMjM0";
+const TELEGRAM_APP_URL = "https://t.me/pmupredictionbot?start=pmugagnant";
+const TELEGRAM_WEB_URL = "https://web.telegram.org/k/#@pmupredictionbot";
 
 export function TelegramCTA() {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
     try {
-      await navigator.clipboard.writeText(TELEGRAM_URL);
+      await navigator.clipboard.writeText(TELEGRAM_APP_URL);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
@@ -29,21 +30,34 @@ export function TelegramCTA() {
             📱 Recevoir les signaux en direct
           </p>
           <p className="mt-1 text-sm font-semibold text-[var(--pmu-text-soft)]">
-            Rejoins le canal Telegram gratuit
+            Ouvre le bot Telegram gratuit
           </p>
           <p className="mt-2 max-w-2xl text-xs leading-6 text-[var(--pmu-text-soft)]">
-            Si Telegram ne s'ouvre pas automatiquement, copie le lien puis colle-le dans l'app Telegram.
+            Ouvre le bot, puis appuie sur Start. Si Telegram ne s'ouvre pas automatiquement, copie le lien et colle-le dans l'app.
           </p>
         </div>
         <div className="flex shrink-0 flex-col gap-3 md:items-end">
           <a
-            href={TELEGRAM_URL}
+            href={TELEGRAM_WEB_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center rounded-xl px-6 py-3.5 text-center text-sm font-black uppercase tracking-wide text-white transition hover:opacity-90"
             style={{ background: "#0088CC" }}
           >
-            OUVRIR LE CANAL →
+            OUVRIR LE BOT →
+          </a>
+          <a
+            href={TELEGRAM_APP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center rounded-xl border px-5 py-3 text-center text-xs font-black uppercase tracking-wide transition hover:opacity-90"
+            style={{
+              borderColor: "color-mix(in srgb, #0088CC 45%, transparent)",
+              color: "var(--pmu-text)",
+              background: "color-mix(in srgb, #0088CC 10%, var(--pmu-surface))",
+            }}
+          >
+            OUVRIR DANS L'APP
           </a>
           <button
             type="button"
