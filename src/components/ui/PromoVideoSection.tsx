@@ -3,10 +3,36 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
+const COPY = {
+  kicker: "D\u00c9COUVREZ L'APPLICATION",
+  title: "L'IA qui d\u00e9tecte les meilleures courses PMU",
+  subtitle:
+    "Notre algorithme analyse des centaines de courses chaque jour. Vous ne voyez que les meilleures opportunit\u00e9s.",
+  cta: "Essayer gratuitement \u2192",
+  ctaMeta: "Pas de carte bancaire requise \u2022 1 pronostic gratuit par jour",
+  visibleLabel: "Ce que vous voyez",
+  visibleText: "Home, fiche course, lecture signal et navigation mobile",
+  videoLabel: "Vid\u00e9o promotionnelle de l'application PMU Gagnant",
+  demoBadge: "D\u00e9mo produit",
+  muteOn: "Activer le son de la vid\u00e9o promotionnelle",
+  muteOff: "Couper le son de la vid\u00e9o promotionnelle",
+  muteOnText: "Son coup\u00e9",
+  muteOffText: "Son actif",
+  overlayTitle: "PMU Gagnant en action",
+  overlayText: "Interface mobile, glow premium et lecture rapide du jour",
+  loadingLabel: "Chargement",
+  loadingReady: "Pr\u00eat",
+  formatLabel: "Format",
+  formatValue: "Vid\u00e9o portrait",
+  renderLabel: "Rendu",
+  renderValue: "Glow vert naturel",
+  loadingPending: "En attente",
+};
+
 const PROMO_POINTS = [
   "Lecture claire des courses",
   "Signal premium en direct",
-  "18 s de demonstration produit",
+  "18 s de d\u00e9monstration produit",
 ];
 
 export function PromoVideoSection() {
@@ -96,16 +122,16 @@ export function PromoVideoSection() {
           <div className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--pmu-primary)_22%,transparent)] bg-[color-mix(in_srgb,var(--pmu-primary-soft)_55%,transparent)] px-3 py-2">
             <span className="h-2.5 w-2.5 rounded-full bg-[var(--pmu-primary)] shadow-[0_0_18px_var(--pmu-primary)]" />
             <span className="text-[0.7rem] font-black uppercase tracking-[0.22em] text-[var(--pmu-primary)]">
-              D\u00c9COUVREZ L&apos;APPLICATION
+              {COPY.kicker}
             </span>
           </div>
 
           <h2 className="mt-5 max-w-3xl text-3xl font-black leading-[0.95] tracking-tight text-[var(--pmu-text)] md:text-5xl xl:text-[3.55rem]">
-            L&apos;IA qui d\u00e9tecte les meilleures courses PMU
+            {COPY.title}
           </h2>
 
           <p className="mt-5 max-w-xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
-            Notre algorithme analyse des centaines de courses chaque jour. Vous ne voyez que les meilleures opportunit\u00e9s.
+            {COPY.subtitle}
           </p>
 
           <div className="mt-6 flex flex-wrap gap-2.5">
@@ -122,20 +148,20 @@ export function PromoVideoSection() {
 
           <div className="mt-7 flex flex-wrap items-center gap-4">
             <Link href="/login" className="app-button-primary">
-              Essayer gratuitement →
+              {COPY.cta}
             </Link>
             <div className="rounded-2xl border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_65%,transparent)] px-4 py-3">
               <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-[var(--pmu-text-muted)]">
-                Ce que vous voyez
+                {COPY.visibleLabel}
               </p>
               <p className="mt-1 text-sm font-semibold text-[var(--pmu-text)]">
-                Home, fiche course, lecture signal et navigation mobile
+                {COPY.visibleText}
               </p>
             </div>
           </div>
 
           <p className="mt-4 text-xs font-semibold tracking-[0.04em] text-[var(--pmu-text-muted)]">
-            Pas de carte bancaire requise • 1 pronostic gratuit par jour
+            {COPY.ctaMeta}
           </p>
         </div>
 
@@ -185,7 +211,7 @@ export function PromoVideoSection() {
                   className="relative z-0 h-auto w-full rounded-[1.55rem] object-cover"
                   src={shouldLoad ? "/promo.mp4" : undefined}
                   poster="/promo-poster.jpg"
-                  aria-label="Vid\u00e9o promotionnelle de l'application PMU Gagnant"
+                  aria-label={COPY.videoLabel}
                   autoPlay
                   controls
                   loop
@@ -197,17 +223,13 @@ export function PromoVideoSection() {
 
                 <div className="pointer-events-none absolute left-3 top-3 z-20 flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--pmu-primary)_24%,transparent)] bg-[color-mix(in_srgb,var(--pmu-bg)_78%,transparent)] px-3 py-2 text-[0.68rem] font-black uppercase tracking-[0.18em] text-[var(--pmu-primary)] shadow-[0_10px_26px_rgba(0,0,0,0.35)]">
                   <span className="h-2 w-2 rounded-full bg-[var(--pmu-primary)] shadow-[0_0_14px_var(--pmu-primary)]" />
-                  <span>Demo produit</span>
+                  <span>{COPY.demoBadge}</span>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setMuted((current) => !current)}
-                  aria-label={
-                    muted
-                      ? "Activer le son de la vid\u00e9o promotionnelle"
-                      : "Couper le son de la vid\u00e9o promotionnelle"
-                  }
+                  aria-label={muted ? COPY.muteOn : COPY.muteOff}
                   aria-pressed={!muted}
                   className="absolute right-3 top-3 z-20 inline-flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--pmu-primary)_24%,transparent)] px-3 py-2 text-xs font-bold text-[var(--pmu-text)]"
                   style={{
@@ -216,26 +238,26 @@ export function PromoVideoSection() {
                     backdropFilter: "blur(14px)",
                   }}
                 >
-                  <span aria-hidden="true">{muted ? "🔇" : "🔊"}</span>
-                  <span>{muted ? "Son coupe" : "Son actif"}</span>
+                  <span aria-hidden="true">{muted ? "Off" : "On"}</span>
+                  <span>{muted ? COPY.muteOnText : COPY.muteOffText}</span>
                 </button>
 
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-[linear-gradient(180deg,transparent_0%,rgba(3,3,3,0.88)_100%)] px-4 pb-4 pt-14">
                   <div className="flex items-end justify-between gap-4">
                     <div>
                       <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-[var(--pmu-primary)]">
-                        PMU Gagnant en action
+                        {COPY.overlayTitle}
                       </p>
                       <p className="mt-1 text-sm font-semibold text-[var(--pmu-text)]">
-                        Interface mobile, glow premium et lecture rapide du jour
+                        {COPY.overlayText}
                       </p>
                     </div>
                     <div className="rounded-2xl border border-[color-mix(in_srgb,var(--pmu-primary)_18%,transparent)] bg-[color-mix(in_srgb,var(--pmu-bg)_72%,transparent)] px-3 py-2 text-right">
                       <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-[var(--pmu-text-muted)]">
-                        Chargement
+                        {COPY.loadingLabel}
                       </p>
                       <p className="mt-1 text-sm font-bold text-[var(--pmu-text)]">
-                        {isReady ? "Pret" : "En attente"}
+                        {isReady ? COPY.loadingReady : COPY.loadingPending}
                       </p>
                     </div>
                   </div>
@@ -245,15 +267,15 @@ export function PromoVideoSection() {
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <div className="rounded-[1.2rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_72%,transparent)] px-4 py-3">
                   <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-[var(--pmu-text-muted)]">
-                    Format
+                    {COPY.formatLabel}
                   </p>
-                  <p className="mt-1 text-sm font-semibold text-[var(--pmu-text)]">Video portrait</p>
+                  <p className="mt-1 text-sm font-semibold text-[var(--pmu-text)]">{COPY.formatValue}</p>
                 </div>
                 <div className="rounded-[1.2rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_72%,transparent)] px-4 py-3">
                   <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-[var(--pmu-text-muted)]">
-                    Rendu
+                    {COPY.renderLabel}
                   </p>
-                  <p className="mt-1 text-sm font-semibold text-[var(--pmu-text)]">Glow vert naturel</p>
+                  <p className="mt-1 text-sm font-semibold text-[var(--pmu-text)]">{COPY.renderValue}</p>
                 </div>
               </div>
             </div>
