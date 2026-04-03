@@ -337,6 +337,54 @@ const css = `
     transition: width 0.8s cubic-bezier(.4,0,.2,1);
   }
 
+  .detail-fold {
+    width: 100%;
+  }
+
+  .detail-fold summary {
+    list-style: none;
+  }
+
+  .detail-fold summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .detail-fold__summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 22px;
+    cursor: pointer;
+  }
+
+  .detail-fold__indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    color: ${MUTED};
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .detail-fold__chevron {
+    display: inline-flex;
+    transition: transform 0.2s ease;
+    font-size: 15px;
+  }
+
+  .detail-fold[open] .detail-fold__chevron {
+    transform: rotate(180deg);
+  }
+
+  .detail-fold__body {
+    padding: 0 22px 22px;
+    border-top: 1px solid ${BORDER_SOFT};
+  }
+
   button { font-family: var(--font-body); }
 `;
 
@@ -387,6 +435,51 @@ function SectionCard({ title, kicker, children, accent }: { title: string; kicke
       <div style={{ padding: "0 22px 22px" }}>
         {children}
       </div>
+    </Card>
+  );
+}
+
+function DetailFold({
+  title,
+  kicker,
+  summary,
+  children,
+  defaultOpen = false,
+  accent,
+}: {
+  title: string;
+  kicker?: string;
+  summary?: string;
+  children: ReactNode;
+  defaultOpen?: boolean;
+  accent?: string;
+}) {
+  return (
+    <Card accent={accent} style={{ marginBottom: 0 }}>
+      <details className="detail-fold" open={defaultOpen}>
+        <summary className="detail-fold__summary">
+          <div style={{ minWidth: 0 }}>
+            {kicker && (
+              <div style={{ fontSize: 10, fontWeight: 600, color: G, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8, opacity: 0.95 }}>
+                {kicker}
+              </div>
+            )}
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 700, color: WHITE, lineHeight: 1.25, letterSpacing: "-0.02em" }}>
+              {title}
+            </div>
+            {summary && (
+              <div style={{ marginTop: 8, fontSize: 13, color: MUTED, lineHeight: 1.55, maxWidth: 560 }}>
+                {summary}
+              </div>
+            )}
+          </div>
+          <div className="detail-fold__indicator">
+            Détails
+            <span className="detail-fold__chevron" aria-hidden="true">▾</span>
+          </div>
+        </summary>
+        <div className="detail-fold__body">{children}</div>
+      </details>
     </Card>
   );
 }
@@ -609,6 +702,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
   const analysis = data?.analysis ?? null;
   const technicalFavorite = analysis?.favori ?? null;
   const simpleTicket = getTicketSimple(analysis);
+  const simpleTicketActionTone = simpleTicket ? getActionTone(simpleTicket.prediction.action, simpleTicket.prediction.valueBet) : null;
   const placeBase = getBasePlace(analysis, simpleTicket);
   const verdict = buildVerdict(data, analysis, simpleTicket);
   const verdictTone = getVerdictTone(verdict.title);
@@ -873,132 +967,47 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                   </div>
                 )}
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <Metric label="Confiance IA" value={`${analysis.scoreConfiance?.score ?? 0}/10`} hint={analysis.prediction.decisionCourse === "VALIDE" ? "Ticket jouable" : "Lecture défensive"} tone={(analysis.scoreConfiance?.score ?? 0) >= SEUIL_JOUABLE ? "good" : (analysis.scoreConfiance?.score ?? 0) >= SEUIL_SURVEILLANCE ? "warn" : "bad"} />
-                  <Metric label="Tenue repère" value={`${round1(analysis.soliditeFavori?.score ?? 0)}/100`} hint="Solidité du repère principal" tone={(analysis.soliditeFavori?.score ?? 0) >= 72 ? "good" : (analysis.soliditeFavori?.score ?? 0) >= 62 ? "warn" : "bad"} />
-                  <Metric label="Angle de jeu" value={simpleTicket.prediction.action} hint={simpleTicket.prediction.valueBet ? "Opportunité value confirmée" : "Pas d'edge suffisant"} tone={simpleTicket.prediction.action === "MISER" ? "good" : "bad"} />
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
+                  <Metric label="Confiance moteur" value={`${analysis.scoreConfiance?.score ?? 0}/10`} hint={analysis.prediction.decisionCourse === "VALIDE" ? "Ticket jouable" : "Lecture défensive"} tone={(analysis.scoreConfiance?.score ?? 0) >= SEUIL_JOUABLE ? "good" : (analysis.scoreConfiance?.score ?? 0) >= SEUIL_SURVEILLANCE ? "warn" : "bad"} />
                   <Metric label="Lisibilité" value={analysis.prediction.lisibilite} hint={describeLisibilite(analysis.prediction.lisibilite)} tone={analysis.prediction.lisibilite === "LISIBLE" ? "good" : analysis.prediction.lisibilite === "COMPLEXE" ? "warn" : "bad"} />
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 14 }}>
+                  {simpleTicketActionTone && (
+                    <Tag color={simpleTicketActionTone.color} bg={simpleTicketActionTone.bg}>
+                      {simpleTicketActionTone.label}
+                    </Tag>
+                  )}
+                  <Tag
+                    color={(analysis.soliditeFavori?.score ?? 0) >= 72 ? G : (analysis.soliditeFavori?.score ?? 0) >= 62 ? GOLD : RED}
+                    bg={(analysis.soliditeFavori?.score ?? 0) >= 72 ? G_DIM : (analysis.soliditeFavori?.score ?? 0) >= 62 ? GOLD_DIM : RED_DIM}
+                  >
+                    Tenue repère {round1(analysis.soliditeFavori?.score ?? 0)}/100
+                  </Tag>
                 </div>
               </div>
             </Card>
 
-            <div style={{ marginBottom: 16 }}>
-              <EloBars profile={buildEloProfileFromParticipant(simpleTicket)} />
-            </div>
-
-            {analysis && simpleTicket ? (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-                  gap: 16,
-                  marginBottom: 16,
-                }}
-              >
-                {enjeuxRunners.length > 0 ? (
-                  <div style={{ minWidth: 0 }}>
-                    <EnjeuxPMU runners={enjeuxRunners} />
-                  </div>
-                ) : null}
-                {synergieResult ? <SynergieCallout result={synergieResult} /> : null}
-                <div style={{ minWidth: 0 }}>
-                  <ChevalStats
-                    runner={simpleTicket}
-                    medianFieldScoreAlgo={medianScoreAlgo}
-                    estTrot={data.courseInfo.estTrot}
-                  />
-                </div>
-              </div>
-            ) : null}
-
-            {/* ── 2-col grid ── */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
-
-              {/* Value & mise */}
-              <SectionCard title="Value et mise" kicker="Décision bankroll" accent={`${G}33`}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <Metric label="Cote actuelle" value={formatOdds(simpleTicket.cote)} hint="Cote PMU au moment de l'analyse" />
-                  <Metric label="Proba réelle" value={formatPercent(simpleTicket.prediction.probaEstimee)} hint={`Marché ${formatPercent(simpleTicket.prediction.probabiliteImplicite)}`} tone={simpleTicket.prediction.valueBet ? "good" : "warn"} />
-                  <Metric label="Mise Kelly" value={formatCurrency(simpleTicket.prediction.miseBase100) ?? "0 EUR"} hint={`Cap bankroll ${Math.round(simpleTicket.prediction.bankrollPct * 100)}%`} tone={simpleTicket.prediction.action === "MISER" ? "good" : "bad"} />
-                  <Metric label="Décision" value={simpleTicket.prediction.action} hint={simpleTicket.prediction.valueBet ? "Opportunité value : proba > cote × 1.15" : "Aucune opportunité value"} tone={simpleTicket.prediction.action === "MISER" ? "good" : "bad"} />
-                </div>
-                {(simpleTicket.prediction.topFacteurs ?? []).length > 0 && (
-                  <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", gap: 6 }}>
-                    {asArray<string>(simpleTicket.prediction.topFacteurs).map((f) => <Tag key={f} color={G} bg={G_DIM}>{f}</Tag>)}
-                  </div>
-                )}
-              </SectionCard>
-
-              {/* Paris optimisés */}
-              <SectionCard title="Paris optimisés" kicker="Simple · Couplé · Trio · Quinté · Multi">
-                <div>
-                  <BetPlanRow label="Simple gagnant" summary={analysis.bettingPlan.simpleGagnant} />
-                  <BetPlanRow label="Couplé" summary={analysis.bettingPlan.couple} />
-                  <BetPlanRow label="Trio" summary={analysis.bettingPlan.trio} />
-                  <BetPlanRow label="Quinte" summary={analysis.bettingPlan.quinte} />
-                  <BetPlanRow label="Multi" summary={analysis.bettingPlan.multi} />
-                </div>
-              </SectionCard>
-            </div>
-
-            {/* ── 2-col grid ── */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
-
-              {/* Alertes */}
-              <SectionCard title="Alertes intelligentes" kicker="Lecture globale">
-                <div style={{ display: "grid", gap: 10 }}>
-                  {daySignal && (
-                    <div style={{
-                      padding: 14, borderRadius: 10,
-                      background: daySignal.label === "JOURNEE_FAVORABLE" ? G_DIM : daySignal.label === "JOURNEE_DEFAVORABLE" ? RED_DIM : CARD2,
-                      border: `1px solid ${daySignal.label === "JOURNEE_FAVORABLE" ? `${G}44` : daySignal.label === "JOURNEE_DEFAVORABLE" ? `${RED}44` : BORDER}`,
-                    }}>
-                      <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Indicateur journée</div>
-                      <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700, color: WHITE, marginBottom: 6, letterSpacing: "-0.02em" }}>
-                        {formatDaySignalTitle(daySignal.label)}
-                      </div>
-                      <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: MUTED, marginBottom: 8 }}>Score {daySignal.score}/100</div>
-                      {asArray<string>(daySignal.raisons).map((r) => (
-                        <div key={r} style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{r}</div>
-                      ))}
-                    </div>
+            <SectionCard title="Plan de jeu" kicker="Lecture ticket" accent={`${G}33`}>
+              <TicketPanel
+                title="Ticket principal"
+                subtitle={getHumanReference(simpleTicket, data.courseInfo.estPlat)}
+                runner={simpleTicket}
+                badge={formatTicketType(simpleTicket.prediction.typePariConseille)}
+                accent={G}
+                arrivalPosition={data.isFinished ? simpleTicketPosition : undefined}
+              />
+              {(placeBase && placeBase.numPmu !== simpleTicket.numPmu) || (technicalFavorite && technicalFavorite.numPmu !== simpleTicket.numPmu) ? (
+                <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+                  {placeBase && placeBase.numPmu !== simpleTicket.numPmu && (
+                    <SecondaryRunnerCard title="Base placée de secours" runner={placeBase} accent={GOLD} placeMode arrivalPosition={data.isFinished ? placeBasePosition : undefined} humanReference={getHumanReference(placeBase, data.courseInfo.estPlat)} />
                   )}
-                  {alertesList.length > 0 ? (
-                    alertesList.map((a) => (
-                      <div key={a} style={{ padding: "10px 14px", borderRadius: 8, background: GOLD_DIM, border: `1px solid ${GOLD}44`, fontSize: 13, color: GOLD, lineHeight: 1.5 }}>
-                        {a}
-                      </div>
-                    ))
-                  ) : (
-                    <div style={{ fontSize: 13, color: MUTED }}>Aucune alerte additionnelle sur cette course.</div>
+                  {technicalFavorite && technicalFavorite.numPmu !== simpleTicket.numPmu && (
+                    <SecondaryRunnerCard title="Favori technique moteur" runner={technicalFavorite} accent={BLUE} arrivalPosition={data.isFinished ? technicalFavoritePosition : undefined} humanReference={getHumanReference(technicalFavorite, data.courseInfo.estPlat)} />
                   )}
                 </div>
-              </SectionCard>
+              ) : null}
+            </SectionCard>
 
-              {/* Plan de jeu */}
-              <SectionCard title="Plan de jeu" kicker="Lecture ticket" accent={`${G}33`}>
-                <TicketPanel
-                  title="Ticket principal"
-                  subtitle={getHumanReference(simpleTicket, data.courseInfo.estPlat)}
-                  runner={simpleTicket}
-                  badge={formatTicketType(simpleTicket.prediction.typePariConseille)}
-                  accent={G}
-                  arrivalPosition={data.isFinished ? simpleTicketPosition : undefined}
-                />
-                {(placeBase && placeBase.numPmu !== simpleTicket.numPmu) || (technicalFavorite && technicalFavorite.numPmu !== simpleTicket.numPmu) ? (
-                  <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-                    {placeBase && placeBase.numPmu !== simpleTicket.numPmu && (
-                      <SecondaryRunnerCard title="Base placée de secours" runner={placeBase} accent={GOLD} placeMode arrivalPosition={data.isFinished ? placeBasePosition : undefined} humanReference={getHumanReference(placeBase, data.courseInfo.estPlat)} />
-                    )}
-                    {technicalFavorite && technicalFavorite.numPmu !== simpleTicket.numPmu && (
-                      <SecondaryRunnerCard title="Favori technique moteur" runner={technicalFavorite} accent={BLUE} arrivalPosition={data.isFinished ? technicalFavoritePosition : undefined} humanReference={getHumanReference(technicalFavorite, data.courseInfo.estPlat)} />
-                    )}
-                  </div>
-                ) : null}
-              </SectionCard>
-            </div>
-
-            {/* ── Debrief officiel ── */}
             {data.isFinished && officialArrivalRows.length > 0 && (
               <SectionCard title="Débrief officiel" kicker="Arrivée course">
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
@@ -1029,63 +1038,172 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
               </SectionCard>
             )}
 
-            {/* ── 2-col grid ── */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
+            <DetailFold
+              title="Repères avancés"
+              kicker="Lecture du ticket"
+              summary="Confiance complète, tenue du repère et profil ELO du cheval conseillé."
+            >
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10, marginBottom: 14 }}>
+                <Metric label="Confiance moteur" value={`${analysis.scoreConfiance?.score ?? 0}/10`} hint={analysis.prediction.decisionCourse === "VALIDE" ? "Ticket jouable" : "Lecture défensive"} tone={(analysis.scoreConfiance?.score ?? 0) >= SEUIL_JOUABLE ? "good" : (analysis.scoreConfiance?.score ?? 0) >= SEUIL_SURVEILLANCE ? "warn" : "bad"} />
+                <Metric label="Tenue repère" value={`${round1(analysis.soliditeFavori?.score ?? 0)}/100`} hint="Solidité du repère principal" tone={(analysis.soliditeFavori?.score ?? 0) >= 72 ? "good" : (analysis.soliditeFavori?.score ?? 0) >= 62 ? "warn" : "bad"} />
+                <Metric label="Angle de jeu" value={simpleTicket.prediction.action} hint={simpleTicket.prediction.valueBet ? "Opportunité value confirmée" : "Pas d'edge suffisant"} tone={simpleTicket.prediction.action === "MISER" ? "good" : "bad"} />
+                <Metric label="Lisibilité" value={analysis.prediction.lisibilite} hint={describeLisibilite(analysis.prediction.lisibilite)} tone={analysis.prediction.lisibilite === "LISIBLE" ? "good" : analysis.prediction.lisibilite === "COMPLEXE" ? "warn" : "bad"} />
+              </div>
+              <EloBars profile={buildEloProfileFromParticipant(simpleTicket)} />
+            </DetailFold>
 
-              {/* Lecture moteur */}
-              <SectionCard title="Lecture moteur" kicker="Ce qui tient / ce qui force la prudence">
-                <div style={{ display: "grid", gap: 12 }}>
-                  <div style={{ padding: 14, borderRadius: 10, background: G_DIM, border: `1px solid ${G}33` }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: G, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>✓ Ce qui tient</div>
-                    <div style={{ display: "grid", gap: 8 }}>
-                      {strengths.length > 0 ? strengths.map(p => (
-                        <div key={p} style={{ padding: "10px 12px", borderRadius: 8, background: CARD2, border: `1px solid ${G}33`, fontSize: 13, color: WHITE, lineHeight: 1.5 }}>{p}</div>
-                      )) : <div style={{ fontSize: 13, color: MUTED }}>Aucun point fort franc ne ressort du moteur.</div>}
-                    </div>
+            <DetailFold
+              title="Marché et profil du cheval"
+              kicker="Lecture de course"
+              summary="Marché PMU, synergie jockey / driver et profil complet du cheval retenu."
+            >
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                  gap: 16,
+                }}
+              >
+                {enjeuxRunners.length > 0 ? (
+                  <div style={{ minWidth: 0 }}>
+                    <EnjeuxPMU runners={enjeuxRunners} />
                   </div>
-                  <div style={{ padding: 14, borderRadius: 10, background: GOLD_DIM, border: `1px solid ${GOLD}33` }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: GOLD, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>⚠ Ce qui force la prudence</div>
-                    <div style={{ display: "grid", gap: 8 }}>
-                      {warnings.length > 0 ? warnings.map(p => (
-                        <div key={p} style={{ padding: "10px 12px", borderRadius: 8, background: CARD2, border: `1px solid ${GOLD}33`, fontSize: 13, color: WHITE, lineHeight: 1.5 }}>{p}</div>
-                      )) : <div style={{ fontSize: 13, color: MUTED }}>{`Pas d'alerte majeure remontée par le moteur.`}</div>}
-                    </div>
-                  </div>
+                ) : null}
+                {synergieResult ? <SynergieCallout result={synergieResult} /> : null}
+                <div style={{ minWidth: 0 }}>
+                  <ChevalStats
+                    runner={simpleTicket}
+                    medianFieldScoreAlgo={medianScoreAlgo}
+                    estTrot={data.courseInfo.estTrot}
+                  />
                 </div>
-              </SectionCard>
+              </div>
+            </DetailFold>
 
-              {/* Radar top 5 */}
-              <SectionCard title="Radar top 5" kicker="Classement du moteur">
-                <div style={{ display: "grid", gap: 10 }}>
-                  {top5Runners.map((runner, index) => {
-                    const position = data.isFinished ? getArrivalPosition(runner.numPmu, officialArrivalRows) : null;
-                    const at = getActionTone(runner.prediction.action, runner.prediction.valueBet);
-                    return (
-                      <div key={runner.numPmu} style={{
-                        display: "grid", gridTemplateColumns: "44px 1fr auto", gap: 12, alignItems: "center",
-                        padding: 12, borderRadius: 10,
-                        background: index === 0 ? G_DIM : CARD2,
-                        border: `1px solid ${index === 0 ? `${G}44` : BORDER}`,
+            <DetailFold
+              title="Bankroll et tickets complémentaires"
+              kicker="Décision de jeu"
+              summary="Value, mise recommandée et tickets complémentaires à consulter seulement si besoin."
+            >
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
+                <SectionCard title="Value et mise" kicker="Décision bankroll" accent={`${G}33`}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <Metric label="Cote actuelle" value={formatOdds(simpleTicket.cote)} hint="Cote PMU au moment de l'analyse" />
+                    <Metric label="Proba réelle" value={formatPercent(simpleTicket.prediction.probaEstimee)} hint={`Marché ${formatPercent(simpleTicket.prediction.probabiliteImplicite)}`} tone={simpleTicket.prediction.valueBet ? "good" : "warn"} />
+                    <Metric label="Mise Kelly" value={formatCurrency(simpleTicket.prediction.miseBase100) ?? "0 EUR"} hint={`Cap bankroll ${Math.round(simpleTicket.prediction.bankrollPct * 100)}%`} tone={simpleTicket.prediction.action === "MISER" ? "good" : "bad"} />
+                    <Metric label="Décision" value={simpleTicket.prediction.action} hint={simpleTicket.prediction.valueBet ? "Opportunité value : proba > cote × 1.15" : "Aucune opportunité value"} tone={simpleTicket.prediction.action === "MISER" ? "good" : "bad"} />
+                  </div>
+                  {(simpleTicket.prediction.topFacteurs ?? []).length > 0 && (
+                    <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {asArray<string>(simpleTicket.prediction.topFacteurs).map((f) => <Tag key={f} color={G} bg={G_DIM}>{f}</Tag>)}
+                    </div>
+                  )}
+                </SectionCard>
+
+                <SectionCard title="Paris optimisés" kicker="Simple · Couplé · Trio · Quinté · Multi">
+                  <div>
+                    <BetPlanRow label="Simple gagnant" summary={analysis.bettingPlan.simpleGagnant} />
+                    <BetPlanRow label="Couplé" summary={analysis.bettingPlan.couple} />
+                    <BetPlanRow label="Trio" summary={analysis.bettingPlan.trio} />
+                    <BetPlanRow label="Quinte" summary={analysis.bettingPlan.quinte} />
+                    <BetPlanRow label="Multi" summary={analysis.bettingPlan.multi} />
+                  </div>
+                </SectionCard>
+              </div>
+            </DetailFold>
+
+            <DetailFold
+              title="Analyse moteur détaillée"
+              kicker="Lecture avancée"
+              summary="Alertes de journée, explication du moteur et radar complet des chevaux du top 5."
+            >
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
+                <SectionCard title="Alertes intelligentes" kicker="Lecture globale">
+                  <div style={{ display: "grid", gap: 10 }}>
+                    {daySignal && (
+                      <div style={{
+                        padding: 14, borderRadius: 10,
+                        background: daySignal.label === "JOURNEE_FAVORABLE" ? G_DIM : daySignal.label === "JOURNEE_DEFAVORABLE" ? RED_DIM : CARD2,
+                        border: `1px solid ${daySignal.label === "JOURNEE_FAVORABLE" ? `${G}44` : daySignal.label === "JOURNEE_DEFAVORABLE" ? `${RED}44` : BORDER}`,
                       }}>
-                        <RunnerBadge num={runner.numPmu} accent={index === 0 ? G : CARD} />
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 800, color: WHITE }}>{runner.nom}</div>
-                          <div style={{ fontSize: 11, color: MUTED, marginTop: 2, fontFamily: "var(--font-mono)" }}>
-                            Score {round1(runner.prediction.scoreFinalPari)} · PMU {formatOdds(runner.cote)} · Proba {formatPercent(runner.prediction.probaEstimee)}
-                          </div>
-                          <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
-                            <Tag color={at.color} bg={at.bg}>{at.label}</Tag>
-                            {asArray<string>(runner.prediction.topFacteurs).map((f) => <Tag key={`${runner.numPmu}-${f}`} color={MUTED}>{f}</Tag>)}
-                          </div>
-                          <div style={{ marginTop: 8 }}><ConfidenceBar score={runner.prediction.confiance} /></div>
+                        <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Indicateur journée</div>
+                        <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700, color: WHITE, marginBottom: 6, letterSpacing: "-0.02em" }}>
+                          {formatDaySignalTitle(daySignal.label)}
                         </div>
-                        {position && <Tag color={position <= 3 ? G : MUTED} bg={position <= 3 ? G_DIM : CARD2}>{formatPosition(position)}</Tag>}
+                        <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: MUTED, marginBottom: 8 }}>Score {daySignal.score}/100</div>
+                        {asArray<string>(daySignal.raisons).map((r) => (
+                          <div key={r} style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{r}</div>
+                        ))}
                       </div>
-                    );
-                  })}
-                </div>
-              </SectionCard>
-            </div>
+                    )}
+                    {alertesList.length > 0 ? (
+                      alertesList.map((a) => (
+                        <div key={a} style={{ padding: "10px 14px", borderRadius: 8, background: GOLD_DIM, border: `1px solid ${GOLD}44`, fontSize: 13, color: GOLD, lineHeight: 1.5 }}>
+                          {a}
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ fontSize: 13, color: MUTED }}>Aucune alerte additionnelle sur cette course.</div>
+                    )}
+                  </div>
+                </SectionCard>
+
+                <SectionCard title="Lecture moteur" kicker="Ce qui tient / ce qui force la prudence">
+                  <div style={{ display: "grid", gap: 12 }}>
+                    <div style={{ padding: 14, borderRadius: 10, background: G_DIM, border: `1px solid ${G}33` }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: G, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>✓ Ce qui tient</div>
+                      <div style={{ display: "grid", gap: 8 }}>
+                        {strengths.length > 0 ? strengths.map(p => (
+                          <div key={p} style={{ padding: "10px 12px", borderRadius: 8, background: CARD2, border: `1px solid ${G}33`, fontSize: 13, color: WHITE, lineHeight: 1.5 }}>{p}</div>
+                        )) : <div style={{ fontSize: 13, color: MUTED }}>Aucun point fort franc ne ressort du moteur.</div>}
+                      </div>
+                    </div>
+                    <div style={{ padding: 14, borderRadius: 10, background: GOLD_DIM, border: `1px solid ${GOLD}33` }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: GOLD, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>⚠ Ce qui force la prudence</div>
+                      <div style={{ display: "grid", gap: 8 }}>
+                        {warnings.length > 0 ? warnings.map(p => (
+                          <div key={p} style={{ padding: "10px 12px", borderRadius: 8, background: CARD2, border: `1px solid ${GOLD}33`, fontSize: 13, color: WHITE, lineHeight: 1.5 }}>{p}</div>
+                        )) : <div style={{ fontSize: 13, color: MUTED }}>{`Pas d'alerte majeure remontée par le moteur.`}</div>}
+                      </div>
+                    </div>
+                  </div>
+                </SectionCard>
+              </div>
+
+              <div style={{ marginTop: 16 }}>
+                <SectionCard title="Radar top 5" kicker="Classement du moteur">
+                  <div style={{ display: "grid", gap: 10 }}>
+                    {top5Runners.map((runner, index) => {
+                      const position = data.isFinished ? getArrivalPosition(runner.numPmu, officialArrivalRows) : null;
+                      const at = getActionTone(runner.prediction.action, runner.prediction.valueBet);
+                      return (
+                        <div key={runner.numPmu} style={{
+                          display: "grid", gridTemplateColumns: "44px 1fr auto", gap: 12, alignItems: "center",
+                          padding: 12, borderRadius: 10,
+                          background: index === 0 ? G_DIM : CARD2,
+                          border: `1px solid ${index === 0 ? `${G}44` : BORDER}`,
+                        }}>
+                          <RunnerBadge num={runner.numPmu} accent={index === 0 ? G : CARD} />
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 800, color: WHITE }}>{runner.nom}</div>
+                            <div style={{ fontSize: 11, color: MUTED, marginTop: 2, fontFamily: "var(--font-mono)" }}>
+                              Score {round1(runner.prediction.scoreFinalPari)} · PMU {formatOdds(runner.cote)} · Proba {formatPercent(runner.prediction.probaEstimee)}
+                            </div>
+                            <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
+                              <Tag color={at.color} bg={at.bg}>{at.label}</Tag>
+                              {asArray<string>(runner.prediction.topFacteurs).map((f) => <Tag key={`${runner.numPmu}-${f}`} color={MUTED}>{f}</Tag>)}
+                            </div>
+                            <div style={{ marginTop: 8 }}><ConfidenceBar score={runner.prediction.confiance} /></div>
+                          </div>
+                          {position && <Tag color={position <= 3 ? G : MUTED} bg={position <= 3 ? G_DIM : CARD2}>{formatPosition(position)}</Tag>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </SectionCard>
+              </div>
+            </DetailFold>
+
           </>
         )}
       </div>
