@@ -1,6 +1,6 @@
 "use client";
 
-const TELEGRAM_URL = "https://t.me/pmugagnant";
+const TELEGRAM_URL = "https://t.me/+L5YPZoscEeMxMjM0";
 
 export function TelegramCTA() {
   return (
@@ -25,7 +25,7 @@ export function TelegramCTA() {
           className="inline-flex shrink-0 items-center justify-center rounded-xl px-6 py-3.5 text-center text-sm font-black uppercase tracking-wide text-white transition hover:opacity-90"
           style={{ background: "#0088CC" }}
         >
-          REJOINDRE MAINTENANT →
+          OUVRIR LE CANAL →
         </a>
       </div>
     </section>
