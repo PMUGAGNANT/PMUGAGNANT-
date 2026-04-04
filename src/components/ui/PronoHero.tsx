@@ -54,26 +54,26 @@ export function PronoHero({
 
   return (
     <section
-      className="relative w-full overflow-hidden rounded-[2rem] border"
+      className="relative w-full overflow-hidden rounded-2xl border"
       style={{
-        borderColor: `${scoreLabel.color}44`,
-        background: `linear-gradient(168deg, ${scoreLabel.color}0A 0%, var(--pmu-surface) 50%, var(--pmu-surface) 100%)`,
-        boxShadow: `0 24px 64px ${scoreLabel.color}18, var(--pmu-card-inset)`,
+        borderColor: "var(--pmu-border)",
+        background: `linear-gradient(168deg, ${scoreLabel.color}08 0%, var(--pmu-surface) 46%, var(--pmu-surface) 100%)`,
+        boxShadow: "0 6px 18px rgba(0, 0, 0, 0.28)",
       }}
     >
-      <div className="flex items-center justify-between px-6 pt-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-5 pb-1 pt-3">
         <span
-          className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-black uppercase tracking-wider"
+          className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-[0.12em]"
           style={{
-            background: `${scoreLabel.color}18`,
+            background: `${scoreLabel.color}14`,
             color: scoreLabel.color,
-            border: `1px solid ${scoreLabel.color}44`,
+            border: `1px solid ${scoreLabel.color}26`,
           }}
         >
           {scoreLabel.emoji} {scoreLabel.label}
         </span>
         <span
-          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold"
+          className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold"
           style={{
             background: "var(--pmu-surface-2)",
             color: "var(--pmu-text-muted)",
@@ -83,26 +83,23 @@ export function PronoHero({
         </span>
       </div>
 
-      <div className="px-6 pb-2 pt-5 text-center">
-        <p className="text-sm font-bold uppercase tracking-wide text-[var(--pmu-text-muted)]">
+      <div className="px-5 pb-1 text-center">
+        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-muted)]">
           Cheval du jour
         </p>
         <h2
-          className="mt-3 text-3xl font-black tracking-tight md:text-4xl"
+          className="mt-1 text-2xl font-black tracking-tight md:text-3xl"
           style={{ color: "var(--pmu-text)" }}
         >
-          N°{horseNum}{" "}
-          <span style={{ color: scoreLabel.color }}>
-            {horseName}
-          </span>
+          N°{horseNum} <span style={{ color: scoreLabel.color }}>{horseName}</span>
         </h2>
-        <p className="mt-2 text-sm font-semibold text-[var(--pmu-text-soft)]">
+        <p className="mt-1 text-sm font-semibold text-[var(--pmu-text-soft)]">
           {hippodrome} • R{reunion}C{course} • {heureDepart}
         </p>
-        <p className="mt-2 text-sm text-[var(--pmu-text-muted)]">{courseName}</p>
+        <p className="mt-1 text-xs text-[var(--pmu-text-muted)]">{courseName}</p>
       </div>
 
-      <div className="mx-auto max-w-sm px-6 pt-4">
+      <div className="mx-auto max-w-sm px-5 pt-2">
         <div className="flex items-center justify-between text-sm">
           <span className="font-bold text-[var(--pmu-text-muted)]">
             Confiance du moteur
@@ -114,7 +111,7 @@ export function PronoHero({
             {Math.round(confidence * 10) / 10}/10
           </span>
         </div>
-        <div className="mt-2 h-3.5 w-full overflow-hidden rounded-full bg-[var(--pmu-surface-2)]">
+        <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-[var(--pmu-surface-2)]">
           <div
             className="h-full rounded-full transition-all duration-1000"
             style={{
@@ -125,34 +122,34 @@ export function PronoHero({
         </div>
       </div>
 
-      <div className="mx-auto mt-5 grid max-w-sm gap-3 px-6 sm:grid-cols-2">
+      <div className="mx-auto mt-3 grid max-w-sm gap-2 px-5 sm:grid-cols-2">
         <div
-          className="rounded-xl px-4 py-3 text-center"
+          className="rounded-lg px-3 py-2 text-center"
           style={{ background: "var(--pmu-surface-2)" }}
         >
-          <p className="text-[11px] font-black uppercase tracking-wider text-[var(--pmu-text-muted)]">
+          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--pmu-text-muted)]">
             Pari conseillé
           </p>
-          <p className="mt-1 text-lg font-black text-[var(--pmu-text)]">
+          <p className="mt-1 text-base font-black text-[var(--pmu-text)]">
             {betLabel.label}
           </p>
-          <p className="mt-0.5 text-[11px] text-[var(--pmu-text-muted)]">
+          <p className="mt-0.5 text-[10px] text-[var(--pmu-text-muted)]">
             {betLabel.tooltip}
           </p>
         </div>
         <div
-          className="rounded-xl px-4 py-3 text-center"
+          className="rounded-lg px-3 py-2 text-center"
           style={{ background: "var(--pmu-surface-2)" }}
         >
-          <p className="text-[11px] font-black uppercase tracking-wider text-[var(--pmu-text-muted)]">
+          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--pmu-text-muted)]">
             {cote ? "Cote actuelle" : "Mise conseillée"}
           </p>
-          <p className="mt-1 text-lg font-black text-[var(--pmu-text)]">
+          <p className="mt-1 text-base font-black text-[var(--pmu-text)]">
             {cote ? `${cote}` : "5€"}
           </p>
           {gainPotentiel && (
             <p
-              className="mt-0.5 text-[11px] font-bold"
+              className="mt-0.5 text-[10px] font-bold"
               style={{ color: "var(--pmu-primary)" }}
             >
               Gain potentiel ≈ {gainPotentiel}€
@@ -162,37 +159,37 @@ export function PronoHero({
       </div>
 
       {topFacteurs.length > 0 && (
-        <div className="mx-auto mt-4 max-w-sm px-6">
-          <p className="text-[11px] font-black uppercase tracking-wider text-[var(--pmu-text-muted)]">
-            Pourquoi ce cheval ?
+        <div className="mx-auto mt-2 max-w-sm px-5">
+          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--pmu-text-muted)]">
+            Pourquoi lui ?
           </p>
-          <ul className="mt-2 space-y-1.5">
-            {topFacteurs.slice(0, 3).map((f, i) => (
+          <ul className="mt-1.5 space-y-1">
+            {topFacteurs.slice(0, 3).map((factor, index) => (
               <li
-                key={i}
-                className="flex items-start gap-2 text-sm text-[var(--pmu-text-soft)]"
+                key={index}
+                className="flex items-start gap-2 text-xs text-[var(--pmu-text-soft)]"
               >
-                <span style={{ color: scoreLabel.color }}>→</span>
-                <span>{f}</span>
+                <span style={{ color: scoreLabel.color }}>•</span>
+                <span>{factor}</span>
               </li>
             ))}
           </ul>
         </div>
       )}
 
-      <div className="flex justify-center px-6 pb-6 pt-5">
+      <div className="flex justify-center px-5 pb-4 pt-3">
         <button
           type="button"
           onClick={onClick}
-          className="app-button-primary w-full max-w-sm py-4 text-base font-black"
+          className="app-button-primary w-full max-w-xs rounded-lg py-3 text-sm font-black"
         >
-          Voir l&apos;analyse complète →
+          Voir l’analyse complète →
         </button>
       </div>
 
-      <div className="border-t border-[var(--pmu-border)] px-6 py-3 text-center text-[11px] text-[var(--pmu-text-muted)]">
-        ⚠️ Les paris comportent des risques. Ne misez que ce que vous êtes prêt
-        à perdre.
+      <div className="border-t border-[var(--pmu-border)] px-5 py-2 text-center text-[10px] text-[var(--pmu-text-muted)]">
+        Les paris comportent des risques. Ne misez que ce que vous êtes prêt à
+        perdre.
       </div>
     </section>
   );

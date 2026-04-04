@@ -534,13 +534,13 @@ function PageContent() {
   }, [featuredRaces, races]);
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-      <section className="app-card overflow-hidden p-6 md:p-8">
-        <div className="grid gap-6 xl:grid-cols-[1.15fr,0.85fr] xl:items-start">
-          <div className="space-y-5">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <section className="app-card overflow-hidden p-5 md:p-6">
+        <div className="grid gap-5 xl:grid-cols-[1.15fr,0.85fr] xl:items-start">
+          <div className="space-y-4">
             <div className="space-y-3">
               <p className="app-kicker">Décision claire, exécution disciplinée</p>
-              <h1 className="max-w-4xl text-4xl font-black leading-[0.94] tracking-tight text-[var(--pmu-text)] md:text-6xl">
+              <h1 className="max-w-4xl text-3xl font-black leading-[0.94] tracking-tight text-[var(--pmu-text)] md:text-5xl">
                 Un moteur qui repère les erreurs du marché pour décider vite, sans bruit.
               </h1>
               <p className="max-w-3xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
@@ -833,7 +833,7 @@ function PageContent() {
 function HomePageSkeletonFallback() {
   return (
     <div
-      className="mx-auto flex w-full max-w-6xl flex-col gap-8"
+      className="mx-auto flex w-full max-w-6xl flex-col gap-6"
       aria-busy="true"
       aria-label="Chargement du programme"
     >

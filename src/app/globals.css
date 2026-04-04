@@ -251,13 +251,13 @@ svg {
   width: 100%;
   max-width: 80rem;
   margin: 0 auto;
-  padding: 1.5rem 1rem 7.75rem;
+  padding: 1.25rem 1rem 5rem;
 }
 
 .app-surface {
   background: var(--pmu-surface);
   border: 1px solid var(--pmu-border);
-  border-radius: 1.5rem;
+  border-radius: 1rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   transition: box-shadow 0.45s var(--pmu-ease-out), border-color 0.35s ease, transform 0.45s var(--pmu-ease-out);
 }
@@ -271,7 +271,7 @@ svg {
     var(--pmu-surface) 100%
   );
   border: 1px solid var(--pmu-border);
-  border-radius: 1.5rem;
+  border-radius: 1rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   transition: transform 0.5s var(--pmu-ease-out), box-shadow 0.45s var(--pmu-ease-out), border-color 0.35s ease;
 }
@@ -308,7 +308,7 @@ svg {
 .app-card-muted {
   background: var(--pmu-surface-2);
   border: 1px solid var(--pmu-border);
-  border-radius: 1.35rem;
+  border-radius: 1rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
@@ -372,7 +372,7 @@ svg {
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
-  border-radius: 0.75rem;
+  border-radius: 0.625rem;
   border: none;
   background: var(--pmu-primary);
   color: var(--pmu-on-primary);
@@ -408,7 +408,7 @@ svg {
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
-  border-radius: 0.75rem;
+  border-radius: 0.625rem;
   border: 1px solid var(--pmu-border-strong);
   background: transparent;
   color: var(--pmu-text);
@@ -482,7 +482,7 @@ svg {
 }
 
 .app-section-title {
-  font-size: clamp(1.2rem, 1.6vw, 1.8rem);
+  font-size: clamp(1.15rem, 1.5vw, 1.7rem);
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: -0.02em;
@@ -497,7 +497,7 @@ svg {
 
 @media (min-width: 768px) {
   .app-shell__content {
-    padding: 2rem 1.5rem 3rem;
+    padding: 1.75rem 1.5rem 3rem;
   }
 }
 

@@ -11,7 +11,7 @@ const STEPS = [
   {
     num: "2",
     emoji: "🎯",
-    title: "On garde l'essentiel",
+    title: "On garde l’essentiel",
     description:
       "Sur 200+ courses analysées, seules 3 à 5 passent nos critères de qualité. Vous ne voyez que les meilleures opportunités.",
   },
@@ -33,28 +33,28 @@ const STEPS = [
 
 export function HowItWorks() {
   return (
-    <section className="app-card overflow-hidden p-6 md:p-8">
+    <section className="app-card overflow-hidden p-5 md:p-6">
       <div className="text-center">
         <p className="app-kicker">Comment ça marche</p>
-        <h2 className="mt-2 text-2xl font-black tracking-tight text-[var(--pmu-text)] md:text-3xl">
+        <h2 className="mt-2 text-xl font-black tracking-tight text-[var(--pmu-text)] md:text-2xl">
           Simple, même si vous débutez
         </h2>
-        <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-[var(--pmu-text-soft)]">
+        <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-[var(--pmu-text-soft)]">
           Pas besoin d&apos;être expert du turf. Le moteur fait le tri, vous gardez
           la décision finale.
         </p>
       </div>
 
-      <div className="mx-auto mt-8 grid max-w-3xl gap-4 md:grid-cols-2">
+      <div className="mx-auto mt-6 grid max-w-3xl gap-3 md:grid-cols-2">
         {STEPS.map((step) => (
           <div
             key={step.num}
-            className="relative rounded-xl border border-[var(--pmu-border)] p-5 transition hover:border-[var(--pmu-primary-soft)]"
+            className="relative rounded-xl border border-[var(--pmu-border)] p-4 transition hover:border-[var(--pmu-border-strong)]"
             style={{ background: "var(--pmu-surface-2)" }}
           >
-            <div className="flex items-start gap-4">
+            <div className="flex items-start gap-3">
               <div
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-black"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-black"
                 style={{
                   background: "var(--pmu-primary-soft)",
                   color: "var(--pmu-primary)",
@@ -64,10 +64,10 @@ export function HowItWorks() {
                 {step.emoji}
               </div>
               <div>
-                <h3 className="text-base font-black text-[var(--pmu-text)]">
+                <h3 className="text-sm font-black text-[var(--pmu-text)] md:text-base">
                   {step.title}
                 </h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-[var(--pmu-text-soft)]">
+                <p className="mt-1 text-sm leading-relaxed text-[var(--pmu-text-soft)]">
                   {step.description}
                 </p>
               </div>

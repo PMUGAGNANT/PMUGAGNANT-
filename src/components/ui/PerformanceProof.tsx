@@ -10,11 +10,11 @@ import { useLiveStats } from "@/lib/use-live-stats";
 
 function ProofSkeletonCard() {
   return (
-    <div className="app-card animate-pulse p-5 md:p-6">
+    <div className="app-card animate-pulse p-4 md:p-5">
       <div className="h-3 w-28 rounded-full bg-[color-mix(in_srgb,var(--pmu-text-muted)_16%,transparent)]" />
-      <div className="mt-5 h-10 w-28 rounded-full bg-[color-mix(in_srgb,var(--pmu-text-muted)_18%,transparent)]" />
-      <div className="mt-4 h-2 w-full rounded-full bg-[color-mix(in_srgb,var(--pmu-text-muted)_12%,transparent)]" />
-      <div className="mt-3 h-3 w-32 rounded-full bg-[color-mix(in_srgb,var(--pmu-text-muted)_14%,transparent)]" />
+      <div className="mt-4 h-9 w-24 rounded-full bg-[color-mix(in_srgb,var(--pmu-text-muted)_18%,transparent)]" />
+      <div className="mt-3 h-2 w-full rounded-full bg-[color-mix(in_srgb,var(--pmu-text-muted)_12%,transparent)]" />
+      <div className="mt-2.5 h-3 w-28 rounded-full bg-[color-mix(in_srgb,var(--pmu-text-muted)_14%,transparent)]" />
     </div>
   );
 }
@@ -23,7 +23,7 @@ function ProgressBar({ value }: { value: number }) {
   const clamped = Math.max(0, Math.min(100, value));
 
   return (
-    <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--pmu-surface-2)_78%,transparent)]">
+    <div className="mt-3 h-2 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--pmu-surface-2)_78%,transparent)]">
       <div
         className="h-full rounded-full transition-[width] duration-700 ease-out"
         style={{
@@ -56,23 +56,37 @@ function ProofCard({
         : "text-[var(--pmu-text)]";
 
   return (
-    <div className="app-card p-5 md:p-6">
+    <div className="app-card p-4 md:p-5">
       <p className="app-label">{label}</p>
-      <p className={`mt-4 font-mono text-4xl font-black tracking-tight ${valueClass}`}>{value}</p>
+      <p
+        className={`mt-3 font-mono text-3xl font-black tracking-tight ${valueClass}`}
+      >
+        {value}
+      </p>
       {typeof progress === "number" ? <ProgressBar value={progress} /> : null}
-      <p className="mt-3 text-sm leading-6 text-[var(--pmu-text-soft)]">{description}</p>
+      <p className="mt-2.5 text-sm leading-6 text-[var(--pmu-text-soft)]">
+        {description}
+      </p>
     </div>
   );
 }
 
-function CollectingCard({ label, description }: { label: string; description: string }) {
+function CollectingCard({
+  label,
+  description,
+}: {
+  label: string;
+  description: string;
+}) {
   return (
-    <div className="app-card p-5 md:p-6">
+    <div className="app-card p-4 md:p-5">
       <p className="app-label">{label}</p>
-      <p className="mt-4 text-lg font-black tracking-tight text-[var(--pmu-text)]">
+      <p className="mt-3 text-base font-black tracking-tight text-[var(--pmu-text)]">
         Données en cours de collecte
       </p>
-      <p className="mt-3 text-sm leading-6 text-[var(--pmu-text-soft)]">{description}</p>
+      <p className="mt-2.5 text-sm leading-6 text-[var(--pmu-text-soft)]">
+        {description}
+      </p>
     </div>
   );
 }
@@ -84,24 +98,29 @@ export function PerformanceProof() {
   const roiTone = data.roi30d >= 0 ? "positive" : "negative";
 
   return (
-    <section className="grid gap-5">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+    <section className="grid gap-4">
+      <div className="flex flex-col gap-2.5 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="app-kicker">Preuve de performance</p>
-          <h2 className="mt-2 text-2xl font-black tracking-tight text-[var(--pmu-text)] md:text-3xl">
+          <h2 className="mt-2 text-xl font-black tracking-tight text-[var(--pmu-text)] md:text-2xl">
             Des résultats publiés, gains et pertes inclus
           </h2>
-          <p className="mt-2 max-w-3xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
-            Les chiffres ci-dessous sont recalculés automatiquement à partir de nos pronostics validés des 30 derniers jours.
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--pmu-text-soft)]">
+            Les chiffres ci-dessous sont recalculés automatiquement à partir de
+            nos pronostics validés des 30 derniers jours.
           </p>
         </div>
 
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--pmu-text-muted)]">
-          {lastUpdated ? `Mis à jour ${lastUpdated}` : isRefreshing ? "Mise à jour..." : "Actualisation auto"}
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--pmu-text-muted)]">
+          {lastUpdated
+            ? `Mis à jour ${lastUpdated}`
+            : isRefreshing
+              ? "Mise à jour..."
+              : "Actualisation auto"}
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {isLoading ? (
           <>
             <ProofSkeletonCard />
@@ -147,8 +166,9 @@ export function PerformanceProof() {
         )}
       </div>
 
-      <div className="app-card-muted px-5 py-4 text-sm leading-6 text-[var(--pmu-text-soft)] md:px-6">
-        Ces statistiques sont calculées automatiquement à partir de nos résultats réels. Nous publions nos gains ET nos pertes.
+      <div className="app-card-muted px-4 py-3 text-sm leading-6 text-[var(--pmu-text-soft)] md:px-5">
+        Ces statistiques sont calculées automatiquement à partir de nos
+        résultats réels. Nous publions nos gains ET nos pertes.
       </div>
     </section>
   );

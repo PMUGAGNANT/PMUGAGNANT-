@@ -62,9 +62,18 @@ export function CourseCard({
   topFacteurs,
 }: CourseCardProps) {
   const interpreted = useMemo(() => interpretScore(displayScore), [displayScore]);
-  const beginnerLabel = useMemo(() => interpretScoreForBeginner(displayScore), [displayScore]);
-  const eloLabel = useMemo(() => eloForBeginner(eloProfile.eloGlobal), [eloProfile.eloGlobal]);
-  const eloBadge = useMemo(() => getEloGlobalBadgeStyle(eloProfile.eloGlobal), [eloProfile.eloGlobal]);
+  const beginnerLabel = useMemo(
+    () => interpretScoreForBeginner(displayScore),
+    [displayScore]
+  );
+  const eloLabel = useMemo(
+    () => eloForBeginner(eloProfile.eloGlobal),
+    [eloProfile.eloGlobal]
+  );
+  const eloBadge = useMemo(
+    () => getEloGlobalBadgeStyle(eloProfile.eloGlobal),
+    [eloProfile.eloGlobal]
+  );
   const progressPct = Math.min(100, Math.max(0, (displayScore / 10) * 100));
   const countdownUrgent = minutesUntilStart > 0 && minutesUntilStart < 30;
 
@@ -106,10 +115,10 @@ export function CourseCard({
           : { background: "#64748b", color: "#f8fafc" };
 
   return (
-    <article className="app-card flex w-full flex-col gap-4 overflow-hidden p-5 text-left hover:border-[var(--pmu-border-strong)]">
+    <article className="app-card flex w-full flex-col gap-3 overflow-hidden rounded-xl p-4 text-left hover:border-[var(--pmu-border-strong)]">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div
-          className="inline-flex max-w-[70%] items-center gap-2 rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-[0.12em]"
+          className="inline-flex max-w-[72%] items-center gap-2 rounded-full px-2.5 py-1.5 text-[11px] font-black uppercase tracking-[0.12em]"
           style={{
             color: beginnerLabel.color,
             backgroundColor: `${beginnerLabel.color}14`,
@@ -120,7 +129,7 @@ export function CourseCard({
           <span>{beginnerLabel.label}</span>
         </div>
         <div
-          className={`font-mono text-sm font-bold tabular-nums ${countdownUrgent ? "text-red-500" : "text-[var(--pmu-text-muted)]"}`}
+          className={`font-mono text-xs font-bold tabular-nums ${countdownUrgent ? "text-red-500" : "text-[var(--pmu-text-muted)]"}`}
         >
           <span className="text-[var(--pmu-text)]">{timeLabel}</span>
           <span className="mx-1 opacity-60">•</span>
@@ -129,25 +138,28 @@ export function CourseCard({
       </div>
 
       <div>
-        <h3 className="text-xl font-black leading-tight tracking-tight text-[var(--pmu-text)] md:text-2xl">
+        <h3 className="text-lg font-black leading-tight tracking-tight text-[var(--pmu-text)] md:text-xl">
           {raceTitle}
         </h3>
-        <p className="mt-1 text-sm font-medium text-[var(--pmu-text-soft)]">{subtitleLine}</p>
+        <p className="mt-1 text-sm font-medium text-[var(--pmu-text-soft)]">
+          {subtitleLine}
+        </p>
       </div>
 
       <div
-        className="rounded-xl border px-3 py-3"
+        className="rounded-lg border px-2.5 py-1.5"
         style={{
           borderColor: "var(--pmu-border)",
-          background: "color-mix(in srgb, var(--pmu-surface-2) 78%, transparent)",
+          background:
+            "color-mix(in srgb, var(--pmu-surface-2) 78%, transparent)",
         }}
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-[11px] font-black uppercase tracking-[0.12em] text-[var(--pmu-text-muted)]">
-            Confiance sur la course
+          <span className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--pmu-text-muted)]">
+            Fiabilité de l’analyse
           </span>
           <span
-            className="rounded-full px-2 py-0.5 text-xs font-black"
+            className="rounded-full px-2 py-0.5 text-[11px] font-black"
             style={{
               color: eloBadge.color,
               background: "color-mix(in srgb, white 8%, transparent)",
@@ -156,13 +168,20 @@ export function CourseCard({
             {eloLabel.label}
           </span>
         </div>
-        <p className="mt-1 text-[11px] font-medium text-[var(--pmu-text-soft)]">{eloLabel.tooltip}</p>
+        <p className="mt-1 text-[10px] font-medium text-[var(--pmu-text-soft)]">
+          {eloLabel.tooltip}
+        </p>
       </div>
 
-      <ul className="grid gap-2 text-sm">
+      <ul className="grid gap-1 text-sm">
         {lines.map((row) => (
-          <li key={row.label} className="flex justify-between gap-3 rounded-lg bg-[var(--pmu-surface-2)] px-3 py-2">
-            <span className="font-semibold text-[var(--pmu-text-muted)]">{row.label}</span>
+          <li
+            key={row.label}
+            className="flex justify-between gap-3 rounded-lg bg-[var(--pmu-surface-2)] px-3 py-1.5"
+          >
+            <span className="font-semibold text-[var(--pmu-text-muted)]">
+              {row.label}
+            </span>
             <span className="font-black text-[var(--pmu-text)]">{row.value}</span>
           </li>
         ))}
@@ -180,7 +199,7 @@ export function CourseCard({
       ) : null}
 
       <div className="space-y-2">
-        <div className="h-2.5 w-full overflow-hidden rounded-full bg-[var(--pmu-surface-2)]">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--pmu-surface-2)]">
           <div
             className="h-full rounded-full transition-all duration-500"
             style={{
@@ -198,10 +217,14 @@ export function CourseCard({
           </span>
         </div>
         {indiceOuverture ? (
-          <p className="text-[11px] font-medium leading-snug text-[var(--pmu-text-soft)]">
-            <span style={{ color: indiceOuverture.color }}>{indiceOuverture.emoji}</span>{" "}
-            <span className="uppercase tracking-[0.08em] text-[var(--pmu-text-muted)]">Lisibilité</span> ·{" "}
-            {indiceOuverture.label} ({indiceOuverture.score}/10)
+          <p className="text-[10px] font-medium leading-snug text-[var(--pmu-text-soft)]">
+            <span style={{ color: indiceOuverture.color }}>
+              {indiceOuverture.emoji}
+            </span>{" "}
+            <span className="uppercase tracking-[0.08em] text-[var(--pmu-text-muted)]">
+              Lisibilité
+            </span>{" "}
+            · {indiceOuverture.label} ({indiceOuverture.score}/10)
           </p>
         ) : null}
       </div>
@@ -209,7 +232,7 @@ export function CourseCard({
       <button
         type="button"
         onClick={onClick}
-        className="w-full shrink-0 rounded-xl py-3.5 text-center text-sm font-bold transition hover:opacity-92"
+        className="w-full shrink-0 rounded-lg py-2.5 text-center text-sm font-bold transition hover:opacity-92"
         style={buttonStyle}
       >
         {ctaLabel(displayScore)}
