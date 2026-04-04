@@ -89,6 +89,10 @@ export default function ResultatsPage() {
         <ResultsDashboard />
       </Suspense>
 
+      <section className="app-card-muted px-5 py-4 text-sm leading-6 text-[var(--pmu-text-soft)]">
+        Les résultats antérieurs à avril 2026 sont issus d&apos;une simulation sur données historiques.
+      </section>
+
       <section className="app-card p-6 text-center md:p-8">
         <p className="app-kicker">Passer à l&apos;action</p>
         <h2 className="mt-2 text-3xl font-black tracking-tight text-[var(--pmu-text)] md:text-4xl">

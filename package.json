@@ -13,6 +13,7 @@
     "cron:results": "tsx scripts/run-results.ts",
     "cron:weekly": "tsx scripts/run-weekly.ts",
     "cron:backtest": "tsx scripts/run-backtest.ts",
+    "cron:backfill": "tsx scripts/run-historical-backfill.ts",
     "cron:calibration": "tsx scripts/run-calibration.ts"
   },
   "dependencies": {
