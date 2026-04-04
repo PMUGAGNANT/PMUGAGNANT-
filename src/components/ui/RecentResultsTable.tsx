@@ -82,7 +82,9 @@ export function RecentResultsTable({ results, isLoading = false }: RecentResults
             const positive = result.resultat === "GAGNANT" || result.resultat === "PLACE";
 
             return (
-              <tr key={`${result.courseInfo.dateStr}-${result.courseInfo.reunion}-${result.courseInfo.course}-${result.favori.numPmu}`}>
+              <tr
+                key={`${result.courseInfo.dateStr}-${result.courseInfo.reunion}-${result.courseInfo.course}-${result.favori.numPmu}`}
+              >
                 <td>{formatDate(result.courseInfo.dateStr)}</td>
                 <td>{`R${result.courseInfo.reunion}C${result.courseInfo.course} • ${result.courseInfo.nomCourse}`}</td>
                 <td>{`N°${result.favori.numPmu} ${result.favori.nom}`}</td>

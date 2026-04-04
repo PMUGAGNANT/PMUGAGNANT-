@@ -4,6 +4,7 @@ import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -22,6 +23,14 @@ function formatAxisDate(value: string) {
   }
 
   return `${value.slice(0, 2)}/${value.slice(2, 4)}`;
+}
+
+function formatTooltipDate(value: string) {
+  if (!/^\d{8}$/.test(value)) {
+    return value;
+  }
+
+  return `${value.slice(0, 2)}/${value.slice(2, 4)}/${value.slice(4)}`;
 }
 
 function formatEuros(value: number) {
@@ -56,13 +65,22 @@ export function RoiChart({ timeline, isLoading = false }: RoiChartProps) {
     <div className="h-[300px]">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={timeline} margin={{ top: 12, right: 12, left: -16, bottom: 0 }}>
-          <CartesianGrid stroke="color-mix(in srgb, var(--pmu-text) 8%, transparent)" vertical={false} />
+          <CartesianGrid
+            stroke="color-mix(in srgb, var(--pmu-text) 8%, transparent)"
+            vertical={false}
+          />
+          <ReferenceLine
+            y={0}
+            stroke="color-mix(in srgb, var(--pmu-text) 14%, transparent)"
+            strokeDasharray="4 4"
+          />
           <XAxis
             dataKey="date"
             tickFormatter={formatAxisDate}
             tick={{ fill: "var(--pmu-text-muted)", fontSize: 12 }}
             axisLine={false}
             tickLine={false}
+            minTickGap={20}
           />
           <YAxis
             tick={{ fill: "var(--pmu-text-muted)", fontSize: 12 }}
@@ -79,7 +97,9 @@ export function RoiChart({ timeline, isLoading = false }: RoiChartProps) {
               color: "var(--pmu-text)",
             }}
             formatter={(value) => [formatTooltipValue(value), "Profit cumulé"]}
-            labelFormatter={(label) => `Date ${label}`}
+            labelFormatter={(label) =>
+              `Date ${typeof label === "string" ? formatTooltipDate(label) : String(label)}`
+            }
           />
           <Line
             type="monotone"

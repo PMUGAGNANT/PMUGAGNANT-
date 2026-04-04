@@ -27,11 +27,20 @@ export const metadata: Metadata = {
 function ResultsDashboardFallback() {
   return (
     <div className="grid gap-6">
+      <div className="app-card h-[220px] animate-pulse bg-[color-mix(in_srgb,var(--pmu-surface-2)_76%,transparent)]" />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
           <div
             key={index}
             className="app-card h-48 animate-pulse bg-[color-mix(in_srgb,var(--pmu-surface-2)_76%,transparent)]"
+          />
+        ))}
+      </div>
+      <div className="grid gap-4 xl:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div
+            key={index}
+            className="app-card h-40 animate-pulse bg-[color-mix(in_srgb,var(--pmu-surface-2)_76%,transparent)]"
           />
         ))}
       </div>
@@ -62,23 +71,30 @@ export default function ResultatsPage() {
           <div>
             <p className="app-kicker">Transparence publique</p>
             <h1 className="mt-2 text-4xl font-black leading-[0.94] tracking-tight text-[var(--pmu-text)] md:text-6xl">
-              Nos résultats réels
+              Nos résultats, sans filtre
             </h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
-              Pas de faux screenshots. Voici nos performances complètes, gains ET pertes.
+              Douze mois de tickets recalculés, gains et pertes inclus. Pas de faux screenshots,
+              pas de journées choisies après coup.
             </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <span className="app-pill app-pill--active">12 mois d&apos;historique</span>
+              <span className="app-pill">Gains et pertes publiés</span>
+              <span className="app-pill">Mise à jour quotidienne</span>
+            </div>
           </div>
 
           <div className="grid gap-3">
             <div className="app-card-muted px-5 py-4">
-              <p className="app-label">Statut</p>
+              <p className="app-label">Lecture rapide</p>
               <p className="mt-3 text-xl font-black text-[var(--pmu-primary)]">
-                Mis à jour automatiquement chaque jour
+                Une page pensée pour vérifier le moteur, pas pour enjoliver les résultats.
               </p>
             </div>
             <div className="app-card-muted px-5 py-4">
               <p className="text-sm leading-6 text-[var(--pmu-text-soft)]">
-                Cette page rend visibles les chiffres du moteur sans trier les bons jours ni masquer les pertes.
+                La courbe ROI, les derniers tickets et les segments les plus rentables sont recalculés
+                automatiquement à partir des tickets stockés.
               </p>
             </div>
           </div>

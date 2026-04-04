@@ -241,7 +241,7 @@ function buildHistoricalDashboard(
         if (right.roi !== left.roi) return right.roi - left.roi;
         return right.sample - left.sample;
       })
-      .slice(0, 5);
+      .slice(0, 10);
 
   return {
     available: true,
@@ -254,7 +254,7 @@ function buildHistoricalDashboard(
     bestTracks: toSegmentSummary(byTrack),
     bestBetTypes: toSegmentSummary(byBetType),
     bestJockeys: toSegmentSummary(dailyJockeys),
-    timeline: timeline.slice(-12),
+    timeline,
   };
 }
 

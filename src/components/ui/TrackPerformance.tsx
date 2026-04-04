@@ -1,6 +1,14 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import type { PublicResultsTrack } from "@/lib/use-public-results";
 
 type TrackPerformanceProps = {
@@ -29,7 +37,10 @@ export function TrackPerformance({ tracks, isLoading = false }: TrackPerformance
           layout="vertical"
           margin={{ top: 12, right: 12, left: 20, bottom: 0 }}
         >
-          <CartesianGrid stroke="color-mix(in srgb, var(--pmu-text) 8%, transparent)" horizontal={false} />
+          <CartesianGrid
+            stroke="color-mix(in srgb, var(--pmu-text) 8%, transparent)"
+            horizontal={false}
+          />
           <XAxis
             type="number"
             tick={{ fill: "var(--pmu-text-muted)", fontSize: 12 }}

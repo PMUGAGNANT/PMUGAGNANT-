@@ -42,6 +42,11 @@ export interface PublicResultsResult {
 
 export interface PublicResultsDashboardPayload {
   success: boolean;
+  dashboardHistory?: {
+    days: number;
+    startIso: string;
+    endIso: string;
+  };
   dashboard?: {
     available: boolean;
     globalRoi: number;
@@ -51,6 +56,8 @@ export interface PublicResultsDashboardPayload {
     totalStake: number;
     totalGain: number;
     bestTracks: PublicResultsTrack[];
+    bestBetTypes: PublicResultsTrack[];
+    bestJockeys: PublicResultsTrack[];
     timeline: PublicResultsTimelinePoint[];
   };
   results?: PublicResultsResult[];
@@ -72,7 +79,7 @@ export function usePublicResultsData(): UsePublicResultsResult {
     setError(null);
 
     try {
-      const response = await fetch(`/api/bilan?date=${getTodayDateStr()}&dashboard_days=90`, {
+      const response = await fetch(`/api/bilan?date=${getTodayDateStr()}&dashboard_days=365`, {
         cache: "no-store",
       });
       const payload = (await response.json()) as PublicResultsDashboardPayload & {
@@ -80,7 +87,7 @@ export function usePublicResultsData(): UsePublicResultsResult {
       };
 
       if (!response.ok || !payload.success) {
-        throw new Error(payload.error ?? "Impossible de charger les resultats publics.");
+        throw new Error(payload.error ?? "Impossible de charger les résultats publics.");
       }
 
       setData(payload);
@@ -88,7 +95,7 @@ export function usePublicResultsData(): UsePublicResultsResult {
       setError(
         loadError instanceof Error
           ? loadError.message
-          : "Impossible de charger les resultats publics."
+          : "Impossible de charger les résultats publics."
       );
       setData(null);
     } finally {
