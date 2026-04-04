@@ -7,6 +7,7 @@ import { ThemeToggle } from "./ThemeToggle";
 const navItems = [
   { href: "/", label: "Courses" },
   { href: "/mes-paris", label: "Paris" },
+  { href: "/resultats", label: "📊 Stats" },
   { href: "/bilan", label: "Bilan" },
   { href: "/premium", label: "Profil" },
 ];
@@ -25,7 +26,7 @@ export function BottomNav() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 pb-2 pt-2 lg:hidden">
       <ThemeToggle compact className="mb-2 w-full max-w-sm mx-auto" />
-      <div className="mx-auto grid max-w-xl grid-cols-4 gap-2">
+      <div className="mx-auto grid max-w-xl grid-cols-5 gap-2">
         {(navItems ?? []).map((item) => {
           const active = isActive(pathname, item.href);
 
