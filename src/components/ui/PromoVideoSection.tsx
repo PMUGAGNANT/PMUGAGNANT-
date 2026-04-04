@@ -19,13 +19,13 @@ const COPY = {
   muteOnText: "Son coupé",
   muteOffText: "Son actif",
   overlayTitle: "PMU Gagnant en action",
-  overlayText: "Interface mobile, glow premium et lecture rapide du jour",
+  overlayText: "Interface mobile, lecture rapide et rendu premium",
   loadingLabel: "Chargement",
   loadingReady: "Prêt",
   formatLabel: "Format",
   formatValue: "Vidéo portrait",
   renderLabel: "Rendu",
-  renderValue: "Glow vert naturel",
+  renderValue: "Glow vert subtil",
   loadingPending: "En attente",
 };
 
@@ -100,33 +100,19 @@ export function PromoVideoSection() {
   return (
     <section
       ref={sectionRef}
-      className="relative overflow-hidden rounded-[2rem] border border-[color-mix(in_srgb,var(--pmu-primary)_10%,transparent)] px-4 py-5 md:px-6 md:py-8 xl:px-8"
+      className="relative overflow-hidden rounded-[2rem] px-4 py-6 md:px-6 md:py-8 xl:px-8"
       style={{
         background:
-          "radial-gradient(circle at 78% 20%, color-mix(in srgb, var(--pmu-primary-soft) 90%, transparent), transparent 24%), radial-gradient(circle at 18% 18%, color-mix(in srgb, var(--pmu-primary-fade) 95%, transparent), transparent 28%), linear-gradient(180deg, color-mix(in srgb, var(--pmu-surface) 68%, transparent), color-mix(in srgb, var(--pmu-bg) 88%, transparent))",
-        boxShadow:
-          "var(--pmu-card-inset), var(--pmu-shadow-sm), 0 0 0 1px color-mix(in srgb, var(--pmu-primary) 8%, transparent), var(--pmu-glow-soft)",
+          "linear-gradient(180deg, color-mix(in srgb, var(--pmu-surface) 92%, transparent), color-mix(in srgb, var(--pmu-bg) 96%, transparent))",
+        border: "1px solid var(--pmu-border)",
+        boxShadow: "0 8px 24px rgba(0, 0, 0, 0.32)",
       }}
     >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-y-10 right-[-8%] hidden w-[32rem] rounded-full blur-3xl lg:block"
-        style={{
-          background:
-            "radial-gradient(circle, color-mix(in srgb, var(--pmu-primary) 20%, transparent) 0%, transparent 68%)",
-        }}
-      />
-
       <div className="relative grid items-center gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(320px,430px)] lg:gap-12">
         <div className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--pmu-primary)_22%,transparent)] bg-[color-mix(in_srgb,var(--pmu-primary-soft)_55%,transparent)] px-3 py-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-[var(--pmu-primary)] shadow-[0_0_18px_var(--pmu-primary)]" />
-            <span className="text-[0.7rem] font-black uppercase tracking-[0.22em] text-[var(--pmu-primary)]">
-              {COPY.kicker}
-            </span>
-          </div>
+          <p className="app-kicker">{COPY.kicker}</p>
 
-          <h2 className="mt-5 max-w-3xl text-3xl font-black leading-[0.95] tracking-tight text-[var(--pmu-text)] md:text-5xl xl:text-[3.55rem]">
+          <h2 className="mt-4 max-w-3xl text-3xl font-black leading-[0.95] tracking-tight text-[var(--pmu-text)] md:text-5xl xl:text-[3.4rem]">
             {COPY.title}
           </h2>
 
@@ -138,7 +124,7 @@ export function PromoVideoSection() {
             {PROMO_POINTS.map((item) => (
               <span
                 key={item}
-                className="inline-flex items-center gap-2 rounded-full border border-[var(--pmu-border-strong)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_55%,transparent)] px-3 py-2 text-xs font-bold text-[var(--pmu-text-soft)]"
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-2 text-xs font-semibold text-[var(--pmu-text-soft)]"
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--pmu-primary)]" />
                 <span>{item}</span>
@@ -150,13 +136,11 @@ export function PromoVideoSection() {
             <Link href="/login" className="app-button-primary">
               {COPY.cta}
             </Link>
-            <div className="rounded-2xl border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_65%,transparent)] px-4 py-3">
-              <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-[var(--pmu-text-muted)]">
+            <div className="rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-4 py-3">
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-muted)]">
                 {COPY.visibleLabel}
               </p>
-              <p className="mt-1 text-sm font-semibold text-[var(--pmu-text)]">
-                {COPY.visibleText}
-              </p>
+              <p className="mt-1 text-sm font-semibold text-[var(--pmu-text)]">{COPY.visibleText}</p>
             </div>
           </div>
 
@@ -169,39 +153,31 @@ export function PromoVideoSection() {
           <div className="relative">
             <div
               aria-hidden="true"
-              className="absolute left-1/2 top-8 h-[82%] w-[82%] -translate-x-1/2 rounded-full blur-3xl"
+              className="absolute left-1/2 top-10 h-[78%] w-[78%] -translate-x-1/2 rounded-full blur-3xl"
               style={{
                 background:
-                  "radial-gradient(circle, color-mix(in srgb, var(--pmu-primary) 28%, transparent) 0%, transparent 68%)",
+                  "radial-gradient(circle, color-mix(in srgb, var(--pmu-primary) 18%, transparent) 0%, transparent 68%)",
               }}
             />
 
             <div
-              className="relative overflow-hidden rounded-[2rem] border border-[color-mix(in_srgb,var(--pmu-primary)_18%,transparent)] p-3 md:p-4"
+              className="relative overflow-hidden rounded-[2rem] border p-3 md:p-4"
               style={{
+                borderColor: "color-mix(in srgb, var(--pmu-primary) 16%, var(--pmu-border))",
                 background:
-                  "linear-gradient(180deg, color-mix(in srgb, var(--pmu-surface) 92%, transparent), color-mix(in srgb, var(--pmu-bg) 96%, transparent))",
+                  "linear-gradient(180deg, color-mix(in srgb, var(--pmu-surface) 92%, transparent), color-mix(in srgb, var(--pmu-bg) 98%, transparent))",
                 boxShadow:
-                  "var(--pmu-shadow), 0 0 0 1px color-mix(in srgb, var(--pmu-primary) 15%, transparent), 0 0 70px color-mix(in srgb, var(--pmu-primary) 16%, transparent)",
+                  "0 12px 28px rgba(0, 0, 0, 0.38), 0 0 42px rgba(0, 255, 136, 0.1)",
               }}
             >
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-x-8 top-0 h-28 blur-2xl"
-                style={{
-                  background:
-                    "radial-gradient(circle at center, color-mix(in srgb, var(--pmu-primary-soft) 85%, transparent), transparent 72%)",
-                }}
-              />
-
-              <div className="relative overflow-hidden rounded-[1.55rem] border border-[color-mix(in_srgb,var(--pmu-primary)_18%,transparent)] bg-black">
+              <div className="relative overflow-hidden rounded-[1.55rem] bg-black">
                 {!isReady ? (
                   <div
                     aria-hidden="true"
                     className="absolute inset-0 z-10 animate-pulse"
                     style={{
                       background:
-                        "linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.22)), radial-gradient(circle at 50% 14%, color-mix(in srgb, var(--pmu-primary-soft) 85%, transparent), transparent 30%)",
+                        "linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.22)), radial-gradient(circle at 50% 14%, color-mix(in srgb, var(--pmu-primary-soft) 70%, transparent), transparent 30%)",
                     }}
                   />
                 ) : null}
@@ -221,8 +197,8 @@ export function PromoVideoSection() {
                   onLoadedData={() => setIsReady(true)}
                 />
 
-                <div className="pointer-events-none absolute left-3 top-3 z-20 flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--pmu-primary)_24%,transparent)] bg-[color-mix(in_srgb,var(--pmu-bg)_78%,transparent)] px-3 py-2 text-[0.68rem] font-black uppercase tracking-[0.18em] text-[var(--pmu-primary)] shadow-[0_10px_26px_rgba(0,0,0,0.35)]">
-                  <span className="h-2 w-2 rounded-full bg-[var(--pmu-primary)] shadow-[0_0_14px_var(--pmu-primary)]" />
+                <div className="pointer-events-none absolute left-3 top-3 z-20 flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--pmu-primary)_24%,transparent)] bg-[color-mix(in_srgb,var(--pmu-bg)_80%,transparent)] px-3 py-2 text-[0.68rem] font-black uppercase tracking-[0.14em] text-[var(--pmu-primary)]">
+                  <span className="h-2 w-2 rounded-full bg-[var(--pmu-primary)]" />
                   <span>{COPY.demoBadge}</span>
                 </div>
 
@@ -231,10 +207,9 @@ export function PromoVideoSection() {
                   onClick={() => setMuted((current) => !current)}
                   aria-label={muted ? COPY.muteOn : COPY.muteOff}
                   aria-pressed={!muted}
-                  className="absolute right-3 top-3 z-20 inline-flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--pmu-primary)_24%,transparent)] px-3 py-2 text-xs font-bold text-[var(--pmu-text)]"
+                  className="absolute right-3 top-3 z-20 inline-flex items-center gap-2 rounded-full border border-[var(--pmu-border-strong)] px-3 py-2 text-xs font-bold text-[var(--pmu-text)]"
                   style={{
-                    background: "color-mix(in srgb, var(--pmu-bg) 78%, transparent)",
-                    boxShadow: "0 10px 26px rgba(0, 0, 0, 0.35)",
+                    background: "color-mix(in srgb, var(--pmu-bg) 82%, transparent)",
                     backdropFilter: "blur(14px)",
                   }}
                 >
@@ -245,15 +220,13 @@ export function PromoVideoSection() {
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-[linear-gradient(180deg,transparent_0%,rgba(3,3,3,0.88)_100%)] px-4 pb-4 pt-14">
                   <div className="flex items-end justify-between gap-4">
                     <div>
-                      <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-[var(--pmu-primary)]">
+                      <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-[var(--pmu-primary)]">
                         {COPY.overlayTitle}
                       </p>
-                      <p className="mt-1 text-sm font-semibold text-[var(--pmu-text)]">
-                        {COPY.overlayText}
-                      </p>
+                      <p className="mt-1 text-sm font-semibold text-[var(--pmu-text)]">{COPY.overlayText}</p>
                     </div>
-                    <div className="rounded-2xl border border-[color-mix(in_srgb,var(--pmu-primary)_18%,transparent)] bg-[color-mix(in_srgb,var(--pmu-bg)_72%,transparent)] px-3 py-2 text-right">
-                      <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-[var(--pmu-text-muted)]">
+                    <div className="rounded-2xl border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-bg)_72%,transparent)] px-3 py-2 text-right">
+                      <p className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-muted)]">
                         {COPY.loadingLabel}
                       </p>
                       <p className="mt-1 text-sm font-bold text-[var(--pmu-text)]">
@@ -265,14 +238,14 @@ export function PromoVideoSection() {
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <div className="rounded-[1.2rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_72%,transparent)] px-4 py-3">
-                  <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-[var(--pmu-text-muted)]">
+                <div className="rounded-[1.2rem] border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-4 py-3">
+                  <p className="text-[0.68rem] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-muted)]">
                     {COPY.formatLabel}
                   </p>
                   <p className="mt-1 text-sm font-semibold text-[var(--pmu-text)]">{COPY.formatValue}</p>
                 </div>
-                <div className="rounded-[1.2rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_72%,transparent)] px-4 py-3">
-                  <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-[var(--pmu-text-muted)]">
+                <div className="rounded-[1.2rem] border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-4 py-3">
+                  <p className="text-[0.68rem] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-muted)]">
                     {COPY.renderLabel}
                   </p>
                   <p className="mt-1 text-sm font-semibold text-[var(--pmu-text)]">{COPY.renderValue}</p>

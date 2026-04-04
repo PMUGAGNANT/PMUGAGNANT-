@@ -25,9 +25,9 @@ function radarMessage(minutes: number): string {
 
 function ctaFromScore(score: number, action: string): string {
   if (score >= 9) return `${action} 🔥`;
-  if (score >= 7) return "VOIR LA SÉLECTION";
-  if (score >= 5) return "SURVEILLER LA COURSE";
-  return "COURSE À ÉVITER";
+  if (score >= 7) return "Voir la sélection";
+  if (score >= 5) return "Surveiller la course";
+  return "Course à éviter";
 }
 
 export function RadarHero({
@@ -41,6 +41,7 @@ export function RadarHero({
   onClick,
 }: RadarHeroProps) {
   const [tick, setTick] = useState(0);
+
   useEffect(() => {
     const id = window.setInterval(() => setTick((t) => t + 1), 60_000);
     return () => window.clearInterval(id);
@@ -48,13 +49,10 @@ export function RadarHero({
 
   const interpreted = useMemo(() => interpretScore(displayScore), [displayScore]);
   const scoreRounded = Math.round(displayScore * 10) / 10;
-  const minutesUntilStart = Math.max(
-    0,
-    Math.round(getMinutesUntilStart(heureDepart, dateStr))
-  );
+  const minutesUntilStart = Math.max(0, Math.round(getMinutesUntilStart(heureDepart, dateStr)));
   void tick;
-  const msg = radarMessage(minutesUntilStart);
 
+  const msg = radarMessage(minutesUntilStart);
   const ticketStr = profile.ticketNums.length ? profile.ticketNums.join(" · ") : "—";
 
   const lines: Array<{ k: string; v: string }> = [];
@@ -66,46 +64,52 @@ export function RadarHero({
   }
   lines.push({ k: "Sélection", v: ticketStr });
 
-  const neon = scoreRounded >= 8.5 ? "#00FF88" : interpreted.color;
-
   return (
-    <section className="w-full overflow-hidden rounded-[2rem] border border-[var(--pmu-border)] bg-[var(--pmu-surface)] p-6 shadow-[var(--pmu-shadow)] md:p-10">
-      <p className="app-kicker text-[var(--pmu-text-muted)]">Radar du jour</p>
+    <section
+      className="w-full overflow-hidden rounded-[2rem] border border-[var(--pmu-border)] bg-[var(--pmu-surface)] p-5 md:p-8"
+      style={{ boxShadow: "0 4px 16px rgba(0, 0, 0, 0.32)" }}
+    >
+      <p className="app-kicker">Radar du jour</p>
 
-      <div className="mt-6 flex flex-col items-center text-center">
+      <div className="mt-5 flex flex-col items-center text-center">
         <p
           className="font-black tabular-nums leading-none tracking-tight"
-          style={{ color: neon, fontSize: "clamp(2.5rem, 8vw, 4rem)" }}
+          style={{ color: interpreted.color, fontSize: "clamp(2.4rem, 7vw, 3.75rem)" }}
         >
           {interpreted.emoji} {scoreRounded}/10
         </p>
-        <p className="mt-3 text-xl font-black uppercase tracking-wide" style={{ color: interpreted.color }}>
+        <p className="mt-3 text-lg font-bold tracking-tight" style={{ color: interpreted.color }}>
           {interpreted.label}
         </p>
       </div>
 
-      <div className="mt-8 space-y-2 text-center">
+      <div className="mt-7 space-y-2 text-center">
         <h2 className="text-2xl font-black text-[var(--pmu-text)] md:text-3xl">{raceTitle}</h2>
-        <p className="text-sm font-semibold text-[var(--pmu-text-soft)] md:text-base">
+        <p className="text-sm font-medium text-[var(--pmu-text-soft)] md:text-base">
           {hippodrome} • {raceMeta}
         </p>
       </div>
 
-      <ul className="mx-auto mt-6 max-w-md space-y-2 text-sm">
+      <div className="mx-auto mt-6 grid max-w-3xl gap-3 md:grid-cols-3">
         {lines.map((row) => (
-          <li key={row.k} className="flex justify-between gap-3 border-b border-[var(--pmu-border)] py-2 last:border-0">
-            <span className="font-bold text-[var(--pmu-text-muted)]">{row.k}</span>
-            <span className="font-black text-[var(--pmu-text)]">{row.v}</span>
-          </li>
+          <div
+            key={row.k}
+            className="rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-4 py-3 text-left"
+          >
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--pmu-text-muted)]">{row.k}</p>
+            <p className="mt-2 text-base font-black text-[var(--pmu-text)]">{row.v}</p>
+          </div>
         ))}
-      </ul>
+      </div>
 
-      <p className="mt-6 text-center text-sm font-bold text-[var(--pmu-text-soft)]">
-        {msg}
-      </p>
+      <p className="mt-6 text-center text-sm font-medium text-[var(--pmu-text-soft)]">{msg}</p>
 
-      <div className="mt-8 flex justify-center">
-        <button type="button" onClick={onClick} className="app-button-primary px-8 py-4 text-base font-black">
+      <div className="mt-7 flex justify-center">
+        <button
+          type="button"
+          onClick={onClick}
+          className="app-button-primary px-8 py-4 text-base font-bold"
+        >
           {ctaFromScore(displayScore, interpreted.action)}
         </button>
       </div>

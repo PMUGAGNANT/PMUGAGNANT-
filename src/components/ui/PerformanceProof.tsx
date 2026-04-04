@@ -25,8 +25,11 @@ function ProgressBar({ value }: { value: number }) {
   return (
     <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--pmu-surface-2)_78%,transparent)]">
       <div
-        className="h-full rounded-full bg-[linear-gradient(90deg,var(--pmu-primary-bright),var(--pmu-primary))] shadow-[0_0_18px_color-mix(in_srgb,var(--pmu-primary)_35%,transparent)] transition-[width] duration-700 ease-out"
-        style={{ width: `${clamped}%` }}
+        className="h-full rounded-full transition-[width] duration-700 ease-out"
+        style={{
+          width: `${clamped}%`,
+          background: "var(--pmu-primary)",
+        }}
       />
     </div>
   );
@@ -81,7 +84,7 @@ export function PerformanceProof() {
   const roiTone = data.roi30d >= 0 ? "positive" : "negative";
 
   return (
-    <section className="grid gap-4">
+    <section className="grid gap-5">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="app-kicker">Preuve de performance</p>
@@ -93,7 +96,7 @@ export function PerformanceProof() {
           </p>
         </div>
 
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--pmu-text-muted)]">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--pmu-text-muted)]">
           {lastUpdated ? `Mis à jour ${lastUpdated}` : isRefreshing ? "Mise à jour..." : "Actualisation auto"}
         </p>
       </div>
@@ -144,7 +147,7 @@ export function PerformanceProof() {
         )}
       </div>
 
-      <div className="app-card px-5 py-4 text-sm leading-6 text-[var(--pmu-text-soft)] md:px-6">
+      <div className="app-card-muted px-5 py-4 text-sm leading-6 text-[var(--pmu-text-soft)] md:px-6">
         Ces statistiques sont calculées automatiquement à partir de nos résultats réels. Nous publions nos gains ET nos pertes.
       </div>
     </section>

@@ -22,9 +22,7 @@ export type CourseCardProps = {
   profile: RaceProfile;
   eloProfile: EloProfile;
   onClick: () => void;
-  /** Indice programme (proxy lisibilité) */
   indiceOuverture?: IndiceOuverture | null;
-  /** Pick data for WhyThisHorse */
   pickNum?: number | null;
   pickNom?: string | null;
   pickConfidence?: number | null;
@@ -41,10 +39,10 @@ function formatCountdown(minutes: number): string {
 }
 
 function ctaLabel(score: number): string {
-  if (score >= 9) return "VOIR LE DÉTAIL DU SIGNAL";
-  if (score >= 7) return "VOIR LA SÉLECTION";
-  if (score >= 5) return "SURVEILLER LA COURSE";
-  return "COURSE À ÉVITER";
+  if (score >= 9) return "Voir le détail du signal";
+  if (score >= 7) return "Voir la sélection";
+  if (score >= 5) return "Surveiller la course";
+  return "Course à éviter";
 }
 
 export function CourseCard({
@@ -78,23 +76,23 @@ export function CourseCard({
   const lines: Array<{ label: string; value: string; tooltip?: string }> = [];
   if (profile.favoriFragileNum != null) {
     lines.push({
-      label: "⚠️ FAVORI FRAGILE",
+      label: "Favori fragile",
       value: `N°${profile.favoriFragileNum}`,
-      tooltip: "Ce favori est surévalué par le public",
+      tooltip: "Ce favori semble surévalué par le marché.",
     });
   }
   if (profile.valueBetNum != null) {
     lines.push({
-      label: "💎 BONNE AFFAIRE",
+      label: "Bonne affaire",
       value: `N°${profile.valueBetNum}`,
-      tooltip: "Cote plus haute que sa vraie valeur",
+      tooltip: "Une cote plus haute que la valeur estimée.",
     });
   }
   const ticketStr = profile.ticketNums.length
     ? profile.ticketNums.map((n) => `N°${n}`).join(" · ")
     : "—";
   lines.push({
-    label: profile.ticketNums.length > 1 ? "🎯 SÉLECTION" : "🎯 CHEVAL RETENU",
+    label: profile.ticketNums.length > 1 ? "Sélection" : "Cheval retenu",
     value: ticketStr,
   });
 
@@ -108,21 +106,21 @@ export function CourseCard({
           : { background: "#64748b", color: "#f8fafc" };
 
   return (
-    <article className="app-card flex w-full flex-col gap-4 overflow-hidden p-5 text-left transition-[border-color,box-shadow] duration-300 ease-out hover:border-[color-mix(in_srgb,var(--pmu-primary)_50%,transparent)] hover:shadow-[var(--pmu-glow)]">
+    <article className="app-card flex w-full flex-col gap-4 overflow-hidden p-5 text-left hover:border-[var(--pmu-border-strong)]">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div
-          className="inline-flex max-w-[70%] items-center gap-2 rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-wide"
+          className="inline-flex max-w-[70%] items-center gap-2 rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-[0.12em]"
           style={{
             color: beginnerLabel.color,
-            backgroundColor: `${beginnerLabel.color}18`,
-            border: `1px solid ${beginnerLabel.color}44`,
+            backgroundColor: `${beginnerLabel.color}14`,
+            border: `1px solid ${beginnerLabel.color}26`,
           }}
         >
           <span aria-hidden>{beginnerLabel.emoji}</span>
           <span>{beginnerLabel.label}</span>
         </div>
         <div
-          className={`font-mono text-sm font-black tabular-nums ${countdownUrgent ? "text-red-500" : "text-[var(--pmu-text-muted)]"}`}
+          className={`font-mono text-sm font-bold tabular-nums ${countdownUrgent ? "text-red-500" : "text-[var(--pmu-text-muted)]"}`}
         >
           <span className="text-[var(--pmu-text)]">{timeLabel}</span>
           <span className="mx-1 opacity-60">•</span>
@@ -131,43 +129,46 @@ export function CourseCard({
       </div>
 
       <div>
-        <h3 className="text-xl font-black leading-tight tracking-tight text-[var(--pmu-text)] md:text-2xl">{raceTitle}</h3>
-        <p className="mt-1 text-sm font-semibold text-[var(--pmu-text-soft)]">{subtitleLine}</p>
+        <h3 className="text-xl font-black leading-tight tracking-tight text-[var(--pmu-text)] md:text-2xl">
+          {raceTitle}
+        </h3>
+        <p className="mt-1 text-sm font-medium text-[var(--pmu-text-soft)]">{subtitleLine}</p>
       </div>
 
-      {/* ELO simplifié pour débutant */}
       <div
-        className="flex flex-col gap-1 rounded-xl border px-3 py-2"
-        style={{ borderColor: eloBadge.color + "55", background: eloBadge.bg }}
+        className="rounded-xl border px-3 py-3"
+        style={{
+          borderColor: "var(--pmu-border)",
+          background: "color-mix(in srgb, var(--pmu-surface-2) 78%, transparent)",
+        }}
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-[11px] font-black uppercase tracking-wider text-[var(--pmu-text-muted)]">
+          <span className="text-[11px] font-black uppercase tracking-[0.12em] text-[var(--pmu-text-muted)]">
             Confiance sur la course
           </span>
           <span
             className="rounded-full px-2 py-0.5 text-xs font-black"
-            style={{ color: eloBadge.color, background: "color-mix(in srgb, white 8%, transparent)" }}
+            style={{
+              color: eloBadge.color,
+              background: "color-mix(in srgb, white 8%, transparent)",
+            }}
           >
             {eloLabel.label}
           </span>
         </div>
-        <p className="text-[11px] font-semibold text-[var(--pmu-text-soft)]">
-          {eloLabel.tooltip}
-        </p>
+        <p className="mt-1 text-[11px] font-medium text-[var(--pmu-text-soft)]">{eloLabel.tooltip}</p>
       </div>
 
-      {/* Infos clés simplifiées */}
-      <ul className="grid gap-1.5 text-sm">
+      <ul className="grid gap-2 text-sm">
         {lines.map((row) => (
-          <li key={row.label} className="flex justify-between gap-3">
-            <span className="font-bold text-[var(--pmu-text-muted)]">{row.label}</span>
+          <li key={row.label} className="flex justify-between gap-3 rounded-lg bg-[var(--pmu-surface-2)] px-3 py-2">
+            <span className="font-semibold text-[var(--pmu-text-muted)]">{row.label}</span>
             <span className="font-black text-[var(--pmu-text)]">{row.value}</span>
           </li>
         ))}
       </ul>
 
-      {/* WhyThisHorse compact */}
-      {pickNum && translatedFactors.length > 0 && (
+      {pickNum && translatedFactors.length > 0 ? (
         <WhyThisHorse
           horseName={pickNom ?? ""}
           horseNum={pickNum}
@@ -176,9 +177,8 @@ export function CourseCard({
           betType={pickBetType}
           mode="compact"
         />
-      )}
+      ) : null}
 
-      {/* Barre de score */}
       <div className="space-y-2">
         <div className="h-2.5 w-full overflow-hidden rounded-full bg-[var(--pmu-surface-2)]">
           <div
@@ -198,9 +198,9 @@ export function CourseCard({
           </span>
         </div>
         {indiceOuverture ? (
-          <p className="text-[11px] font-bold leading-snug text-[var(--pmu-text-soft)]">
+          <p className="text-[11px] font-medium leading-snug text-[var(--pmu-text-soft)]">
             <span style={{ color: indiceOuverture.color }}>{indiceOuverture.emoji}</span>{" "}
-            <span className="uppercase tracking-wide text-[var(--pmu-text-muted)]">Lisibilité</span> ·{" "}
+            <span className="uppercase tracking-[0.08em] text-[var(--pmu-text-muted)]">Lisibilité</span> ·{" "}
             {indiceOuverture.label} ({indiceOuverture.score}/10)
           </p>
         ) : null}
@@ -209,7 +209,7 @@ export function CourseCard({
       <button
         type="button"
         onClick={onClick}
-        className="w-full shrink-0 rounded-xl py-3.5 text-center text-sm font-black uppercase tracking-wide transition hover:opacity-92"
+        className="w-full shrink-0 rounded-xl py-3.5 text-center text-sm font-bold transition hover:opacity-92"
         style={buttonStyle}
       >
         {ctaLabel(displayScore)}

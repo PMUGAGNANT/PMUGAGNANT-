@@ -57,7 +57,7 @@ export function LiveStatsBanner() {
       <div
         className="h-11 overflow-x-auto overflow-y-hidden"
         style={{
-          background: "color-mix(in srgb, var(--pmu-bg) 76%, transparent)",
+          background: "color-mix(in srgb, var(--pmu-bg) 88%, transparent)",
           backdropFilter: "blur(12px)",
         }}
       >
@@ -65,7 +65,7 @@ export function LiveStatsBanner() {
           className="mx-auto flex h-full min-w-max max-w-6xl items-center gap-3 px-4 text-[13px]"
           aria-live="polite"
         >
-          <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-[color-mix(in_srgb,var(--pmu-red)_30%,transparent)] bg-[color-mix(in_srgb,var(--pmu-red)_10%,transparent)] px-2.5 py-1 font-black uppercase tracking-[0.18em] text-[var(--pmu-text)]">
+          <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-[color-mix(in_srgb,var(--pmu-red)_30%,transparent)] bg-[color-mix(in_srgb,var(--pmu-red)_10%,transparent)] px-2.5 py-1 font-black uppercase tracking-[0.14em] text-[var(--pmu-text)]">
             <span className="relative flex h-2.5 w-2.5">
               <span className="absolute inset-0 rounded-full bg-[var(--pmu-red)] opacity-70 motion-safe:animate-ping" />
               <span className="relative h-2.5 w-2.5 rounded-full bg-[var(--pmu-red)]" />
@@ -113,7 +113,7 @@ export function LiveStatsBanner() {
           )}
 
           <span className="text-[var(--pmu-text-muted)]">|</span>
-          <span className="whitespace-nowrap text-[11px] font-semibold text-[var(--pmu-text-muted)]">
+          <span className="whitespace-nowrap text-[11px] font-medium text-[var(--pmu-text-muted)]">
             {lastUpdated ? `Màj ${lastUpdated}` : isRefreshing ? "Mise à jour..." : "Màj auto 5 min"}
           </span>
         </div>

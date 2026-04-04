@@ -534,7 +534,7 @@ function PageContent() {
   }, [featuredRaces, races]);
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
       <section className="app-card overflow-hidden p-6 md:p-8">
         <div className="grid gap-6 xl:grid-cols-[1.15fr,0.85fr] xl:items-start">
           <div className="space-y-5">
@@ -833,7 +833,7 @@ function PageContent() {
 function HomePageSkeletonFallback() {
   return (
     <div
-      className="mx-auto flex w-full max-w-6xl flex-col gap-6"
+      className="mx-auto flex w-full max-w-6xl flex-col gap-8"
       aria-busy="true"
       aria-label="Chargement du programme"
     >
