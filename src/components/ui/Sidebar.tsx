@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
+import { SidebarSearch } from "./SidebarSearch";
 import { ThemeToggle } from "./ThemeToggle";
 
 type NavItem = {
@@ -131,7 +132,11 @@ export function Sidebar() {
           </div>
         </Link>
 
-        <nav className="mt-8 space-y-1">
+        <div className="mt-5">
+          <SidebarSearch />
+        </div>
+
+        <nav className="space-y-1">
           {(navItems ?? []).map((item) => {
             const active = isActive(pathname, item.href);
             const Icon = item.Icon;
