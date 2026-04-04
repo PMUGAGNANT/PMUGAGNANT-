@@ -2,6 +2,9 @@
 
 import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ReferralInput } from "@/components/ui/ReferralInput";
+import { applyReferralCode } from "@/lib/referral-client";
+import { normalizeReferralCode } from "@/lib/referral";
 import {
   getSupabaseBrowserClient,
   getSupabaseConfigError,
@@ -45,6 +48,7 @@ function LoginPageContent() {
 
   const redirectTo = searchParams.get("redirect") || "/";
   const premiumIntent = useMemo(() => redirectTo.includes("mes-paris"), [redirectTo]);
+  const referralCode = useMemo(() => normalizeReferralCode(searchParams.get("ref")), [searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -64,8 +68,19 @@ function LoginPageContent() {
         const { error: signUpError } = await supabase.auth.signUp({ email, password });
         if (signUpError) throw signUpError;
 
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        const {
+          data: signInData,
+          error: signInError,
+        } = await supabase.auth.signInWithPassword({ email, password });
         if (signInError) throw signInError;
+
+        if (referralCode && signInData.session?.access_token) {
+          try {
+            await applyReferralCode(referralCode, signInData.session.access_token);
+          } catch (referralError) {
+            console.error(referralError);
+          }
+        }
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
         if (signInError) throw signInError;
@@ -422,6 +437,8 @@ function LoginPageContent() {
                     : "Se connecter"}
             </button>
           </form>
+
+          {referralCode ? <ReferralInput defaultCode={referralCode} /> : null}
 
           <div style={{ textAlign: "center", marginTop: 20, fontSize: 14, color: "var(--pmu-text-muted)" }}>
             {isSignUp ? "Déjà un compte ?" : "Pas encore de compte ?"}{" "}

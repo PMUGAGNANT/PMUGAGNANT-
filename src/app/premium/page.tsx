@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ReferralCard } from "@/components/ui/ReferralCard";
 import {
   PREMIUM_MONTHLY_PRICE_CURRENCY_SUFFIX,
   PREMIUM_MONTHLY_PRICE_DISPLAY_MAIN,
@@ -194,6 +195,8 @@ export default function PremiumPage() {
             </article>
           ))}
         </section>
+
+        <ReferralCard />
 
         <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.92fr)]">
           <div className="dark-surface overflow-hidden rounded-[34px] p-6 md:p-7">

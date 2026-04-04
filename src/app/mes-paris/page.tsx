@@ -8,6 +8,7 @@ import {
   getSupabaseConfigError,
   hasSupabaseConfig,
 } from "@/lib/supabase";
+import { ReferralCard } from "@/components/ui/ReferralCard";
 import { UserStreakCard } from "@/components/ui/UserStreakCard";
 
 const GREEN = "var(--pmu-primary)";
@@ -875,6 +876,10 @@ function MesParisContent() {
               </div>
             )}
           </section>
+
+          <div style={{ marginTop: 20 }}>
+            <ReferralCard />
+          </div>
         </>
       )}
 
