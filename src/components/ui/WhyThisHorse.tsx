@@ -96,7 +96,6 @@ export function WhyThisHorse({
           </span>
         </div>
 
-        {/* Barre de confiance */}
         <div className="mt-4">
           <div className="flex items-center justify-between text-sm">
             <span className="font-bold text-[var(--pmu-text-muted)]">
@@ -124,7 +123,6 @@ export function WhyThisHorse({
           </div>
         </div>
 
-        {/* Raisons */}
         <div className="mt-4 space-y-2">
           {translated.map((f, i) => (
             <div
@@ -142,13 +140,12 @@ export function WhyThisHorse({
           ))}
           {translated.length === 0 && (
             <p className="text-sm text-[var(--pmu-text-muted)]">
-              Analyse en cours — les détails seront disponibles au signal T-30min.
+              Analyse en cours — les détails seront disponibles au signal T-30 min.
             </p>
           )}
         </div>
       </div>
 
-      {/* Disclaimer */}
       <div
         className="border-t px-5 py-3 text-xs text-[var(--pmu-text-muted)]"
         style={{ borderColor: "var(--pmu-border)" }}

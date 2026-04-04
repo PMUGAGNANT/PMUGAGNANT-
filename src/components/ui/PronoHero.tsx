@@ -61,7 +61,6 @@ export function PronoHero({
         boxShadow: `0 24px 64px ${scoreLabel.color}18, var(--pmu-card-inset)`,
       }}
     >
-      {/* Top badge */}
       <div className="flex items-center justify-between px-6 pt-6">
         <span
           className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-black uppercase tracking-wider"
@@ -84,7 +83,6 @@ export function PronoHero({
         </span>
       </div>
 
-      {/* Prono principal */}
       <div className="px-6 pb-2 pt-5 text-center">
         <p className="text-sm font-bold uppercase tracking-wide text-[var(--pmu-text-muted)]">
           Cheval du jour
@@ -104,7 +102,6 @@ export function PronoHero({
         <p className="mt-2 text-sm text-[var(--pmu-text-muted)]">{courseName}</p>
       </div>
 
-      {/* Barre de confiance */}
       <div className="mx-auto max-w-sm px-6 pt-4">
         <div className="flex items-center justify-between text-sm">
           <span className="font-bold text-[var(--pmu-text-muted)]">
@@ -128,7 +125,6 @@ export function PronoHero({
         </div>
       </div>
 
-      {/* Infos clés */}
       <div className="mx-auto mt-5 grid max-w-sm gap-3 px-6 sm:grid-cols-2">
         <div
           className="rounded-xl px-4 py-3 text-center"
@@ -165,7 +161,6 @@ export function PronoHero({
         </div>
       </div>
 
-      {/* Pourquoi lui ? */}
       {topFacteurs.length > 0 && (
         <div className="mx-auto mt-4 max-w-sm px-6">
           <p className="text-[11px] font-black uppercase tracking-wider text-[var(--pmu-text-muted)]">
@@ -185,18 +180,16 @@ export function PronoHero({
         </div>
       )}
 
-      {/* CTA */}
       <div className="flex justify-center px-6 pb-6 pt-5">
         <button
           type="button"
           onClick={onClick}
           className="app-button-primary w-full max-w-sm py-4 text-base font-black"
         >
-          Voir l&apos;analyse compl?te ?
+          Voir l&apos;analyse complète →
         </button>
       </div>
 
-      {/* Disclaimer */}
       <div className="border-t border-[var(--pmu-border)] px-6 py-3 text-center text-[11px] text-[var(--pmu-text-muted)]">
         ⚠️ Les paris comportent des risques. Ne misez que ce que vous êtes prêt
         à perdre.

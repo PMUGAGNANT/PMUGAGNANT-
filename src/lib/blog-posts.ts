@@ -9,7 +9,6 @@ export type BlogPost = {
 };
 
 export const blogPosts: BlogPost[] = [
-  /* ─── ARTICLES ÉDUCATIFS POUR DÉBUTANTS ─── */
   {
     slug: "le-pmu-en-5-minutes",
     title: "Le PMU en 5 minutes : tout comprendre pour bien débuter",
@@ -186,8 +185,6 @@ Si vous ne savez pas combien vous avez misé et gagné sur le mois, vous ne save
 
 Aucun système ne garantit un gain. Quiconque vous promet 100% de réussite vous ment. Chez PMU Gagnant, on publie nos vrais résultats, gains ET pertes.`,
   },
-
-  /* ─── ARTICLES ORIGINAUX (conservés) ─── */
   {
     slug: "lire-un-programme-pmu-sans-se-perdre",
     title: "Lire un programme PMU sans se perdre",

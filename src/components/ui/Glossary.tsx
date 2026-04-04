@@ -21,7 +21,6 @@ export function GlossaryPanel() {
 
   return (
     <>
-      {/* Floating trigger button */}
       <button
         type="button"
         onClick={toggle}
@@ -37,7 +36,6 @@ export function GlossaryPanel() {
         📖
       </button>
 
-      {/* Panel */}
       {open && (
         <div
           className="fixed inset-0 z-[950] flex items-end justify-center md:items-center md:p-4"
@@ -54,7 +52,6 @@ export function GlossaryPanel() {
               maxHeight: "85vh",
             }}
           >
-            {/* Header */}
             <div className="flex items-center justify-between border-b border-[var(--pmu-border)] px-5 py-4">
               <div>
                 <h2 className="text-lg font-black text-[var(--pmu-text)]">
@@ -73,7 +70,6 @@ export function GlossaryPanel() {
               </button>
             </div>
 
-            {/* Search */}
             <div className="px-5 py-3">
               <input
                 type="text"
@@ -84,7 +80,6 @@ export function GlossaryPanel() {
               />
             </div>
 
-            {/* Entries */}
             <div
               className="space-y-1 overflow-y-auto px-5 pb-6"
               style={{ maxHeight: "calc(85vh - 160px)" }}
@@ -141,8 +136,6 @@ function GlossaryItem({ entry }: { entry: GlossaryEntry }) {
     </button>
   );
 }
-
-/* ─── Tooltip inline pour termes techniques ─── */
 
 export function TermTooltip({
   term,

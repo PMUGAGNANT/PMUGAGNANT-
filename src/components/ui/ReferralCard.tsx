@@ -150,7 +150,7 @@ export function ReferralCard() {
           🎁 Invitez un ami, gagnez 7 jours Premium
         </h2>
         <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--pmu-text-soft)]">
-          Votre ami recoit aussi 7 jours gratuits. Connectez-vous pour obtenir votre code de partage.
+          Votre ami reçoit aussi 7 jours gratuits. Connectez-vous pour obtenir votre code de partage.
         </p>
         <Link href="/login" className="app-button-primary mt-5 inline-flex">
           Se connecter
@@ -182,12 +182,12 @@ export function ReferralCard() {
             🎁 Invitez un ami, gagnez 7 jours Premium
           </h2>
           <p className="mt-2 text-sm leading-7 text-[var(--pmu-text-soft)]">
-            Votre ami recoit aussi 7 jours gratuits.
+            Votre ami reçoit aussi 7 jours gratuits.
           </p>
         </div>
 
         <div className="rounded-full border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-4 py-2 text-sm font-semibold text-[var(--pmu-text-soft)]">
-          {data.referral_count} amis parraines • {data.referral_premium_days} jours Premium gagnes
+          {data.referral_count} amis parrainés • {data.referral_premium_days} jours Premium gagnés
         </div>
       </div>
 
@@ -206,7 +206,7 @@ export function ReferralCard() {
               void copyText(data.referral_code).then(() => setCopied("code"));
             }}
           >
-            {copied === "code" ? "Copie !" : "Copier"}
+            {copied === "code" ? "Copié !" : "Copier"}
           </button>
         </div>
 
@@ -242,7 +242,7 @@ export function ReferralCard() {
                 void copyText(data.share_url).then(() => setCopied("link"));
               }}
             >
-              {copied === "link" ? "Lien copie !" : "Copier le lien"}
+              {copied === "link" ? "Lien copié !" : "Copier le lien"}
             </button>
           </div>
         </div>

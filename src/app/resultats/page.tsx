@@ -62,10 +62,10 @@ export default function ResultatsPage() {
           <div>
             <p className="app-kicker">Transparence publique</p>
             <h1 className="mt-2 text-4xl font-black leading-[0.94] tracking-tight text-[var(--pmu-text)] md:text-6xl">
-              Nos resultats reels
+              Nos résultats réels
             </h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
-              Pas de faux screenshots. Voici nos performances completes, gains ET pertes.
+              Pas de faux screenshots. Voici nos performances complètes, gains ET pertes.
             </p>
           </div>
 
@@ -73,7 +73,7 @@ export default function ResultatsPage() {
             <div className="app-card-muted px-5 py-4">
               <p className="app-label">Statut</p>
               <p className="mt-3 text-xl font-black text-[var(--pmu-primary)]">
-                Mis a jour automatiquement chaque jour
+                Mis à jour automatiquement chaque jour
               </p>
             </div>
             <div className="app-card-muted px-5 py-4">
@@ -90,7 +90,7 @@ export default function ResultatsPage() {
       </Suspense>
 
       <section className="app-card p-6 text-center md:p-8">
-        <p className="app-kicker">Passer a l&apos;action</p>
+        <p className="app-kicker">Passer à l&apos;action</p>
         <h2 className="mt-2 text-3xl font-black tracking-tight text-[var(--pmu-text)] md:text-4xl">
           Convaincu ? Essayez gratuitement
         </h2>

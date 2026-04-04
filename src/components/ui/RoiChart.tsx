@@ -45,7 +45,7 @@ export function RoiChart({ timeline, isLoading = false }: RoiChartProps) {
   if (!timeline.length) {
     return (
       <div className="flex h-[300px] items-center justify-center rounded-[24px] border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] text-sm font-semibold text-[var(--pmu-text-soft)]">
-        Donnees en cours de collecte
+        Données en cours de collecte
       </div>
     );
   }
@@ -78,7 +78,7 @@ export function RoiChart({ timeline, isLoading = false }: RoiChartProps) {
               borderRadius: 16,
               color: "var(--pmu-text)",
             }}
-            formatter={(value) => [formatTooltipValue(value), "Profit cumule"]}
+            formatter={(value) => [formatTooltipValue(value), "Profit cumulé"]}
             labelFormatter={(label) => `Date ${label}`}
           />
           <Line

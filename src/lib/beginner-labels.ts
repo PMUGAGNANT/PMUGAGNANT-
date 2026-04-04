@@ -5,7 +5,7 @@
  * Utilisé quand le mode débutant est activé, ou pour les tooltips.
  */
 
-/* ─── Score global ─── */
+/* Score global */
 
 export interface BeginnerScoreLabel {
   label: string;
@@ -39,7 +39,7 @@ export function interpretScoreForBeginner(score: number): BeginnerScoreLabel {
       label: "À surveiller",
       emoji: "🔵",
       explanation: "Potentiel mais incertitude plus élevée.",
-      advice: "Attendez le signal T-30min avant de décider.",
+      advice: "Attendez le signal T-30 min avant de décider.",
       color: "#FFB800",
     };
   }
@@ -52,7 +52,7 @@ export function interpretScoreForBeginner(score: number): BeginnerScoreLabel {
   };
 }
 
-/* ─── Lisibilité ─── */
+/* Lisibilité */
 
 export function lisibiliteForBeginner(lis: string): {
   label: string;
@@ -90,7 +90,7 @@ export function lisibiliteForBeginner(lis: string): {
   }
 }
 
-/* ─── Décisions ─── */
+/* Décisions */
 
 export function decisionForBeginner(decision: string): {
   label: string;
@@ -109,7 +109,7 @@ export function decisionForBeginner(decision: string): {
         label: "À surveiller",
         emoji: "👀",
         tooltip:
-          "La course est intéressante mais pas assez sûre. On attend le signal T-30min.",
+          "La course est intéressante mais pas assez sûre. On attend le signal T-30 min.",
       };
     case "REJET":
       return {
@@ -126,7 +126,7 @@ export function decisionForBeginner(decision: string): {
   }
 }
 
-/* ─── Types de pari ─── */
+/* Types de pari */
 
 export function betTypeForBeginner(betType: string | null | undefined): {
   label: string;
@@ -165,7 +165,7 @@ export function betTypeForBeginner(betType: string | null | undefined): {
   };
 }
 
-/* ─── Glossaire complet ─── */
+/* Glossaire complet */
 
 export interface GlossaryEntry {
   term: string;
@@ -215,7 +215,7 @@ export const GLOSSARY: GlossaryEntry[] = [
   {
     term: "Trot attelé",
     definition:
-      "Discipline où le jockey est assis dans un sulky (petit chariot tiré par le cheval). Le cheval doit trotter sans galoper.",
+      "Discipline où le jockey est assis dans un sulky (petit chariot tiré par le cheval). Le cheval doit trotter sans jamais galoper, sinon il est disqualifié. C'est la discipline la plus populaire en France.",
   },
   {
     term: "Trot monté",
@@ -274,7 +274,7 @@ export const GLOSSARY: GlossaryEntry[] = [
   },
 ];
 
-/* ─── Top facteurs en français simple ─── */
+/* Top facteurs en français simple */
 
 const FACTOR_TRANSLATIONS: Record<string, string> = {
   "Forme récente excellente": "En grande forme sur ses dernières courses",
@@ -302,7 +302,7 @@ export function translateFactors(factors: string[]): string[] {
   return factors.map(translateFactor);
 }
 
-/* ─── Profils psychologiques en français simple ─── */
+/* Profils psychologiques en français simple */
 
 export function profileStatusForBeginner(status: string): {
   label: string;
@@ -345,7 +345,7 @@ export function profileStatusForBeginner(status: string): {
   }
 }
 
-/* ─── Explication simple du score ELO ─── */
+/* Explication simple du score ELO */
 
 export function eloForBeginner(eloGlobal: number): {
   label: string;

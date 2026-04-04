@@ -67,7 +67,7 @@ function CollectingCard({ label, description }: { label: string; description: st
     <div className="app-card p-5 md:p-6">
       <p className="app-label">{label}</p>
       <p className="mt-4 text-lg font-black tracking-tight text-[var(--pmu-text)]">
-        Donnees en cours de collecte
+        Données en cours de collecte
       </p>
       <p className="mt-3 text-sm leading-6 text-[var(--pmu-text-soft)]">{description}</p>
     </div>
@@ -86,15 +86,15 @@ export function PerformanceProof() {
         <div>
           <p className="app-kicker">Preuve de performance</p>
           <h2 className="mt-2 text-2xl font-black tracking-tight text-[var(--pmu-text)] md:text-3xl">
-            Des resultats publies, gains et pertes inclus
+            Des résultats publiés, gains et pertes inclus
           </h2>
           <p className="mt-2 max-w-3xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
-            Les chiffres ci-dessous sont recalcules automatiquement a partir de nos pronostics valides des 30 derniers jours.
+            Les chiffres ci-dessous sont recalculés automatiquement à partir de nos pronostics validés des 30 derniers jours.
           </p>
         </div>
 
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--pmu-text-muted)]">
-          {lastUpdated ? `Mis a jour ${lastUpdated}` : isRefreshing ? "Mise a jour..." : "Actualisation auto"}
+          {lastUpdated ? `Mis à jour ${lastUpdated}` : isRefreshing ? "Mise à jour..." : "Actualisation auto"}
         </p>
       </div>
 
@@ -109,7 +109,7 @@ export function PerformanceProof() {
         ) : hasData ? (
           <>
             <ProofCard
-              label="Taux de reussite"
+              label="Taux de réussite"
               value={formatLivePercent(data.winRate, 0)}
               progress={data.winRate}
               tone="positive"
@@ -122,13 +122,13 @@ export function PerformanceProof() {
               description="Retour sur investissement"
             />
             <ProofCard
-              label="Serie en cours"
+              label="Série en cours"
               value={`${data.currentStreak}${data.currentStreak >= 3 ? " 🔥" : ""}`}
               tone={data.currentStreak >= 3 ? "positive" : "default"}
-              description="Places consecutives"
+              description="Placés consécutifs"
             />
             <ProofCard
-              label="Pronos valides"
+              label="Pronos validés"
               value={`${data.totalPredictions}`}
               tone="default"
               description="Ce mois"
@@ -136,16 +136,16 @@ export function PerformanceProof() {
           </>
         ) : (
           <>
-            <CollectingCard label="Taux de reussite" description="Sur 30 jours" />
+            <CollectingCard label="Taux de réussite" description="Sur 30 jours" />
             <CollectingCard label="ROI" description="Retour sur investissement" />
-            <CollectingCard label="Serie en cours" description="Places consecutives" />
-            <CollectingCard label="Pronos valides" description="Ce mois" />
+            <CollectingCard label="Série en cours" description="Placés consécutifs" />
+            <CollectingCard label="Pronos validés" description="Ce mois" />
           </>
         )}
       </div>
 
       <div className="app-card px-5 py-4 text-sm leading-6 text-[var(--pmu-text-soft)] md:px-6">
-        Ces statistiques sont calculees automatiquement a partir de nos resultats reels. Nous publions nos gains ET nos pertes.
+        Ces statistiques sont calculées automatiquement à partir de nos résultats réels. Nous publions nos gains ET nos pertes.
       </div>
     </section>
   );

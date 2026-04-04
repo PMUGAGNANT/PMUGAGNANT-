@@ -107,7 +107,7 @@ export function ResultsDashboard() {
         ) : hasLiveData ? (
           <>
             <KpiCard
-              label="Taux de reussite"
+              label="Taux de réussite"
               value={formatLivePercent(liveStats.data.winRate, 0)}
               description="Sur 30 jours"
               tone="positive"
@@ -120,23 +120,23 @@ export function ResultsDashboard() {
               tone={roiTone}
             />
             <KpiCard
-              label="Pronos valides"
+              label="Pronos validés"
               value={`${liveStats.data.totalPredictions}`}
               description="Ce mois"
             />
             <KpiCard
-              label="Meilleure serie"
+              label="Meilleure série"
               value={`${liveStats.data.bestStreak}${liveStats.data.bestStreak >= 3 ? " 🔥" : ""}`}
-              description="Serie consecutive"
+              description="Série consécutive"
               tone={bestStreakTone}
             />
           </>
         ) : (
           <>
-            <KpiCard label="Taux de reussite" value="—" description="Donnees en cours de collecte" />
-            <KpiCard label="ROI 30 jours" value="—" description="Donnees en cours de collecte" />
-            <KpiCard label="Pronos valides" value="—" description="Donnees en cours de collecte" />
-            <KpiCard label="Meilleure serie" value="—" description="Donnees en cours de collecte" />
+            <KpiCard label="Taux de réussite" value="—" description="Données en cours de collecte" />
+            <KpiCard label="ROI 30 jours" value="—" description="Données en cours de collecte" />
+            <KpiCard label="Pronos validés" value="—" description="Données en cours de collecte" />
+            <KpiCard label="Meilleure série" value="—" description="Données en cours de collecte" />
           </>
         )}
       </section>
@@ -144,8 +144,8 @@ export function ResultsDashboard() {
       <section className="app-card p-5 md:p-6">
         <div className="app-section-heading">
           <div>
-            <p className="app-kicker">ROI cumule</p>
-            <h2 className="app-section-title">Evolution du profit jour apres jour</h2>
+            <p className="app-kicker">ROI cumulé</p>
+            <h2 className="app-section-title">Évolution du profit jour après jour</h2>
           </div>
         </div>
         <div className="mt-4">
@@ -157,7 +157,7 @@ export function ResultsDashboard() {
         <div className="app-section-heading">
           <div>
             <p className="app-kicker">Derniers tickets</p>
-            <h2 className="app-section-title">20 derniers resultats publies</h2>
+            <h2 className="app-section-title">20 derniers résultats publiés</h2>
           </div>
           {bilan.error ? (
             <p className="text-sm font-semibold text-[#FF4444]">{bilan.error}</p>

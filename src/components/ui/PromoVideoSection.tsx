@@ -4,26 +4,26 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 const COPY = {
-  kicker: "D\u00c9COUVREZ L'APPLICATION",
-  title: "L'IA qui d\u00e9tecte les meilleures courses PMU",
+  kicker: "DÉCOUVREZ L'APPLICATION",
+  title: "L'IA qui détecte les meilleures courses PMU",
   subtitle:
-    "Notre algorithme analyse des centaines de courses chaque jour. Vous ne voyez que les meilleures opportunit\u00e9s.",
-  cta: "Essayer gratuitement \u2192",
-  ctaMeta: "Pas de carte bancaire requise \u2022 1 pronostic gratuit par jour",
+    "Notre algorithme analyse des centaines de courses chaque jour. Vous ne voyez que les meilleures opportunités.",
+  cta: "Essayer gratuitement →",
+  ctaMeta: "Pas de carte bancaire requise • 1 pronostic gratuit par jour",
   visibleLabel: "Ce que vous voyez",
   visibleText: "Home, fiche course, lecture signal et navigation mobile",
-  videoLabel: "Vid\u00e9o promotionnelle de l'application PMU Gagnant",
-  demoBadge: "D\u00e9mo produit",
-  muteOn: "Activer le son de la vid\u00e9o promotionnelle",
-  muteOff: "Couper le son de la vid\u00e9o promotionnelle",
-  muteOnText: "Son coup\u00e9",
+  videoLabel: "Vidéo promotionnelle de l'application PMU Gagnant",
+  demoBadge: "Démo produit",
+  muteOn: "Activer le son de la vidéo promotionnelle",
+  muteOff: "Couper le son de la vidéo promotionnelle",
+  muteOnText: "Son coupé",
   muteOffText: "Son actif",
   overlayTitle: "PMU Gagnant en action",
   overlayText: "Interface mobile, glow premium et lecture rapide du jour",
   loadingLabel: "Chargement",
-  loadingReady: "Pr\u00eat",
+  loadingReady: "Prêt",
   formatLabel: "Format",
-  formatValue: "Vid\u00e9o portrait",
+  formatValue: "Vidéo portrait",
   renderLabel: "Rendu",
   renderValue: "Glow vert naturel",
   loadingPending: "En attente",
@@ -32,7 +32,7 @@ const COPY = {
 const PROMO_POINTS = [
   "Lecture claire des courses",
   "Signal premium en direct",
-  "18 s de d\u00e9monstration produit",
+  "18 s de démonstration produit",
 ];
 
 export function PromoVideoSection() {
@@ -190,7 +190,7 @@ export function PromoVideoSection() {
                 className="pointer-events-none absolute inset-x-8 top-0 h-28 blur-2xl"
                 style={{
                   background:
-                    "radial-gradient(circle at center, color-mix(in srgb, var(--pmu-primary-soft) 95%, transparent) 0%, transparent 72%)",
+                    "radial-gradient(circle at center, color-mix(in srgb, var(--pmu-primary-soft) 85%, transparent), transparent 72%)",
                 }}
               />
 

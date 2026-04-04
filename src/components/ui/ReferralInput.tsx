@@ -35,7 +35,7 @@ export function ReferralInput({ defaultCode = "" }: ReferralInputProps) {
 
     if (!session) {
       setTone("info");
-      setMessage("Creez ou connectez votre compte, puis le code sera applique.");
+      setMessage("Créez ou connectez votre compte, puis le code sera appliqué.");
       return;
     }
 
@@ -105,7 +105,7 @@ export function ReferralInput({ defaultCode = "" }: ReferralInputProps) {
 
       {defaultCode ? (
         <div style={{ marginTop: 10, fontSize: 12, fontWeight: 700, color: "var(--pmu-primary)" }}>
-          Code d?tect? automatiquement depuis votre lien d&apos;invitation.
+          Code détecté automatiquement depuis votre lien d&apos;invitation.
         </div>
       ) : null}
 

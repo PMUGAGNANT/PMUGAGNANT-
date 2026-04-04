@@ -91,7 +91,6 @@ export function OnboardingModal() {
           boxShadow: "0 32px 80px rgba(0,0,0,0.6)",
         }}
       >
-        {/* Progress bar */}
         <div className="flex gap-1.5 px-6 pt-6">
           {STEPS.map((_, i) => (
             <div
@@ -107,7 +106,6 @@ export function OnboardingModal() {
           ))}
         </div>
 
-        {/* Content */}
         <div className="px-6 pb-6 pt-5">
           <div className="text-center">
             <span className="text-5xl">{current.emoji}</span>
@@ -140,7 +138,6 @@ export function OnboardingModal() {
           )}
         </div>
 
-        {/* Navigation */}
         <div className="flex items-center justify-between border-t border-[var(--pmu-border)] px-6 py-4">
           <div>
             {step > 0 ? (
@@ -170,7 +167,6 @@ export function OnboardingModal() {
           </button>
         </div>
 
-        {/* Step indicator */}
         <p className="pb-4 text-center text-xs font-semibold text-[var(--pmu-text-muted)]">
           {step + 1} / {STEPS.length}
         </p>

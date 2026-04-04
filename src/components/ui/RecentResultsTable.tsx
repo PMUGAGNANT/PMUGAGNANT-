@@ -58,7 +58,7 @@ export function RecentResultsTable({ results, isLoading = false }: RecentResults
   if (!results.length) {
     return (
       <div className="flex h-[220px] items-center justify-center rounded-[24px] border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] text-sm font-semibold text-[var(--pmu-text-soft)]">
-        Donnees en cours de collecte
+        Données en cours de collecte
       </div>
     );
   }
@@ -73,7 +73,7 @@ export function RecentResultsTable({ results, isLoading = false }: RecentResults
             <th>Cheval</th>
             <th>Pari</th>
             <th>Cote</th>
-            <th>Resultat</th>
+            <th>Résultat</th>
             <th>Gain</th>
           </tr>
         </thead>

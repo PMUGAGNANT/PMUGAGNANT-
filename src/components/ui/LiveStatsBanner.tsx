@@ -68,7 +68,7 @@ export function LiveStatsBanner() {
           <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-[color-mix(in_srgb,var(--pmu-red)_30%,transparent)] bg-[color-mix(in_srgb,var(--pmu-red)_10%,transparent)] px-2.5 py-1 font-black uppercase tracking-[0.18em] text-[var(--pmu-text)]">
             <span className="relative flex h-2.5 w-2.5">
               <span className="absolute inset-0 rounded-full bg-[var(--pmu-red)] opacity-70 motion-safe:animate-ping" />
-              <span className="relative rounded-full bg-[var(--pmu-red)] h-2.5 w-2.5" />
+              <span className="relative h-2.5 w-2.5 rounded-full bg-[var(--pmu-red)]" />
             </span>
             <span>Live</span>
           </span>
@@ -87,14 +87,14 @@ export function LiveStatsBanner() {
             <>
               <span className="text-[var(--pmu-text-muted)]">|</span>
               <StatSegment
-                label="Taux de reussite :"
+                label="Taux de réussite :"
                 value={formatLivePercent(data.winRate, 0)}
                 tone="positive"
               />
               <span className="text-[var(--pmu-text-muted)]">|</span>
               <StatSegment
-                label="Serie en cours :"
-                value={`${data.currentStreak} places`}
+                label="Série en cours :"
+                value={`${data.currentStreak} placés`}
                 tone={data.currentStreak >= 3 ? "positive" : "neutral"}
               />
               <span className="text-[var(--pmu-text-muted)]">|</span>
@@ -108,13 +108,13 @@ export function LiveStatsBanner() {
             </>
           ) : (
             <span className="whitespace-nowrap font-semibold text-[var(--pmu-text-soft)]">
-              Donnees en cours de collecte
+              Données en cours de collecte
             </span>
           )}
 
           <span className="text-[var(--pmu-text-muted)]">|</span>
           <span className="whitespace-nowrap text-[11px] font-semibold text-[var(--pmu-text-muted)]">
-            {lastUpdated ? `Maj ${lastUpdated}` : isRefreshing ? "Mise a jour..." : "Maj auto 5 min"}
+            {lastUpdated ? `Màj ${lastUpdated}` : isRefreshing ? "Mise à jour..." : "Màj auto 5 min"}
           </span>
         </div>
       </div>
