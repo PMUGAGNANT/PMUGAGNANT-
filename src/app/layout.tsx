@@ -5,6 +5,8 @@ import { AppShell } from "@/components/ui/AppShell";
 import { GlossaryPanel } from "@/components/ui/Glossary";
 import { LiveStatsBanner } from "@/components/ui/LiveStatsBanner";
 import { OnboardingModal } from "@/components/ui/OnboardingModal";
+import { PushNotificationPrompt } from "@/components/ui/PushNotificationPrompt";
+import { ServiceWorkerRegistration } from "@/components/ui/ServiceWorkerRegistration";
 import { ThemeMetaColor } from "@/components/ui/ThemeMetaColor";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import "./globals.css";
@@ -46,9 +48,11 @@ export default function RootLayout({
         </Script>
         <ThemeProvider>
           <ThemeMetaColor />
+          <ServiceWorkerRegistration />
           <AppShell>{children}</AppShell>
           <OnboardingModal />
           <GlossaryPanel />
+          <PushNotificationPrompt />
         </ThemeProvider>
       </body>
     </html>
