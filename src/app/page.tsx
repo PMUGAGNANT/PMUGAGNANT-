@@ -12,6 +12,7 @@ import { PronoHero } from "@/components/ui/PronoHero";
 import { PromoVideoSection } from "@/components/ui/PromoVideoSection";
 import { RadarHero } from "@/components/ui/RadarHero";
 import { RecentResults } from "@/components/ui/RecentResults";
+import { SearchRunners } from "@/components/ui/SearchRunners";
 import { SagesseFoules } from "@/components/ui/SagesseFoules";
 import { TelegramCTA } from "@/components/ui/TelegramCTA";
 import { TopParisStrip, type TopParisItem } from "@/components/ui/TopParisStrip";
@@ -623,6 +624,8 @@ function PageContent() {
           <p className="mt-1 text-sm text-[var(--pmu-text-muted)]">courses à moins d’une heure</p>
         </div>
       </section>
+
+      <SearchRunners dateStr={selectedDate} />
 
       <section className="grid gap-4 xl:grid-cols-[1.1fr,0.9fr]">
         <div className="app-card p-5 md:p-6">
