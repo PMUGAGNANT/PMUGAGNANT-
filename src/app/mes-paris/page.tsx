@@ -44,7 +44,7 @@ function MesParisFallback() {
   return (
     <div
       style={{
-        width: "min(1180px, calc(100% - 24px))",
+        width: "min(1180px, calc(100% - 20px))",
         margin: "0 auto",
         minHeight: "100vh",
         background: `radial-gradient(circle at top left, var(--pmu-primary-fade), transparent 30%), linear-gradient(180deg, var(--pmu-bg) 0%, var(--pmu-bg-mid) 100%)`,
@@ -408,11 +408,11 @@ function MesParisContent() {
   return (
     <div
       style={{
-        width: "min(1180px, calc(100% - 24px))",
+        width: "min(1180px, calc(100% - 20px))",
         margin: "0 auto",
         minHeight: "100vh",
         background: `radial-gradient(circle at top left, var(--pmu-primary-fade), transparent 30%), linear-gradient(180deg, var(--pmu-bg) 0%, var(--pmu-bg-mid) 100%)`,
-        paddingBottom: showBottomNav ? 96 : 32,
+        paddingBottom: showBottomNav ? 88 : 24,
       }}
     >
       <div
@@ -423,7 +423,7 @@ function MesParisContent() {
           background: "color-mix(in srgb, var(--pmu-bg) 92%, transparent)",
           backdropFilter: "blur(18px)",
           borderBottom: `1px solid ${BORDER}`,
-          height: 68,
+          height: 60,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -433,20 +433,20 @@ function MesParisContent() {
           onClick={() => router.push("/")}
           style={{
             position: "absolute",
-            left: 16,
+            left: 14,
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            width: 36,
-            height: 36,
+            width: 32,
+            height: 32,
             borderRadius: "50%",
             background: "color-mix(in srgb, var(--pmu-text) 12%, transparent)",
           }}
         >
           <svg
-            width="20"
-            height="20"
+            width="18"
+            height="18"
             viewBox="0 0 24 24"
             fill="none"
             stroke="var(--pmu-text)"
@@ -457,16 +457,16 @@ function MesParisContent() {
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </div>
-        <div style={{ color: GREEN, fontWeight: 800, fontSize: 20, letterSpacing: "-0.3px" }}>
+        <div style={{ color: GREEN, fontWeight: 800, fontSize: 18, letterSpacing: "-0.3px" }}>
           Mes Paris
         </div>
         <div
           onClick={handleLogout}
           style={{
             position: "absolute",
-            right: 16,
+            right: 14,
             color: "color-mix(in srgb, var(--pmu-text) 68%, transparent)",
-            fontSize: 12,
+            fontSize: 11,
             cursor: "pointer",
             fontWeight: 700,
           }}
@@ -480,7 +480,7 @@ function MesParisContent() {
           role="status"
           aria-busy="true"
           aria-label="Chargement de vos paris"
-          style={{ textAlign: "center", padding: 60, color: "var(--pmu-text-muted)" }}
+          style={{ textAlign: "center", padding: 48, color: "var(--pmu-text-muted)" }}
         >
           Chargement...
         </div>
@@ -489,13 +489,13 @@ function MesParisContent() {
           role="alert"
           aria-live="assertive"
           style={{
-            margin: "18px 0",
+            margin: "14px 0",
             background: "color-mix(in srgb, var(--pmu-orange) 12%, transparent)",
             color: "var(--pmu-orange)",
             border: "1px solid color-mix(in srgb, var(--pmu-orange) 35%, transparent)",
-            padding: 16,
-            borderRadius: 16,
-            fontSize: 14,
+            padding: 14,
+            borderRadius: 14,
+            fontSize: 13,
             fontWeight: 500,
           }}
         >
@@ -506,7 +506,7 @@ function MesParisContent() {
             style={{
               border: "none",
               borderRadius: 999,
-              padding: "10px 18px",
+              padding: "9px 16px",
               background: GREEN,
               color: "var(--pmu-on-primary)",
               fontWeight: 800,
@@ -521,9 +521,9 @@ function MesParisContent() {
           {billingNotice ? (
             <div
               style={{
-                margin: "18px 0 0",
-                padding: 18,
-                borderRadius: 20,
+                margin: "14px 0 0",
+                padding: 16,
+                borderRadius: 16,
                 border: `1px solid ${
                   billingNotice.tone === "success"
                     ? "color-mix(in srgb, var(--pmu-primary) 35%, transparent)"
@@ -537,7 +537,7 @@ function MesParisContent() {
                     : billingNotice.tone === "loading"
                       ? "color-mix(in srgb, var(--pmu-accent-blue) 10%, transparent)"
                       : "color-mix(in srgb, var(--pmu-orange) 8%, transparent)",
-                boxShadow: "var(--pmu-shadow)",
+                boxShadow: "0 10px 24px rgba(0, 0, 0, 0.22)",
               }}
             >
               <div
@@ -552,55 +552,55 @@ function MesParisContent() {
                       : billingNotice.tone === "loading"
                         ? "var(--pmu-accent-blue)"
                         : "var(--pmu-orange)",
-                  marginBottom: 8,
+                  marginBottom: 6,
                 }}
               >
                 {"Confirmation d'abonnement"}
               </div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: DARK, marginBottom: 6 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: DARK, marginBottom: 5 }}>
                 {billingNotice.title}
               </div>
-              <div style={{ fontSize: 14, lineHeight: "21px", color: "var(--pmu-text-muted)" }}>
+              <div style={{ fontSize: 13, lineHeight: "19px", color: "var(--pmu-text-muted)" }}>
                 {billingNotice.message}
               </div>
             </div>
           ) : null}
 
-          <div style={{ marginBottom: 18 }}>
+          <div style={{ marginBottom: 14 }}>
             <UserStreakCard />
           </div>
 
           <section
             style={{
               background: `radial-gradient(circle at top right, var(--pmu-primary-soft), transparent 35%), linear-gradient(135deg, color-mix(in srgb, var(--pmu-primary) 12%, var(--pmu-bg-mid)), var(--pmu-bg))`,
-              borderRadius: 30,
-              margin: "18px 0 16px",
-              padding: 28,
+              borderRadius: 24,
+              margin: "14px 0 12px",
+              padding: 22,
               color: "var(--pmu-text)",
-              boxShadow: "var(--pmu-glow), var(--pmu-shadow)",
+              boxShadow: "0 12px 28px rgba(0, 0, 0, 0.26)",
               border: "1px solid var(--pmu-border)",
               display: "grid",
-              gap: 18,
+              gap: 14,
               gridTemplateColumns: "minmax(0,1.4fr) minmax(240px,0.9fr)",
             }}
           >
             <div>
-              <div style={{ fontSize: 12, opacity: 0.84, marginBottom: 6 }}>{user?.email}</div>
-              <div style={{ fontSize: 46, fontWeight: 900, marginBottom: 8, letterSpacing: "-1.2px" }}>
+              <div style={{ fontSize: 11, opacity: 0.84, marginBottom: 4 }}>{user?.email}</div>
+              <div style={{ fontSize: 38, fontWeight: 900, marginBottom: 6, letterSpacing: "-1px" }}>
                 {formatEuros(solde)}
               </div>
-              <div style={{ fontSize: 14, opacity: 0.92, fontWeight: 600 }}>
+              <div style={{ fontSize: 13, opacity: 0.92, fontWeight: 600 }}>
                 {bets.length} paris · {wonCount} gagnés · {placedCount} placés
               </div>
             </div>
             <div
               style={{
-                borderRadius: 24,
+                borderRadius: 18,
                 background: "color-mix(in srgb, var(--pmu-surface-2) 84%, transparent)",
                 border: "1px solid var(--pmu-border)",
-                padding: 18,
+                padding: 14,
                 display: "grid",
-                gap: 12,
+                gap: 10,
                 alignContent: "start",
               }}
             >
@@ -620,16 +620,16 @@ function MesParisContent() {
                   display: "inline-flex",
                   alignItems: "center",
                   width: "fit-content",
-                  padding: "10px 14px",
+                  padding: "8px 12px",
                   borderRadius: 999,
                   background: "color-mix(in srgb, var(--pmu-text) 14%, transparent)",
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: 800,
                 }}
               >
                 {isSubscribed ? `Abonnement ${subscriptionStatus}` : "Compte gratuit"}
               </div>
-              <div style={{ fontSize: 13, lineHeight: "19px", color: "color-mix(in srgb, var(--pmu-text) 78%, transparent)" }}>
+              <div style={{ fontSize: 12, lineHeight: "18px", color: "color-mix(in srgb, var(--pmu-text) 78%, transparent)" }}>
                 {isSubscribed
                   ? "Ton espace premium est actif : pronostics complets, mises et tickets détaillés."
                   : "Passe en premium pour débloquer les opportunités value filtrées, les mises Kelly et les tickets optimisés."}
@@ -640,7 +640,7 @@ function MesParisContent() {
                 style={{
                   border: "none",
                   borderRadius: 999,
-                  padding: "12px 16px",
+                  padding: "10px 14px",
                   background: GREEN,
                   color: "var(--pmu-on-primary)",
                   fontWeight: 800,
@@ -659,7 +659,7 @@ function MesParisContent() {
                   style={{
                     border: "1px solid color-mix(in srgb, var(--pmu-text) 22%, transparent)",
                     borderRadius: 999,
-                    padding: "12px 16px",
+                    padding: "10px 14px",
                     background: "transparent",
                     color: "var(--pmu-text)",
                     fontWeight: 800,
@@ -670,7 +670,7 @@ function MesParisContent() {
                 </button>
               ) : null}
               {!isSubscribed ? (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {[
                     "Top 5 complet",
                     "Opportunité value confirmée",
@@ -680,10 +680,10 @@ function MesParisContent() {
                     <div
                       key={item}
                       style={{
-                        padding: "8px 10px",
+                        padding: "7px 9px",
                         borderRadius: 999,
                         background: "color-mix(in srgb, var(--pmu-text) 12%, transparent)",
-                        fontSize: 11,
+                        fontSize: 10,
                         fontWeight: 800,
                       }}
                     >
@@ -699,8 +699,8 @@ function MesParisContent() {
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-              gap: 12,
-              marginBottom: 18,
+              gap: 10,
+              marginBottom: 14,
             }}
           >
             {[
@@ -717,37 +717,37 @@ function MesParisContent() {
                 key={item.label}
                 style={{
                   background: CARD,
-                  borderRadius: 22,
-                  padding: "16px 12px",
+                  borderRadius: 18,
+                  padding: "14px 10px",
                   textAlign: "center",
-                  boxShadow: "var(--pmu-shadow)",
+                  boxShadow: "0 10px 24px rgba(0, 0, 0, 0.18)",
                   border: `1px solid ${BORDER}`,
                 }}
               >
-                <div style={{ fontSize: 22, fontWeight: 800, color: item.color, letterSpacing: "-0.4px" }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: item.color, letterSpacing: "-0.4px" }}>
                   {item.value}
                 </div>
-                <div style={{ fontSize: 11, color: "var(--pmu-text-muted)", marginTop: 3 }}>{item.label}</div>
+                <div style={{ fontSize: 10, color: "var(--pmu-text-muted)", marginTop: 2 }}>{item.label}</div>
               </div>
             ))}
           </section>
 
           {pendingCount > 0 ? (
-            <div style={{ marginBottom: 18 }}>
+            <div style={{ marginBottom: 14 }}>
               <button
                 onClick={handleSettle}
                 disabled={settling}
                 style={{
                   width: "100%",
-                  padding: 16,
-                  borderRadius: 18,
+                  padding: 14,
+                  borderRadius: 14,
                   border: "none",
                   background: settling ? "var(--pmu-border-strong)" : "var(--pmu-orange)",
                   color: settling ? "var(--pmu-text-muted)" : "var(--pmu-on-primary)",
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: 800,
                   cursor: settling ? "not-allowed" : "pointer",
-                  boxShadow: "0 16px 28px color-mix(in srgb, var(--pmu-orange) 28%, transparent)",
+                  boxShadow: "0 12px 22px color-mix(in srgb, var(--pmu-orange) 20%, transparent)",
                 }}
               >
                 {settling ? "Vérification..." : `Vérifier les résultats (${pendingCount} en attente)`}
@@ -756,7 +756,7 @@ function MesParisContent() {
           ) : null}
 
           <section style={{ padding: 0 }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: DARK, marginBottom: 14 }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: DARK, marginBottom: 12 }}>
               Historique
             </div>
 
@@ -764,16 +764,16 @@ function MesParisContent() {
               <div
                 style={{
                   textAlign: "center",
-                  padding: "48px 20px",
+                  padding: "40px 18px",
                   color: "var(--pmu-text-muted)",
-                  borderRadius: 24,
+                  borderRadius: 18,
                   background: CARD,
                   border: `1px solid ${BORDER}`,
                 }}
               >
-                <div style={{ fontSize: 48, marginBottom: 12 }}>&#127922;</div>
+                <div style={{ fontSize: 40, marginBottom: 10 }}>&#127922;</div>
                 <div style={{ fontWeight: 700 }}>Aucun pari</div>
-                <div style={{ fontSize: 13, marginTop: 8 }}>
+                <div style={{ fontSize: 12, marginTop: 6 }}>
                   Ouvre une course pour poser ton premier ticket.
                 </div>
               </div>
@@ -782,7 +782,7 @@ function MesParisContent() {
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-                  gap: 12,
+                  gap: 10,
                 }}
               >
                 {bets.map((bet) => {
@@ -792,9 +792,9 @@ function MesParisContent() {
                       key={bet.id}
                       style={{
                         background: CARD,
-                        borderRadius: 22,
-                        padding: 18,
-                        boxShadow: "var(--pmu-shadow)",
+                        borderRadius: 18,
+                        padding: 14,
+                        boxShadow: "0 10px 24px rgba(0, 0, 0, 0.18)",
                         border: `1px solid ${BORDER}`,
                       }}
                     >
@@ -804,7 +804,7 @@ function MesParisContent() {
                           justifyContent: "space-between",
                           alignItems: "center",
                           gap: 10,
-                          marginBottom: 10,
+                          marginBottom: 8,
                         }}
                       >
                         <div style={{ fontSize: 13, color: "var(--pmu-text-muted)" }}>
@@ -816,34 +816,34 @@ function MesParisContent() {
                             fontWeight: 700,
                             background: cfg.bg,
                             color: cfg.color,
-                            padding: "5px 10px",
-                            borderRadius: 20,
+                            padding: "4px 9px",
+                            borderRadius: 16,
                           }}
                         >
                           {cfg.label}
                         </span>
                       </div>
 
-                      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                         <div
                           style={{
-                            width: 42,
-                            height: 42,
-                            borderRadius: 16,
+                            width: 38,
+                            height: 38,
+                            borderRadius: 12,
                             background: GREEN,
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                             color: "var(--pmu-on-primary)",
                             fontWeight: 800,
-                            fontSize: 15,
+                            fontSize: 14,
                             flexShrink: 0,
                           }}
                         >
                           {bet.cheval_num}
                         </div>
                         <div>
-                          <div style={{ fontWeight: 800, fontSize: 16, color: DARK }}>{bet.cheval_nom}</div>
+                          <div style={{ fontWeight: 800, fontSize: 15, color: DARK }}>{bet.cheval_nom}</div>
                           <div style={{ fontSize: 12, color: "var(--pmu-text-muted)", marginTop: 2 }}>
                             {bet.type_pari} · Cote {bet.cote} · Mise {formatEuros(bet.mise)}
                           </div>
@@ -862,7 +862,7 @@ function MesParisContent() {
                       >
                         <span>{bet.heure_depart} · {bet.date_str}</span>
                         {bet.gain !== null ? (
-                          <strong style={{ color: bet.gain >= 0 ? GREEN : "var(--pmu-red)", fontSize: 15 }}>
+                          <strong style={{ color: bet.gain >= 0 ? GREEN : "var(--pmu-red)", fontSize: 14 }}>
                             {bet.gain >= 0 ? "+" : ""}
                             {formatEuros(bet.gain)}
                           </strong>
@@ -877,7 +877,7 @@ function MesParisContent() {
             )}
           </section>
 
-          <div style={{ marginTop: 20 }}>
+          <div style={{ marginTop: 16 }}>
             <ReferralCard />
           </div>
         </>
@@ -896,8 +896,8 @@ function MesParisContent() {
             background: "color-mix(in srgb, var(--pmu-bg) 95%, transparent)",
             backdropFilter: "blur(18px)",
             borderTop: `1px solid ${BORDER}`,
-            boxShadow: "0 -14px 30px color-mix(in srgb, var(--pmu-text) 12%, transparent)",
-            height: 70,
+            boxShadow: "0 -10px 22px color-mix(in srgb, var(--pmu-text) 10%, transparent)",
+            height: 62,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-around",
@@ -911,7 +911,7 @@ function MesParisContent() {
               alignItems: "center",
               gap: 2,
               cursor: "pointer",
-              paddingTop: 8,
+               paddingTop: 6,
             }}
           >
             <span style={{ fontSize: 22 }}>&#127943;</span>
@@ -924,7 +924,7 @@ function MesParisContent() {
               alignItems: "center",
               gap: 2,
               cursor: "pointer",
-              paddingTop: 8,
+               paddingTop: 6,
               position: "relative",
             }}
           >
@@ -940,7 +940,7 @@ function MesParisContent() {
               alignItems: "center",
               gap: 2,
               cursor: "pointer",
-              paddingTop: 8,
+               paddingTop: 6,
             }}
           >
             <span style={{ fontSize: 22 }}>&#128202;</span>

@@ -354,7 +354,7 @@ const css = `
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    padding: 20px 22px;
+    padding: 16px 18px;
     cursor: pointer;
   }
 
@@ -381,7 +381,7 @@ const css = `
   }
 
   .detail-fold__body {
-    padding: 0 22px 22px;
+    padding: 0 18px 18px;
     border-top: 1px solid ${BORDER_SOFT};
   }
 
@@ -392,12 +392,12 @@ function Tag({ children, color = WHITE, bg = CARD2, mono = false }: { children: 
   return (
     <span style={{
       display: "inline-flex", alignItems: "center",
-      padding: "5px 11px", borderRadius: 9999,
+      padding: "4px 9px", borderRadius: 9999,
       background: bg, color, fontSize: 10, fontWeight: 600,
       letterSpacing: "0.06em", textTransform: "uppercase",
       fontFamily: mono ? "var(--font-mono)" : "var(--font-body)",
       border: `1px solid ${BORDER_SOFT}`,
-      boxShadow: "0 1px 2px rgba(0,0,0,0.12)",
+      boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
     }}>
       {children}
     </span>
@@ -408,10 +408,10 @@ function Card({ children, accent, style }: { children: ReactNode; accent?: strin
   return (
     <div style={{
       background: `linear-gradient(165deg, ${CARD_HI}f0 0%, ${CARD} 48%, ${CARD} 100%)`,
-      borderRadius: 16,
+      borderRadius: 14,
       border: `1px solid ${accent ?? BORDER}`,
       overflow: "hidden",
-      boxShadow: `0 20px 48px rgba(2, 6, 23, 0.45), 0 0 0 1px rgba(45, 212, 191, 0.04)`,
+      boxShadow: `0 12px 28px rgba(2, 6, 23, 0.34), 0 0 0 1px rgba(45, 212, 191, 0.02)`,
       ...style,
     }}>
       {children}
@@ -422,17 +422,17 @@ function Card({ children, accent, style }: { children: ReactNode; accent?: strin
 function SectionCard({ title, kicker, children, accent }: { title: string; kicker?: string; children: ReactNode; accent?: string }) {
   return (
     <Card accent={accent} style={{ marginBottom: 0 }}>
-      <div style={{ padding: "22px 22px 0" }}>
+      <div style={{ padding: "18px 18px 0" }}>
         {kicker && (
           <div style={{ fontSize: 10, fontWeight: 600, color: G, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8, opacity: 0.95 }}>
             {kicker}
           </div>
         )}
-        <div style={{ fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 700, color: WHITE, marginBottom: 16, lineHeight: 1.25, letterSpacing: "-0.02em" }}>
+        <div style={{ fontFamily: "var(--font-display)", fontSize: 17, fontWeight: 700, color: WHITE, marginBottom: 14, lineHeight: 1.2, letterSpacing: "-0.02em" }}>
           {title}
         </div>
       </div>
-      <div style={{ padding: "0 22px 22px" }}>
+      <div style={{ padding: "0 18px 18px" }}>
         {children}
       </div>
     </Card>
@@ -464,7 +464,7 @@ function DetailFold({
                 {kicker}
               </div>
             )}
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 700, color: WHITE, lineHeight: 1.25, letterSpacing: "-0.02em" }}>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 17, fontWeight: 700, color: WHITE, lineHeight: 1.2, letterSpacing: "-0.02em" }}>
               {title}
             </div>
             {summary && (
@@ -490,14 +490,14 @@ function Metric({ label, value, hint, tone = "default" }: { label: string; value
   const borders = { default: BORDER, good: `${G}44`, warn: `${GOLD}44`, bad: `${RED}44` };
 
   return (
-    <div style={{ padding: 14, borderRadius: 10, background: bgs[tone], border: `1px solid ${borders[tone]}` }}>
+    <div style={{ padding: 12, borderRadius: 8, background: bgs[tone], border: `1px solid ${borders[tone]}` }}>
       <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6, fontFamily: "var(--font-mono)" }}>
         {label}
       </div>
-      <div style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 800, color: colors[tone], lineHeight: 1, marginBottom: hint ? 6 : 0 }}>
+      <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 800, color: colors[tone], lineHeight: 1, marginBottom: hint ? 6 : 0 }}>
         {value}
       </div>
-      {hint && <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{hint}</div>}
+      {hint && <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.45 }}>{hint}</div>}
     </div>
   );
 }
@@ -522,7 +522,7 @@ function BetPlanRow({ label, summary }: { label: string; summary: { chevaux: num
   return (
     <div style={{
       display: "flex", alignItems: "flex-start", gap: 12,
-      padding: "12px 0", borderBottom: `1px solid ${BORDER}`,
+      padding: "10px 0", borderBottom: `1px solid ${BORDER}`,
     }}>
       <div style={{ width: 8, height: 8, borderRadius: 2, marginTop: 5, flexShrink: 0, background: summary.eligible ? G : MUTED }} />
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -550,12 +550,12 @@ function BetPlanRow({ label, summary }: { label: string; summary: { chevaux: num
 function RunnerBadge({ num, accent = CARD2 }: { num: number; accent?: string }) {
   return (
     <div style={{
-      width: 46, height: 46, borderRadius: 12, flexShrink: 0,
+      width: 40, height: 40, borderRadius: 10, flexShrink: 0,
       background: `linear-gradient(145deg, ${accent}, ${CARD})`,
       border: `1px solid ${BORDER}`,
       display: "flex", alignItems: "center", justifyContent: "center",
-      fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 800, color: WHITE,
-      boxShadow: "0 6px 16px rgba(2,6,23,0.35)",
+      fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 800, color: WHITE,
+      boxShadow: "0 4px 12px rgba(2,6,23,0.24)",
     }}>
       {num}
     </div>
@@ -571,19 +571,19 @@ function TicketPanel({ title, subtitle, runner, badge, accent, placeMode = false
   const actionTone = getActionTone(runner.prediction.action, runner.prediction.valueBet);
 
   return (
-    <div style={{ borderRadius: 14, border: `1px solid ${accent}40`, overflow: "hidden", boxShadow: "0 12px 32px rgba(2,6,23,0.35)" }}>
+    <div style={{ borderRadius: 12, border: `1px solid ${accent}40`, overflow: "hidden", boxShadow: "0 8px 20px rgba(2,6,23,0.28)" }}>
       {/* Header strip */}
-      <div style={{ padding: "12px 16px", background: `linear-gradient(90deg, ${accent}22, ${accent}0d)`, display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${BORDER_SOFT}` }}>
+      <div style={{ padding: "10px 14px", background: `linear-gradient(90deg, ${accent}22, ${accent}0d)`, display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${BORDER_SOFT}` }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: accent, textTransform: "uppercase", letterSpacing: "0.1em" }}>{title}</span>
         <Tag color={accent} bg={`${accent}20`}>{badge}</Tag>
       </div>
 
-      <div style={{ padding: 16 }}>
+      <div style={{ padding: 14 }}>
         {/* Runner header */}
-        <div style={{ display: "flex", gap: 14, alignItems: "flex-start", marginBottom: 14 }}>
+        <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 12 }}>
           <RunnerBadge num={runner.numPmu} accent={accent} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 800, color: WHITE, lineHeight: 1.1 }}>{runner.nom}</div>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 800, color: WHITE, lineHeight: 1.1 }}>{runner.nom}</div>
             <div style={{ fontSize: 12, color: MUTED, marginTop: 4 }}>{subtitle}</div>
           </div>
           {arrivalPosition !== undefined && (
@@ -592,7 +592,7 @@ function TicketPanel({ title, subtitle, runner, badge, accent, placeMode = false
         </div>
 
         {/* Pills */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 12 }}>
           <Tag color={G} bg={G_DIM}>{formatObjective(runner.prediction.objective)}</Tag>
           <Tag color={actionTone.color} bg={actionTone.bg}>{actionTone.label}</Tag>
           {(runner.stalle || runner.placeCorde) && <Tag color={MUTED} bg={CARD2}>Stalle {runner.stalle ?? runner.placeCorde}</Tag>}
@@ -604,7 +604,7 @@ function TicketPanel({ title, subtitle, runner, badge, accent, placeMode = false
 
         <ConfidenceBar score={runner.prediction.confiance} />
 
-        <div style={{ marginTop: 12, fontSize: 12, lineHeight: 1.6, color: MUTED }}>
+        <div style={{ marginTop: 10, fontSize: 12, lineHeight: 1.5, color: MUTED }}>
           {describeTicketIntent(runner)} — Mise reco : {formatCurrency(runner.prediction.miseBase100) ?? "0 EUR"} / bankroll 100 EUR.
         </div>
       </div>
@@ -620,21 +620,21 @@ function SecondaryRunnerCard({ title, runner, accent, placeMode = false, arrival
   const actionTone = getActionTone(runner.prediction.action, runner.prediction.valueBet);
 
   return (
-    <div style={{ padding: 16, borderRadius: 14, background: `linear-gradient(165deg, ${CARD2}, ${CARD})`, border: `1px solid ${BORDER}`, boxShadow: "0 10px 28px rgba(2,6,23,0.32)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+    <div style={{ padding: 14, borderRadius: 12, background: `linear-gradient(165deg, ${CARD2}, ${CARD})`, border: `1px solid ${BORDER}`, boxShadow: "0 8px 20px rgba(2,6,23,0.26)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <span style={{ fontSize: 10, color: accent, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em" }}>{title}</span>
         {arrivalPosition !== undefined && (
           <Tag color={outcome.color} bg={outcome.bg}>{arrivalPosition ? `${outcome.label} ${formatPosition(arrivalPosition)}` : outcome.label}</Tag>
         )}
       </div>
-      <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 10 }}>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
         <RunnerBadge num={runner.numPmu} accent={accent} />
         <div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 800, color: WHITE }}>{runner.nom}</div>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 800, color: WHITE }}>{runner.nom}</div>
           <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>{humanReference}</div>
         </div>
       </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
         <Tag color={G} bg={G_DIM}>{formatObjective(runner.prediction.objective)}</Tag>
         <Tag color={actionTone.color} bg={actionTone.bg}>{actionTone.label}</Tag>
         {(runner.stalle || runner.placeCorde) && <Tag>Stalle {runner.stalle ?? runner.placeCorde}</Tag>}
@@ -786,11 +786,11 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
   /* Loading skeleton */
   if (loading) {
     return (
-      <div className="course-detail-shell" style={{ maxWidth: 960, margin: "0 auto", padding: "0 16px" }}>
+      <div className="course-detail-shell" style={{ maxWidth: 920, margin: "0 auto", padding: "0 14px" }}>
         <style>{css}</style>
-        <div style={{ height: 60, background: CARD, borderBottom: `1px solid ${BORDER}`, marginBottom: 20 }} />
+        <div style={{ height: 54, background: CARD, borderBottom: `1px solid ${BORDER}`, marginBottom: 16 }} />
         {[230, 120, 120, 180, 160].map((h, i) => (
-          <div key={i} className="shimmer" style={{ height: h, borderRadius: 12, marginBottom: 14 }} />
+          <div key={i} className="shimmer" style={{ height: h, borderRadius: 12, marginBottom: 12 }} />
         ))}
       </div>
     );
@@ -799,9 +799,9 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
   /* Error state */
   if (error || !data) {
     return (
-      <div className="course-detail-shell" style={{ maxWidth: 960, margin: "0 auto", padding: "0 16px" }}>
+      <div className="course-detail-shell" style={{ maxWidth: 920, margin: "0 auto", padding: "0 14px" }}>
         <style>{css}</style>
-        <div style={{ height: 60, background: CARD, borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+        <div style={{ height: 54, background: CARD, borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
           <span style={{ color: WHITE, fontFamily: "var(--font-display)", fontWeight: 800 }}>Analyse course</span>
         </div>
         <SectionCard title="Analyse indisponible" kicker="Erreur">
@@ -816,44 +816,44 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
 
   /* ─── Render ─── */
   return (
-    <div className="course-detail-shell" style={{ maxWidth: 960, margin: "0 auto", paddingBottom: showBottomNav ? 90 : 28 }}>
+    <div className="course-detail-shell" style={{ maxWidth: 920, margin: "0 auto", paddingBottom: showBottomNav ? 84 : 24 }}>
       <style>{css}</style>
 
       {/* Top nav */}
       <div style={{
-        position: "sticky", top: 0, zIndex: 80, height: 60,
+        position: "sticky", top: 0, zIndex: 80, height: 54,
         background: DARK_GLASS, backdropFilter: "blur(20px)",
         borderBottom: `1px solid ${BORDER}`,
         display: "flex", alignItems: "center", justifyContent: "center",
-        padding: "0 16px",
+        padding: "0 14px",
       }}>
         <button onClick={() => router.push(`/?date=${selectedDate}`)} style={{
-          position: "absolute", left: 16, width: 32, height: 32, borderRadius: 8,
+          position: "absolute", left: 14, width: 30, height: 30, borderRadius: 8,
           border: `1px solid ${BORDER}`, background: CARD2, color: WHITE,
-          fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
         }}>
           ←
         </button>
-        <span style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 700, color: WHITE, letterSpacing: "-0.01em" }}>
+        <span style={{ fontFamily: "var(--font-display)", fontSize: 13, fontWeight: 700, color: WHITE, letterSpacing: "-0.01em" }}>
           R{data.courseInfo.reunion}C{data.courseInfo.course} — {data.courseInfo.hippodrome}
         </span>
       </div>
 
-      <div style={{ padding: "20px 16px", display: "grid", gap: 16 }} className="fade-up">
+      <div style={{ padding: "16px 14px", display: "grid", gap: 12 }} className="fade-up">
 
         {/* ── Hero card ── */}
         <Card accent={`${G}44`}>
-          <div style={{ padding: 20 }}>
+          <div style={{ padding: 16 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: G, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 8 }}>
               Lecture course
             </div>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 700, color: WHITE, lineHeight: 1.15, marginBottom: 6, letterSpacing: "-0.02em" }}>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 700, color: WHITE, lineHeight: 1.15, marginBottom: 4, letterSpacing: "-0.02em" }}>
               {data.courseInfo.nomCourse}
             </div>
-            <div style={{ fontSize: 13, color: MUTED, marginBottom: 16 }}>
+            <div style={{ fontSize: 12, color: MUTED, marginBottom: 12 }}>
               {data.courseInfo.hippodrome} · {readableDate}
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 20 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
               <Tag color={G} bg={G_DIM}>{data.courseInfo.discipline}</Tag>
               <Tag color={MUTED} bg={CARD2}>{data.courseInfo.distance}m</Tag>
               <Tag color={MUTED} bg={CARD2}>{data.courseInfo.nombrePartants} partants</Tag>
@@ -863,7 +863,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
             </div>
 
             {indiceOuvertureCourse && analysis ? (
-              <div style={{ marginBottom: 16, padding: 12, borderRadius: 10, border: `1px solid ${BORDER}`, background: CARD2 }}>
+              <div style={{ marginBottom: 12, padding: 10, borderRadius: 8, border: `1px solid ${BORDER}`, background: CARD2 }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: indiceOuvertureCourse.color, letterSpacing: "0.04em" }}>
                   {`${indiceOuvertureCourse.emoji} Indice d'ouverture ? ${indiceOuvertureCourse.label} ? ${indiceOuvertureCourse.score}/10`}
                 </div>
@@ -871,16 +871,16 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
               </div>
             ) : null}
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 10 }}>
               <div>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 42, fontWeight: 500, color: WHITE, lineHeight: 1 }}>
+                 <div style={{ fontFamily: "var(--font-mono)", fontSize: 36, fontWeight: 500, color: WHITE, lineHeight: 1 }}>
                   {data.courseInfo.heureDepart}
                 </div>
-                <div style={{ fontSize: 12, color: MUTED, marginTop: 6 }}>
+                 <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>
                   {data.isFinished ? "Course terminée" : data.pronoAvailable ? "Analyse ouverte" : formatRevealTime(data.minutesUntilStart)}
                 </div>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
                 <Tag
                   color={data.isFinished ? MUTED : data.pronoAvailable ? G : MUTED}
                   bg={data.isFinished ? CARD2 : data.pronoAvailable ? G_DIM : CARD2}
@@ -894,7 +894,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
             </div>
 
             {contextHighlights.length > 0 && (
-              <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${BORDER}`, display: "flex", flexWrap: "wrap", gap: 6 }}>
+               <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${BORDER}`, display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {contextHighlights.map(item => <Tag key={item} color={MUTED}>{item}</Tag>)}
               </div>
             )}
@@ -942,35 +942,35 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
           <>
             {/* ── Verdict ── */}
             <Card accent={`${verdictTone.color}44`}>
-              <div style={{ padding: 20 }}>
+              <div style={{ padding: 16 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: verdictTone.color, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 8 }}>
                   {verdict.label}
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 12 }}>
                   <div>
-                    <div style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 900, color: WHITE, lineHeight: 1.1, marginBottom: 4 }}>
+                    <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 900, color: WHITE, lineHeight: 1.1, marginBottom: 4 }}>
                       {verdict.title}
                     </div>
-                    <div style={{ fontSize: 10, color: G, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8, fontFamily: "var(--font-mono)" }}>
+                    <div style={{ fontSize: 10, color: G, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6, fontFamily: "var(--font-mono)" }}>
                       Ticket conseillé
                     </div>
-                    <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 800, color: WHITE }}>
+                    <div style={{ fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 800, color: WHITE }}>
                       N{simpleTicket.numPmu} {simpleTicket.nom}
                     </div>
                     <div style={{ fontSize: 12, color: MUTED, marginTop: 4 }}>
                       {getHumanReference(simpleTicket, data.courseInfo.estPlat)}
                     </div>
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end", flexShrink: 0 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 5, alignItems: "flex-end", flexShrink: 0 }}>
                     <Tag color={verdictTone.color} bg={verdictTone.bg}>{verdict.title}</Tag>
                     <Tag color={G} bg={G_DIM}>{formatTicketType(simpleTicket.prediction.typePariConseille)}</Tag>
                   </div>
                 </div>
 
-                <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6, marginBottom: 16 }}>{verdict.subtitle}</p>
+                <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.55, marginBottom: 12 }}>{verdict.subtitle}</p>
 
                 {technicalFavorite && technicalFavorite.numPmu !== simpleTicket.numPmu && (
-                  <div style={{ padding: "12px 14px", borderRadius: 8, background: CARD2, border: `1px solid ${BORDER}`, marginBottom: 16 }}>
+                  <div style={{ padding: "10px 12px", borderRadius: 8, background: CARD2, border: `1px solid ${BORDER}`, marginBottom: 12 }}>
                     <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Favori technique moteur</div>
                     <div style={{ fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 700, color: WHITE }}>
                       N{technicalFavorite.numPmu} {technicalFavorite.nom}
@@ -981,11 +981,11 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                   </div>
                 )}
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
+                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 8 }}>
                   <Metric label="Confiance moteur" value={`${analysis.scoreConfiance?.score ?? 0}/10`} hint={analysis.prediction.decisionCourse === "VALIDE" ? "Ticket jouable" : "Lecture défensive"} tone={(analysis.scoreConfiance?.score ?? 0) >= SEUIL_JOUABLE ? "good" : (analysis.scoreConfiance?.score ?? 0) >= SEUIL_SURVEILLANCE ? "warn" : "bad"} />
                   <Metric label="Lisibilité" value={analysis.prediction.lisibilite} hint={describeLisibilite(analysis.prediction.lisibilite)} tone={analysis.prediction.lisibilite === "LISIBLE" ? "good" : analysis.prediction.lisibilite === "COMPLEXE" ? "warn" : "bad"} />
                 </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 14 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
                   {simpleTicketActionTone && (
                     <Tag color={simpleTicketActionTone.color} bg={simpleTicketActionTone.bg}>
                       {simpleTicketActionTone.label}
@@ -1011,7 +1011,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                 arrivalPosition={data.isFinished ? simpleTicketPosition : undefined}
               />
               {(placeBase && placeBase.numPmu !== simpleTicket.numPmu) || (technicalFavorite && technicalFavorite.numPmu !== simpleTicket.numPmu) ? (
-                <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+                <div style={{ marginTop: 8, display: "grid", gap: 8 }}>
                   {placeBase && placeBase.numPmu !== simpleTicket.numPmu && (
                     <SecondaryRunnerCard title="Base placée de secours" runner={placeBase} accent={GOLD} placeMode arrivalPosition={data.isFinished ? placeBasePosition : undefined} humanReference={getHumanReference(placeBase, data.courseInfo.estPlat)} />
                   )}
@@ -1024,25 +1024,25 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
 
             {data.isFinished && officialArrivalRows.length > 0 && (
               <SectionCard title="Débrief officiel" kicker="Arrivée course">
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
                   {officialArrivalRows.slice(0, 3).map((r) => (
                     <Tag key={`${r.position}-${r.numPmu}`} color={WHITE} bg={CARD2}>
                       {formatPosition(r.position)} N{r.numPmu} {r.nom}
                     </Tag>
                   ))}
                 </div>
-                <div style={{ display: "grid", gap: 10 }}>
-                  <div style={{ padding: 14, borderRadius: 10, background: CARD2, border: `1px solid ${BORDER}` }}>
+                <div style={{ display: "grid", gap: 8 }}>
+                  <div style={{ padding: 12, borderRadius: 8, background: CARD2, border: `1px solid ${BORDER}` }}>
                     <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Ticket principal</div>
-                    <div style={{ fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 800, color: WHITE, marginBottom: 8 }}>N{simpleTicket.numPmu} {simpleTicket.nom}</div>
+                    <div style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 800, color: WHITE, marginBottom: 8 }}>N{simpleTicket.numPmu} {simpleTicket.nom}</div>
                     <Tag color={getOutcomeTone(simpleTicketPosition, false).color} bg={getOutcomeTone(simpleTicketPosition, false).bg}>
                       {simpleTicketPosition ? `${getOutcomeTone(simpleTicketPosition, false).label} (${formatPosition(simpleTicketPosition)})` : "Résultat indisponible"}
                     </Tag>
                   </div>
                   {placeBase && placeBase.numPmu !== simpleTicket.numPmu && (
-                    <div style={{ padding: 14, borderRadius: 10, background: CARD2, border: `1px solid ${BORDER}` }}>
+                    <div style={{ padding: 12, borderRadius: 8, background: CARD2, border: `1px solid ${BORDER}` }}>
                       <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Base placée</div>
-                      <div style={{ fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 800, color: WHITE, marginBottom: 8 }}>N{placeBase.numPmu} {placeBase.nom}</div>
+                      <div style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 800, color: WHITE, marginBottom: 8 }}>N{placeBase.numPmu} {placeBase.nom}</div>
                       <Tag color={getOutcomeTone(placeBasePosition, true).color} bg={getOutcomeTone(placeBasePosition, true).bg}>
                         {placeBasePosition ? `${getOutcomeTone(placeBasePosition, true).label} (${formatPosition(placeBasePosition)})` : "Résultat indisponible"}
                       </Tag>
@@ -1053,15 +1053,15 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
             )}
 
             <Card accent={`${BORDER_SOFT}`}>
-              <div style={{ padding: 18, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+              <div style={{ padding: 14, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 10, fontWeight: 600, color: G, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>
                     Lecture experte
                   </div>
-                  <div style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 700, color: WHITE, lineHeight: 1.2, letterSpacing: "-0.02em" }}>
+                  <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700, color: WHITE, lineHeight: 1.2, letterSpacing: "-0.02em" }}>
                     Analyse complète
                   </div>
-                  <div style={{ marginTop: 8, fontSize: 13, color: MUTED, lineHeight: 1.55, maxWidth: 560 }}>
+                  <div style={{ marginTop: 6, fontSize: 12, color: MUTED, lineHeight: 1.5, maxWidth: 560 }}>
                     Marché PMU, bankroll, radar moteur et détails avancés. Ouvre seulement si tu veux creuser la course.
                   </div>
                 </div>
@@ -1072,9 +1072,9 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                     background: showAdvanced ? G_DIM : CARD2,
                     color: showAdvanced ? G : WHITE,
                     borderRadius: 999,
-                    padding: "11px 16px",
+                    padding: "9px 14px",
                     cursor: "pointer",
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: 700,
                     flexShrink: 0,
                   }}
@@ -1091,7 +1091,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
               kicker="Lecture du ticket"
               summary="Confiance complète, tenue du repère et profil ELO du cheval conseillé."
             >
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10, marginBottom: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 8, marginBottom: 12 }}>
                 <Metric label="Confiance moteur" value={`${analysis.scoreConfiance?.score ?? 0}/10`} hint={analysis.prediction.decisionCourse === "VALIDE" ? "Ticket jouable" : "Lecture défensive"} tone={(analysis.scoreConfiance?.score ?? 0) >= SEUIL_JOUABLE ? "good" : (analysis.scoreConfiance?.score ?? 0) >= SEUIL_SURVEILLANCE ? "warn" : "bad"} />
                 <Metric label="Tenue repère" value={`${round1(analysis.soliditeFavori?.score ?? 0)}/100`} hint="Solidité du repère principal" tone={(analysis.soliditeFavori?.score ?? 0) >= 72 ? "good" : (analysis.soliditeFavori?.score ?? 0) >= 62 ? "warn" : "bad"} />
                 <Metric label="Angle de jeu" value={simpleTicket.prediction.action} hint={simpleTicket.prediction.valueBet ? "Opportunité value confirmée" : "Pas d'edge suffisant"} tone={simpleTicket.prediction.action === "MISER" ? "good" : "bad"} />
@@ -1108,8 +1108,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-                  gap: 16,
+                  gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+                  gap: 12,
                 }}
               >
                 {enjeuxRunners.length > 0 ? (
@@ -1133,16 +1133,16 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
               kicker="Décision de jeu"
               summary="Value, mise recommandée et tickets complémentaires à consulter seulement si besoin."
             >
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
                 <SectionCard title="Value et mise" kicker="Décision bankroll" accent={`${G}33`}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                     <Metric label="Cote actuelle" value={formatOdds(simpleTicket.cote)} hint="Cote PMU au moment de l'analyse" />
                     <Metric label="Proba réelle" value={formatPercent(simpleTicket.prediction.probaEstimee)} hint={`Marché ${formatPercent(simpleTicket.prediction.probabiliteImplicite)}`} tone={simpleTicket.prediction.valueBet ? "good" : "warn"} />
                     <Metric label="Mise Kelly" value={formatCurrency(simpleTicket.prediction.miseBase100) ?? "0 EUR"} hint={`Cap bankroll ${Math.round(simpleTicket.prediction.bankrollPct * 100)}%`} tone={simpleTicket.prediction.action === "MISER" ? "good" : "bad"} />
                     <Metric label="Décision" value={simpleTicket.prediction.action} hint={simpleTicket.prediction.valueBet ? "Opportunité value : proba > cote × 1.15" : "Aucune opportunité value"} tone={simpleTicket.prediction.action === "MISER" ? "good" : "bad"} />
                   </div>
                   {(simpleTicket.prediction.topFacteurs ?? []).length > 0 && (
-                    <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", gap: 6 }}>
+                     <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 6 }}>
                       {asArray<string>(simpleTicket.prediction.topFacteurs).map((f) => <Tag key={f} color={G} bg={G_DIM}>{f}</Tag>)}
                     </div>
                   )}
@@ -1165,12 +1165,12 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
               kicker="Lecture avancée"
               summary="Alertes de journée, explication du moteur et radar complet des chevaux du top 5."
             >
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
                 <SectionCard title="Alertes intelligentes" kicker="Lecture globale">
-                  <div style={{ display: "grid", gap: 10 }}>
+                  <div style={{ display: "grid", gap: 8 }}>
                     {daySignal && (
                       <div style={{
-                        padding: 14, borderRadius: 10,
+                        padding: 12, borderRadius: 8,
                         background: daySignal.label === "JOURNEE_FAVORABLE" ? G_DIM : daySignal.label === "JOURNEE_DEFAVORABLE" ? RED_DIM : CARD2,
                         border: `1px solid ${daySignal.label === "JOURNEE_FAVORABLE" ? `${G}44` : daySignal.label === "JOURNEE_DEFAVORABLE" ? `${RED}44` : BORDER}`,
                       }}>
@@ -1197,20 +1197,20 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                 </SectionCard>
 
                 <SectionCard title="Lecture moteur" kicker="Ce qui tient / ce qui force la prudence">
-                  <div style={{ display: "grid", gap: 12 }}>
-                    <div style={{ padding: 14, borderRadius: 10, background: G_DIM, border: `1px solid ${G}33` }}>
+                  <div style={{ display: "grid", gap: 10 }}>
+                    <div style={{ padding: 12, borderRadius: 8, background: G_DIM, border: `1px solid ${G}33` }}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: G, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>✓ Ce qui tient</div>
-                      <div style={{ display: "grid", gap: 8 }}>
+                      <div style={{ display: "grid", gap: 6 }}>
                         {strengths.length > 0 ? strengths.map(p => (
-                          <div key={p} style={{ padding: "10px 12px", borderRadius: 8, background: CARD2, border: `1px solid ${G}33`, fontSize: 13, color: WHITE, lineHeight: 1.5 }}>{p}</div>
+                          <div key={p} style={{ padding: "8px 10px", borderRadius: 8, background: CARD2, border: `1px solid ${G}33`, fontSize: 12, color: WHITE, lineHeight: 1.45 }}>{p}</div>
                         )) : <div style={{ fontSize: 13, color: MUTED }}>Aucun point fort franc ne ressort du moteur.</div>}
                       </div>
                     </div>
-                    <div style={{ padding: 14, borderRadius: 10, background: GOLD_DIM, border: `1px solid ${GOLD}33` }}>
+                    <div style={{ padding: 12, borderRadius: 8, background: GOLD_DIM, border: `1px solid ${GOLD}33` }}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: GOLD, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>⚠ Ce qui force la prudence</div>
-                      <div style={{ display: "grid", gap: 8 }}>
+                      <div style={{ display: "grid", gap: 6 }}>
                         {warnings.length > 0 ? warnings.map(p => (
-                          <div key={p} style={{ padding: "10px 12px", borderRadius: 8, background: CARD2, border: `1px solid ${GOLD}33`, fontSize: 13, color: WHITE, lineHeight: 1.5 }}>{p}</div>
+                          <div key={p} style={{ padding: "8px 10px", borderRadius: 8, background: CARD2, border: `1px solid ${GOLD}33`, fontSize: 12, color: WHITE, lineHeight: 1.45 }}>{p}</div>
                         )) : <div style={{ fontSize: 13, color: MUTED }}>{`Pas d'alerte majeure remontée par le moteur.`}</div>}
                       </div>
                     </div>
@@ -1218,30 +1218,30 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
                 </SectionCard>
               </div>
 
-              <div style={{ marginTop: 16 }}>
+              <div style={{ marginTop: 12 }}>
                 <SectionCard title="Radar top 5" kicker="Classement du moteur">
-                  <div style={{ display: "grid", gap: 10 }}>
+                  <div style={{ display: "grid", gap: 8 }}>
                     {top5Runners.map((runner, index) => {
                       const position = data.isFinished ? getArrivalPosition(runner.numPmu, officialArrivalRows) : null;
                       const at = getActionTone(runner.prediction.action, runner.prediction.valueBet);
                       return (
                         <div key={runner.numPmu} style={{
-                          display: "grid", gridTemplateColumns: "44px 1fr auto", gap: 12, alignItems: "center",
-                          padding: 12, borderRadius: 10,
+                          display: "grid", gridTemplateColumns: "40px 1fr auto", gap: 10, alignItems: "center",
+                          padding: 10, borderRadius: 8,
                           background: index === 0 ? G_DIM : CARD2,
                           border: `1px solid ${index === 0 ? `${G}44` : BORDER}`,
                         }}>
                           <RunnerBadge num={runner.numPmu} accent={index === 0 ? G : CARD} />
                           <div style={{ minWidth: 0 }}>
-                            <div style={{ fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 800, color: WHITE }}>{runner.nom}</div>
+                            <div style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 800, color: WHITE }}>{runner.nom}</div>
                             <div style={{ fontSize: 11, color: MUTED, marginTop: 2, fontFamily: "var(--font-mono)" }}>
                               Score {round1(runner.prediction.scoreFinalPari)} · PMU {formatOdds(runner.cote)} · Proba {formatPercent(runner.prediction.probaEstimee)}
                             </div>
-                            <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
+                            <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 5 }}>
                               <Tag color={at.color} bg={at.bg}>{at.label}</Tag>
                               {asArray<string>(runner.prediction.topFacteurs).map((f) => <Tag key={`${runner.numPmu}-${f}`} color={MUTED}>{f}</Tag>)}
                             </div>
-                            <div style={{ marginTop: 8 }}><ConfidenceBar score={runner.prediction.confiance} /></div>
+                            <div style={{ marginTop: 6 }}><ConfidenceBar score={runner.prediction.confiance} /></div>
                           </div>
                           {position && <Tag color={position <= 3 ? G : MUTED} bg={position <= 3 ? G_DIM : CARD2}>{formatPosition(position)}</Tag>}
                         </div>
@@ -1262,7 +1262,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
       {showBottomNav ? (
         <div style={{
           position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
-          width: "100%", maxWidth: 960, height: 64,
+          width: "100%", maxWidth: 920, height: 60,
           background: DARK_GLASS, backdropFilter: "blur(20px)",
           borderTop: `1px solid ${BORDER}`,
           display: "flex", justifyContent: "space-around", alignItems: "center", zIndex: 120,
@@ -1275,7 +1275,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
             <button key={item.label} onClick={() => router.push(item.path)} style={{
               border: "none", background: "transparent", cursor: "pointer",
               fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 700,
-              color: item.active ? G : MUTED, padding: "8px 16px",
+              color: item.active ? G : MUTED, padding: "6px 14px",
             }}>
               {item.label}
             </button>
