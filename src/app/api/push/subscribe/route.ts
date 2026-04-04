@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { badRequest, serverError } from "@/lib/api-response";
+import { badRequest, serverError, serviceUnavailable } from "@/lib/api-response";
 import { getOptionalRequestUser } from "@/lib/request-auth";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
@@ -18,7 +18,7 @@ type PushSubscriptionBody = {
 export async function POST(request: NextRequest) {
   const admin = getSupabaseAdminClient();
   if (!admin) {
-    return serverError("Supabase admin n'est pas configure pour enregistrer les alertes push.");
+    return serviceUnavailable("Supabase admin n'est pas configure pour enregistrer les alertes push.");
   }
 
   const auth = await getOptionalRequestUser(request);

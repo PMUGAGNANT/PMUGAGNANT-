@@ -192,7 +192,7 @@ export function PronoHero({
           onClick={onClick}
           className="app-button-primary w-full max-w-sm py-4 text-base font-black"
         >
-          Voir l'analyse complète →
+          Voir l&apos;analyse compl?te ?
         </button>
       </div>
 

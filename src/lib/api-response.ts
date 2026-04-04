@@ -8,8 +8,12 @@ export function badRequest(message: string, details?: Record<string, unknown>) {
   );
 }
 
-export function unauthorized(message = "Accès non autorisé.") {
+export function unauthorized(message = "Acc?s non autoris?.") {
   return NextResponse.json({ success: false, error: message }, { status: 401 });
+}
+
+export function serviceUnavailable(message: string) {
+  return NextResponse.json({ success: false, error: message }, { status: 503 });
 }
 
 export function serverError(message: string, error?: unknown, context?: Record<string, unknown>) {

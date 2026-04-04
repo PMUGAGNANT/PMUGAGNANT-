@@ -17,7 +17,7 @@ function timingSafeEqualString(left: string, right: string) {
  * Heavy backtest refresh is public on /api/backtest but must not be abusable in production.
  * This does not replace route logic; it only gates ?refresh=1 when NODE_ENV=production.
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   if (request.nextUrl.pathname !== "/api/backtest") {
     return NextResponse.next();
   }

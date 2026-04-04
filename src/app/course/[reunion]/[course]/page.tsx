@@ -865,7 +865,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ reunion
             {indiceOuvertureCourse && analysis ? (
               <div style={{ marginBottom: 16, padding: 12, borderRadius: 10, border: `1px solid ${BORDER}`, background: CARD2 }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: indiceOuvertureCourse.color, letterSpacing: "0.04em" }}>
-                  {indiceOuvertureCourse.emoji} Indice d'ouverture — {indiceOuvertureCourse.label} · {indiceOuvertureCourse.score}/10
+                  {`${indiceOuvertureCourse.emoji} Indice d'ouverture ? ${indiceOuvertureCourse.label} ? ${indiceOuvertureCourse.score}/10`}
                 </div>
                 <div style={{ fontSize: 12, color: MUTED, marginTop: 4, lineHeight: 1.5 }}>{indiceOuvertureCourse.conseil}</div>
               </div>

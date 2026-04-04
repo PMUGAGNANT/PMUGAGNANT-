@@ -33,7 +33,7 @@ export function TelegramCTA() {
             Ouvre le bot Telegram gratuit
           </p>
           <p className="mt-2 max-w-2xl text-xs leading-6 text-[var(--pmu-text-soft)]">
-            Ouvre le bot, puis appuie sur Start. Si Telegram ne s'ouvre pas automatiquement, copie le lien et colle-le dans l'app.
+            Ouvre le bot, puis appuie sur Start. Si Telegram ne s&apos;ouvre pas automatiquement, copie le lien et colle-le dans l&apos;app.
           </p>
         </div>
         <div className="flex shrink-0 flex-col gap-3 md:items-end">
@@ -57,7 +57,7 @@ export function TelegramCTA() {
               background: "color-mix(in srgb, #0088CC 10%, var(--pmu-surface))",
             }}
           >
-            OUVRIR DANS L'APP
+            OUVRIR DANS L&apos;APP
           </a>
           <button
             type="button"

@@ -105,7 +105,7 @@ export function ReferralInput({ defaultCode = "" }: ReferralInputProps) {
 
       {defaultCode ? (
         <div style={{ marginTop: 10, fontSize: 12, fontWeight: 700, color: "var(--pmu-primary)" }}>
-          Code detecte automatiquement depuis votre lien d'invitation.
+          Code d?tect? automatiquement depuis votre lien d&apos;invitation.
         </div>
       ) : null}
 

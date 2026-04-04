@@ -5,7 +5,7 @@ import {
   getSupabaseConfigError,
 } from "@/lib/supabase";
 import { getBearerToken } from "@/lib/request-utils";
-import { serverError, unauthorized } from "@/lib/api-response";
+import { serviceUnavailable, serverError, unauthorized } from "@/lib/api-response";
 
 export function getSupabaseRequestClientFromRequest(req: NextRequest) {
   const token = getBearerToken(req.headers.get("authorization"));
@@ -14,14 +14,18 @@ export function getSupabaseRequestClientFromRequest(req: NextRequest) {
 
 export async function getOptionalRequestUser(
   req: NextRequest
-): Promise<{ client: SupabaseClient | null; user: User | null; errorResponse?: ReturnType<typeof serverError> }> {
+): Promise<{
+  client: SupabaseClient | null;
+  user: User | null;
+  errorResponse?: ReturnType<typeof serviceUnavailable> | ReturnType<typeof serverError>;
+}> {
   const client = getSupabaseRequestClientFromRequest(req);
 
   if (!client) {
     return {
       client: null,
       user: null,
-      errorResponse: serverError(getSupabaseConfigError()),
+      errorResponse: serviceUnavailable(getSupabaseConfigError()),
     };
   }
 
@@ -45,7 +49,12 @@ export async function getAuthenticatedRequestUser(
   req: NextRequest
 ): Promise<
   | { client: SupabaseClient; user: User }
-  | { errorResponse: ReturnType<typeof unauthorized> | ReturnType<typeof serverError> }
+  | {
+      errorResponse:
+        | ReturnType<typeof unauthorized>
+        | ReturnType<typeof serviceUnavailable>
+        | ReturnType<typeof serverError>;
+    }
 > {
   const auth = await getOptionalRequestUser(req);
 

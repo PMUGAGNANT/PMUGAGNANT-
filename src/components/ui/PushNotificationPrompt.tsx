@@ -216,10 +216,10 @@ export function PushNotificationPrompt() {
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-lg font-black text-[var(--pmu-text)]">
-              Recevez les signaux en direct sur votre telephone
+              Recevez les signaux en direct sur votre t?l?phone
             </div>
             <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">
-              Sans installer d'app — directement dans votre navigateur.
+              Sans installer d&apos;app ? directement dans votre navigateur.
             </p>
           </div>
         </div>

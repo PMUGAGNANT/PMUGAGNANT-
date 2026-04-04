@@ -40,8 +40,8 @@ export function HowItWorks() {
           Simple, même si vous débutez
         </h2>
         <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-[var(--pmu-text-soft)]">
-          Pas besoin d'être expert du turf. Le moteur fait le tri, vous gardez
-          la décision finale.
+          Pas besoin d&apos;?tre expert du turf. Le moteur fait le tri, vous gardez
+          la d?cision finale.
         </p>
       </div>
 
