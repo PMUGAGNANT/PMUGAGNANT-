@@ -544,7 +544,7 @@ function PageContent() {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <section className="app-card overflow-hidden p-5 md:p-6">
-        <div className="grid gap-5 xl:grid-cols-[1.15fr,0.85fr] xl:items-start">
+        <div className="grid gap-5 xl:grid-cols-[1.2fr,0.8fr] xl:items-end">
           <div className="space-y-4">
             <div className="space-y-3">
               <p className="app-kicker">Décision claire, exécution disciplinée</p>
@@ -552,7 +552,7 @@ function PageContent() {
                 Un moteur qui repère les erreurs du marché pour décider vite, sans bruit.
               </h1>
               <p className="max-w-3xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
-                Radar du jour, top 3, puis programme trié. Chaque écran pousse une décision claire.
+                Le plus important d'abord : cheval du jour, top jouables, puis programme trié.
               </p>
             </div>
 
@@ -580,34 +580,23 @@ function PageContent() {
             </div>
           </div>
 
-          <div className="grid gap-3">
-            {[
-              {
-                title: "Accès gratuit",
-                text: "Le radar du jour, les priorités et le tri du moteur sont lisibles en quelques secondes.",
-              },
-              {
-                title: "Jouer avec cadre",
-                text: "Tickets bankroll et opportunités value uniquement quand la fenêtre de jeu est réelle.",
-              },
-              {
-                title: "Après la course",
-                text: "Le bilan vérifie si le moteur aide, sans enjoliver les résultats.",
-              },
-            ].map((item) => (
-              <div key={item.title} className="app-card-muted px-5 py-4">
-                <h2 className="text-lg font-bold text-[var(--pmu-text)]">{item.title}</h2>
-                <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">{item.text}</p>
-              </div>
-            ))}
+          <div className="app-card-muted p-4">
+            <p className="app-label">Ce que tu vois tout de suite</p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+              {[
+                "Cheval du jour et niveau de confiance",
+                "Top 3 jouables quand le signal est propre",
+                "Tri du programme par urgence ou qualité",
+                "Bilan réel sans enjoliver les pertes",
+              ].map((item) => (
+                <p key={item} className="text-sm leading-6 text-[var(--pmu-text-soft)]">
+                  {item}
+                </p>
+              ))}
+            </div>
           </div>
         </div>
       </section>
-
-      <PerformanceProof />
-      <UserStreakCard />
-
-      <PromoVideoSection />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="app-card p-5">
@@ -631,6 +620,53 @@ function PageContent() {
           <p className="mt-1 text-sm text-[var(--pmu-text-muted)]">courses à moins d’une heure</p>
         </div>
       </section>
+
+      {radarRace && radarRace.score?.pick?.numPmu && radarRace.score?.pick?.nom ? (
+        <>
+          <PronoHero
+            horseName={radarRace.score.pick.nom}
+            horseNum={radarRace.score.pick.numPmu}
+            confidence={radarRace.confidence}
+            hippodrome={radarRace.race.hippodrome}
+            heureDepart={radarRace.race.heureDepart}
+            courseName={radarRace.race.nomCourse}
+            reunion={radarRace.race.reunion}
+            course={radarRace.race.course}
+            betType={radarRace.score.pick.betType}
+            cote={null}
+            topFacteurs={translateFactors(radarRace.score.pick.topFacteurs ?? [])}
+            lisibilite={radarRace.score?.lisibilite}
+            onClick={() => navigateToRace(radarRace.race)}
+          />
+          {radarRace.score?.pepiteDuJour?.numPmu && radarRace.score?.pepiteDuJour?.nom ? (
+            <PepiteCard
+              horseName={radarRace.score.pepiteDuJour.nom}
+              horseNum={radarRace.score.pepiteDuJour.numPmu}
+              confidence={radarRace.score.pepiteDuJour.confidence ?? 0}
+              cote={radarRace.score.pepiteDuJour.cote ?? null}
+              hippodrome={radarRace.race.hippodrome}
+              heureDepart={radarRace.race.heureDepart}
+              reunion={radarRace.race.reunion}
+              course={radarRace.race.course}
+              topFacteurs={translateFactors(radarRace.score.pepiteDuJour.topFacteurs ?? [])}
+              onClick={() => navigateToRace(radarRace.race)}
+            />
+          ) : null}
+        </>
+      ) : radarRace && radarProfile ? (
+        <RadarHero
+          raceTitle={`R${radarRace.race.reunion}C${radarRace.race.course} - ${radarRace.race.nomCourse}`}
+          hippodrome={radarRace.race.hippodrome}
+          raceMeta={formatRaceMeta(radarRace.race)}
+          displayScore={radarRace.scoreValue}
+          profile={radarProfile}
+          heureDepart={radarRace.race.heureDepart}
+          dateStr={radarRace.race.dateStr}
+          onClick={() => navigateToRace(radarRace.race)}
+        />
+      ) : null}
+
+      {topParisItems.length ? <TopParisStrip items={topParisItems} /> : null}
 
       <section className="grid gap-4 xl:grid-cols-[1.1fr,0.9fr]">
         <div className="app-card p-5 md:p-6">
@@ -683,72 +719,6 @@ function PageContent() {
         </div>
       </section>
 
-      {radarRace && radarRace.score?.pick?.numPmu && radarRace.score?.pick?.nom ? (
-        <>
-          <PronoHero
-            horseName={radarRace.score.pick.nom}
-            horseNum={radarRace.score.pick.numPmu}
-            confidence={radarRace.confidence}
-            hippodrome={radarRace.race.hippodrome}
-            heureDepart={radarRace.race.heureDepart}
-            courseName={radarRace.race.nomCourse}
-            reunion={radarRace.race.reunion}
-            course={radarRace.race.course}
-            betType={radarRace.score.pick.betType}
-            cote={null}
-            topFacteurs={translateFactors(radarRace.score.pick.topFacteurs ?? [])}
-            lisibilite={radarRace.score?.lisibilite}
-            onClick={() => navigateToRace(radarRace.race)}
-          />
-          {radarRace.score?.pepiteDuJour?.numPmu && radarRace.score?.pepiteDuJour?.nom ? (
-            <PepiteCard
-              horseName={radarRace.score.pepiteDuJour.nom}
-              horseNum={radarRace.score.pepiteDuJour.numPmu}
-              confidence={radarRace.score.pepiteDuJour.confidence ?? 0}
-              cote={radarRace.score.pepiteDuJour.cote ?? null}
-              hippodrome={radarRace.race.hippodrome}
-              heureDepart={radarRace.race.heureDepart}
-              reunion={radarRace.race.reunion}
-              course={radarRace.race.course}
-              topFacteurs={translateFactors(radarRace.score.pepiteDuJour.topFacteurs ?? [])}
-              onClick={() => navigateToRace(radarRace.race)}
-            />
-          ) : null}
-        </>
-      ) : radarRace && radarProfile ? (
-        <RadarHero
-          raceTitle={`R${radarRace.race.reunion}C${radarRace.race.course} - ${radarRace.race.nomCourse}`}
-          hippodrome={radarRace.race.hippodrome}
-          raceMeta={formatRaceMeta(radarRace.race)}
-          displayScore={radarRace.scoreValue}
-          profile={radarProfile}
-          heureDepart={radarRace.race.heureDepart}
-          dateStr={radarRace.race.dateStr}
-          onClick={() => navigateToRace(radarRace.race)}
-        />
-      ) : null}
-
-      <TelegramCTA />
-      <HowItWorks />
-
-      {topParisItems.length ? <TopParisStrip items={topParisItems} /> : null}
-
-      {quinteDuJour ? (
-        <section className="grid gap-4 lg:grid-cols-2">
-          <SagesseFoules
-            raceId={`${selectedDate}-R${quinteDuJour.race.reunion}C${quinteDuJour.race.course}`}
-            raceLabel={`${quinteDuJour.race.nomCourse} (R${quinteDuJour.race.reunion}C${quinteDuJour.race.course})`}
-          />
-          <ComparatifIA
-            dateStr={selectedDate}
-            reunion={quinteDuJour.race.reunion}
-            course={quinteDuJour.race.course}
-            nomCourse={quinteDuJour.race.nomCourse}
-          />
-        </section>
-      ) : null}
-
-      <RecentResults />
 
       {!isLoading && !error && featuredRaces.length > 0 && topParisItems.length === 0 ? (
         <section className="app-card p-5 text-sm leading-6 text-[var(--pmu-text-soft)]">
@@ -850,6 +820,33 @@ function PageContent() {
           </p>
         </section>
       ) : null}
+
+      <section className="grid gap-4 xl:grid-cols-[1.15fr,0.85fr] xl:items-start">
+        <PerformanceProof />
+        <UserStreakCard />
+      </section>
+
+      <RecentResults />
+
+      {quinteDuJour ? (
+        <section className="grid gap-4 lg:grid-cols-2">
+          <SagesseFoules
+            raceId={`${selectedDate}-R${quinteDuJour.race.reunion}C${quinteDuJour.race.course}`}
+            raceLabel={`${quinteDuJour.race.nomCourse} (R${quinteDuJour.race.reunion}C${quinteDuJour.race.course})`}
+          />
+          <ComparatifIA
+            dateStr={selectedDate}
+            reunion={quinteDuJour.race.reunion}
+            course={quinteDuJour.race.course}
+            nomCourse={quinteDuJour.race.nomCourse}
+          />
+        </section>
+      ) : null}
+
+      <PromoVideoSection />
+      <TelegramCTA />
+      <HowItWorks />
+
     </div>
   );
 }
