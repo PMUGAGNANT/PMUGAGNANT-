@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { ComparatifIA } from "@/components/ui/ComparatifIA";
 import { CourseCard } from "@/components/ui/CourseCard";
+import { DirectCourseJump } from "@/components/ui/DirectCourseJump";
 import { FilterPills } from "@/components/ui/FilterPills";
 import { HowItWorks } from "@/components/ui/HowItWorks";
 import { PepiteCard } from "@/components/ui/PepiteCard";
@@ -38,6 +39,7 @@ import type { Lisibilite, PredictionDecision, RaceSummary } from "@/lib/types";
 
 type ScoreStage = "preview_2h" | "preview_1h" | "final_30m" | "finished";
 type SortMode = "hour" | "score" | "urgent" | "allocation";
+type HomeSecondaryPanel = "performance" | "results" | "demo" | "method" | "quinte";
 
 type RaceScore = {
   dateStr: string;
@@ -356,6 +358,7 @@ function PageContent() {
 
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [sortMode, setSortMode] = useState<SortMode>("hour");
+  const [secondaryPanel, setSecondaryPanel] = useState<HomeSecondaryPanel>("performance");
   const [races, setRaces] = useState<RaceSummary[]>([]);
   const [scores, setScores] = useState<RaceScore[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -539,24 +542,45 @@ function PageContent() {
     return { meetings, playable, hot, closingSoon };
   }, [featuredRaces, races]);
 
+  const secondaryPanels = useMemo(() => {
+    const base: Array<{ key: HomeSecondaryPanel; label: string }> = [
+      { key: "performance", label: "Performance" },
+      { key: "results", label: "Résultats" },
+      { key: "demo", label: "Démo vidéo" },
+      { key: "method", label: "Méthode" },
+    ];
+
+    if (quinteDuJour) {
+      base.push({ key: "quinte", label: "Quinté" });
+    }
+
+    return base;
+  }, [quinteDuJour]);
+
+  useEffect(() => {
+    if (secondaryPanel === "quinte" && !quinteDuJour) {
+      setSecondaryPanel("performance");
+    }
+  }, [quinteDuJour, secondaryPanel]);
+
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <section className="app-card overflow-hidden p-5 md:p-6">
-        <div className="grid gap-5 xl:grid-cols-[1.2fr,0.8fr] xl:items-end">
+        <div className="grid gap-5 xl:grid-cols-[1.15fr,0.85fr] xl:items-end">
           <div className="space-y-4">
-            <div className="space-y-3">
-              <p className="app-kicker">Décision claire, exécution disciplinée</p>
-              <h1 className="max-w-4xl text-3xl font-black leading-[0.94] tracking-tight text-[var(--pmu-text)] md:text-5xl">
-                Un moteur qui repère les erreurs du marché pour décider vite, sans bruit.
+            <div className="space-y-2">
+              <p className="app-kicker">Tableau de bord du jour</p>
+              <h1 className="max-w-4xl text-2xl font-black leading-tight tracking-tight text-[var(--pmu-text)] md:text-4xl">
+                Cheval du jour, top jouables et programme trié au même endroit.
               </h1>
-              <p className="max-w-3xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
-                Le plus important d'abord : cheval du jour, top jouables, puis programme trié.
+              <p className="max-w-3xl text-sm leading-6 text-[var(--pmu-text-soft)] md:text-base">
+                L’accueil sert d’écran de décision. Le reste vit plus bas dans un panneau secondaire, mieux rangé.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <button type="button" onClick={() => router.push("/login")} className="app-button-secondary">
-                Se connecter
+              <button type="button" onClick={() => router.push("/resultats")} className="app-button-secondary">
+                Voir les résultats
               </button>
               <button type="button" onClick={() => router.push("/premium")} className="app-button-primary">
                 Voir l’offre premium
@@ -564,12 +588,7 @@ function PageContent() {
             </div>
 
             <div className="flex flex-wrap gap-2 text-xs font-semibold text-[var(--pmu-text-soft)]">
-              {[
-                "Radar du jour",
-                "Top 3 jouables",
-                "Programme trié",
-                "Bilan réel",
-              ].map((label) => (
+              {["Cheval du jour", "Top 3 jouables", "Accès direct R/C", "Programme trié"].map((label) => (
                 <span key={label} className="app-pill text-xs">
                   {label}
                 </span>
@@ -577,19 +596,18 @@ function PageContent() {
             </div>
           </div>
 
-          <div className="app-card-muted p-4">
-            <p className="app-label">Ce que tu vois tout de suite</p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-              {[
-                "Cheval du jour et niveau de confiance",
-                "Top 3 jouables quand le signal est propre",
-                "Programme trié sans bruit",
-                "Bilan réel, gains et pertes",
-              ].map((item) => (
-                <p key={item} className="text-sm leading-6 text-[var(--pmu-text-soft)]">
-                  {item}
-                </p>
-              ))}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="app-card-muted px-4 py-3">
+              <p className="app-label">Date active</p>
+              <p className="mt-2 text-lg font-black capitalize text-[var(--pmu-text)]">{formatRelativeDay(selectedDate)}</p>
+            </div>
+            <div className="app-card-muted px-4 py-3">
+              <p className="app-label">Programme</p>
+              <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">{races.length}</p>
+            </div>
+            <div className="app-card-muted px-4 py-3">
+              <p className="app-label">Jouables</p>
+              <p className="mt-2 text-2xl font-black text-[var(--pmu-primary)]">{summaryStats.playable}</p>
             </div>
           </div>
         </div>
@@ -642,38 +660,15 @@ function PageContent() {
 
       {topParisItems.length ? <TopParisStrip items={topParisItems} /> : null}
 
-      <section className="grid gap-4 xl:grid-cols-[1.1fr,0.9fr] xl:items-start">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="app-card p-5">
-            <p className="app-label">Date active</p>
-            <p className="mt-3 text-2xl font-black capitalize tracking-tight text-[var(--pmu-text)]">{formatRelativeDay(selectedDate)}</p>
-            <p className="mt-1 text-sm text-[var(--pmu-text-muted)]">{formatDisplayDate(selectedDate)}</p>
-          </div>
-          <div className="app-card p-5">
-            <p className="app-label">Programme</p>
-            <p className="mt-3 text-3xl font-black tracking-tight text-[var(--pmu-text)]">{races.length}</p>
-            <p className="mt-1 text-sm text-[var(--pmu-text-muted)]">{summaryStats.meetings} réunions chargées</p>
-          </div>
-          <div className="app-card p-5">
-            <p className="app-label">Courses jouables</p>
-            <p className="mt-3 text-3xl font-black tracking-tight text-[var(--pmu-primary)]">{summaryStats.playable}</p>
-            <p className="mt-1 text-sm text-[var(--pmu-text-muted)]">signaux validés par le moteur</p>
-          </div>
-          <div className="app-card p-5">
-            <p className="app-label">Départs proches</p>
-            <p className="mt-3 text-3xl font-black tracking-tight text-[var(--pmu-text)]">{summaryStats.closingSoon}</p>
-            <p className="mt-1 text-sm text-[var(--pmu-text-muted)]">courses à moins d’une heure</p>
-          </div>
-        </div>
-
-        <div className="app-card p-5 md:p-6">
+      <section className="app-card p-5 md:p-6">
+        <div className="grid gap-5 xl:grid-cols-[1.1fr,0.9fr]">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div>
                 <p className="app-kicker">Pilotage du jour</p>
                 <h2 className="mt-2 text-2xl font-black tracking-tight text-[var(--pmu-text)] md:text-3xl">{formatDisplayDate(selectedDate)}</h2>
-                <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">
-                  Change de journée sans quitter l’écran principal. Le tri et le radar se recalculent automatiquement.
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--pmu-text-soft)]">
+                  Change de journée, trie le programme et ouvre une course sans scroller dans toute la liste.
                 </p>
               </div>
 
@@ -690,7 +685,7 @@ function PageContent() {
               </div>
             </div>
 
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr),auto,auto] lg:items-center">
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr),auto,auto,auto] lg:items-center">
               <label className="block">
                 <span className="sr-only">Choisir une date</span>
                 <input
@@ -700,6 +695,10 @@ function PageContent() {
                   onChange={(event) => setSelectedDate(normalizeDateParam(event.target.value.replaceAll("-", "")))}
                 />
               </label>
+              <div className="app-card-muted px-4 py-3">
+                <p className="app-label">Programme</p>
+                <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">{races.length}</p>
+              </div>
               <div className="app-card-muted px-4 py-3">
                 <p className="app-label">Pistes chaudes</p>
                 <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">{summaryStats.hot}</p>
@@ -719,13 +718,25 @@ function PageContent() {
                   <h2 className="app-section-title">Opportunités détectées</h2>
                 </div>
                 <p className="max-w-xl text-sm leading-6 text-[var(--pmu-text-soft)]">
-                  Chaque carte = une décision. Trie par heure, note, urgence ou enjeu.
+                  Chaque carte pousse une décision. Trie vite, garde la lecture utile, puis ouvre la bonne course.
                 </p>
               </div>
               <FilterPills options={SORT_OPTIONS} value={sortMode} onChange={setSortMode} />
             </div>
           </div>
+
+          <DirectCourseJump races={races} onOpenRace={navigateToRace} />
         </div>
+      </section>
+
+      <section className="app-section-heading">
+        <div>
+          <p className="app-kicker">Programme du jour</p>
+          <h2 className="app-section-title">Les courses à ouvrir maintenant</h2>
+        </div>
+        <p className="max-w-xl text-sm leading-6 text-[var(--pmu-text-soft)]">
+          Le haut de page sert à décider vite. Le programme détaillé commence ici, trié selon ton mode actif.
+        </p>
       </section>
 
 
@@ -817,27 +828,52 @@ function PageContent() {
         </section>
       ) : null}
 
-      <PerformanceProof />
+      <section className="space-y-4">
+        <div className="app-section-heading">
+          <div>
+            <p className="app-kicker">Panneau secondaire</p>
+            <h2 className="app-section-title">Preuves, démo et méthode</h2>
+          </div>
+          <p className="max-w-xl text-sm leading-6 text-[var(--pmu-text-soft)]">
+            Le cœur produit reste au-dessus. Ici, tu ouvres seulement le bloc complémentaire dont tu as besoin.
+          </p>
+        </div>
 
-      {quinteDuJour ? (
-        <section className="grid gap-4 lg:grid-cols-2">
-          <SagesseFoules
-            raceId={`${selectedDate}-R${quinteDuJour.race.reunion}C${quinteDuJour.race.course}`}
-            raceLabel={`${quinteDuJour.race.nomCourse} (R${quinteDuJour.race.reunion}C${quinteDuJour.race.course})`}
-          />
-          <ComparatifIA
-            dateStr={selectedDate}
-            reunion={quinteDuJour.race.reunion}
-            course={quinteDuJour.race.course}
-            nomCourse={quinteDuJour.race.nomCourse}
-          />
-        </section>
-      ) : null}
+        <div className="flex flex-wrap gap-2">
+          {secondaryPanels.map((panel) => {
+            const active = secondaryPanel === panel.key;
+            return (
+              <button
+                key={panel.key}
+                type="button"
+                className={`app-pill ${active ? "app-pill--active" : ""}`}
+                onClick={() => setSecondaryPanel(panel.key)}
+              >
+                {panel.label}
+              </button>
+            );
+          })}
+        </div>
 
-      <RecentResults />
-
-      <HowItWorks />
-      <PromoVideoSection />
+        {secondaryPanel === "performance" ? <PerformanceProof /> : null}
+        {secondaryPanel === "results" ? <RecentResults /> : null}
+        {secondaryPanel === "demo" ? <PromoVideoSection /> : null}
+        {secondaryPanel === "method" ? <HowItWorks /> : null}
+        {secondaryPanel === "quinte" && quinteDuJour ? (
+          <section className="grid gap-4 lg:grid-cols-2">
+            <SagesseFoules
+              raceId={`${selectedDate}-R${quinteDuJour.race.reunion}C${quinteDuJour.race.course}`}
+              raceLabel={`${quinteDuJour.race.nomCourse} (R${quinteDuJour.race.reunion}C${quinteDuJour.race.course})`}
+            />
+            <ComparatifIA
+              dateStr={selectedDate}
+              reunion={quinteDuJour.race.reunion}
+              course={quinteDuJour.race.course}
+              nomCourse={quinteDuJour.race.nomCourse}
+            />
+          </section>
+        ) : null}
+      </section>
 
     </div>
   );
