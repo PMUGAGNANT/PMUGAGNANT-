@@ -48,7 +48,7 @@ const TYPE_LABELS: Record<SearchRunnerType, string> = {
   cheval: "Cheval",
 };
 
-const TYPE_EMOJIS: Record<SearchRunnerType, string> = {
+const TYPE_ICONS: Record<SearchRunnerType, string> = {
   jockey: "🏇",
   driver: "🏇",
   entraineur: "🎯",
@@ -132,10 +132,13 @@ export function SidebarSearch() {
     setError(null);
     setOpen(true);
 
-    void fetch(`/api/search-runners?q=${encodeURIComponent(debouncedQuery)}&date=${getTodayDateStr()}`, {
-      cache: "no-store",
-      signal: controller.signal,
-    })
+    void fetch(
+      `/api/search-runners?q=${encodeURIComponent(debouncedQuery)}&date=${getTodayDateStr()}`,
+      {
+        cache: "no-store",
+        signal: controller.signal,
+      },
+    )
       .then(async (response) => {
         const payload = (await response.json()) as SearchRunnerResponse;
         if (!response.ok || !payload.success) {
@@ -151,7 +154,11 @@ export function SidebarSearch() {
         }
 
         setResults([]);
-        setError(fetchError instanceof Error ? fetchError.message : "Impossible de lancer la recherche.");
+        setError(
+          fetchError instanceof Error
+            ? fetchError.message
+            : "Impossible de lancer la recherche.",
+        );
       })
       .finally(() => {
         if (!controller.signal.aborted) {
@@ -171,9 +178,9 @@ export function SidebarSearch() {
           groupType: group.type,
           groupName: group.name,
           entry,
-        }))
+        })),
       ),
-    [results]
+    [results],
   );
 
   function goToEntry(entry: SearchRunnerEntry) {
@@ -249,7 +256,7 @@ export function SidebarSearch() {
           autoComplete="off"
           spellCheck={false}
           placeholder="Jockey, entraîneur"
-          className="h-9 w-full rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] pl-9 pr-9 text-[13px] text-[var(--pmu-text)] outline-none transition placeholder:text-[var(--pmu-text-muted)] focus:border-[var(--pmu-border-strong)]"
+          className="h-12 w-full rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] pl-10 pr-10 text-[13px] text-[var(--pmu-text)] outline-none transition placeholder:text-[var(--pmu-text-muted)] focus:border-[var(--pmu-border-strong)]"
           aria-label="Recherche jockey, entraîneur ou cheval"
           role="combobox"
           aria-autocomplete="list"
@@ -275,7 +282,7 @@ export function SidebarSearch() {
           <button
             type="button"
             aria-label="Effacer la recherche"
-            className="absolute right-2 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-xs text-[var(--pmu-text-muted)] transition hover:bg-[var(--pmu-surface)] hover:text-[var(--pmu-text)]"
+            className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-xs text-[var(--pmu-text-muted)] transition hover:bg-[var(--pmu-surface)] hover:text-[var(--pmu-text)]"
             onClick={clearSearch}
           >
             ×
@@ -287,12 +294,15 @@ export function SidebarSearch() {
         <div
           id={listboxId}
           role="listbox"
-          className="app-card absolute left-0 top-[calc(100%+0.6rem)] z-[1000] max-h-[400px] w-[min(30rem,calc(100vw-2rem))] overflow-y-auto p-3 shadow-[0_18px_40px_rgba(0,0,0,0.42)]"
+          className="app-card absolute left-0 top-[calc(100%+0.6rem)] z-[1000] max-h-[420px] w-[min(34rem,calc(100vw-2rem))] overflow-y-auto p-3 shadow-[0_18px_40px_rgba(0,0,0,0.42)]"
         >
           {loading ? (
             <div className="space-y-2">
               {Array.from({ length: 3 }, (_, index) => (
-                <div key={index} className="animate-pulse rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-3">
+                <div
+                  key={index}
+                  className="animate-pulse rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-3"
+                >
                   <div className="h-3 w-28 rounded-full bg-[color-mix(in_srgb,var(--pmu-text)_12%,transparent)]" />
                   <div className="mt-2 h-3 w-3/4 rounded-full bg-[color-mix(in_srgb,var(--pmu-text)_8%,transparent)]" />
                 </div>
@@ -300,7 +310,9 @@ export function SidebarSearch() {
             </div>
           ) : null}
 
-          {!loading && error ? <p className="px-1 py-2 text-sm text-[var(--pmu-orange)]">{error}</p> : null}
+          {!loading && error ? (
+            <p className="px-1 py-2 text-sm text-[var(--pmu-orange)]">{error}</p>
+          ) : null}
 
           {!loading && !error && results.length === 0 ? (
             <p className="px-1 py-2 text-sm text-[var(--pmu-text-soft)]">Aucun résultat</p>
@@ -309,11 +321,16 @@ export function SidebarSearch() {
           {!loading && !error && results.length > 0 ? (
             <div className="space-y-3">
               {results.map((group) => (
-                <div key={`${group.type}-${group.name}`} className="rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-3">
+                <div
+                  key={`${group.type}-${group.name}`}
+                  className="rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-3"
+                >
                   <div className="mb-2 flex items-center gap-2 text-sm font-bold text-[var(--pmu-text)]">
-                    <span>{TYPE_EMOJIS[group.type]}</span>
+                    <span>{TYPE_ICONS[group.type]}</span>
                     <span className="truncate">{group.name}</span>
-                    <span className="text-xs font-medium text-[var(--pmu-text-muted)]">• {TYPE_LABELS[group.type]}</span>
+                    <span className="text-xs font-medium text-[var(--pmu-text-muted)]">
+                      • {TYPE_LABELS[group.type]}
+                    </span>
                   </div>
 
                   <div className="space-y-1.5">
@@ -324,7 +341,7 @@ export function SidebarSearch() {
                           option.groupName === group.name &&
                           option.entry.reunion === entry.reunion &&
                           option.entry.course === entry.course &&
-                          option.entry.numPmu === entry.numPmu
+                          option.entry.numPmu === entry.numPmu,
                       );
                       const active = optionIndex === activeIndex;
                       const prefix = entryIndex === group.entries.length - 1 ? "└─" : "├─";
@@ -346,7 +363,8 @@ export function SidebarSearch() {
                         >
                           <div className="text-[12px] font-semibold text-[var(--pmu-text)]">
                             <span className="mr-1 text-[var(--pmu-text-muted)]">{prefix}</span>
-                            R{entry.reunion}C{entry.course} {entry.hippodrome} {entry.heureDepart} → N°{entry.numPmu} {entry.cheval}
+                            R{entry.reunion}C{entry.course} {entry.hippodrome} {entry.heureDepart} → N°
+                            {entry.numPmu} {entry.cheval}
                           </div>
                           <div className="mt-1 pl-4 text-[11px] text-[var(--pmu-text-soft)]">
                             {entry.nomCourse} • {entry.discipline} • Cote {formatOdds(entry.cote)}

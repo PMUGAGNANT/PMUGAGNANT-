@@ -20,6 +20,9 @@ export interface CourseParticipantRow {
   poids?: number | null;
   musique?: string | null;
   cote?: number | null;
+  scoreIa?: number | null;
+  nonPartant?: boolean | null;
+  topFacteurs?: string[] | null;
 }
 
 interface ParticipantsTableProps {
@@ -43,13 +46,7 @@ function getOddsTone(odds?: number | null) {
 
   if (odds < 5) return "var(--pmu-primary)";
   if (odds <= 10) return "rgb(245 158 11)";
-  return "var(--pmu-text-soft)";
-}
-
-function getArrivalPosition(arrivalMap: Map<number, number | null>, numPmu: number) {
-  const value = arrivalMap.get(numPmu);
-  if (!value) return "--";
-  return value === 1 ? "1er" : `${value}e`;
+  return "var(--pmu-text)";
 }
 
 function formatOdds(odds?: number | null) {
@@ -63,23 +60,85 @@ function formatSexAge(participant: CourseParticipantRow) {
   return `${sexe}/${age}`;
 }
 
+function getArrivalPosition(arrivalMap: Map<number, number | null>, numPmu: number) {
+  const value = arrivalMap.get(numPmu);
+  if (!value) return "--";
+  return value === 1 ? "1er" : `${value}e`;
+}
+
+function getScoreTone(score?: number | null) {
+  if (score === null || score === undefined || !Number.isFinite(score)) {
+    return {
+      label: "--",
+      accent: "○",
+      color: "var(--pmu-text-soft)",
+    };
+  }
+
+  const rounded = Math.round(score);
+
+  if (score >= 70) {
+    return { label: `${rounded}/100`, accent: "●", color: "var(--pmu-primary)" };
+  }
+
+  if (score >= 60) {
+    return { label: `${rounded}/100`, accent: "◆", color: "rgb(251 191 36)" };
+  }
+
+  if (score >= 50) {
+    return { label: `${rounded}/100`, accent: "●", color: "rgb(245 158 11)" };
+  }
+
+  return { label: `${rounded}/100`, accent: "○", color: "var(--pmu-text-soft)" };
+}
+
 function RunnerTags({ isFavori, isPepite }: { isFavori: boolean; isPepite: boolean }) {
   if (!isFavori && !isPepite) return null;
 
   return (
-    <div className="mt-1 flex flex-wrap gap-1.5">
+    <div className="mt-1.5 flex flex-wrap gap-1.5">
       {isFavori ? (
-        <span className="rounded-full bg-[var(--pmu-primary-soft)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pmu-primary)]">
+        <span className="rounded-full bg-[rgba(0,255,136,0.08)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pmu-primary)]">
           Favori IA
         </span>
       ) : null}
       {isPepite ? (
-        <span className="rounded-full bg-[rgba(251,191,36,0.14)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[rgb(251,191,36)]">
-          Pepite
+        <span className="rounded-full bg-[rgba(251,191,36,0.12)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[rgb(251,191,36)]">
+          Pépite
         </span>
       ) : null}
     </div>
   );
+}
+
+function getRowBackground(index: number, isFavori: boolean, isPepite: boolean) {
+  if (isFavori) return "rgba(0, 255, 136, 0.03)";
+  if (isPepite) return "rgba(251, 191, 36, 0.04)";
+  return index % 2 === 0 ? "var(--pmu-surface)" : "var(--pmu-surface-2)";
+}
+
+function getNumberChipStyle(isFavori: boolean, isPepite: boolean) {
+  if (isFavori) {
+    return {
+      background: "rgba(0,255,136,0.10)",
+      color: "var(--pmu-primary)",
+      border: "1px solid rgba(0,255,136,0.16)",
+    };
+  }
+
+  if (isPepite) {
+    return {
+      background: "rgba(251,191,36,0.12)",
+      color: "rgb(251 191 36)",
+      border: "1px solid rgba(251,191,36,0.16)",
+    };
+  }
+
+  return {
+    background: "var(--pmu-surface-highlight)",
+    color: "var(--pmu-text)",
+    border: "1px solid transparent",
+  };
 }
 
 export function ParticipantsTable({
@@ -103,9 +162,7 @@ export function ParticipantsTable({
       <section className="app-card overflow-hidden">
         <div className="border-b border-[var(--pmu-border)] px-4 py-4 md:px-5">
           <p className="app-kicker">Tableau des partants</p>
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-            <h2 className="app-section-title">Tous les chevaux de la course</h2>
-          </div>
+          <h2 className="mt-2 app-section-title">Tous les chevaux de la course</h2>
         </div>
         <div className="p-4 text-sm text-[var(--pmu-text-soft)] md:p-5">
           Les partants sont en cours de chargement.
@@ -117,28 +174,30 @@ export function ParticipantsTable({
   return (
     <section className="app-card overflow-hidden">
       <div className="border-b border-[var(--pmu-border)] px-4 py-4 md:px-5">
-        <p className="app-kicker">Tableau des partants</p>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h2 className="app-section-title">Tous les chevaux de la course</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="app-kicker">Tableau des partants</p>
+            <h2 className="mt-2 app-section-title">Tous les chevaux de la course</h2>
+          </div>
           <span className="rounded-full border border-[var(--pmu-border)] px-2.5 py-1 text-[11px] font-semibold text-[var(--pmu-text-soft)]">
-            Tries par numero PMU
+            Tri par numéro PMU
           </span>
         </div>
       </div>
 
       <div className="hidden overflow-x-auto md:block">
-        <table className="app-table min-w-[980px]">
+        <table className="app-table min-w-[1080px] table-auto">
           <thead>
             <tr>
-              <th>No</th>
-              <th>Cheval</th>
-              <th>{estPlat ? "Jockey" : "Driver"}</th>
-              <th>Entraineur</th>
-              <th>Sexe/age</th>
-              <th>Cote</th>
-              <th>Musique</th>
-              <th>Poids</th>
-              {courseFinished ? <th>Arrivee</th> : null}
+              <th className="w-[88px]">N°</th>
+              <th className="min-w-[220px]">Cheval</th>
+              <th className="min-w-[170px]">{estPlat ? "Jockey/Driver" : "Driver/Jockey"}</th>
+              <th className="min-w-[180px]">Entraîneur</th>
+              <th className="w-[100px]">Sexe/Âge</th>
+              <th className="w-[88px]">Cote</th>
+              <th className="min-w-[140px]">Musique</th>
+              <th className="w-[112px]">Score IA</th>
+              {courseFinished ? <th className="w-[90px]">Arrivée</th> : null}
             </tr>
           </thead>
           <tbody>
@@ -146,33 +205,35 @@ export function ParticipantsTable({
               const numPmu = Number(participant.numero ?? 0);
               const isFavori = String(participant.numero) === String(favoriNum);
               const isPepite = String(participant.numero) === String(pepiteNum);
+              const score = getScoreTone(participant.scoreIa);
+              const numberStyle = getNumberChipStyle(isFavori, isPepite);
+              const struck = participant.nonPartant ? "line-through opacity-60" : "";
 
               return (
                 <tr
                   key={`${participant.numero}-${index}`}
                   className="transition hover:bg-[var(--pmu-surface-highlight)]"
                   style={{
-                    backgroundColor: isFavori
-                      ? "var(--pmu-primary-fade)"
-                      : isPepite
-                        ? "rgba(251, 191, 36, 0.08)"
-                        : index % 2 === 0
-                          ? "var(--pmu-surface)"
-                          : "var(--pmu-surface-2)",
+                    backgroundColor: getRowBackground(index, isFavori, isPepite),
                   }}
                 >
                   <td>
-                    <span className="inline-flex min-w-10 items-center justify-center rounded-xl bg-[var(--pmu-surface-highlight)] px-2.5 py-2 text-sm font-black text-[var(--pmu-text)]">
+                    <span
+                      className="inline-flex min-w-12 items-center justify-center rounded-xl px-3 py-2 text-sm font-black"
+                      style={numberStyle}
+                    >
                       {participant.numero ?? "--"}
                     </span>
                   </td>
                   <td>
-                    <p className="font-bold text-[var(--pmu-text)]">{participant.nom || "--"}</p>
-                    <RunnerTags isFavori={isFavori} isPepite={isPepite} />
+                    <div className="min-w-0">
+                      <p className={`font-bold text-[var(--pmu-text)] ${struck}`}>{participant.nom || "--"}</p>
+                      <RunnerTags isFavori={isFavori} isPepite={isPepite} />
+                    </div>
                   </td>
                   <td className="text-[var(--pmu-text)]">{getHumanLead(participant, estPlat)}</td>
                   <td className="text-[var(--pmu-text-soft)]">{participant.entraineur || "--"}</td>
-                  <td className="font-medium text-[var(--pmu-text-soft)]">{formatSexAge(participant)}</td>
+                  <td className="font-mono text-sm text-[var(--pmu-text-soft)]">{formatSexAge(participant)}</td>
                   <td>
                     <span
                       className="font-mono text-sm font-bold tabular-nums"
@@ -181,11 +242,15 @@ export function ParticipantsTable({
                       {formatOdds(participant.cote)}
                     </span>
                   </td>
-                  <td className="font-mono text-sm text-[var(--pmu-text-soft)]">
-                    {participant.musique || "--"}
-                  </td>
-                  <td className="text-[var(--pmu-text-soft)]">
-                    {participant.poids ? `${participant.poids} kg` : "--"}
+                  <td className="font-mono text-sm text-[var(--pmu-text-soft)]">{participant.musique || "--"}</td>
+                  <td>
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full border border-[var(--pmu-border)] px-2 py-1 font-mono text-sm font-bold tabular-nums"
+                      style={{ color: score.color }}
+                    >
+                      <span aria-hidden>{score.accent}</span>
+                      <span>{score.label}</span>
+                    </span>
                   </td>
                   {courseFinished ? (
                     <td className="font-semibold text-[var(--pmu-text)]">
@@ -204,6 +269,9 @@ export function ParticipantsTable({
           const numPmu = Number(participant.numero ?? 0);
           const isFavori = String(participant.numero) === String(favoriNum);
           const isPepite = String(participant.numero) === String(pepiteNum);
+          const score = getScoreTone(participant.scoreIa);
+          const numberStyle = getNumberChipStyle(isFavori, isPepite);
+          const struck = participant.nonPartant ? "line-through opacity-60" : "";
 
           return (
             <article
@@ -211,23 +279,22 @@ export function ParticipantsTable({
               className="rounded-2xl border p-3"
               style={{
                 borderColor: "var(--pmu-border)",
-                background: isFavori
-                  ? "var(--pmu-primary-fade)"
-                  : isPepite
-                    ? "rgba(251, 191, 36, 0.08)"
-                    : "var(--pmu-surface-2)",
+                background: getRowBackground(index, isFavori, isPepite),
               }}
             >
               <div className="flex items-start gap-3">
-                <div className="inline-flex min-w-11 items-center justify-center rounded-xl bg-[var(--pmu-surface-highlight)] px-2.5 py-2 text-sm font-black text-[var(--pmu-text)]">
+                <div
+                  className="inline-flex min-w-11 items-center justify-center rounded-xl px-2.5 py-2 text-sm font-black"
+                  style={numberStyle}
+                >
                   {participant.numero ?? "--"}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-base font-bold text-[var(--pmu-text)]">
+                  <p className={`truncate text-base font-bold text-[var(--pmu-text)] ${struck}`}>
                     {participant.nom || "--"}
                   </p>
-                  <p className="mt-0.5 text-sm text-[var(--pmu-text-soft)]">
-                    {getHumanLead(participant, estPlat)} • {participant.entraineur || "--"}
+                  <p className="mt-0.5 truncate text-sm text-[var(--pmu-text-soft)]">
+                    {getHumanLead(participant, estPlat)}
                   </p>
                   <RunnerTags isFavori={isFavori} isPepite={isPepite} />
                 </div>
@@ -235,17 +302,15 @@ export function ParticipantsTable({
 
               <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                 <div className="rounded-xl bg-[var(--pmu-bg)] px-3 py-2">
-                  <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--pmu-text-soft)]">
-                    Sexe/age
-                  </p>
-                  <p className="mt-1 font-semibold text-[var(--pmu-text)]">
-                    {formatSexAge(participant)}
-                  </p>
+                  <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--pmu-text-soft)]">Entraîneur</p>
+                  <p className="mt-1 text-[var(--pmu-text)]">{participant.entraineur || "--"}</p>
                 </div>
                 <div className="rounded-xl bg-[var(--pmu-bg)] px-3 py-2">
-                  <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--pmu-text-soft)]">
-                    Cote
-                  </p>
+                  <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--pmu-text-soft)]">Sexe/Âge</p>
+                  <p className="mt-1 text-[var(--pmu-text)]">{formatSexAge(participant)}</p>
+                </div>
+                <div className="rounded-xl bg-[var(--pmu-bg)] px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--pmu-text-soft)]">Cote</p>
                   <p
                     className="mt-1 font-mono font-bold tabular-nums"
                     style={{ color: getOddsTone(participant.cote) }}
@@ -254,26 +319,18 @@ export function ParticipantsTable({
                   </p>
                 </div>
                 <div className="rounded-xl bg-[var(--pmu-bg)] px-3 py-2">
-                  <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--pmu-text-soft)]">
-                    Musique
-                  </p>
-                  <p className="mt-1 font-mono text-[var(--pmu-text)]">
-                    {participant.musique || "--"}
+                  <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--pmu-text-soft)]">Score IA</p>
+                  <p className="mt-1 font-semibold" style={{ color: score.color }}>
+                    {score.accent} {score.label}
                   </p>
                 </div>
-                <div className="rounded-xl bg-[var(--pmu-bg)] px-3 py-2">
-                  <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--pmu-text-soft)]">
-                    Poids
-                  </p>
-                  <p className="mt-1 font-semibold text-[var(--pmu-text)]">
-                    {participant.poids ? `${participant.poids} kg` : "--"}
-                  </p>
+                <div className="col-span-2 rounded-xl bg-[var(--pmu-bg)] px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--pmu-text-soft)]">Musique</p>
+                  <p className="mt-1 font-mono text-[var(--pmu-text)]">{participant.musique || "--"}</p>
                 </div>
                 {courseFinished ? (
                   <div className="col-span-2 rounded-xl bg-[var(--pmu-bg)] px-3 py-2">
-                    <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--pmu-text-soft)]">
-                      Arrivee
-                    </p>
+                    <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--pmu-text-soft)]">Arrivée</p>
                     <p className="mt-1 font-semibold text-[var(--pmu-text)]">
                       {getArrivalPosition(arrivalMap, numPmu)}
                     </p>

@@ -38,7 +38,7 @@ function sortRaces(items: RaceSummary[]) {
 
 function formatDateLabel(dateStr: string) {
   if (dateStr === getTodayDateStr()) {
-    return "Aujourd’hui";
+    return "Aujourd'hui";
   }
 
   return new Intl.DateTimeFormat("fr-FR", {
@@ -86,10 +86,10 @@ function getRaceStatusTone(status: string, active: boolean) {
   }
 
   if (status === "Courue") {
-    return "bg-[var(--pmu-bg)] text-[var(--pmu-text-soft)]";
+    return "bg-[var(--pmu-surface-2)] text-[var(--pmu-text-soft)]";
   }
 
-  return "bg-[var(--pmu-bg)] text-[var(--pmu-text)]";
+  return "bg-[var(--pmu-surface-2)] text-[var(--pmu-text)]";
 }
 
 function formatDiscipline(race: RaceSummary) {
@@ -99,14 +99,14 @@ function formatDiscipline(race: RaceSummary) {
 }
 
 function getCourseMeta(race: RaceSummary) {
-  return `${formatDiscipline(race)} • ${race.distance} m • ${race.nombrePartants} partants`;
+  return `${formatDiscipline(race)} · ${race.distance} m · ${race.nombrePartants} partants`;
 }
 
 function RaceCode({ reunion, course }: { reunion: number; course: number }) {
   return (
-    <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl bg-[var(--pmu-bg)] text-[var(--pmu-text)]">
-      <span className="text-lg font-black leading-none">R{reunion}</span>
-      <span className="mt-0.5 text-lg font-black leading-none">C{course}</span>
+    <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-[var(--pmu-bg)] text-[var(--pmu-text)]">
+      <span className="text-base font-black leading-none">R{reunion}</span>
+      <span className="mt-0.5 text-base font-black leading-none">C{course}</span>
     </div>
   );
 }
@@ -116,6 +116,7 @@ export function SidebarProgramme() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const selectedDate = normalizeDateParam(searchParams.get("date"));
+  const isCoursePage = /^\/course\/\d+\/\d+$/.test(pathname);
 
   const [isOpen, setIsOpen] = useState(false);
   const [tab, setTab] = useState<SidebarProgrammeTab>("reunions");
@@ -170,14 +171,6 @@ export function SidebarProgramme() {
   }, [pathname]);
 
   useEffect(() => {
-    if (currentRoute) {
-      setIsOpen(true);
-      setTab("courses");
-      setSelectedReunion(currentRoute.reunion);
-    }
-  }, [currentRoute]);
-
-  useEffect(() => {
     if (reunionGroups.length === 0) {
       setSelectedReunion(null);
       return;
@@ -188,9 +181,9 @@ export function SidebarProgramme() {
         return current;
       }
 
-      return currentRoute?.reunion ?? reunionGroups[0]?.reunion ?? null;
+      return reunionGroups[0]?.reunion ?? null;
     });
-  }, [currentRoute?.reunion, reunionGroups]);
+  }, [reunionGroups]);
 
   const selectedGroup = useMemo(
     () => reunionGroups.find((group) => group.reunion === selectedReunion) ?? null,
@@ -211,8 +204,12 @@ export function SidebarProgramme() {
     router.push(`/course/${race.reunion}/${race.course}?date=${selectedDate}`);
   }
 
+  if (isCoursePage) {
+    return null;
+  }
+
   return (
-    <section className="ml-3 overflow-hidden rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface)]">
+    <section className="ml-3 mt-3 overflow-hidden rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface)]">
       <button
         type="button"
         className="flex w-full items-center gap-3 px-3 py-3 text-left transition hover:bg-[var(--pmu-surface-2)]"
@@ -220,7 +217,7 @@ export function SidebarProgramme() {
         aria-expanded={isOpen}
         aria-controls="sidebar-programme-panel"
       >
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] text-[var(--pmu-text)]">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] text-[var(--pmu-text)]">
           <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 6.5h12M4 10h12M4 13.5h8" />
           </svg>
@@ -229,7 +226,7 @@ export function SidebarProgramme() {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-black text-[var(--pmu-text)]">Programme du jour</p>
           <p className="mt-0.5 truncate text-[11px] text-[var(--pmu-text-soft)]">
-            Réunions puis courses • {reunionGroups.length} réunions • {formatDateLabel(selectedDate)}
+            {reunionGroups.length} réunions · {formatDateLabel(selectedDate)}
           </p>
         </div>
 
@@ -266,7 +263,7 @@ export function SidebarProgramme() {
           </div>
 
           {tab === "courses" ? (
-            <div className="mt-3 flex items-center justify-between gap-2 rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-2">
+            <div className="mt-3 flex items-center justify-between gap-2 rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-2.5">
               <button
                 type="button"
                 className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-bg)] text-[var(--pmu-text)] transition hover:border-[var(--pmu-border-strong)]"
@@ -284,14 +281,14 @@ export function SidebarProgramme() {
                 </p>
                 <p className="truncate text-[11px] text-[var(--pmu-text-soft)]">
                   {selectedGroup
-                    ? `${selectedGroup.count} courses • ${selectedGroup.firstTime} → ${selectedGroup.lastTime}`
+                    ? `${selectedGroup.count} courses · ${selectedGroup.firstTime} → ${selectedGroup.lastTime}`
                     : "Sélectionne une réunion pour afficher ses courses"}
                 </p>
               </div>
             </div>
           ) : null}
 
-          <div className="mt-3 max-h-[26rem] space-y-2 overflow-y-auto pr-1">
+          <div className="mt-3 max-h-[23rem] space-y-2 overflow-y-auto pr-1">
             {loading
               ? Array.from({ length: 4 }, (_, index) => (
                   <div
@@ -320,32 +317,25 @@ export function SidebarProgramme() {
                     type="button"
                     className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
                       selectedReunion === group.reunion
-                        ? "border-[var(--pmu-primary)] bg-[var(--pmu-primary-soft)]"
+                        ? "border-[var(--pmu-border-strong)] bg-[var(--pmu-surface-2)]"
                         : "border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] hover:border-[var(--pmu-border-strong)]"
                     }`}
                     onClick={() => openReunion(group.reunion)}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 flex-1 gap-3">
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[var(--pmu-bg)] text-[var(--pmu-text)]">
-                          <span className="text-lg font-black leading-none">R{group.reunion}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-lg bg-[var(--pmu-bg)] px-2 py-1 text-[11px] font-black text-[var(--pmu-text)]">
+                            R{group.reunion}
+                          </span>
+                          <p className="truncate text-sm font-black text-[var(--pmu-text)]">{group.hippodrome}</p>
                         </div>
-
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-base font-black text-[var(--pmu-text)]">
-                            {group.hippodrome}
-                          </p>
-                          <p className="mt-1 text-[12px] leading-5 text-[var(--pmu-text-soft)]">
-                            {group.count} courses • premier départ {group.firstTime}
-                          </p>
-                          <div className="mt-2 inline-flex rounded-full bg-[var(--pmu-bg)] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--pmu-text-soft)]">
-                            {group.firstTime} → {group.lastTime}
-                          </div>
-                        </div>
+                        <p className="mt-1 text-[11px] leading-5 text-[var(--pmu-text-soft)]">
+                          {group.count} courses · premier départ {group.firstTime}
+                        </p>
                       </div>
-
-                      <span className="shrink-0 text-xs font-black uppercase tracking-[0.08em] text-[var(--pmu-text-soft)]">
-                        Ouvrir
+                      <span className="shrink-0 rounded-full bg-[var(--pmu-bg)] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pmu-text-soft)]">
+                        {group.lastTime}
                       </span>
                     </div>
                   </button>
@@ -354,7 +344,7 @@ export function SidebarProgramme() {
 
             {!loading && !error && tab === "courses" && visibleCourses.length === 0 ? (
               <div className="rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-3 text-xs leading-5 text-[var(--pmu-text-soft)]">
-                Choisis d’abord une réunion, puis ses courses apparaîtront ici.
+                Sélectionne une réunion pour voir ses courses.
               </div>
             ) : null}
 
@@ -375,43 +365,34 @@ export function SidebarProgramme() {
                       }`}
                       onClick={() => openCourse(race)}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 flex-1 gap-3">
-                          <RaceCode reunion={race.reunion} course={race.course} />
+                      <div className="flex items-start gap-3">
+                        <RaceCode reunion={race.reunion} course={race.course} />
 
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-base font-black text-[var(--pmu-text)]">
-                              {race.hippodrome}
-                            </p>
-                            <p className="mt-0.5 line-clamp-2 text-[13px] font-semibold leading-5 text-[var(--pmu-text)]">
-                              {race.nomCourse}
-                            </p>
-                            <p className="mt-1 text-[11px] leading-5 text-[var(--pmu-text-soft)]">
-                              {getCourseMeta(race)}
-                            </p>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-black text-[var(--pmu-text)]">
+                                {race.nomCourse}
+                              </p>
+                              <p className="mt-0.5 text-[11px] leading-5 text-[var(--pmu-text-soft)]">
+                                {getCourseMeta(race)}
+                              </p>
+                            </div>
+                            <span
+                              className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${getRaceStatusTone(
+                                status,
+                                active,
+                              )}`}
+                            >
+                              {status}
+                            </span>
                           </div>
-                        </div>
-
-                        <div className="shrink-0 text-right">
-                          <p className="text-sm font-black text-[var(--pmu-text)]">{race.heureDepart}</p>
-                          <span
-                            className={`mt-2 inline-flex rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] ${getRaceStatusTone(
-                              status,
-                              active,
-                            )}`}
-                          >
-                            {status}
-                          </span>
                         </div>
                       </div>
                     </button>
                   );
                 })
               : null}
-          </div>
-
-          <div className="mt-3 rounded-2xl border border-dashed border-[var(--pmu-border)] px-3 py-2 text-[11px] leading-5 text-[var(--pmu-text-soft)]">
-            Tu choisis d’abord une réunion, puis tu fais défiler ses courses dans la même fenêtre.
           </div>
         </div>
       ) : null}

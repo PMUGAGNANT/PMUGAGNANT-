@@ -26,8 +26,11 @@ type RaceApiParticipant = {
   poids?: number | null;
   musique?: string | null;
   cote?: number | null;
+  statut?: string | null;
+  nonPartant?: boolean | null;
   prediction?: {
     confiance?: number | null;
+    scoreCheval?: number | null;
     topFacteurs?: string[] | null;
     typePariConseille?: string | null;
     miseConseillee?: number | null;
@@ -40,12 +43,16 @@ type RaceApiResponse = {
     reunion?: number;
     course?: number;
     hippodrome?: string | null;
+    pays?: string | null;
     nomCourse?: string | null;
     discipline?: string | null;
     distance?: number | string | null;
     heureDepart?: string | null;
     nombrePartants?: number | null;
     allocation?: number | null;
+    terrain?: string | null;
+    meteo?: string | null;
+    dateStr?: string | null;
   } | null;
   participants?: RaceApiParticipant[] | number | null;
   officialArrival?: ArrivalRow[] | null;
@@ -98,6 +105,49 @@ function formatEuros(value?: number | null) {
   }).format(value);
 }
 
+function formatDateLabel(dateStr?: string | null) {
+  if (!dateStr || !/^\d{8}$/.test(dateStr)) return null;
+  return new Intl.DateTimeFormat("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(new Date(`${dateStr.slice(4, 8)}-${dateStr.slice(2, 4)}-${dateStr.slice(0, 2)}T12:00:00Z`));
+}
+
+function mergeParticipantData(payload: RaceApiResponse | null) {
+  const rawParticipants = Array.isArray(payload?.participants) ? payload.participants : [];
+  const rankingParticipants = Array.isArray(payload?.analysis?.ranking) ? payload.analysis.ranking : [];
+
+  if (rawParticipants.length === 0) {
+    return rankingParticipants;
+  }
+
+  const rankingByNumber = new Map(
+    rankingParticipants.map((participant) => [
+      String(participant.numero ?? participant.numPmu ?? ""),
+      participant,
+    ]),
+  );
+
+  return rawParticipants.map((participant) => {
+    const key = String(participant.numero ?? participant.numPmu ?? "");
+    const ranked = rankingByNumber.get(key);
+
+    return {
+      ...participant,
+      prediction: {
+        ...ranked?.prediction,
+        ...participant.prediction,
+        topFacteurs: participant.prediction?.topFacteurs ?? ranked?.prediction?.topFacteurs ?? [],
+        scoreCheval: participant.prediction?.scoreCheval ?? ranked?.prediction?.scoreCheval ?? null,
+      },
+      cote: participant.cote ?? ranked?.cote ?? null,
+      musique: participant.musique ?? ranked?.musique ?? null,
+      nonPartant: participant.nonPartant ?? ranked?.nonPartant ?? null,
+    };
+  });
+}
+
 function toParticipantRow(participant: RaceApiParticipant): CourseParticipantRow {
   return {
     numero: participant.numero ?? participant.numPmu ?? null,
@@ -111,19 +161,16 @@ function toParticipantRow(participant: RaceApiParticipant): CourseParticipantRow
     poids: participant.poids ?? null,
     musique: participant.musique ?? null,
     cote: participant.cote ?? null,
+    scoreIa: participant.prediction?.scoreCheval ?? null,
+    nonPartant: participant.nonPartant ?? participant.statut === "NON_PARTANT",
+    topFacteurs: Array.isArray(participant.prediction?.topFacteurs)
+      ? participant.prediction?.topFacteurs ?? []
+      : [],
   };
 }
 
 function normalizeParticipants(payload: RaceApiResponse | null): CourseParticipantRow[] {
-  if (Array.isArray(payload?.participants)) {
-    return payload.participants.map(toParticipantRow);
-  }
-
-  if (Array.isArray(payload?.analysis?.ranking)) {
-    return payload.analysis.ranking.map(toParticipantRow);
-  }
-
-  return [];
+  return mergeParticipantData(payload).map(toParticipantRow);
 }
 
 function normalizeOfficialArrival(payload: RaceApiResponse | null): ArrivalRow[] {
@@ -138,11 +185,10 @@ function normalizePronostic(payload: RaceApiResponse | null): PronosticCardData 
 
   const ranking = Array.isArray(analysis.ranking) ? analysis.ranking : [];
   const top5 = Array.isArray(analysis.top5) ? analysis.top5 : [];
-  const favori =
-    analysis.favori && typeof analysis.favori === "object" ? analysis.favori : null;
+  const favori = analysis.favori && typeof analysis.favori === "object" ? analysis.favori : null;
   const selected = favori ?? ranking[0] ?? null;
   const facteurs = Array.isArray(selected?.prediction?.topFacteurs)
-    ? selected.prediction?.topFacteurs ?? []
+    ? selected?.prediction?.topFacteurs ?? []
     : Array.isArray(analysis.scoreConfiance?.facteurs)
       ? analysis.scoreConfiance?.facteurs ?? []
       : [];
@@ -157,10 +203,7 @@ function normalizePronostic(payload: RaceApiResponse | null): PronosticCardData 
     top5: (top5.length ? top5 : ranking.slice(0, 5))
       .map((runner) => runner?.numPmu)
       .filter((value): value is number | string => value !== null && value !== undefined),
-    scoreConfiance:
-      analysis.scoreConfiance?.score ??
-      selected?.prediction?.confiance ??
-      null,
+    scoreConfiance: analysis.scoreConfiance?.score ?? selected?.prediction?.confiance ?? null,
     valueBet: analysis.pepiteDuJour?.numPmu ?? null,
     miseConseil: selected?.prediction?.miseConseillee ?? null,
     recommandation: analysis.recommandation?.decision ?? null,
@@ -171,97 +214,175 @@ function normalizePronostic(payload: RaceApiResponse | null): PronosticCardData 
 
 function LockedCard({ previewLabel }: { previewLabel?: string | null }) {
   return (
-    <div className="app-card app-card-muted flex flex-col gap-3 rounded-2xl p-5">
+    <section className="app-card flex flex-col gap-3 rounded-2xl p-5">
       <div className="flex items-center gap-3 text-[var(--pmu-primary)]">
         <span aria-hidden>🔒</span>
-        <span className="app-kicker">Pronostic reserve</span>
+        <span className="app-kicker">Pronostic réservé</span>
       </div>
-      <h3 className="text-lg font-semibold text-[var(--pmu-text)]">Fiche course</h3>
+      <h2 className="text-xl font-black text-[var(--pmu-text)]">Pronostic Premium</h2>
       <p className="text-sm text-[var(--pmu-text-soft)]">
-        Le tableau complet des partants et la lecture IA detaillee sont disponibles
-        avec l&apos;acces Premium.
+        Le tableau des partants reste public, mais le ticket détaillé et la lecture complète sont réservés à l'accès Premium.
       </p>
       {previewLabel ? (
         <p className="text-sm text-[var(--pmu-text)]">
-          Apercu disponible : <strong>{previewLabel}</strong>
+          Cheval repéré : <strong>{previewLabel}</strong>
         </p>
       ) : null}
       <Link
         href="/premium"
         className="app-button-primary inline-flex w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold sm:w-auto"
       >
-        Debloquer la fiche Premium
+        Débloquer le pronostic Premium
       </Link>
-    </div>
+    </section>
   );
 }
 
 function AnalysisPendingCard() {
   return (
-    <div className="app-card app-card-muted flex flex-col gap-3 rounded-2xl p-5">
+    <section className="app-card flex flex-col gap-3 rounded-2xl p-5">
       <div className="flex items-center gap-3 text-[var(--pmu-primary)]">
         <span aria-hidden>⏳</span>
         <span className="app-kicker">Lecture moteur</span>
       </div>
-      <h3 className="text-lg font-semibold text-[var(--pmu-text)]">Analyse en cours</h3>
+      <h2 className="text-xl font-black text-[var(--pmu-text)]">Analyse en cours</h2>
       <p className="text-sm text-[var(--pmu-text-soft)]">
-        Le moteur termine encore la lecture de cette course. Recharge la page dans
-        quelques instants.
+        Le moteur termine encore la lecture de cette course. Recharge la page dans quelques instants.
       </p>
-    </div>
+    </section>
   );
 }
 
-function OfficialArrivalCard({
-  arrivee,
-  updatedAt,
-}: {
-  arrivee: ArrivalRow[];
-  updatedAt?: string | null;
-}) {
-  const safeArrival = Array.isArray(arrivee) ? arrivee : [];
-
-  if (safeArrival.length === 0) {
+function OfficialArrivalCard({ arrivee }: { arrivee: ArrivalRow[] }) {
+  if (arrivee.length === 0) {
     return null;
   }
 
   return (
-    <div className="app-card flex flex-col gap-4 rounded-2xl p-5">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgba(0,255,136,0.08)] text-[var(--pmu-primary)]">
-            <span aria-hidden>🏆</span>
-          </div>
-          <div>
-            <p className="app-kicker">Resultat officiel</p>
-            <h3 className="text-lg font-semibold text-[var(--pmu-text)]">
-              Arrivee officielle
-            </h3>
-          </div>
-        </div>
-        {updatedAt ? (
-          <p className="text-xs text-[var(--pmu-text-soft)]">
-            Mis a jour {new Date(updatedAt).toLocaleString("fr-FR")}
-          </p>
-        ) : null}
+    <section className="app-card flex flex-col gap-4 rounded-2xl p-5">
+      <div>
+        <p className="app-kicker">Résultat officiel</p>
+        <h3 className="mt-2 app-section-title">Arrivée officielle</h3>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        {safeArrival.map((row, index) => (
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        {arrivee.map((row, index) => (
           <div
             key={`${row.numPmu}-${index}`}
-            className="flex min-w-[88px] flex-col items-center rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-raised)] px-4 py-3 text-center"
+            className="rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-raised)] px-4 py-3 text-center"
           >
             <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--pmu-text-soft)]">
               {index + 1}e
             </span>
-            <span className="mt-1 text-2xl font-black text-[var(--pmu-text)]">
-              {row.numPmu}
-            </span>
+            <p className="mt-1 text-2xl font-black text-[var(--pmu-text)]">{row.numPmu}</p>
           </div>
         ))}
       </div>
-    </div>
+    </section>
+  );
+}
+
+function TopFiveCard({
+  top5,
+  participants,
+}: {
+  top5: Array<number | string>;
+  participants: CourseParticipantRow[];
+}) {
+  if (top5.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="app-card rounded-2xl p-5">
+      <div>
+        <p className="app-kicker">Lecture moteur</p>
+        <h3 className="mt-2 app-section-title">Top 5 de l'algo</h3>
+      </div>
+
+      <div className="mt-4 space-y-3">
+        {top5.map((numero, index) => {
+          const participant = participants.find((item) => String(item.numero) === String(numero));
+
+          return (
+            <div
+              key={`${numero}-${index}`}
+              className="flex items-center justify-between gap-3 rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-raised)] px-3 py-3"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-black text-[var(--pmu-text)]">
+                  {index + 1}. N°{numero} {participant?.nom || `Cheval ${numero}`}
+                </p>
+                <p className="mt-1 text-xs text-[var(--pmu-text-soft)]">
+                  Score {Math.round(participant?.scoreIa ?? 0) || "--"}
+                  {typeof participant?.cote === "number" ? ` · Cote ${participant.cote.toFixed(1)}` : ""}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function CourseHeader({
+  courseInfo,
+  reunion,
+  course,
+  selectedDate,
+}: {
+  courseInfo: NonNullable<RaceApiResponse["courseInfo"]>;
+  reunion: string;
+  course: string;
+  selectedDate: string | null;
+}) {
+  const titlePrefix = `R${courseInfo.reunion ?? reunion}C${courseInfo.course ?? course}`;
+  const dateLabel = formatDateLabel(selectedDate ?? courseInfo.dateStr ?? null);
+  const pills = [
+    courseInfo.discipline,
+    courseInfo.distance ? `${courseInfo.distance} m` : null,
+    courseInfo.nombrePartants ? `${courseInfo.nombrePartants} partants` : null,
+    courseInfo.allocation ? formatEuros(courseInfo.allocation) : null,
+    courseInfo.terrain || null,
+    courseInfo.meteo || null,
+    courseInfo.heureDepart ? `Départ ${courseInfo.heureDepart}` : null,
+  ].filter(Boolean) as string[];
+
+  return (
+    <section className="app-card flex flex-col gap-4 rounded-2xl p-5 md:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="app-kicker">
+            {titlePrefix} — {(courseInfo.hippodrome || "Programme").toUpperCase()}
+          </p>
+          <h1 className="mt-2 text-3xl font-black tracking-[-0.03em] text-[var(--pmu-text)] md:text-4xl">
+            {courseInfo.nomCourse || `Course ${course}`}
+          </h1>
+          <p className="mt-2 text-sm text-[var(--pmu-text-soft)]">
+            {dateLabel || "Fiche course complète"}{courseInfo.pays ? ` · ${courseInfo.pays}` : ""}
+          </p>
+        </div>
+
+        {courseInfo.heureDepart ? (
+          <div className="rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-4 py-3 text-right">
+            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--pmu-text-soft)]">Départ</p>
+            <p className="mt-1 text-2xl font-black text-[var(--pmu-text)]">{courseInfo.heureDepart}</p>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {pills.map((pill) => (
+          <span
+            key={pill}
+            className="rounded-full border border-[var(--pmu-border)] px-3 py-1 text-xs font-semibold text-[var(--pmu-text-soft)]"
+          >
+            {pill}
+          </span>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -343,9 +464,10 @@ export default function CourseDetailPage() {
   const officialArrival = useMemo(() => normalizeOfficialArrival(data), [data]);
   const pronostic = useMemo(() => normalizePronostic(data), [data]);
   const ranking = useMemo(
-    () => (Array.isArray(data?.analysis?.ranking) ? data.analysis?.ranking ?? [] : []),
+    () => (Array.isArray(data?.analysis?.ranking) ? data.analysis.ranking ?? [] : []),
     [data],
   );
+
   const top5 = Array.isArray(pronostic?.top5)
     ? pronostic.top5
     : ranking
@@ -353,22 +475,8 @@ export default function CourseDetailPage() {
         .map((runner) => runner?.numPmu)
         .filter((value): value is number | string => value !== null && value !== undefined);
 
-  const meta = useMemo(() => {
-    if (!courseInfo) return [];
-    const items: string[] = [];
-    if (courseInfo.discipline) items.push(courseInfo.discipline);
-    if (courseInfo.distance) items.push(`${courseInfo.distance} m`);
-    if (courseInfo.nombrePartants) items.push(`${courseInfo.nombrePartants} partants`);
-    if (courseInfo.allocation) {
-      const euros = formatEuros(courseInfo.allocation);
-      if (euros) items.push(euros);
-    }
-    if (courseInfo.heureDepart) items.push(`Depart ${courseInfo.heureDepart}`);
-    return items;
-  }, [courseInfo]);
-
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-4 md:px-6">
+    <main className="mx-auto flex w-full max-w-[88rem] flex-col gap-5 px-4 py-4 md:px-6">
       <div className="flex items-center justify-between gap-3">
         <Link
           href={selectedDate ? `/?date=${selectedDate}` : "/"}
@@ -383,104 +491,43 @@ export default function CourseDetailPage() {
           <div className="h-4 w-28 animate-pulse rounded bg-[var(--pmu-skeleton)]" />
           <div className="h-10 w-3/4 animate-pulse rounded bg-[var(--pmu-skeleton)]" />
           <div className="h-4 w-1/2 animate-pulse rounded bg-[var(--pmu-skeleton)]" />
-          <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-            <div className="h-[360px] animate-pulse rounded-2xl bg-[var(--pmu-skeleton)]" />
-            <div className="h-[360px] animate-pulse rounded-2xl bg-[var(--pmu-skeleton)]" />
-          </div>
+          <div className="h-[520px] animate-pulse rounded-2xl bg-[var(--pmu-skeleton)]" />
+          <div className="h-[220px] animate-pulse rounded-2xl bg-[var(--pmu-skeleton)]" />
         </section>
       ) : error ? (
         <section className="app-card flex flex-col gap-3 rounded-2xl p-5">
           <p className="app-kicker">Fiche course</p>
-          <h1 className="text-2xl font-black text-[var(--pmu-text)]">
-            Impossible de charger cette course
-          </h1>
+          <h1 className="text-2xl font-black text-[var(--pmu-text)]">Impossible de charger cette course</h1>
           <p className="text-sm text-[var(--pmu-text-soft)]">{error}</p>
         </section>
       ) : data && courseInfo ? (
-        <section className="app-card flex flex-col gap-5 rounded-2xl p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="space-y-2">
-              <p className="app-kicker">
-                R{courseInfo.reunion ?? reunion}C{courseInfo.course ?? course}
-                {courseInfo.hippodrome ? ` - ${courseInfo.hippodrome}` : ""}
-              </p>
-              <h1 className="text-3xl font-black tracking-[-0.03em] text-[var(--pmu-text)] md:text-4xl">
-                {courseInfo.nomCourse || `Course ${course}`}
-              </h1>
-              <p className="text-sm text-[var(--pmu-text-soft)]">
-                {meta.length ? meta.join(" • ") : "Depart imminent"}
-              </p>
+        <>
+          <CourseHeader courseInfo={courseInfo} reunion={reunion} course={course} selectedDate={selectedDate} />
+
+          <ParticipantsTable
+            participants={participants}
+            favoriNum={pronostic?.favoris?.[0] ?? null}
+            pepiteNum={data.analysis?.pepiteDuJour?.numPmu ?? null}
+            estPlat={courseInfo.discipline?.toUpperCase() === "PLAT"}
+            courseFinished={Boolean(data.isFinished || officialArrival.length)}
+            officialArrival={officialArrival}
+          />
+
+          {data.paywall?.required ? (
+            <LockedCard previewLabel={data.paywall.preview?.favori?.nom ?? null} />
+          ) : pronostic ? (
+            <CoursePronostic pronostic={pronostic} participants={participants} />
+          ) : (
+            <AnalysisPendingCard />
+          )}
+
+          {top5.length > 0 || officialArrival.length > 0 ? (
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,400px)]">
+              <TopFiveCard top5={top5} participants={participants} />
+              <OfficialArrivalCard arrivee={officialArrival} />
             </div>
-          </div>
-
-          <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
-            <ParticipantsTable
-              participants={participants}
-              favoriNum={pronostic?.favoris?.[0] ?? null}
-              pepiteNum={data.analysis?.pepiteDuJour?.numPmu ?? null}
-              estPlat={courseInfo.discipline?.toUpperCase() === "PLAT"}
-              courseFinished={Boolean(data.isFinished || officialArrival.length)}
-              officialArrival={officialArrival}
-            />
-
-            <div className="flex flex-col gap-5">
-              {data.paywall?.required ? (
-                <LockedCard previewLabel={data.paywall.preview?.favori?.nom ?? null} />
-              ) : pronostic ? (
-                <CoursePronostic pronostic={pronostic} participants={participants} />
-              ) : (
-                <AnalysisPendingCard />
-              )}
-
-              {top5.length ? (
-                <div className="app-card app-card-muted flex flex-col gap-4 rounded-2xl p-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="app-kicker">Lecture moteur</p>
-                      <h3 className="text-lg font-semibold text-[var(--pmu-text)]">
-                        Repere principal
-                      </h3>
-                    </div>
-                    <span className="rounded-full border border-[var(--pmu-border)] px-3 py-1 text-xs font-semibold text-[var(--pmu-text-soft)]">
-                      Top 5
-                    </span>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {top5.map((numero, index) => {
-                      const participant = participants.find(
-                        (item) => String(item.numero) === String(numero),
-                      );
-
-                      return (
-                        <div
-                          key={`${numero}-${index}`}
-                          className="rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-raised)] px-4 py-3"
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--pmu-text-soft)]">
-                              {index + 1}
-                            </span>
-                            <span className="text-2xl font-black text-[var(--pmu-primary)]">
-                              {numero}
-                            </span>
-                          </div>
-                          <p className="mt-2 text-sm font-semibold text-[var(--pmu-text)]">
-                            {participant?.nom || `Cheval ${numero}`}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
-
-              {officialArrival.length ? (
-                <OfficialArrivalCard arrivee={officialArrival} updatedAt={null} />
-              ) : null}
-            </div>
-          </div>
-        </section>
+          ) : null}
+        </>
       ) : null}
     </main>
   );
