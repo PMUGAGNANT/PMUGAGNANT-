@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
+import { SidebarProgramme } from "./SidebarProgramme";
 import { SidebarSearch } from "./SidebarSearch";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -165,6 +166,12 @@ export function Sidebar() {
         <div className="mt-5">
           <SidebarSearch />
         </div>
+
+        <Suspense
+          fallback={<div className="mt-4 h-52 animate-pulse rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface)]" />}
+        >
+          <SidebarProgramme />
+        </Suspense>
 
         <nav className="mt-4 space-y-1">
           {(navItems ?? []).map((item) => {
