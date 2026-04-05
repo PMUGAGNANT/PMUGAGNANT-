@@ -85,7 +85,7 @@ export async function GET(
       return NextResponse.json({
         success: true,
         courseInfo,
-        participants: participants.length,
+        participants,
         officialArrival,
         minutesUntilStart: minutesUntil,
         pronoAvailable,
@@ -113,7 +113,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       courseInfo,
-      participants: participants.length,
+      participants,
       officialArrival,
       minutesUntilStart: minutesUntil,
       pronoAvailable,

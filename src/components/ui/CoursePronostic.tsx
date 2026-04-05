@@ -9,27 +9,32 @@ type CoursePronosticData = {
   valueBet?: number | string | null;
   miseConseil?: number | null;
   recommandation?: string | null;
+  betType?: string | null;
   pourquoi?: string[];
 };
 
 interface CoursePronosticProps {
   pronostic: CoursePronosticData;
-  participants: CourseParticipantRow[];
+  participants: CourseParticipantRow[] | null | undefined;
 }
 
 function formatBetType(value?: string | null) {
   if (!value) return "Gagnant";
-  if (value.toUpperCase() === "PLACE") return "Placé";
+  if (value.toUpperCase().includes("PLACE")) return "Place";
   return "Gagnant";
 }
 
-function getSelectedHorse(pronostic: CoursePronosticData, participants: CourseParticipantRow[]) {
+function getSelectedHorse(
+  pronostic: CoursePronosticData,
+  participants: CourseParticipantRow[] | null | undefined,
+) {
+  const safeParticipants = Array.isArray(participants) ? participants : [];
   const targetNumber = pronostic.favoris?.[0] ?? pronostic.top5?.[0] ?? null;
-  if (targetNumber === null) return participants[0] ?? null;
+  if (targetNumber === null) return safeParticipants[0] ?? null;
 
   return (
-    participants.find((item) => String(item.numero) === String(targetNumber)) ??
-    participants[0] ??
+    safeParticipants.find((item) => String(item.numero) === String(targetNumber)) ??
+    safeParticipants[0] ??
     null
   );
 }
@@ -39,7 +44,7 @@ function getVerdictLabel(pronostic: CoursePronosticData) {
 
   if (pronostic.valueBet) {
     return {
-      label: "Bonne opportunité",
+      label: "Bonne opportunite",
       tone: "rgb(251 191 36)",
       background: "rgba(251, 191, 36, 0.12)",
     };
@@ -47,7 +52,7 @@ function getVerdictLabel(pronostic: CoursePronosticData) {
 
   if (recommendation.includes("SURVEILL")) {
     return {
-      label: "À surveiller",
+      label: "A surveiller",
       tone: "rgb(245 158 11)",
       background: "rgba(245, 158, 11, 0.12)",
     };
@@ -55,21 +60,23 @@ function getVerdictLabel(pronostic: CoursePronosticData) {
 
   if (recommendation.includes("PASS")) {
     return {
-      label: "À éviter",
+      label: "A eviter",
       tone: "var(--pmu-red)",
       background: "color-mix(in srgb, var(--pmu-red) 14%, transparent)",
     };
   }
 
   return {
-    label: "Coup sûr du jour",
+    label: "Coup sur du jour",
     tone: "var(--pmu-primary)",
     background: "var(--pmu-primary-soft)",
   };
 }
 
 export function CoursePronostic({ pronostic, participants }: CoursePronosticProps) {
-  const selectedHorse = getSelectedHorse(pronostic, participants);
+  const safeParticipants = Array.isArray(participants) ? participants : [];
+  const raisons = Array.isArray(pronostic.pourquoi) ? pronostic.pourquoi : [];
+  const selectedHorse = getSelectedHorse(pronostic, safeParticipants);
 
   if (!selectedHorse) {
     return null;
@@ -77,6 +84,7 @@ export function CoursePronostic({ pronostic, participants }: CoursePronosticProp
 
   const confidence = Math.max(0, Math.min(pronostic.scoreConfiance ?? 0, 10));
   const verdict = getVerdictLabel(pronostic);
+  const betType = formatBetType(pronostic.betType ?? pronostic.recommandation);
 
   return (
     <section className="app-card px-4 py-4 md:px-5">
@@ -98,7 +106,9 @@ export function CoursePronostic({ pronostic, participants }: CoursePronosticProp
       <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(240px,320px)]">
         <div className="rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] p-4">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-[var(--pmu-text-soft)]">Confiance du moteur</p>
+            <p className="text-sm font-semibold text-[var(--pmu-text-soft)]">
+              Confiance du moteur
+            </p>
             <span className="font-mono text-lg font-black text-[var(--pmu-primary)]">
               {confidence.toFixed(1)}/10
             </span>
@@ -114,16 +124,14 @@ export function CoursePronostic({ pronostic, participants }: CoursePronosticProp
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl bg-[var(--pmu-bg)] px-3 py-3">
               <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--pmu-text-soft)]">
-                Pari conseillé
+                Pari conseille
               </p>
-              <p className="mt-2 text-xl font-black text-[var(--pmu-text)]">
-                {formatBetType(pronostic.recommandation)}
-              </p>
+              <p className="mt-2 text-xl font-black text-[var(--pmu-text)]">{betType}</p>
             </div>
 
             <div className="rounded-2xl bg-[var(--pmu-bg)] px-3 py-3">
               <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--pmu-text-soft)]">
-                Mise conseillée
+                Mise conseillee
               </p>
               <p className="mt-2 text-xl font-black text-[var(--pmu-text)]">
                 {pronostic.miseConseil ?? 0}€
@@ -137,15 +145,15 @@ export function CoursePronostic({ pronostic, participants }: CoursePronosticProp
             Pourquoi lui ?
           </p>
           <div className="mt-3 space-y-2">
-            {(pronostic.pourquoi ?? []).slice(0, 4).map((factor) => (
+            {raisons.slice(0, 4).map((factor) => (
               <div key={factor} className="flex items-start gap-2 text-sm text-[var(--pmu-text)]">
                 <span className="mt-[2px] text-[var(--pmu-primary)]">•</span>
                 <span>{factor}</span>
               </div>
             ))}
-            {(pronostic.pourquoi ?? []).length === 0 ? (
+            {raisons.length === 0 ? (
               <p className="text-sm text-[var(--pmu-text-soft)]">
-                Le moteur retient ce cheval sur la synthèse globale de la course.
+                Le moteur retient ce cheval sur la synthese globale de la course.
               </p>
             ) : null}
           </div>
