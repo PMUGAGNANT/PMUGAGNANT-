@@ -125,7 +125,7 @@ function formatDiscipline(race: RaceSummary) {
 
 function ReunionCode({ reunion }: { reunion: number }) {
   return (
-    <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-bg)] text-[var(--pmu-text)]">
+    <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-bg)] text-[var(--pmu-text)]">
       <span className="text-[13px] font-black tracking-[-0.03em]">R{reunion}</span>
       <span className="text-[9px] font-semibold uppercase tracking-[0.08em] text-[var(--pmu-text-soft)]">
         Run
@@ -136,11 +136,11 @@ function ReunionCode({ reunion }: { reunion: number }) {
 
 function CourseCode({ reunion, course }: { reunion: number; course: number }) {
   return (
-    <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl border border-[var(--pmu-border)] bg-[linear-gradient(180deg,var(--pmu-surface-2)_0%,var(--pmu-bg)_100%)] text-[var(--pmu-text)]">
-      <span className="text-[11px] font-black uppercase tracking-[0.08em] text-[var(--pmu-text-soft)]">
+    <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl border border-[var(--pmu-border)] bg-[linear-gradient(180deg,var(--pmu-surface-2)_0%,var(--pmu-bg)_100%)] text-[var(--pmu-text)]">
+      <span className="text-[10px] font-black uppercase tracking-[0.08em] text-[var(--pmu-text-soft)]">
         R{reunion}
       </span>
-      <span className="text-[18px] font-black tracking-[-0.04em]">C{course}</span>
+      <span className="text-[17px] font-black tracking-[-0.04em]">C{course}</span>
     </div>
   );
 }
@@ -305,11 +305,11 @@ export function SidebarProgramme() {
           </div>
 
           {tab === "courses" ? (
-            <div className="mt-3 rounded-2xl border border-[var(--pmu-border)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--pmu-surface-highlight)_20%,var(--pmu-surface-2))_0%,var(--pmu-surface-2)_100%)] p-3">
-              <div className="flex items-center gap-3">
+            <div className="mt-3 rounded-xl border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_88%,var(--pmu-bg)_12%)] px-2.5 py-2">
+              <div className="flex items-start gap-2.5">
                 <button
                   type="button"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-bg)] text-[var(--pmu-text)] transition hover:border-[var(--pmu-border-strong)]"
+                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-bg)] text-[var(--pmu-text)] transition hover:border-[var(--pmu-border-strong)]"
                   onClick={() => setTab("reunions")}
                   aria-label="Retour aux réunions"
                 >
@@ -319,38 +319,29 @@ export function SidebarProgramme() {
                 </button>
 
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-black text-[var(--pmu-text)]">
-                    {selectedGroup ? `R${selectedGroup.reunion} ${selectedGroup.hippodrome}` : "Choisis une réunion"}
-                  </p>
-                  <p className="truncate text-[11px] text-[var(--pmu-text-soft)]">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="truncate text-[13px] font-black text-[var(--pmu-text)]">
+                      {selectedGroup ? `R${selectedGroup.reunion} ${selectedGroup.hippodrome}` : "Choisis une réunion"}
+                    </p>
+                    {selectedGroup ? (
+                      <span className="shrink-0 rounded-full border border-[var(--pmu-border)] bg-[var(--pmu-bg)] px-2 py-0.5 text-[10px] font-bold text-[var(--pmu-text-soft)]">
+                        {selectedGroup.count} courses
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-0.5 truncate text-[10px] text-[var(--pmu-text-soft)]">
                     {selectedGroup
-                      ? `${selectedGroup.count} courses • ${selectedGroup.firstTime} → ${selectedGroup.lastTime}`
+                      ? `${selectedGroup.firstTime} → ${selectedGroup.lastTime} • ${reunionSummary.pending} à venir${
+                          reunionSummary.live > 0 ? ` • ${reunionSummary.live} en cours` : ""
+                        }${reunionSummary.done > 0 ? ` • ${reunionSummary.done} courues` : ""}`
                       : "Sélectionne une réunion pour afficher ses courses"}
                   </p>
                 </div>
               </div>
-
-              {selectedGroup ? (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <span className="rounded-full border border-[var(--pmu-border)] bg-[var(--pmu-bg)] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pmu-text-soft)]">
-                    {reunionSummary.pending} à venir
-                  </span>
-                  {reunionSummary.live > 0 ? (
-                    <span className="rounded-full border border-[var(--pmu-primary)]/25 bg-[var(--pmu-primary-soft)] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pmu-primary)]">
-                      {reunionSummary.live} en cours
-                    </span>
-                  ) : null}
-                  {reunionSummary.done > 0 ? (
-                    <span className="rounded-full border border-[var(--pmu-border)] bg-[var(--pmu-bg)] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pmu-text-soft)]">
-                      {reunionSummary.done} courues
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
             </div>
           ) : null}
 
-          <div className="mt-3 max-h-[26rem] space-y-2 overflow-y-auto pr-1 [scrollbar-width:thin]">
+          <div className="mt-3 max-h-[31rem] space-y-2 overflow-y-auto pr-1 [scrollbar-width:thin]">
             {loading
               ? Array.from({ length: 4 }, (_, index) => (
                   <div
