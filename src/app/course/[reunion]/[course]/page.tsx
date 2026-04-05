@@ -1,1287 +1,349 @@
 "use client";
 
-import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { SEUIL_JOUABLE, SEUIL_SURVEILLANCE } from "@/lib/client-race-scoring";
-import { buildEloProfileFromParticipant, computeSigmaFromRunCount } from "@/lib/elo-scoring";
-import { computeIndiceOuverture } from "@/lib/ouverture";
-import { getSynergie } from "@/lib/synergie";
-import { CONFIDENCE_BUCKET_HIGH, CONFIDENCE_BUCKET_MEDIUM } from "@/lib/scoring-policy";
-import { ChevalStats } from "@/components/ui/ChevalStats";
-import { EnjeuxPMU } from "@/components/ui/EnjeuxPMU";
-import { EloBars } from "@/components/ui/EloBars";
-import { SynergieCallout } from "@/components/ui/SynergieCallout";
-import { asArray } from "@/lib/array-utils";
-import { fromIsoDate, getTodayDateStr, parsePmuDate } from "@/lib/date-utils";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useParams, useSearchParams } from "next/navigation";
+
+import { CoursePronostic } from "@/components/ui/CoursePronostic";
+import { ParticipantsTable } from "@/components/ui/ParticipantsTable";
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
-import type { RaceAnalysis, RaceSummary, ScoredParticipant } from "@/lib/types";
 
-interface ArrivalRow {
-  position: number | null;
-  numPmu: number;
-  nom: string;
-  jockey: string | null;
-  entraineur: string | null;
+type RaceApiParticipant = {
+  numero?: number | string | null;
+  nom?: string | null;
+  driver?: string | null;
+  jockey?: string | null;
+  entraineur?: string | null;
+  proprietaire?: string | null;
+  age?: number | null;
+  sexe?: string | null;
+  corde?: number | string | null;
+  poids?: number | null;
+  musique?: string | null;
+  cote?: number | null;
+  rapportDirect?: number | null;
+  coefficientFormeCheval?: number | null;
+  coefficientFormeJockey?: number | null;
+  coefficientFormeEntraineur?: number | null;
+  gainsCarriere?: number | null;
+  gainsVictoires?: number | null;
+  gainsPlace?: number | null;
+};
+
+type RaceApiData = {
+  reunion: number;
+  course: number;
+  nom?: string | null;
+  hippodrome?: string | null;
+  discipline?: string | null;
+  distance?: number | string | null;
+  heureDepart?: string | null;
+  heureFin?: string | null;
+  nombrePartants?: number | null;
+  meteo?: string | null;
+  temperatureC?: number | null;
+  allocation?: number | null;
+  participants?: RaceApiParticipant[];
+  pronostic?: {
+    statut?: string;
+    favoris?: Array<number | string>;
+    outsider?: number | string | null;
+    tocard?: number | string | null;
+    bases?: Array<number | string>;
+    champReduit?: Array<number | string>;
+    ticketPrincipal?: Array<number | string>;
+    top5?: Array<number | string>;
+    scoreConfiance?: number | null;
+    valueBet?: number | string | null;
+    miseConseil?: number | null;
+    lisibilite?: number | null;
+    recommandation?: string | null;
+    pourquoi?: string[];
+  };
+  officialResult?: {
+    arrivee?: Array<number | string>;
+    updatedAt?: string | null;
+  };
+};
+
+function formatEuros(value?: number | null) {
+  if (typeof value !== "number" || Number.isNaN(value)) return null;
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0,
+  }).format(value);
 }
 
-interface RaceApiResponse {
-  success: boolean;
-  courseInfo: RaceSummary;
-  officialArrival: ArrivalRow[];
-  minutesUntilStart: number;
-  pronoAvailable: boolean;
-  isFinished: boolean;
-  analysis: RaceAnalysis | null;
-  paywall?: {
-    required: boolean;
-    preview?: {
-      lisibilite: string;
-      recommendation: string | null;
-      favori: { numPmu: number; nom: string } | null;
-    } | null;
-  } | null;
-  error?: string;
-}
-
-/* ─── Palette = variables thème (dark / warm) ─────────── */
-const G = "var(--pmu-primary)";
-const G_DIM = "var(--pmu-primary-soft)";
-const DARK = "var(--pmu-bg)";
-const DARK_GLASS = "color-mix(in srgb, var(--pmu-surface) 92%, transparent)";
-const CARD = "var(--pmu-surface)";
-const CARD2 = "var(--pmu-surface-2)";
-const CARD_HI = "var(--pmu-surface-highlight)";
-const BORDER = "var(--pmu-border)";
-const BORDER_SOFT = "color-mix(in srgb, var(--pmu-border) 80%, transparent)";
-const MUTED = "var(--pmu-text-muted)";
-const WHITE = "var(--pmu-text)";
-const GOLD = "var(--pmu-orange)";
-const GOLD_DIM = "color-mix(in srgb, var(--pmu-orange) 12%, transparent)";
-const RED = "var(--pmu-red)";
-const RED_DIM = "color-mix(in srgb, var(--pmu-red) 12%, transparent)";
-const BLUE = "var(--pmu-accent-blue)";
-const BLUE_DIM = "color-mix(in srgb, var(--pmu-accent-blue) 12%, transparent)";
-const VIOLET = "var(--pmu-accent-violet)";
-
-/* ─── Helpers (identiques) ─────────────────────────────── */
-function round1(v: number) { return Math.round(v * 10) / 10; }
-
-function normalizeSelectedDate(raw: string | null) {
-  if (!raw) return getTodayDateStr();
-  if (/^\d{8}$/.test(raw)) return raw;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return fromIsoDate(raw);
-  return getTodayDateStr();
-}
-
-function formatDateLabel(d: string) {
-  return parsePmuDate(d).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
-}
-
-function formatCurrency(v: number | null | undefined) {
-  if (v == null || !Number.isFinite(v)) return null;
-  return `${new Intl.NumberFormat("fr-FR").format(v)} EUR`;
-}
-
-function formatOdds(v: number | null | undefined) {
-  if (v == null || !Number.isFinite(v)) return "-";
-  return Number(v).toFixed(1);
-}
-
-function formatPercent(v: number | null | undefined) {
-  if (v == null || !Number.isFinite(v)) return "-";
-  return `${Math.round(Number(v) * 100)}%`;
-}
-
-function formatCountdown(m: number) {
-  if (m <= 0) return "Départ imminent";
-  if (m < 60) return `Dans ${Math.round(m)} min`;
-  const h = Math.floor(m / 60);
-  const mn = Math.round(m % 60);
-  return `Dans ${h}h${String(mn).padStart(2, "0")}`;
-}
-
-function formatRevealTime(m: number) {
-  const r = m - 30;
-  if (r <= 0) return "Ouverture imminente";
-  return `Ouverture dans ${formatCountdown(r).replace(/^Dans /, "")}`;
-}
-
-function formatPosition(p: number | null | undefined) {
-  if (!p) return "n.c.";
-  return p === 1 ? "1er" : `${p}e`;
-}
-
-function getHumanLead(p: ScoredParticipant | null, estPlat: boolean): { label: string; value: string } {
-  if (!p) return { label: "Repère humain", value: "Info humaine indisponible" };
-  const list = estPlat
-    ? [{ label: "Jockey", value: p.jockey }, { label: "Driver", value: p.driver }, { label: "Entraîneur", value: p.entraineur }]
-    : [{ label: "Driver", value: p.driver }, { label: "Jockey", value: p.jockey }, { label: "Entraîneur", value: p.entraineur }];
-  const m = list.find(e => e.value && e.value.trim().length > 0);
-  return m ? { label: m.label, value: m.value!.trim() } : { label: "Repère humain", value: "Info humaine indisponible" };
-}
-
-function getHumanReference(p: ScoredParticipant | null, estPlat: boolean) {
-  const l = getHumanLead(p, estPlat);
-  return `${l.label}: ${l.value}`;
-}
-
-function formatTicketType(t: string | null | undefined) {
-  if (!t) return "Lecture prudente";
-  switch (t) {
-    case "GAGNANT": return "Simple gagnant";
-    case "PLACE": return "Simple placé";
-    case "COUPLE_GAGNANT": return "Couplé gagnant";
-    case "COUPLE_PLACE": return "Couplé placé";
-    default: return t;
-  }
-}
-
-function describeLisibilite(l: string) {
-  switch (l) {
-    case "LISIBLE": return "Course lisible, hiérarchie plus fiable.";
-    case "COMPLEXE": return "Course ouverte, écarts plus serrés.";
-    default: return "Course trop diffuse pour une lecture nette.";
-  }
-}
-
-function formatObjective(o: ScoredParticipant["prediction"]["objective"] | null | undefined) {
-  switch (o) {
-    case "GAGNE": return "Vise la gagne";
-    case "PODIUM": return "Profil podium";
-    case "TOP5": return "Vise le top 5";
-    default: return "Spéculatif";
-  }
-}
-
-function describeTicketIntent(r: ScoredParticipant) {
-  if (r.prediction.typePariConseille === "PLACE") {
-    if (r.prediction.objective === "TOP5") return "Cheval surtout solide pour accrocher une place élargie plutôt qu’un ticket gagnant sec.";
-    return "Le moteur le préfère en couverture placée, plus fiable qu’une attaque trop offensive.";
-  }
-  if (r.prediction.objective === "GAGNE") return "Le moteur voit ici un vrai ticket gagnant, avec suffisamment de tenue pour l’assumer.";
-  return "Lecture offensive mesurée : ticket jouable si la course ne se resserre pas davantage.";
-}
-
-function formatVariation(v: number | null | undefined) {
-  if (v == null || !Number.isFinite(v)) return null;
-  const r = round1(v);
-  return `${r > 0 ? "+" : ""}${r}%`;
-}
-
-function getConfidenceFill(s: number) { return `${Math.max(0, Math.min(s, 10)) * 10}%`; }
-
-function getActionTone(action: string, valueBet: boolean) {
-  if (action === "MISER" && valueBet) return { bg: G_DIM, color: G, label: "OPPORTUNITÉ VALUE ✅" };
-  return { bg: RED_DIM, color: RED, label: "ÉVITER ❌" };
-}
-
-function getConfianceStyle(s: number) {
-  if (s >= CONFIDENCE_BUCKET_HIGH) return { color: G };
-  if (s >= CONFIDENCE_BUCKET_MEDIUM) return { color: GOLD };
-  return { color: RED };
-}
-
-function getTicketSimple(analysis: RaceAnalysis | null) {
-  if (!analysis) return null;
+function LockedCard() {
   return (
-    analysis.ranking.find(r => r.prediction.decision !== "REJET" && r.prediction.typePariConseille === "GAGNANT") ??
-    analysis.ranking.find(r => r.prediction.decision !== "REJET") ??
-    analysis.favori
-  );
-}
-
-function getBasePlace(analysis: RaceAnalysis | null, simpleTicket: ScoredParticipant | null) {
-  if (!analysis) return null;
-  return (
-    analysis.ranking.find(r => r.numPmu !== simpleTicket?.numPmu && r.prediction.decision !== "REJET" && r.prediction.typePariConseille === "PLACE") ??
-    analysis.top5.find(r => r.numPmu !== simpleTicket?.numPmu) ??
-    null
-  );
-}
-
-function getArrivalPosition(numPmu: number | null | undefined, arrival: ArrivalRow[]) {
-  if (!numPmu) return null;
-  return arrival.find(r => r.numPmu === numPmu)?.position ?? null;
-}
-
-function getOutcomeTone(position: number | null, placeMode = false) {
-  if (position === null) return { label: "Résultat indisponible", bg: CARD2, color: MUTED };
-  if (position === 1) return { label: placeMode ? "Dans les 3" : "Gagnant", bg: G_DIM, color: G };
-  if (placeMode && position <= 3) return { label: "Place", bg: GOLD_DIM, color: GOLD };
-  return { label: "Perdu", bg: RED_DIM, color: RED };
-}
-
-function getVerdictTone(label: string) {
-  if (label === "Ticket gagnant" || label === "Pari fort") return { bg: G_DIM, color: G };
-  if (label === "Ticket placé" || label === "Base placée" || label === "Course ouverte") return { bg: GOLD_DIM, color: GOLD };
-  return { bg: RED_DIM, color: RED };
-}
-
-function buildVerdict(response: RaceApiResponse | null, analysis: RaceAnalysis | null, simpleTicket: ScoredParticipant | null) {
-  const technicalFavorite = analysis?.favori ?? null;
-  const recommendation = analysis?.recommandation?.decision ?? "PAS DE VALIDATION FORTE";
-  const confidence = analysis?.scoreConfiance?.score ?? 0;
-  const lisibilite = analysis?.prediction.lisibilite ?? "LOTERIE";
-  const solidity = analysis?.soliditeFavori?.score ?? 0;
-  const placeTicket = simpleTicket?.prediction.typePariConseille === "PLACE";
-
-  if (response?.isFinished && response.officialArrival.length > 0 && simpleTicket) {
-    const position = getArrivalPosition(simpleTicket.numPmu, response.officialArrival);
-    if (position === 1) return { title: "Ticket gagnant", subtitle: `Le ticket principal N${simpleTicket.numPmu} a gagné la course.`, label: "Bilan officiel" };
-    if (position !== null && position <= 3) return { title: "Ticket placé", subtitle: `Le ticket principal N${simpleTicket.numPmu} termine ${formatPosition(position)}.`, label: "Bilan officiel" };
-    if (position !== null) return { title: "Ticket manqué", subtitle: `Le ticket principal N${simpleTicket.numPmu} termine ${formatPosition(position)}.`, label: "Bilan officiel" };
-  }
-
-  if (recommendation === "PARI OFFENSIF" && confidence >= SEUIL_JOUABLE) return { title: "Ticket offensif", subtitle: `Le ticket principal ressort proprement avec ${confidence}/10 de confiance sur une course ${lisibilite.toLowerCase()}.`, label: "Verdict moteur" };
-  if (placeTicket && solidity >= 68) return { title: "Base placée", subtitle: "Le moteur préfère une base placée solide plutôt qu’une attaque gagnante trop agressive.", label: "Verdict moteur" };
-  if (lisibilite === "LOTERIE") return { title: "Course à laisser de côté", subtitle: "La course est trop ouverte pour sortir un vrai ticket propre.", label: "Verdict moteur" };
-  if (recommendation === "SURVEILLANCE ACTIVE" || lisibilite === "COMPLEXE") return { title: "Lecture prudente", subtitle: "Le favori reste jouable, mais l'écart avec ses poursuivants est trop court pour valider un ticket offensif.", label: "Verdict moteur" };
-  if (technicalFavorite && solidity >= 70) return { title: "⚠️ À surveiller", subtitle: "Le favori tient encore, mais la course demande plus de prudence que d'engagement.", label: "Verdict moteur" };
-  return { title: "Lecture réservée", subtitle: "Le moteur préfère rester défensif plutôt que d'insister sur un ticket peu clair.", label: "Verdict moteur" };
-}
-
-function buildStrengths(analysis: RaceAnalysis | null, favorite: ScoredParticipant | null, placeBase: ScoredParticipant | null) {
-  if (!analysis || !favorite) return [];
-  const points: string[] = [];
-  const solidity = analysis.soliditeFavori;
-  if ((favorite.musicStats?.trend ?? 0) > 0.5) points.push("Forme récente orientée à la hausse.");
-  if ((favorite.musicStats?.fiabilite ?? 0) >= 0.75) points.push("Profil fiable dans la musique récente.");
-  if (favorite.signaux.victoire >= 8) points.push("Signal de victoire présent dans le moteur.");
-  if (favorite.signaux.podium >= 8) points.push("Base podium solide pour sécuriser la course.");
-  if ((favorite.stalle ?? favorite.placeCorde ?? 99) <= 4 && analysis.courseInfo.estPlat) points.push("Bon numéro de stalle pour le parcours.");
-  if (placeBase && placeBase.numPmu !== favorite.numPmu) points.push(`Base placée complémentaire : N${placeBase.numPmu} ${placeBase.nom}.`);
-  if (solidity?.score && solidity.score >= 72) points.push(`Solidité correcte du favori (${round1(solidity.score)}/100).`);
-  return points.slice(0, 4);
-}
-
-function buildWarnings(analysis: RaceAnalysis | null, favorite: ScoredParticipant | null) {
-  if (!analysis || !favorite) return [];
-  const warnings: string[] = [];
-  const solidity = analysis.soliditeFavori;
-  if (analysis.prediction.lisibilite === "COMPLEXE") warnings.push("Course serrée : le top 3 se tient de près.");
-  if (analysis.prediction.lisibilite === "LOTERIE") warnings.push("Course trop ouverte pour une validation propre.");
-  if (solidity && solidity.ecartScore <= 2.5) warnings.push(`Écart faible avec le 2e : ${round1(solidity.ecartScore)} pts.`);
-  if (favorite.signaux.risque >= 8) warnings.push("Risque technique élevé dans le profil du favori.");
-  if (favorite.prediction.typePariConseille === "PLACE") warnings.push("Le moteur voit surtout une base placée, pas un vrai ticket gagnant sec.");
-  return warnings.slice(0, 3);
-}
-
-function buildContextHighlights(data: RaceApiResponse, analysis: RaceAnalysis | null) {
-  const items: string[] = [];
-  if (data.courseInfo.terrain) items.push(`Terrain : ${data.courseInfo.terrain}`);
-  if (data.courseInfo.meteo) items.push(`Météo : ${data.courseInfo.meteo}`);
-  items.push(`Lisibilité : ${analysis?.prediction.lisibilite ?? "N/A"}`);
-  if (analysis?.soliditeFavori?.ecartScore !== undefined) items.push(`Écart favori / 2e : ${round1(analysis.soliditeFavori.ecartScore)} pts`);
-  return items;
-}
-
-function formatDaySignalTitle(label: string) {
-  const s = label.replaceAll("_", " ").toLowerCase();
-  return s.replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-/* ─── Primitives UI ────────────────────────────────────── */
-
-const css = `
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap');
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --g: ${G};
-    --dark: ${DARK};
-    --card: ${CARD};
-    --card2: ${CARD2};
-    --border: ${BORDER};
-    --muted: ${MUTED};
-    --white: ${WHITE};
-    --gold: ${GOLD};
-    --red: ${RED};
-    --blue: ${BLUE};
-    --violet: ${VIOLET};
-    --font-display: 'Outfit', system-ui, sans-serif;
-    --font-body: 'DM Sans', system-ui, sans-serif;
-    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-  }
-
-  .course-detail-shell {
-    min-height: 100vh;
-    background:
-      radial-gradient(ellipse 85% 52% at 50% -28%, rgba(13, 148, 136, 0.1), transparent 56%),
-      radial-gradient(ellipse 68% 42% at 98% 8%, rgba(37, 99, 235, 0.06), transparent 52%),
-      radial-gradient(ellipse 48% 32% at 2% 88%, rgba(124, 58, 237, 0.05), transparent 48%),
-      var(--dark);
-  }
-
-  .shimmer {
-    background: linear-gradient(90deg, ${CARD} 25%, ${CARD2} 50%, ${CARD} 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.6s ease-in-out infinite;
-  }
-
-  @keyframes shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-  }
-
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(12px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  .fade-up { animation: fadeUp 0.45s ease forwards; }
-
-  .bar-fill {
-    height: 100%;
-    border-radius: 999px;
-    transition: width 0.8s cubic-bezier(.4,0,.2,1);
-  }
-
-  .detail-fold {
-    width: 100%;
-  }
-
-  .detail-fold summary {
-    list-style: none;
-  }
-
-  .detail-fold summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .detail-fold__summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 16px 18px;
-    cursor: pointer;
-  }
-
-  .detail-fold__indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    flex-shrink: 0;
-    color: ${MUTED};
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .detail-fold__chevron {
-    display: inline-flex;
-    transition: transform 0.2s ease;
-    font-size: 15px;
-  }
-
-  .detail-fold[open] .detail-fold__chevron {
-    transform: rotate(180deg);
-  }
-
-  .detail-fold__body {
-    padding: 0 18px 18px;
-    border-top: 1px solid ${BORDER_SOFT};
-  }
-
-  button { font-family: var(--font-body); }
-`;
-
-function Tag({ children, color = WHITE, bg = CARD2, mono = false }: { children: ReactNode; color?: string; bg?: string; mono?: boolean }) {
-  return (
-    <span style={{
-      display: "inline-flex", alignItems: "center",
-      padding: "4px 9px", borderRadius: 9999,
-      background: bg, color, fontSize: 10, fontWeight: 600,
-      letterSpacing: "0.06em", textTransform: "uppercase",
-      fontFamily: mono ? "var(--font-mono)" : "var(--font-body)",
-      border: `1px solid ${BORDER_SOFT}`,
-      boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-    }}>
-      {children}
-    </span>
-  );
-}
-
-function Card({ children, accent, style }: { children: ReactNode; accent?: string; style?: React.CSSProperties }) {
-  return (
-    <div style={{
-      background: `linear-gradient(165deg, ${CARD_HI}f0 0%, ${CARD} 48%, ${CARD} 100%)`,
-      borderRadius: 14,
-      border: `1px solid ${accent ?? BORDER}`,
-      overflow: "hidden",
-      boxShadow: `0 12px 28px rgba(2, 6, 23, 0.34), 0 0 0 1px rgba(45, 212, 191, 0.02)`,
-      ...style,
-    }}>
-      {children}
+    <div className="app-card app-card-muted flex flex-col gap-3 rounded-2xl p-5">
+      <div className="flex items-center gap-3 text-[var(--pmu-primary)]">
+        <span aria-hidden>🔒</span>
+        <span className="app-kicker">Pronostic reserve</span>
+      </div>
+      <h3 className="text-lg font-semibold text-[var(--pmu-text)]">Fiche course</h3>
+      <p className="text-sm text-[var(--pmu-text-soft)]">
+        Le tableau complet des partants et la lecture IA detaillee sont disponibles
+        avec l&apos;acces Premium.
+      </p>
+      <Link
+        href="/premium"
+        className="app-button-primary inline-flex w-full items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold sm:w-auto"
+      >
+        Debloquer la fiche Premium
+      </Link>
     </div>
   );
 }
 
-function SectionCard({ title, kicker, children, accent }: { title: string; kicker?: string; children: ReactNode; accent?: string }) {
-  return (
-    <Card accent={accent} style={{ marginBottom: 0 }}>
-      <div style={{ padding: "18px 18px 0" }}>
-        {kicker && (
-          <div style={{ fontSize: 10, fontWeight: 600, color: G, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8, opacity: 0.95 }}>
-            {kicker}
-          </div>
-        )}
-        <div style={{ fontFamily: "var(--font-display)", fontSize: 17, fontWeight: 700, color: WHITE, marginBottom: 14, lineHeight: 1.2, letterSpacing: "-0.02em" }}>
-          {title}
-        </div>
-      </div>
-      <div style={{ padding: "0 18px 18px" }}>
-        {children}
-      </div>
-    </Card>
-  );
-}
-
-function DetailFold({
-  title,
-  kicker,
-  summary,
-  children,
-  defaultOpen = false,
-  accent,
+function OfficialArrivalCard({
+  arrivee,
+  updatedAt,
 }: {
-  title: string;
-  kicker?: string;
-  summary?: string;
-  children: ReactNode;
-  defaultOpen?: boolean;
-  accent?: string;
+  arrivee: Array<number | string>;
+  updatedAt?: string | null;
 }) {
   return (
-    <Card accent={accent} style={{ marginBottom: 0 }}>
-      <details className="detail-fold" open={defaultOpen}>
-        <summary className="detail-fold__summary">
-          <div style={{ minWidth: 0 }}>
-            {kicker && (
-              <div style={{ fontSize: 10, fontWeight: 600, color: G, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8, opacity: 0.95 }}>
-                {kicker}
-              </div>
-            )}
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 17, fontWeight: 700, color: WHITE, lineHeight: 1.2, letterSpacing: "-0.02em" }}>
-              {title}
-            </div>
-            {summary && (
-              <div style={{ marginTop: 8, fontSize: 13, color: MUTED, lineHeight: 1.55, maxWidth: 560 }}>
-                {summary}
-              </div>
-            )}
+    <div className="app-card flex flex-col gap-4 rounded-2xl p-5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[rgba(0,255,136,0.08)] text-[var(--pmu-primary)]">
+            <span aria-hidden>🏆</span>
           </div>
-          <div className="detail-fold__indicator">
-            Détails
-            <span className="detail-fold__chevron" aria-hidden="true">▾</span>
+          <div>
+            <p className="app-kicker">Resultat officiel</p>
+            <h3 className="text-lg font-semibold text-[var(--pmu-text)]">
+              Arrivee officielle
+            </h3>
           </div>
-        </summary>
-        <div className="detail-fold__body">{children}</div>
-      </details>
-    </Card>
-  );
-}
-
-function Metric({ label, value, hint, tone = "default" }: { label: string; value: string; hint?: string; tone?: "default" | "good" | "warn" | "bad" }) {
-  const colors = { default: WHITE, good: G, warn: GOLD, bad: RED };
-  const bgs = { default: CARD2, good: G_DIM, warn: GOLD_DIM, bad: RED_DIM };
-  const borders = { default: BORDER, good: `${G}44`, warn: `${GOLD}44`, bad: `${RED}44` };
-
-  return (
-    <div style={{ padding: 12, borderRadius: 8, background: bgs[tone], border: `1px solid ${borders[tone]}` }}>
-      <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6, fontFamily: "var(--font-mono)" }}>
-        {label}
-      </div>
-      <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 800, color: colors[tone], lineHeight: 1, marginBottom: hint ? 6 : 0 }}>
-        {value}
-      </div>
-      {hint && <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.45 }}>{hint}</div>}
-    </div>
-  );
-}
-
-function ConfidenceBar({ score }: { score: number }) {
-  const { color } = getConfianceStyle(score);
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-        <span style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "var(--font-mono)" }}>Confiance</span>
-        <span style={{ fontSize: 12, fontWeight: 700, color, fontFamily: "var(--font-mono)" }}>{score}/10</span>
-      </div>
-      <div style={{ height: 6, borderRadius: 999, background: `${DARK}cc`, border: `1px solid ${BORDER_SOFT}`, overflow: "hidden" }}>
-        <div className="bar-fill" style={{ width: getConfidenceFill(score), background: `linear-gradient(90deg, ${color}cc, ${color})` }} />
-      </div>
-    </div>
-  );
-}
-
-function BetPlanRow({ label, summary }: { label: string; summary: { chevaux: number[]; eligible: boolean; confiance: number; raison: string } | null }) {
-  if (!summary) return null;
-  return (
-    <div style={{
-      display: "flex", alignItems: "flex-start", gap: 12,
-      padding: "10px 0", borderBottom: `1px solid ${BORDER}`,
-    }}>
-      <div style={{ width: 8, height: 8, borderRadius: 2, marginTop: 5, flexShrink: 0, background: summary.eligible ? G : MUTED }} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 4 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: WHITE }}>{label}</span>
-          <Tag color={summary.eligible ? G : MUTED} bg={summary.eligible ? G_DIM : CARD2}>
-            {summary.eligible ? "✅ Jouable" : "Bloqué"}
-          </Tag>
         </div>
-        <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{summary.raison}</div>
-        {asArray<number>(summary.chevaux).length > 0 && (
-          <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {asArray<number>(summary.chevaux).map((n) => (
-              <span key={n} style={{ fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700, padding: "3px 7px", borderRadius: 4, background: CARD2, color: WHITE }}>
-                N{n}
-              </span>
-            ))}
+        {updatedAt ? (
+          <p className="text-xs text-[var(--pmu-text-soft)]">
+            Mis a jour {new Date(updatedAt).toLocaleString("fr-FR")}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        {arrivee.map((numero, index) => (
+          <div
+            key={`${numero}-${index}`}
+            className="flex min-w-[88px] flex-col items-center rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-raised)] px-4 py-3 text-center"
+          >
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--pmu-text-soft)]">
+              {index + 1}e
+            </span>
+            <span className="mt-1 text-2xl font-black text-[var(--pmu-text)]">
+              {numero}
+            </span>
           </div>
-        )}
+        ))}
       </div>
     </div>
   );
 }
 
-function RunnerBadge({ num, accent = CARD2 }: { num: number; accent?: string }) {
-  return (
-    <div style={{
-      width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-      background: `linear-gradient(145deg, ${accent}, ${CARD})`,
-      border: `1px solid ${BORDER}`,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 800, color: WHITE,
-      boxShadow: "0 4px 12px rgba(2,6,23,0.24)",
-    }}>
-      {num}
-    </div>
-  );
-}
-
-function TicketPanel({ title, subtitle, runner, badge, accent, placeMode = false, arrivalPosition }: {
-  title: string; subtitle: string; runner: ScoredParticipant; badge: string;
-  accent: string; placeMode?: boolean; arrivalPosition?: number | null;
-}) {
-  const outcome = getOutcomeTone(arrivalPosition ?? null, placeMode);
-  const variation = formatVariation(runner.variationCote);
-  const actionTone = getActionTone(runner.prediction.action, runner.prediction.valueBet);
-
-  return (
-    <div style={{ borderRadius: 12, border: `1px solid ${accent}40`, overflow: "hidden", boxShadow: "0 8px 20px rgba(2,6,23,0.28)" }}>
-      {/* Header strip */}
-      <div style={{ padding: "10px 14px", background: `linear-gradient(90deg, ${accent}22, ${accent}0d)`, display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${BORDER_SOFT}` }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: accent, textTransform: "uppercase", letterSpacing: "0.1em" }}>{title}</span>
-        <Tag color={accent} bg={`${accent}20`}>{badge}</Tag>
-      </div>
-
-      <div style={{ padding: 14 }}>
-        {/* Runner header */}
-        <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 12 }}>
-          <RunnerBadge num={runner.numPmu} accent={accent} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 800, color: WHITE, lineHeight: 1.1 }}>{runner.nom}</div>
-            <div style={{ fontSize: 12, color: MUTED, marginTop: 4 }}>{subtitle}</div>
-          </div>
-          {arrivalPosition !== undefined && (
-            <Tag color={outcome.color} bg={outcome.bg}>{arrivalPosition ? `${outcome.label} (${formatPosition(arrivalPosition)})` : outcome.label}</Tag>
-          )}
-        </div>
-
-        {/* Pills */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 12 }}>
-          <Tag color={G} bg={G_DIM}>{formatObjective(runner.prediction.objective)}</Tag>
-          <Tag color={actionTone.color} bg={actionTone.bg}>{actionTone.label}</Tag>
-          {(runner.stalle || runner.placeCorde) && <Tag color={MUTED} bg={CARD2}>Stalle {runner.stalle ?? runner.placeCorde}</Tag>}
-          {runner.poids && <Tag color={GOLD} bg={GOLD_DIM}>Poids {runner.poids.toFixed(1)} kg</Tag>}
-          <Tag color={BLUE} bg={BLUE_DIM} mono>PMU {formatOdds(runner.cote)}</Tag>
-          <Tag color={G} bg={G_DIM}>Proba {formatPercent(runner.prediction.probaEstimee)}</Tag>
-          {variation && <Tag color={GOLD} bg={GOLD_DIM}>{variation}</Tag>}
-        </div>
-
-        <ConfidenceBar score={runner.prediction.confiance} />
-
-        <div style={{ marginTop: 10, fontSize: 12, lineHeight: 1.5, color: MUTED }}>
-          {describeTicketIntent(runner)} — Mise reco : {formatCurrency(runner.prediction.miseBase100) ?? "0 EUR"} / bankroll 100 EUR.
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SecondaryRunnerCard({ title, runner, accent, placeMode = false, arrivalPosition, humanReference }: {
-  title: string; runner: ScoredParticipant; accent: string; placeMode?: boolean; arrivalPosition?: number | null; humanReference: string;
-}) {
-  const outcome = getOutcomeTone(arrivalPosition ?? null, placeMode);
-  const variation = formatVariation(runner.variationCote);
-  const actionTone = getActionTone(runner.prediction.action, runner.prediction.valueBet);
-
-  return (
-    <div style={{ padding: 14, borderRadius: 12, background: `linear-gradient(165deg, ${CARD2}, ${CARD})`, border: `1px solid ${BORDER}`, boxShadow: "0 8px 20px rgba(2,6,23,0.26)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <span style={{ fontSize: 10, color: accent, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em" }}>{title}</span>
-        {arrivalPosition !== undefined && (
-          <Tag color={outcome.color} bg={outcome.bg}>{arrivalPosition ? `${outcome.label} ${formatPosition(arrivalPosition)}` : outcome.label}</Tag>
-        )}
-      </div>
-      <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 8 }}>
-        <RunnerBadge num={runner.numPmu} accent={accent} />
-        <div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 800, color: WHITE }}>{runner.nom}</div>
-          <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>{humanReference}</div>
-        </div>
-      </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
-        <Tag color={G} bg={G_DIM}>{formatObjective(runner.prediction.objective)}</Tag>
-        <Tag color={actionTone.color} bg={actionTone.bg}>{actionTone.label}</Tag>
-        {(runner.stalle || runner.placeCorde) && <Tag>Stalle {runner.stalle ?? runner.placeCorde}</Tag>}
-        {runner.poids && <Tag color={GOLD} bg={GOLD_DIM}>Poids {runner.poids.toFixed(1)} kg</Tag>}
-        <Tag color={BLUE} bg={BLUE_DIM} mono>PMU {formatOdds(runner.cote)}</Tag>
-        {variation && <Tag color={GOLD} bg={GOLD_DIM}>{variation}</Tag>}
-      </div>
-      <ConfidenceBar score={runner.prediction.confiance} />
-    </div>
-  );
-}
-
-/* ─── Main page ────────────────────────────────────────── */
-export default function CourseDetailPage({ params }: { params: Promise<{ reunion: string; course: string }> }) {
-  const router = useRouter();
+export default function CourseDetailPage() {
+  const params = useParams<{ reunion: string; course: string }>();
   const searchParams = useSearchParams();
-  const [reunion, setReunion] = useState<number | null>(null);
-  const [course, setCourse] = useState<number | null>(null);
-  const [data, setData] = useState<RaceApiResponse | null>(null);
+
+  const [data, setData] = useState<RaceApiData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [showBottomNav, setShowBottomNav] = useState(false);
 
-  const selectedDate = normalizeSelectedDate(searchParams.get("date"));
+  const reunion = params?.reunion ?? "";
+  const course = params?.course ?? "";
+  const selectedDate = searchParams.get("date");
 
   useEffect(() => {
     let cancelled = false;
-    params.then(({ reunion: r, course: c }) => {
-      if (cancelled) return;
-      setReunion(Number.parseInt(r, 10));
-      setCourse(Number.parseInt(c, 10));
-    }).catch(() => { if (!cancelled) { setError("Impossible de lire la course."); setLoading(false); } });
-    return () => { cancelled = true; };
-  }, [params]);
 
-  useEffect(() => {
-    if (!reunion || !course) return;
-    let cancelled = false;
     async function loadRace() {
       try {
-        let headers: HeadersInit | undefined;
-        if (hasSupabaseConfig()) {
-          const supabase = getSupabaseBrowserClient();
-          const {
-            data: { session },
-          } = await supabase.auth.getSession();
-          if (session?.access_token) headers = { Authorization: `Bearer ${session.access_token}` };
+        setLoading(true);
+        setError(null);
+
+        const url = new URL(`/api/race/${reunion}/${course}`, window.location.origin);
+        if (selectedDate) {
+          url.searchParams.set("date", selectedDate);
         }
-        const r = await fetch(`/api/race/${reunion}/${course}?date=${selectedDate}`, { headers });
-        const json = (await r.json()) as RaceApiResponse;
-        if (!r.ok || !json.success) throw new Error(json.error || "Course introuvable");
-        if (!cancelled) setData(json);
-      } catch (e) {
+
+        let authorization = "";
+        if (hasSupabaseConfig()) {
+          try {
+            const supabase = getSupabaseBrowserClient();
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
+            authorization = session?.access_token ? `Bearer ${session.access_token}` : "";
+          } catch {
+            authorization = "";
+          }
+        }
+
+        const response = await fetch(url.toString(), {
+          headers: authorization ? { Authorization: authorization } : undefined,
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => null);
+          throw new Error(payload?.error || "Impossible de charger cette course");
+        }
+
+        const payload = (await response.json()) as RaceApiData;
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Analyse indisponible");
+          setData(payload);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Impossible de charger cette course");
           setData(null);
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
-    void loadRace();
-    return () => { cancelled = true; };
-  }, [course, reunion, selectedDate]);
 
-  useEffect(() => {
-    function syncBottomNavVisibility() {
-      setShowBottomNav(window.innerWidth < 1024);
+    if (reunion && course) {
+      void loadRace();
     }
 
-    syncBottomNavVisibility();
-    window.addEventListener("resize", syncBottomNavVisibility);
     return () => {
-      window.removeEventListener("resize", syncBottomNavVisibility);
+      cancelled = true;
     };
-  }, []);
+  }, [course, reunion, selectedDate]);
 
-  const analysis = data?.analysis ?? null;
-  const technicalFavorite = analysis?.favori ?? null;
-  const simpleTicket = getTicketSimple(analysis);
-  const simpleTicketActionTone = simpleTicket ? getActionTone(simpleTicket.prediction.action, simpleTicket.prediction.valueBet) : null;
-  const placeBase = getBasePlace(analysis, simpleTicket);
-  const verdict = buildVerdict(data, analysis, simpleTicket);
-  const verdictTone = getVerdictTone(verdict.title);
-  const strengths = buildStrengths(analysis, technicalFavorite, placeBase);
-  const warnings = buildWarnings(analysis, technicalFavorite);
-  const officialArrivalRows = asArray<ArrivalRow>(data?.officialArrival);
-  const technicalFavoritePosition = getArrivalPosition(technicalFavorite?.numPmu, officialArrivalRows);
-  const simpleTicketPosition = getArrivalPosition(simpleTicket?.numPmu, officialArrivalRows);
-  const placeBasePosition = getArrivalPosition(placeBase?.numPmu, officialArrivalRows);
-  const readableDate = formatDateLabel(selectedDate);
-  const contextHighlights = data ? buildContextHighlights(data, analysis) : [];
-  const daySignal = analysis?.prediction.journeeSignal ?? null;
-  const alertesList = asArray<string>(analysis?.alertes);
-  const top5Runners = asArray<ScoredParticipant>(analysis?.top5);
-  const rankingAll = useMemo(
-    () => asArray<ScoredParticipant>(analysis?.ranking),
-    [analysis]
-  );
+  const meta = useMemo(() => {
+    if (!data) return [];
+    const items: string[] = [];
+    if (data.discipline) items.push(data.discipline);
+    if (data.distance) items.push(`${data.distance} m`);
+    if (data.nombrePartants) items.push(`${data.nombrePartants} partants`);
+    if (data.allocation) {
+      const euros = formatEuros(data.allocation);
+      if (euros) items.push(euros);
+    }
+    if (data.heureDepart) items.push(`Depart ${data.heureDepart}`);
+    return items;
+  }, [data]);
 
-  const medianScoreAlgo = useMemo(() => {
-    const arr = rankingAll
-      .map((r) => r.scoreAlgo)
-      .filter((n): n is number => Number.isFinite(n))
-      .sort((a, b) => a - b);
-    if (arr.length === 0) return 0;
-    const mid = Math.floor(arr.length / 2);
-    return arr.length % 2 ? arr[mid]! : (arr[mid - 1]! + arr[mid]!) / 2;
-  }, [rankingAll]);
+  const top5 = data?.pronostic?.top5 ?? [];
 
-  const sigmaMoyenPct = useMemo(() => {
-    const rr = rankingAll.slice(0, 16);
-    if (rr.length === 0) return 50;
-    const s = rr.map((r) => computeSigmaFromRunCount(r.nombreCourses));
-    return s.reduce((a, b) => a + b, 0) / s.length;
-  }, [rankingAll]);
-
-  const indiceOuvertureCourse = useMemo(() => {
-    if (rankingAll.length === 0 || !data) return null;
-    const first = rankingAll[0]?.scoreAlgo ?? 0;
-    const second = rankingAll[1]?.scoreAlgo ?? first * 0.92;
-    return computeIndiceOuverture({
-      scoreFirst: first,
-      scoreSecond: second,
-      partants: data.courseInfo.nombrePartants,
-      sigmaMoyenPct,
-    });
-  }, [rankingAll, data, sigmaMoyenPct]);
-
-  const enjeuxRunners = useMemo(
-    () =>
-      rankingAll.slice(0, 14).map((r) => ({
-        numPmu: r.numPmu,
-        nom: r.nom,
-        cote: r.cote,
-        iaScore: r.prediction?.confiance ?? null,
-      })),
-    [rankingAll]
-  );
-
-  const synergieResult = useMemo(() => {
-    if (!simpleTicket || !data) return null;
-    const pilot = (data.courseInfo.estTrot ? simpleTicket.driver : simpleTicket.jockey) || "—";
-    const chevalId = `${simpleTicket.numPmu}|${simpleTicket.nom}`;
-    return getSynergie(pilot, chevalId, []);
-  }, [simpleTicket, data]);
-
-  /* Loading skeleton */
-  if (loading) {
-    return (
-      <div className="course-detail-shell" style={{ maxWidth: 920, margin: "0 auto", padding: "0 14px" }}>
-        <style>{css}</style>
-        <div style={{ height: 54, background: CARD, borderBottom: `1px solid ${BORDER}`, marginBottom: 16 }} />
-        {[230, 120, 120, 180, 160].map((h, i) => (
-          <div key={i} className="shimmer" style={{ height: h, borderRadius: 12, marginBottom: 12 }} />
-        ))}
-      </div>
-    );
-  }
-
-  /* Error state */
-  if (error || !data) {
-    return (
-      <div className="course-detail-shell" style={{ maxWidth: 920, margin: "0 auto", padding: "0 14px" }}>
-        <style>{css}</style>
-        <div style={{ height: 54, background: CARD, borderBottom: `1px solid ${BORDER}`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-          <span style={{ color: WHITE, fontFamily: "var(--font-display)", fontWeight: 800 }}>Analyse course</span>
-        </div>
-        <SectionCard title="Analyse indisponible" kicker="Erreur">
-          <p style={{ fontSize: 14, color: MUTED, marginBottom: 16 }}>{error || "La course n'a pas pu être chargée."}</p>
-          <button onClick={() => router.push(`/?date=${selectedDate}`)} style={{ width: "100%", padding: "14px 0", borderRadius: 8, border: "none", background: G, color: "var(--pmu-on-primary)", fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 14, cursor: "pointer" }}>
-            ← Retour aux courses
-          </button>
-        </SectionCard>
-      </div>
-    );
-  }
-
-  /* ─── Render ─── */
   return (
-    <div className="course-detail-shell" style={{ maxWidth: 920, margin: "0 auto", paddingBottom: showBottomNav ? 84 : 24 }}>
-      <style>{css}</style>
-
-      {/* Top nav */}
-      <div style={{
-        position: "sticky", top: 0, zIndex: 80, height: 54,
-        background: DARK_GLASS, backdropFilter: "blur(20px)",
-        borderBottom: `1px solid ${BORDER}`,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        padding: "0 14px",
-      }}>
-        <button onClick={() => router.push(`/?date=${selectedDate}`)} style={{
-          position: "absolute", left: 14, width: 30, height: 30, borderRadius: 8,
-          border: `1px solid ${BORDER}`, background: CARD2, color: WHITE,
-          fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
-          ←
-        </button>
-        <span style={{ fontFamily: "var(--font-display)", fontSize: 13, fontWeight: 700, color: WHITE, letterSpacing: "-0.01em" }}>
-          R{data.courseInfo.reunion}C{data.courseInfo.course} — {data.courseInfo.hippodrome}
-        </span>
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-4 md:px-6">
+      <div className="flex items-center justify-between gap-3">
+        <Link
+          href={selectedDate ? `/?date=${selectedDate}` : "/"}
+          className="app-button-secondary inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold"
+        >
+          ← Retour aux courses
+        </Link>
       </div>
 
-      <div style={{ padding: "16px 14px", display: "grid", gap: 12 }} className="fade-up">
-
-        {/* ── Hero card ── */}
-        <Card accent={`${G}44`}>
-          <div style={{ padding: 16 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: G, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 8 }}>
-              Lecture course
-            </div>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 700, color: WHITE, lineHeight: 1.15, marginBottom: 4, letterSpacing: "-0.02em" }}>
-              {data.courseInfo.nomCourse}
-            </div>
-            <div style={{ fontSize: 12, color: MUTED, marginBottom: 12 }}>
-              {data.courseInfo.hippodrome} · {readableDate}
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
-              <Tag color={G} bg={G_DIM}>{data.courseInfo.discipline}</Tag>
-              <Tag color={MUTED} bg={CARD2}>{data.courseInfo.distance}m</Tag>
-              <Tag color={MUTED} bg={CARD2}>{data.courseInfo.nombrePartants} partants</Tag>
-              {formatCurrency(data.courseInfo.allocation) && (
-                <Tag color={GOLD} bg={GOLD_DIM}>Alloc. {formatCurrency(data.courseInfo.allocation)}</Tag>
-              )}
-            </div>
-
-            {indiceOuvertureCourse && analysis ? (
-              <div style={{ marginBottom: 12, padding: 10, borderRadius: 8, border: `1px solid ${BORDER}`, background: CARD2 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: indiceOuvertureCourse.color, letterSpacing: "0.04em" }}>
-                  {`${indiceOuvertureCourse.emoji} Indice d'ouverture ? ${indiceOuvertureCourse.label} ? ${indiceOuvertureCourse.score}/10`}
-                </div>
-                <div style={{ fontSize: 12, color: MUTED, marginTop: 4, lineHeight: 1.5 }}>{indiceOuvertureCourse.conseil}</div>
-              </div>
-            ) : null}
-
-             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 10 }}>
-              <div>
-                 <div style={{ fontFamily: "var(--font-mono)", fontSize: 36, fontWeight: 500, color: WHITE, lineHeight: 1 }}>
-                  {data.courseInfo.heureDepart}
-                </div>
-                 <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>
-                  {data.isFinished ? "Course terminée" : data.pronoAvailable ? "Analyse ouverte" : formatRevealTime(data.minutesUntilStart)}
-                </div>
-              </div>
-               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-                <Tag
-                  color={data.isFinished ? MUTED : data.pronoAvailable ? G : MUTED}
-                  bg={data.isFinished ? CARD2 : data.pronoAvailable ? G_DIM : CARD2}
-                >
-                  {data.isFinished ? "🏁 Résultat dispo" : data.pronoAvailable ? "Lecture active" : "🔴 Signal actif"}
-                </Tag>
-                {!data.isFinished && (
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: GOLD }}>{formatCountdown(data.minutesUntilStart)}</span>
-                )}
-              </div>
-            </div>
-
-            {contextHighlights.length > 0 && (
-               <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${BORDER}`, display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {contextHighlights.map(item => <Tag key={item} color={MUTED}>{item}</Tag>)}
-              </div>
-            )}
+      {loading ? (
+        <section className="app-card flex flex-col gap-4 rounded-2xl p-5">
+          <div className="h-4 w-28 animate-pulse rounded bg-[var(--pmu-skeleton)]" />
+          <div className="h-10 w-3/4 animate-pulse rounded bg-[var(--pmu-skeleton)]" />
+          <div className="h-4 w-1/2 animate-pulse rounded bg-[var(--pmu-skeleton)]" />
+          <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="h-[360px] animate-pulse rounded-2xl bg-[var(--pmu-skeleton)]" />
+            <div className="h-[360px] animate-pulse rounded-2xl bg-[var(--pmu-skeleton)]" />
           </div>
-        </Card>
-
-        {/* ── T-30 message ── */}
-        {!data.pronoAvailable && !data.isFinished && (
-          <SectionCard title="Lecture à venir" kicker="Tempo moteur">
-            <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>
-              Le moteur ouvrira sa lecture détaillée 30 minutes avant le départ officiel.
-              Pour cette course, {"l'analyse"} sera visible {formatRevealTime(data.minutesUntilStart).toLowerCase()}.
-            </p>
-          </SectionCard>
-        )}
-
-        {/* ── Paywall ── */}
-        {data.paywall?.required && !analysis && (
-          <SectionCard title="Pronostic réservé aux abonnés" kicker="PMU AI Premium">
-            <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6, marginBottom: 14 }}>
-              {"La page d'accueil"} reste gratuite, mais le classement complet, les opportunités value, les mises Kelly et les tickets
-              détaillés sont réservés aux abonnés.
-            </p>
-            {data.paywall.preview?.favori && (
-              <div style={{ padding: 14, borderRadius: 10, background: CARD2, border: `1px solid ${BORDER}`, marginBottom: 14 }}>
-                <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Aperçu gratuit</div>
-                <div style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 800, color: WHITE }}>
-                  Favori technique : N{data.paywall.preview.favori.numPmu} {data.paywall.preview.favori.nom}
-                </div>
-                <div style={{ fontSize: 12, color: MUTED, marginTop: 4 }}>
-                  Lisibilité {data.paywall.preview.lisibilite} · {data.paywall.preview.recommendation ?? "Lecture premium"}
-                </div>
+        </section>
+      ) : error ? (
+        <section className="app-card flex flex-col gap-3 rounded-2xl p-5">
+          <p className="app-kicker">Fiche course</p>
+          <h1 className="text-2xl font-black text-[var(--pmu-text)]">
+            Impossible de charger cette course
+          </h1>
+          <p className="text-sm text-[var(--pmu-text-soft)]">{error}</p>
+        </section>
+      ) : data ? (
+        <>
+          <section className="app-card flex flex-col gap-5 rounded-2xl p-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="space-y-2">
+                <p className="app-kicker">
+                  R{data.reunion}C{data.course}
+                  {data.hippodrome ? ` — ${data.hippodrome}` : ""}
+                </p>
+                <h1 className="text-3xl font-black tracking-[-0.03em] text-[var(--pmu-text)] md:text-4xl">
+                  {data.nom || `Course ${data.course}`}
+                </h1>
+                <p className="text-sm text-[var(--pmu-text-soft)]">
+                  {meta.length ? meta.join(" • ") : "Depart imminent"}
+                </p>
               </div>
-            )}
-            <button onClick={() => router.push("/login?redirect=/mes-paris")} style={{
-              width: "100%", padding: "14px 0", borderRadius: 8, border: "none",
-              background: G, color: "var(--pmu-on-primary)", fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 14, cursor: "pointer",
-            }}>
-              Se connecter et {"s'abonner"}
-            </button>
-          </SectionCard>
-        )}
+            </div>
 
-        {analysis && simpleTicket && (
-          <>
-            {/* ── Verdict ── */}
-            <Card accent={`${verdictTone.color}44`}>
-              <div style={{ padding: 16 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: verdictTone.color, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 8 }}>
-                  {verdict.label}
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 12 }}>
-                  <div>
-                    <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 900, color: WHITE, lineHeight: 1.1, marginBottom: 4 }}>
-                      {verdict.title}
-                    </div>
-                    <div style={{ fontSize: 10, color: G, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6, fontFamily: "var(--font-mono)" }}>
-                      Ticket conseillé
-                    </div>
-                    <div style={{ fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 800, color: WHITE }}>
-                      N{simpleTicket.numPmu} {simpleTicket.nom}
-                    </div>
-                    <div style={{ fontSize: 12, color: MUTED, marginTop: 4 }}>
-                      {getHumanReference(simpleTicket, data.courseInfo.estPlat)}
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 5, alignItems: "flex-end", flexShrink: 0 }}>
-                    <Tag color={verdictTone.color} bg={verdictTone.bg}>{verdict.title}</Tag>
-                    <Tag color={G} bg={G_DIM}>{formatTicketType(simpleTicket.prediction.typePariConseille)}</Tag>
-                  </div>
-                </div>
+            <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
+              <ParticipantsTable participants={data.participants ?? []} />
 
-                <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.55, marginBottom: 12 }}>{verdict.subtitle}</p>
-
-                {technicalFavorite && technicalFavorite.numPmu !== simpleTicket.numPmu && (
-                  <div style={{ padding: "10px 12px", borderRadius: 8, background: CARD2, border: `1px solid ${BORDER}`, marginBottom: 12 }}>
-                    <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Favori technique moteur</div>
-                    <div style={{ fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 700, color: WHITE }}>
-                      N{technicalFavorite.numPmu} {technicalFavorite.nom}
-                    </div>
-                    <div style={{ fontSize: 12, color: MUTED, marginTop: 4 }}>
-                      Le moteur voit ce cheval comme repère technique, mais le ticket conseillé reste N{simpleTicket.numPmu}.
-                    </div>
-                  </div>
+              <div className="flex flex-col gap-5">
+                {data.pronostic ? (
+                  <CoursePronostic pronostic={data.pronostic} participants={data.participants ?? []} />
+                ) : (
+                  <LockedCard />
                 )}
 
-                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 8 }}>
-                  <Metric label="Confiance moteur" value={`${analysis.scoreConfiance?.score ?? 0}/10`} hint={analysis.prediction.decisionCourse === "VALIDE" ? "Ticket jouable" : "Lecture défensive"} tone={(analysis.scoreConfiance?.score ?? 0) >= SEUIL_JOUABLE ? "good" : (analysis.scoreConfiance?.score ?? 0) >= SEUIL_SURVEILLANCE ? "warn" : "bad"} />
-                  <Metric label="Lisibilité" value={analysis.prediction.lisibilite} hint={describeLisibilite(analysis.prediction.lisibilite)} tone={analysis.prediction.lisibilite === "LISIBLE" ? "good" : analysis.prediction.lisibilite === "COMPLEXE" ? "warn" : "bad"} />
-                </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
-                  {simpleTicketActionTone && (
-                    <Tag color={simpleTicketActionTone.color} bg={simpleTicketActionTone.bg}>
-                      {simpleTicketActionTone.label}
-                    </Tag>
-                  )}
-                  <Tag
-                    color={(analysis.soliditeFavori?.score ?? 0) >= 72 ? G : (analysis.soliditeFavori?.score ?? 0) >= 62 ? GOLD : RED}
-                    bg={(analysis.soliditeFavori?.score ?? 0) >= 72 ? G_DIM : (analysis.soliditeFavori?.score ?? 0) >= 62 ? GOLD_DIM : RED_DIM}
-                  >
-                    Tenue repère {round1(analysis.soliditeFavori?.score ?? 0)}/100
-                  </Tag>
-                </div>
-              </div>
-            </Card>
-
-            <SectionCard title="Plan de jeu" kicker="Lecture ticket" accent={`${G}33`}>
-              <TicketPanel
-                title="Ticket principal"
-                subtitle={getHumanReference(simpleTicket, data.courseInfo.estPlat)}
-                runner={simpleTicket}
-                badge={formatTicketType(simpleTicket.prediction.typePariConseille)}
-                accent={G}
-                arrivalPosition={data.isFinished ? simpleTicketPosition : undefined}
-              />
-              {(placeBase && placeBase.numPmu !== simpleTicket.numPmu) || (technicalFavorite && technicalFavorite.numPmu !== simpleTicket.numPmu) ? (
-                <div style={{ marginTop: 8, display: "grid", gap: 8 }}>
-                  {placeBase && placeBase.numPmu !== simpleTicket.numPmu && (
-                    <SecondaryRunnerCard title="Base placée de secours" runner={placeBase} accent={GOLD} placeMode arrivalPosition={data.isFinished ? placeBasePosition : undefined} humanReference={getHumanReference(placeBase, data.courseInfo.estPlat)} />
-                  )}
-                  {technicalFavorite && technicalFavorite.numPmu !== simpleTicket.numPmu && (
-                    <SecondaryRunnerCard title="Favori technique moteur" runner={technicalFavorite} accent={BLUE} arrivalPosition={data.isFinished ? technicalFavoritePosition : undefined} humanReference={getHumanReference(technicalFavorite, data.courseInfo.estPlat)} />
-                  )}
-                </div>
-              ) : null}
-            </SectionCard>
-
-            {data.isFinished && officialArrivalRows.length > 0 && (
-              <SectionCard title="Débrief officiel" kicker="Arrivée course">
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
-                  {officialArrivalRows.slice(0, 3).map((r) => (
-                    <Tag key={`${r.position}-${r.numPmu}`} color={WHITE} bg={CARD2}>
-                      {formatPosition(r.position)} N{r.numPmu} {r.nom}
-                    </Tag>
-                  ))}
-                </div>
-                <div style={{ display: "grid", gap: 8 }}>
-                  <div style={{ padding: 12, borderRadius: 8, background: CARD2, border: `1px solid ${BORDER}` }}>
-                    <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Ticket principal</div>
-                    <div style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 800, color: WHITE, marginBottom: 8 }}>N{simpleTicket.numPmu} {simpleTicket.nom}</div>
-                    <Tag color={getOutcomeTone(simpleTicketPosition, false).color} bg={getOutcomeTone(simpleTicketPosition, false).bg}>
-                      {simpleTicketPosition ? `${getOutcomeTone(simpleTicketPosition, false).label} (${formatPosition(simpleTicketPosition)})` : "Résultat indisponible"}
-                    </Tag>
-                  </div>
-                  {placeBase && placeBase.numPmu !== simpleTicket.numPmu && (
-                    <div style={{ padding: 12, borderRadius: 8, background: CARD2, border: `1px solid ${BORDER}` }}>
-                      <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Base placée</div>
-                      <div style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 800, color: WHITE, marginBottom: 8 }}>N{placeBase.numPmu} {placeBase.nom}</div>
-                      <Tag color={getOutcomeTone(placeBasePosition, true).color} bg={getOutcomeTone(placeBasePosition, true).bg}>
-                        {placeBasePosition ? `${getOutcomeTone(placeBasePosition, true).label} (${formatPosition(placeBasePosition)})` : "Résultat indisponible"}
-                      </Tag>
+                {top5.length ? (
+                  <div className="app-card app-card-muted flex flex-col gap-4 rounded-2xl p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="app-kicker">Lecture moteur</p>
+                        <h3 className="text-lg font-semibold text-[var(--pmu-text)]">
+                          Repere principal
+                        </h3>
+                      </div>
+                      <span className="rounded-full border border-[var(--pmu-border)] px-3 py-1 text-xs font-semibold text-[var(--pmu-text-soft)]">
+                        Top 5
+                      </span>
                     </div>
-                  )}
-                </div>
-              </SectionCard>
-            )}
 
-            <Card accent={`${BORDER_SOFT}`}>
-              <div style={{ padding: 14, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: G, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>
-                    Lecture experte
-                  </div>
-                  <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700, color: WHITE, lineHeight: 1.2, letterSpacing: "-0.02em" }}>
-                    Analyse complète
-                  </div>
-                  <div style={{ marginTop: 6, fontSize: 12, color: MUTED, lineHeight: 1.5, maxWidth: 560 }}>
-                    Marché PMU, bankroll, radar moteur et détails avancés. Ouvre seulement si tu veux creuser la course.
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowAdvanced((current) => !current)}
-                  style={{
-                    border: `1px solid ${showAdvanced ? `${G}55` : BORDER}`,
-                    background: showAdvanced ? G_DIM : CARD2,
-                    color: showAdvanced ? G : WHITE,
-                    borderRadius: 999,
-                    padding: "9px 14px",
-                    cursor: "pointer",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    flexShrink: 0,
-                  }}
-                >
-                  {showAdvanced ? "Masquer l'analyse complète" : "Voir l'analyse complète"}
-                </button>
-              </div>
-            </Card>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {top5.map((numero, index) => {
+                        const participant = (data.participants ?? []).find(
+                          (item) => String(item.numero) === String(numero),
+                        );
 
-            {showAdvanced && (
-              <>
-            <DetailFold
-              title="Repères avancés"
-              kicker="Lecture du ticket"
-              summary="Confiance complète, tenue du repère et profil ELO du cheval conseillé."
-            >
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 8, marginBottom: 12 }}>
-                <Metric label="Confiance moteur" value={`${analysis.scoreConfiance?.score ?? 0}/10`} hint={analysis.prediction.decisionCourse === "VALIDE" ? "Ticket jouable" : "Lecture défensive"} tone={(analysis.scoreConfiance?.score ?? 0) >= SEUIL_JOUABLE ? "good" : (analysis.scoreConfiance?.score ?? 0) >= SEUIL_SURVEILLANCE ? "warn" : "bad"} />
-                <Metric label="Tenue repère" value={`${round1(analysis.soliditeFavori?.score ?? 0)}/100`} hint="Solidité du repère principal" tone={(analysis.soliditeFavori?.score ?? 0) >= 72 ? "good" : (analysis.soliditeFavori?.score ?? 0) >= 62 ? "warn" : "bad"} />
-                <Metric label="Angle de jeu" value={simpleTicket.prediction.action} hint={simpleTicket.prediction.valueBet ? "Opportunité value confirmée" : "Pas d'edge suffisant"} tone={simpleTicket.prediction.action === "MISER" ? "good" : "bad"} />
-                <Metric label="Lisibilité" value={analysis.prediction.lisibilite} hint={describeLisibilite(analysis.prediction.lisibilite)} tone={analysis.prediction.lisibilite === "LISIBLE" ? "good" : analysis.prediction.lisibilite === "COMPLEXE" ? "warn" : "bad"} />
-              </div>
-              <EloBars profile={buildEloProfileFromParticipant(simpleTicket)} />
-            </DetailFold>
-
-            <DetailFold
-              title="Marché et profil du cheval"
-              kicker="Lecture de course"
-              summary="Marché PMU, synergie jockey / driver et profil complet du cheval retenu."
-            >
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-                  gap: 12,
-                }}
-              >
-                {enjeuxRunners.length > 0 ? (
-                  <div style={{ minWidth: 0 }}>
-                    <EnjeuxPMU runners={enjeuxRunners} />
+                        return (
+                          <div
+                            key={`${numero}-${index}`}
+                            className="rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-raised)] px-4 py-3"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--pmu-text-soft)]">
+                                {index + 1}
+                              </span>
+                              <span className="text-2xl font-black text-[var(--pmu-primary)]">
+                                {numero}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-sm font-semibold text-[var(--pmu-text)]">
+                              {participant?.nom || `Cheval ${numero}`}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 ) : null}
-                {synergieResult ? <SynergieCallout result={synergieResult} /> : null}
-                <div style={{ minWidth: 0 }}>
-                  <ChevalStats
-                    runner={simpleTicket}
-                    medianFieldScoreAlgo={medianScoreAlgo}
-                    estTrot={data.courseInfo.estTrot}
+
+                {data.officialResult?.arrivee?.length ? (
+                  <OfficialArrivalCard
+                    arrivee={data.officialResult.arrivee}
+                    updatedAt={data.officialResult.updatedAt}
                   />
-                </div>
+                ) : null}
               </div>
-            </DetailFold>
-
-            <DetailFold
-              title="Bankroll et tickets complémentaires"
-              kicker="Décision de jeu"
-              summary="Value, mise recommandée et tickets complémentaires à consulter seulement si besoin."
-            >
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
-                <SectionCard title="Value et mise" kicker="Décision bankroll" accent={`${G}33`}>
-                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                    <Metric label="Cote actuelle" value={formatOdds(simpleTicket.cote)} hint="Cote PMU au moment de l'analyse" />
-                    <Metric label="Proba réelle" value={formatPercent(simpleTicket.prediction.probaEstimee)} hint={`Marché ${formatPercent(simpleTicket.prediction.probabiliteImplicite)}`} tone={simpleTicket.prediction.valueBet ? "good" : "warn"} />
-                    <Metric label="Mise Kelly" value={formatCurrency(simpleTicket.prediction.miseBase100) ?? "0 EUR"} hint={`Cap bankroll ${Math.round(simpleTicket.prediction.bankrollPct * 100)}%`} tone={simpleTicket.prediction.action === "MISER" ? "good" : "bad"} />
-                    <Metric label="Décision" value={simpleTicket.prediction.action} hint={simpleTicket.prediction.valueBet ? "Opportunité value : proba > cote × 1.15" : "Aucune opportunité value"} tone={simpleTicket.prediction.action === "MISER" ? "good" : "bad"} />
-                  </div>
-                  {(simpleTicket.prediction.topFacteurs ?? []).length > 0 && (
-                     <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 6 }}>
-                      {asArray<string>(simpleTicket.prediction.topFacteurs).map((f) => <Tag key={f} color={G} bg={G_DIM}>{f}</Tag>)}
-                    </div>
-                  )}
-                </SectionCard>
-
-                <SectionCard title="Paris optimisés" kicker="Simple · Couplé · Trio · Quinté · Multi">
-                  <div>
-                    <BetPlanRow label="Simple gagnant" summary={analysis.bettingPlan.simpleGagnant} />
-                    <BetPlanRow label="Couplé" summary={analysis.bettingPlan.couple} />
-                    <BetPlanRow label="Trio" summary={analysis.bettingPlan.trio} />
-                    <BetPlanRow label="Quinte" summary={analysis.bettingPlan.quinte} />
-                    <BetPlanRow label="Multi" summary={analysis.bettingPlan.multi} />
-                  </div>
-                </SectionCard>
-              </div>
-            </DetailFold>
-
-            <DetailFold
-              title="Analyse moteur détaillée"
-              kicker="Lecture avancée"
-              summary="Alertes de journée, explication du moteur et radar complet des chevaux du top 5."
-            >
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
-                <SectionCard title="Alertes intelligentes" kicker="Lecture globale">
-                  <div style={{ display: "grid", gap: 8 }}>
-                    {daySignal && (
-                      <div style={{
-                        padding: 12, borderRadius: 8,
-                        background: daySignal.label === "JOURNEE_FAVORABLE" ? G_DIM : daySignal.label === "JOURNEE_DEFAVORABLE" ? RED_DIM : CARD2,
-                        border: `1px solid ${daySignal.label === "JOURNEE_FAVORABLE" ? `${G}44` : daySignal.label === "JOURNEE_DEFAVORABLE" ? `${RED}44` : BORDER}`,
-                      }}>
-                        <div style={{ fontSize: 10, color: MUTED, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Indicateur journée</div>
-                        <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700, color: WHITE, marginBottom: 6, letterSpacing: "-0.02em" }}>
-                          {formatDaySignalTitle(daySignal.label)}
-                        </div>
-                        <div style={{ fontSize: 11, fontFamily: "var(--font-mono)", color: MUTED, marginBottom: 8 }}>Score {daySignal.score}/100</div>
-                        {asArray<string>(daySignal.raisons).map((r) => (
-                          <div key={r} style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{r}</div>
-                        ))}
-                      </div>
-                    )}
-                    {alertesList.length > 0 ? (
-                      alertesList.map((a) => (
-                        <div key={a} style={{ padding: "10px 14px", borderRadius: 8, background: GOLD_DIM, border: `1px solid ${GOLD}44`, fontSize: 13, color: GOLD, lineHeight: 1.5 }}>
-                          {a}
-                        </div>
-                      ))
-                    ) : (
-                      <div style={{ fontSize: 13, color: MUTED }}>Aucune alerte additionnelle sur cette course.</div>
-                    )}
-                  </div>
-                </SectionCard>
-
-                <SectionCard title="Lecture moteur" kicker="Ce qui tient / ce qui force la prudence">
-                  <div style={{ display: "grid", gap: 10 }}>
-                    <div style={{ padding: 12, borderRadius: 8, background: G_DIM, border: `1px solid ${G}33` }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: G, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>✓ Ce qui tient</div>
-                      <div style={{ display: "grid", gap: 6 }}>
-                        {strengths.length > 0 ? strengths.map(p => (
-                          <div key={p} style={{ padding: "8px 10px", borderRadius: 8, background: CARD2, border: `1px solid ${G}33`, fontSize: 12, color: WHITE, lineHeight: 1.45 }}>{p}</div>
-                        )) : <div style={{ fontSize: 13, color: MUTED }}>Aucun point fort franc ne ressort du moteur.</div>}
-                      </div>
-                    </div>
-                    <div style={{ padding: 12, borderRadius: 8, background: GOLD_DIM, border: `1px solid ${GOLD}33` }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: GOLD, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>⚠ Ce qui force la prudence</div>
-                      <div style={{ display: "grid", gap: 6 }}>
-                        {warnings.length > 0 ? warnings.map(p => (
-                          <div key={p} style={{ padding: "8px 10px", borderRadius: 8, background: CARD2, border: `1px solid ${GOLD}33`, fontSize: 12, color: WHITE, lineHeight: 1.45 }}>{p}</div>
-                        )) : <div style={{ fontSize: 13, color: MUTED }}>{`Pas d'alerte majeure remontée par le moteur.`}</div>}
-                      </div>
-                    </div>
-                  </div>
-                </SectionCard>
-              </div>
-
-              <div style={{ marginTop: 12 }}>
-                <SectionCard title="Radar top 5" kicker="Classement du moteur">
-                  <div style={{ display: "grid", gap: 8 }}>
-                    {top5Runners.map((runner, index) => {
-                      const position = data.isFinished ? getArrivalPosition(runner.numPmu, officialArrivalRows) : null;
-                      const at = getActionTone(runner.prediction.action, runner.prediction.valueBet);
-                      return (
-                        <div key={runner.numPmu} style={{
-                          display: "grid", gridTemplateColumns: "40px 1fr auto", gap: 10, alignItems: "center",
-                          padding: 10, borderRadius: 8,
-                          background: index === 0 ? G_DIM : CARD2,
-                          border: `1px solid ${index === 0 ? `${G}44` : BORDER}`,
-                        }}>
-                          <RunnerBadge num={runner.numPmu} accent={index === 0 ? G : CARD} />
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 800, color: WHITE }}>{runner.nom}</div>
-                            <div style={{ fontSize: 11, color: MUTED, marginTop: 2, fontFamily: "var(--font-mono)" }}>
-                              Score {round1(runner.prediction.scoreFinalPari)} · PMU {formatOdds(runner.cote)} · Proba {formatPercent(runner.prediction.probaEstimee)}
-                            </div>
-                            <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 5 }}>
-                              <Tag color={at.color} bg={at.bg}>{at.label}</Tag>
-                              {asArray<string>(runner.prediction.topFacteurs).map((f) => <Tag key={`${runner.numPmu}-${f}`} color={MUTED}>{f}</Tag>)}
-                            </div>
-                            <div style={{ marginTop: 6 }}><ConfidenceBar score={runner.prediction.confiance} /></div>
-                          </div>
-                          {position && <Tag color={position <= 3 ? G : MUTED} bg={position <= 3 ? G_DIM : CARD2}>{formatPosition(position)}</Tag>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </SectionCard>
-              </div>
-            </DetailFold>
-              </>
-            )}
-
-          </>
-        )}
-      </div>
-
-      {/* Bottom nav */}
-      {showBottomNav ? (
-        <div style={{
-          position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
-          width: "100%", maxWidth: 920, height: 60,
-          background: DARK_GLASS, backdropFilter: "blur(20px)",
-          borderTop: `1px solid ${BORDER}`,
-          display: "flex", justifyContent: "space-around", alignItems: "center", zIndex: 120,
-        }}>
-          {[
-            { label: "Courses", path: `/?date=${selectedDate}`, active: true },
-            { label: "Mes Paris", path: "/mes-paris", active: false },
-            { label: "Bilan", path: `/bilan?date=${selectedDate}`, active: false },
-          ].map(item => (
-            <button key={item.label} onClick={() => router.push(item.path)} style={{
-              border: "none", background: "transparent", cursor: "pointer",
-              fontFamily: "var(--font-body)", fontSize: 13, fontWeight: 700,
-              color: item.active ? G : MUTED, padding: "6px 14px",
-            }}>
-              {item.label}
-            </button>
-          ))}
-        </div>
+            </div>
+          </section>
+        </>
       ) : null}
-    </div>
+    </main>
   );
 }

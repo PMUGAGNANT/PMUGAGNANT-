@@ -44,7 +44,7 @@ type EntryOption = {
 const TYPE_LABELS: Record<SearchRunnerType, string> = {
   jockey: "Jockey",
   driver: "Driver",
-  entraineur: "Entraineur",
+  entraineur: "Entraîneur",
   cheval: "Cheval",
 };
 
@@ -234,7 +234,7 @@ export function SidebarSearch() {
   return (
     <div ref={rootRef} className="relative mb-3">
       <label htmlFor={inputId} className="sr-only">
-        Rechercher un jockey, un entraineur ou un cheval
+        Rechercher un jockey, un entraîneur ou un cheval
       </label>
 
       <div className="relative">
@@ -248,9 +248,9 @@ export function SidebarSearch() {
           value={query}
           autoComplete="off"
           spellCheck={false}
-          placeholder="Jockey, entraineur..."
+          placeholder="Jockey, entraîneur"
           className="h-9 w-full rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] pl-9 pr-9 text-[13px] text-[var(--pmu-text)] outline-none transition placeholder:text-[var(--pmu-text-muted)] focus:border-[var(--pmu-border-strong)]"
-          aria-label="Recherche jockey, entraineur ou cheval"
+          aria-label="Recherche jockey, entraîneur ou cheval"
           role="combobox"
           aria-autocomplete="list"
           aria-expanded={showDropdown}
@@ -300,12 +300,10 @@ export function SidebarSearch() {
             </div>
           ) : null}
 
-          {!loading && error ? (
-            <p className="px-1 py-2 text-sm text-[var(--pmu-orange)]">{error}</p>
-          ) : null}
+          {!loading && error ? <p className="px-1 py-2 text-sm text-[var(--pmu-orange)]">{error}</p> : null}
 
           {!loading && !error && results.length === 0 ? (
-            <p className="px-1 py-2 text-sm text-[var(--pmu-text-soft)]">Aucun resultat</p>
+            <p className="px-1 py-2 text-sm text-[var(--pmu-text-soft)]">Aucun résultat</p>
           ) : null}
 
           {!loading && !error && results.length > 0 ? (
@@ -315,7 +313,7 @@ export function SidebarSearch() {
                   <div className="mb-2 flex items-center gap-2 text-sm font-bold text-[var(--pmu-text)]">
                     <span>{TYPE_EMOJIS[group.type]}</span>
                     <span className="truncate">{group.name}</span>
-                    <span className="text-xs font-medium text-[var(--pmu-text-muted)]">- {TYPE_LABELS[group.type]}</span>
+                    <span className="text-xs font-medium text-[var(--pmu-text-muted)]">• {TYPE_LABELS[group.type]}</span>
                   </div>
 
                   <div className="space-y-1.5">
