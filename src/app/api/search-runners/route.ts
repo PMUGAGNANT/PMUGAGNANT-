@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { badRequest, serviceUnavailable } from "@/lib/api-response";
-import { getAllRaces, getParticipants, getTodayDateStr } from "@/lib/pmu-api";
+import {
+  getAllRaces,
+  getParticipants,
+  getTodayDateStr,
+  isEligiblePmuFranceRace,
+} from "@/lib/pmu-api";
 import { isValidPmuDate } from "@/lib/request-utils";
 import { logger } from "@/lib/server-logger";
 import type { Participant, RaceSummary } from "@/lib/types";
@@ -117,7 +122,7 @@ function sortGroups(left: SearchRunnerGroup, right: SearchRunnerGroup) {
 }
 
 async function buildDateIndex(dateStr: string) {
-  const races = await getAllRaces(dateStr);
+  const races = (await getAllRaces(dateStr)).filter(isEligiblePmuFranceRace);
 
   if (races.length === 0) {
     return [];

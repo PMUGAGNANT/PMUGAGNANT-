@@ -29,6 +29,10 @@ type ReunionSummary = {
   done: number;
 };
 
+function filterPmuFranceRaces(items: RaceSummary[]) {
+  return items.filter((race) => String(race.pays ?? "").toUpperCase() === "FRA");
+}
+
 function normalizeDateParam(value: string | null) {
   return value && /^\d{8}$/.test(value) ? value : getTodayDateStr();
 }
@@ -174,7 +178,7 @@ export function SidebarProgramme() {
           throw new Error(payload.error ?? "Programme indisponible.");
         }
 
-        setRaces(Array.isArray(payload.races) ? payload.races : []);
+        setRaces(filterPmuFranceRaces(Array.isArray(payload.races) ? payload.races : []));
       })
       .catch((fetchError) => {
         if (fetchError instanceof Error && fetchError.name === "AbortError") {

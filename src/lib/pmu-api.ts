@@ -287,6 +287,10 @@ function isEligiblePmuReunion(reunion: Record<string, unknown>) {
   return pays === "FRA";
 }
 
+export function isEligiblePmuFranceRace(race: Pick<RaceSummary, "pays"> | null | undefined) {
+  return String(race?.pays ?? "").toUpperCase() === "FRA";
+}
+
 export async function getAllRaces(dateStr?: string): Promise<RaceSummary[]> {
   const date = dateStr ?? getTodayDateStr();
   if (!isValidPmuDate(date)) {
@@ -347,7 +351,7 @@ export async function getAllRaces(dateStr?: string): Promise<RaceSummary[]> {
   }
 
   races.sort((a, b) => a.heureDepart.localeCompare(b.heureDepart));
-  return races;
+  return races.filter(isEligiblePmuFranceRace);
 }
 
 export async function getParticipants(

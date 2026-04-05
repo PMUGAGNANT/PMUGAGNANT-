@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAllRaces, getTodayDateStr } from '@/lib/pmu-api';
+import { getAllRaces, getTodayDateStr, isEligiblePmuFranceRace } from '@/lib/pmu-api';
 import { badRequest, serverError } from '@/lib/api-response';
 import { normalizeRequestedDate } from '@/lib/request-utils';
 
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const races = await getAllRaces(date);
+    const races = (await getAllRaces(date)).filter(isEligiblePmuFranceRace);
     return NextResponse.json({ success: true, date, races });
   } catch (error) {
     return serverError('Échec du chargement des courses.', error, { date });

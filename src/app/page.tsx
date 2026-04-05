@@ -122,7 +122,11 @@ function normalizeScoresPayload(
 }
 
 function coerceRaceSummaries(raw: unknown): RaceSummary[] {
-  return Array.isArray(raw) ? raw : [];
+  return Array.isArray(raw)
+    ? raw.filter((race): race is RaceSummary =>
+        race != null && String((race as RaceSummary).pays ?? "").toUpperCase() === "FRA"
+      )
+    : [];
 }
 
 type FeaturedRace = {

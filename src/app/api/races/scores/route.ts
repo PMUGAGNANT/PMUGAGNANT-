@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAllRaces, getParticipants, getTodayDateStr } from "@/lib/pmu-api";
+import { getAllRaces, getParticipants, getTodayDateStr, isEligiblePmuFranceRace } from "@/lib/pmu-api";
 import { analyzeRaceWithParameters, getMinutesUntilStart } from "@/lib/analysis";
 import { attachFaultRates } from "@/lib/horse-faults";
 import { loadAlgoParameters } from "@/lib/config";
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     const { state: subscriptionState } = await getRequestSubscriptionState(
       request.headers.get("authorization")
     );
-    const races = await getAllRaces(date);
+    const races = (await getAllRaces(date)).filter(isEligiblePmuFranceRace);
     const scores: Record<
       string,
       {
