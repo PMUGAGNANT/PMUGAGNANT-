@@ -276,6 +276,17 @@ export function getTodayDateStr(): string {
   return getTodayDateStrFromUtils();
 }
 
+function isEligiblePmuReunion(reunion: Record<string, unknown>) {
+  const pays = String(
+    ((reunion.pays as Record<string, unknown> | undefined)?.code as string) ?? ""
+  ).toUpperCase();
+
+  // On garde uniquement le périmètre PMU France pour éviter
+  // que des réunions étrangères (DEU, ARG, URY, etc.) alimentent
+  // l'accueil, le scoring et les sélections du jour.
+  return pays === "FRA";
+}
+
 export async function getAllRaces(dateStr?: string): Promise<RaceSummary[]> {
   const date = dateStr ?? getTodayDateStr();
   if (!isValidPmuDate(date)) {
@@ -289,6 +300,10 @@ export async function getAllRaces(dateStr?: string): Promise<RaceSummary[]> {
   const races: RaceSummary[] = [];
 
   for (const reunion of reunions) {
+    if (!isEligiblePmuReunion(reunion)) {
+      continue;
+    }
+
     const reunionNumber = Number(reunion.numOfficiel ?? 0);
     const hippodrome = String(
       ((reunion.hippodrome as Record<string, unknown> | undefined)?.libelleCourt as string) ?? ""
