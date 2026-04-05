@@ -57,22 +57,45 @@ function getDateLabel(dateStr: string) {
 
 function getRaceStatus(race: RaceSummary) {
   const minutes = getMinutesUntilStart(race.heureDepart, race.dateStr);
-  if (minutes <= 0) {
+
+  if (minutes <= -20) {
+    return "Courue";
+  }
+
+  if (minutes <= 10) {
     return "En cours";
   }
+
   if (minutes <= 45) {
     return `${Math.round(minutes)} min`;
   }
+
   return race.heureDepart;
+}
+
+function getRaceStatusTone(race: RaceSummary, active: boolean) {
+  const status = getRaceStatus(race);
+
+  if (active || status === "En cours") {
+    return "bg-[var(--pmu-bg)] text-[var(--pmu-primary)]";
+  }
+
+  if (status === "Courue") {
+    return "bg-[var(--pmu-bg)] text-[var(--pmu-text-soft)]";
+  }
+
+  return "bg-[var(--pmu-bg)] text-[var(--pmu-text)]";
 }
 
 function formatDiscipline(race: RaceSummary) {
   if (race.estTrot) {
     return "Attelé";
   }
+
   if (race.estPlat) {
     return "Plat";
   }
+
   return race.discipline || "Discipline";
 }
 
@@ -100,6 +123,10 @@ function getReunionGroups(races: RaceSummary[]) {
     .sort((a, b) => a.firstTime.localeCompare(b.firstTime));
 }
 
+function getCourseMeta(race: RaceSummary) {
+  return `${formatDiscipline(race)} • ${race.distance} m • ${race.nombrePartants} partants`;
+}
+
 export function SidebarProgramme() {
   const router = useRouter();
   const pathname = usePathname();
@@ -107,7 +134,8 @@ export function SidebarProgramme() {
   const selectedDate = normalizeDateParam(searchParams.get("date"));
 
   const [isOpen, setIsOpen] = useState(false);
-  const [tab, setTab] = useState<SidebarProgrammeTab>("courses");
+  const [tab, setTab] = useState<SidebarProgrammeTab>("reunions");
+  const [selectedReunion, setSelectedReunion] = useState<number | null>(null);
   const [races, setRaces] = useState<RaceSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -146,18 +174,66 @@ export function SidebarProgramme() {
     return () => controller.abort();
   }, [selectedDate]);
 
-  const sortedRaces = useMemo(() => sortRaces(races).slice(0, 6), [races]);
-  const reunionGroups = useMemo(() => getReunionGroups(races).slice(0, 6), [races]);
-  const reunionCount = reunionGroups.length;
+  const sortedRaces = useMemo(() => sortRaces(races), [races]);
+  const reunionGroups = useMemo(() => getReunionGroups(races), [races]);
 
-  const currentCourseKey = useMemo(() => {
+  const currentRoute = useMemo(() => {
     const match = pathname.match(/^\/course\/(\d+)\/(\d+)$/);
     if (!match) {
       return null;
     }
 
-    return `${match[1]}-${match[2]}`;
+    return {
+      reunion: Number(match[1]),
+      course: Number(match[2]),
+      key: `${match[1]}-${match[2]}`,
+    };
   }, [pathname]);
+
+  useEffect(() => {
+    if (currentRoute) {
+      setIsOpen(true);
+      setTab("courses");
+      setSelectedReunion(currentRoute.reunion);
+    }
+  }, [currentRoute]);
+
+  useEffect(() => {
+    if (reunionGroups.length === 0) {
+      setSelectedReunion(null);
+      return;
+    }
+
+    setSelectedReunion((current) => {
+      if (current && reunionGroups.some((group) => group.reunion === current)) {
+        return current;
+      }
+
+      return currentRoute?.reunion ?? reunionGroups[0]?.reunion ?? null;
+    });
+  }, [currentRoute?.reunion, reunionGroups]);
+
+  const selectedGroup = useMemo(
+    () => reunionGroups.find((group) => group.reunion === selectedReunion) ?? null,
+    [reunionGroups, selectedReunion]
+  );
+
+  const visibleCourses = useMemo(() => {
+    if (selectedReunion === null) {
+      return [];
+    }
+
+    return sortedRaces.filter((race) => race.reunion === selectedReunion);
+  }, [selectedReunion, sortedRaces]);
+
+  function handleOpenReunion(reunion: number) {
+    setSelectedReunion(reunion);
+    setTab("courses");
+  }
+
+  function handleOpenCourse(race: RaceSummary) {
+    router.push(`/course/${race.reunion}/${race.course}?date=${selectedDate}`);
+  }
 
   return (
     <section className="ml-3 overflow-hidden rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface)]">
@@ -175,9 +251,9 @@ export function SidebarProgramme() {
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black text-[var(--pmu-text)]">Programme PMU</p>
+          <p className="text-sm font-black text-[var(--pmu-text)]">Programme du jour</p>
           <p className="mt-0.5 truncate text-[11px] text-[var(--pmu-text-soft)]">
-            Courses / Réunions • {sortedRaces.length} accès • {getDateLabel(selectedDate)}
+            Réunions puis courses • {reunionGroups.length} réunions • {getDateLabel(selectedDate)}
           </p>
         </div>
 
@@ -234,7 +310,33 @@ export function SidebarProgramme() {
             </a>
           </div>
 
-          <div className="mt-3 max-h-[22rem] space-y-2 overflow-y-auto pr-1">
+          {tab === "courses" ? (
+            <div className="mt-3 mb-3 flex items-center justify-between gap-2 rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-2">
+              <button
+                type="button"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-bg)] text-[var(--pmu-text)] transition hover:border-[var(--pmu-border-strong)]"
+                onClick={() => setTab("reunions")}
+                aria-label="Revenir aux réunions"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12.5 5.5L8 10l4.5 4.5" />
+                </svg>
+              </button>
+
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-black text-[var(--pmu-text)]">
+                  {selectedGroup ? `R${selectedGroup.reunion} ${selectedGroup.hippodrome}` : "Choisis une réunion"}
+                </p>
+                <p className="truncate text-[11px] text-[var(--pmu-text-soft)]">
+                  {selectedGroup
+                    ? `${selectedGroup.count} courses • ${selectedGroup.firstTime} → ${selectedGroup.lastTime}`
+                    : "Sélectionne une réunion pour afficher ses courses"}
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="max-h-[24rem] space-y-2 overflow-y-auto pr-1">
             {loading
               ? Array.from({ length: 4 }, (_, index) => (
                   <div
@@ -250,27 +352,71 @@ export function SidebarProgramme() {
               </div>
             ) : null}
 
-            {!loading && !error && tab === "courses" && sortedRaces.length === 0 ? (
+            {!loading && !error && tab === "reunions" && reunionGroups.length === 0 ? (
               <div className="rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-3 text-xs leading-5 text-[var(--pmu-text-soft)]">
-                Aucune course chargée pour cette journée.
+                Aucune réunion chargée pour cette journée.
+              </div>
+            ) : null}
+
+            {!loading && !error && tab === "reunions"
+              ? reunionGroups.map((group) => (
+                  <button
+                    key={`${selectedDate}-reunion-${group.reunion}`}
+                    type="button"
+                    className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
+                      selectedReunion === group.reunion
+                        ? "border-[var(--pmu-primary)] bg-[var(--pmu-primary-soft)]"
+                        : "border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] hover:border-[var(--pmu-border-strong)]"
+                    }`}
+                    onClick={() => handleOpenReunion(group.reunion)}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 flex-1 gap-3">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[var(--pmu-bg)] text-center">
+                          <span className="text-base font-black uppercase leading-none tracking-tight text-[var(--pmu-text)]">
+                            R{group.reunion}
+                          </span>
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-base font-black text-[var(--pmu-text)]">{group.hippodrome}</p>
+                          <p className="mt-1 text-[12px] leading-5 text-[var(--pmu-text-soft)]">
+                            {group.count} courses • fenêtre courses dédiée
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            <span className="rounded-full bg-[var(--pmu-bg)] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--pmu-text-soft)]">
+                              {group.firstTime} → {group.lastTime}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <span className="shrink-0 text-sm font-black text-[var(--pmu-text)]">R{group.reunion}</span>
+                    </div>
+                  </button>
+                ))
+              : null}
+
+            {!loading && !error && tab === "courses" && visibleCourses.length === 0 ? (
+              <div className="rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-3 text-xs leading-5 text-[var(--pmu-text-soft)]">
+                Sélectionne une réunion pour faire défiler ses courses.
               </div>
             ) : null}
 
             {!loading && !error && tab === "courses"
-              ? sortedRaces.map((race) => {
+              ? visibleCourses.map((race) => {
                   const raceKey = `${race.reunion}-${race.course}`;
-                  const active = currentCourseKey === raceKey;
+                  const active = currentRoute?.key === raceKey;
+                  const raceTone = active
+                    ? "border-[var(--pmu-primary)] bg-[var(--pmu-primary-soft)]"
+                    : "border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] hover:border-[var(--pmu-border-strong)]";
 
                   return (
                     <button
                       key={`${race.dateStr}-${raceKey}`}
                       type="button"
-                      className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
-                        active
-                          ? "border-[var(--pmu-primary)] bg-[var(--pmu-primary-soft)]"
-                          : "border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] hover:border-[var(--pmu-border-strong)]"
-                      }`}
-                      onClick={() => router.push(`/course/${race.reunion}/${race.course}?date=${selectedDate}`)}
+                      className={`w-full rounded-2xl border px-3 py-3 text-left transition ${raceTone}`}
+                      onClick={() => handleOpenCourse(race)}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex min-w-0 flex-1 gap-3">
@@ -288,7 +434,7 @@ export function SidebarProgramme() {
                               {race.nomCourse}
                             </p>
                             <p className="mt-1 text-[11px] leading-5 text-[var(--pmu-text-soft)]">
-                              {formatDiscipline(race)} • {race.distance} m • {race.nombrePartants} partants
+                              {getCourseMeta(race)}
                             </p>
                           </div>
                         </div>
@@ -296,11 +442,10 @@ export function SidebarProgramme() {
                         <div className="shrink-0 text-right">
                           <p className="text-sm font-black text-[var(--pmu-text)]">{race.heureDepart}</p>
                           <span
-                            className={`mt-2 inline-flex rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] ${
+                            className={`mt-2 inline-flex rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] ${getRaceStatusTone(
+                              race,
                               active
-                                ? "bg-[var(--pmu-bg)] text-[var(--pmu-primary)]"
-                                : "bg-[var(--pmu-bg)] text-[var(--pmu-text-soft)]"
-                            }`}
+                            )}`}
                           >
                             {getRaceStatus(race)}
                           </span>
@@ -310,53 +455,10 @@ export function SidebarProgramme() {
                   );
                 })
               : null}
-
-            {!loading && !error && tab === "reunions" && reunionGroups.length === 0 ? (
-              <div className="rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-3 text-xs leading-5 text-[var(--pmu-text-soft)]">
-                Aucune réunion chargée pour cette journée.
-              </div>
-            ) : null}
-
-            {!loading && !error && tab === "reunions"
-              ? reunionGroups.map((group) => (
-                  <button
-                    key={`${selectedDate}-reunion-${group.reunion}`}
-                    type="button"
-                    className="w-full rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-3 text-left transition hover:border-[var(--pmu-border-strong)]"
-                    onClick={() =>
-                      router.push(`/course/${group.firstRace.reunion}/${group.firstRace.course}?date=${selectedDate}`)
-                    }
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 flex-1 gap-3">
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[var(--pmu-bg)] text-center">
-                          <span className="text-base font-black uppercase leading-none tracking-tight text-[var(--pmu-text)]">
-                            R{group.reunion}
-                          </span>
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-base font-black text-[var(--pmu-text)]">{group.hippodrome}</p>
-                          <p className="mt-1 text-[12px] leading-5 text-[var(--pmu-text-soft)]">
-                            {group.count} courses • première fiche en ouverture
-                          </p>
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            <span className="rounded-full bg-[var(--pmu-bg)] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--pmu-text-soft)]">
-                              {group.firstTime} → {group.lastTime}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <span className="shrink-0 text-sm font-black text-[var(--pmu-text)]">{group.firstTime}</span>
-                    </div>
-                  </button>
-                ))
-              : null}
           </div>
 
           <div className="mt-3 rounded-2xl border border-dashed border-[var(--pmu-border)] px-3 py-2 text-[11px] leading-5 text-[var(--pmu-text-soft)]">
-            Déroule ce dossier pour faire défiler les fenêtres Courses / Réunions comme un mini-programme PMU.
+            Choisis d’abord une réunion, puis fais défiler ses courses dans la même fenêtre, façon mini-programme PMU.
           </div>
         </div>
       ) : null}

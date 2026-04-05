@@ -170,7 +170,7 @@ export function Sidebar() {
         </div>
 
         <nav className="mt-4 space-y-1">
-          {(navItems ?? []).map((item) => {
+          {navItems.map((item) => {
             const active = isActive(pathname, item.href, item.external);
             const Icon = item.Icon;
 
