@@ -7,6 +7,7 @@ import { ComparatifIA } from "@/components/ui/ComparatifIA";
 import { CourseCard } from "@/components/ui/CourseCard";
 import { FilterPills } from "@/components/ui/FilterPills";
 import { HowItWorks } from "@/components/ui/HowItWorks";
+import { PepiteCard } from "@/components/ui/PepiteCard";
 import { PerformanceProof } from "@/components/ui/PerformanceProof";
 import { PronoHero } from "@/components/ui/PronoHero";
 import { PromoVideoSection } from "@/components/ui/PromoVideoSection";
@@ -57,6 +58,13 @@ type RaceScore = {
     decision?: string | null;
     betType?: string | null;
     confidence?: number | null;
+    topFacteurs?: string[];
+  } | null;
+  pepiteDuJour?: {
+    numPmu?: number | null;
+    nom?: string | null;
+    confidence?: number | null;
+    cote?: number | null;
     topFacteurs?: string[];
   } | null;
 };
@@ -676,21 +684,37 @@ function PageContent() {
       </section>
 
       {radarRace && radarRace.score?.pick?.numPmu && radarRace.score?.pick?.nom ? (
-        <PronoHero
-          horseName={radarRace.score.pick.nom}
-          horseNum={radarRace.score.pick.numPmu}
-          confidence={radarRace.confidence}
-          hippodrome={radarRace.race.hippodrome}
-          heureDepart={radarRace.race.heureDepart}
-          courseName={radarRace.race.nomCourse}
-          reunion={radarRace.race.reunion}
-          course={radarRace.race.course}
-          betType={radarRace.score.pick.betType}
-          cote={null}
-          topFacteurs={translateFactors(radarRace.score.pick.topFacteurs ?? [])}
-          lisibilite={radarRace.score?.lisibilite}
-          onClick={() => navigateToRace(radarRace.race)}
-        />
+        <>
+          <PronoHero
+            horseName={radarRace.score.pick.nom}
+            horseNum={radarRace.score.pick.numPmu}
+            confidence={radarRace.confidence}
+            hippodrome={radarRace.race.hippodrome}
+            heureDepart={radarRace.race.heureDepart}
+            courseName={radarRace.race.nomCourse}
+            reunion={radarRace.race.reunion}
+            course={radarRace.race.course}
+            betType={radarRace.score.pick.betType}
+            cote={null}
+            topFacteurs={translateFactors(radarRace.score.pick.topFacteurs ?? [])}
+            lisibilite={radarRace.score?.lisibilite}
+            onClick={() => navigateToRace(radarRace.race)}
+          />
+          {radarRace.score?.pepiteDuJour?.numPmu && radarRace.score?.pepiteDuJour?.nom ? (
+            <PepiteCard
+              horseName={radarRace.score.pepiteDuJour.nom}
+              horseNum={radarRace.score.pepiteDuJour.numPmu}
+              confidence={radarRace.score.pepiteDuJour.confidence ?? 0}
+              cote={radarRace.score.pepiteDuJour.cote ?? null}
+              hippodrome={radarRace.race.hippodrome}
+              heureDepart={radarRace.race.heureDepart}
+              reunion={radarRace.race.reunion}
+              course={radarRace.race.course}
+              topFacteurs={translateFactors(radarRace.score.pepiteDuJour.topFacteurs ?? [])}
+              onClick={() => navigateToRace(radarRace.race)}
+            />
+          ) : null}
+        </>
       ) : radarRace && radarProfile ? (
         <RadarHero
           raceTitle={`R${radarRace.race.reunion}C${radarRace.race.course} - ${radarRace.race.nomCourse}`}

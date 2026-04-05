@@ -41,6 +41,16 @@ export async function GET(request: Request) {
               decision: PredictionDecision;
               betType: string;
               confidence: number;
+              topFacteurs: string[];
+            }
+          | null;
+        pepiteDuJour:
+          | {
+              numPmu: number;
+              nom: string;
+              confidence: number;
+              cote: number | null;
+              topFacteurs: string[];
             }
           | null;
       }
@@ -107,6 +117,17 @@ export async function GET(request: Request) {
                     decision: analysis.favori.prediction.decision,
                     betType: analysis.favori.prediction.typePariConseille,
                     confidence: analysis.favori.prediction.confiance,
+                    topFacteurs: analysis.favori.prediction.topFacteurs,
+                  }
+                : null,
+            pepiteDuJour:
+              allowFullScore && analysis.pepiteDuJour
+                ? {
+                    numPmu: analysis.pepiteDuJour.numPmu,
+                    nom: analysis.pepiteDuJour.nom,
+                    confidence: analysis.pepiteDuJour.prediction.confiance,
+                    cote: analysis.pepiteDuJour.cote,
+                    topFacteurs: analysis.pepiteDuJour.prediction.topFacteurs,
                   }
                 : null,
           };
@@ -124,6 +145,7 @@ export async function GET(request: Request) {
             playable: v.playable,
             recommendation: v.recommendation,
             pick: v.pick,
+            pepiteDuJour: v.pepiteDuJour,
           };
         } else if (result.status === "rejected") {
           logger.warn("race_scores.batch_item_failed", {

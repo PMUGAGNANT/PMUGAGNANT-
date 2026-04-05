@@ -255,23 +255,24 @@ export function parseMusic(music: string): MusicStats {
 function getMarketSignal(cote: number | null, variationCote: number | null) {
   if (cote === null || Number.isNaN(cote)) return 0;
 
+  // TIER 3 : la cote brute donne un signal faible.
   let signal = 0;
-  if (cote <= 2.8) signal += 10;
-  else if (cote <= 4.5) signal += 8;
-  else if (cote <= 7) signal += 5;
-  else if (cote <= 10) signal += 2;
-  else if (cote <= 15) signal -= 1;
-  else if (cote <= 25) signal -= 4;
-  else signal -= 8;
+  if (cote <= 2.0) signal += 2;
+  else if (cote <= 3.5) signal += 1;
+  else if (cote <= 6.0) signal += 0;
+  else if (cote <= 10) signal += 0;
+  else if (cote <= 18) signal -= 1;
+  else if (cote <= 30) signal -= 2;
+  else signal -= 3;
 
   if (variationCote !== null) {
     if (variationCote <= -20) signal += 4;
     else if (variationCote <= -10) signal += 2;
-    else if (variationCote >= 30) signal -= 6;
-    else if (variationCote >= 15) signal -= 3;
+    else if (variationCote >= 30) signal -= 5;
+    else if (variationCote >= 15) signal -= 2;
   }
 
-  return clamp(signal, -10, 12);
+  return clamp(signal, -8, 6);
 }
 
 function getWeightSignal(participant: Participant, race: RaceSummary) {
@@ -305,13 +306,15 @@ function getStallSignal(participant: Participant, race: RaceSummary) {
 
 function getHumanSignal(participant: Participant, race: RaceSummary) {
   const human = getHumanReference(participant, race.estPlat);
-  return race.estPlat
+  const raw = race.estPlat
     ? getEliteScore(human, ELITE_JOCKEYS_FLAT)
     : getEliteScore(human, ELITE_DRIVERS_TROT);
+  return clamp(Math.round(raw * 0.8), 0, 8);
 }
 
 function getTrainerSignal(participant: Participant) {
-  return getEliteScore(participant.entraineur, ELITE_TRAINERS);
+  const raw = getEliteScore(participant.entraineur, ELITE_TRAINERS);
+  return clamp(Math.round(raw * 0.7), 0, 7);
 }
 
 function getJockeyFormSignal(participant: Participant, race: RaceSummary) {
@@ -320,30 +323,30 @@ function getJockeyFormSignal(participant: Participant, race: RaceSummary) {
     : getEliteScore(participant.driver || participant.jockey, ELITE_DRIVERS_TROT);
   const winRate = safeRate(participant.jockeyWinRate) ?? 0;
   const recentForm = safeRate(participant.jockeyRecentForm) ?? 0;
-  const signal = humanBase * 0.45 + winRate * 18 + recentForm * 12;
-  return clamp(Math.round(signal), 0, 15);
+  const signal = humanBase * 0.35 + winRate * 22 + recentForm * 14;
+  return clamp(Math.round(signal), 0, 16);
 }
 
 function getTrainerTrackSignal(participant: Participant) {
   const trackWinRate = safeRate(participant.trainerTrackWinRate) ?? 0;
-  const eliteBonus = getTrainerSignal(participant) * 0.4;
-  return clamp(Math.round(trackWinRate * 18 + eliteBonus), 0, 14);
+  const eliteBonus = getTrainerSignal(participant) * 0.3;
+  return clamp(Math.round(trackWinRate * 22 + eliteBonus), 0, 15);
 }
 
 function getDistanceSignal(participant: Participant, race: RaceSummary) {
   const winRate = safeRate(participant.distanceWinRate) ?? 0;
   const placeRate = safeRate(participant.distancePlaceRate) ?? 0;
-  let signal = winRate * 16 + placeRate * 10;
+  let signal = winRate * 20 + placeRate * 12;
 
   if (race.distance >= 2600 && participant.age >= 5 && participant.age <= 7) {
-    signal += 2;
+    signal += 3;
   }
 
   if (race.distance <= 1600 && participant.age >= 3 && participant.age <= 5) {
-    signal += 2;
+    signal += 3;
   }
 
-  return clamp(Math.round(signal), -2, 16);
+  return clamp(Math.round(signal), -2, 18);
 }
 
 function getTerrainSignal(participant: Participant, race: RaceSummary) {
@@ -391,7 +394,7 @@ function getWeatherSignal(participant: Participant, race: RaceSummary) {
 function getTrackHistorySignal(participant: Participant) {
   const winRate = safeRate(participant.trackWinRate) ?? 0;
   const placeRate = safeRate(participant.trackPlaceRate) ?? 0;
-  return clamp(Math.round(winRate * 16 + placeRate * 10), -2, 15);
+  return clamp(Math.round(winRate * 22 + placeRate * 12), -2, 18);
 }
 
 function getAgeSexSignal(participant: Participant, race: RaceSummary) {
@@ -418,27 +421,47 @@ function getRestSignal(participant: Participant) {
     return 0;
   }
 
-  if (restDays <= 4) return -4;
-  if (restDays <= 14) return 3;
-  if (restDays <= 28) return 2;
-  if (restDays <= 45) return 0;
-  if (restDays <= 75) return -3;
+  if (restDays <= 4) return -5;
+  if (restDays <= 10) return 2;
+  if (restDays <= 21) return 5;
+  if (restDays <= 35) return 3;
+  if (restDays <= 50) return 0;
+  if (restDays <= 80) return -4;
   if (restDays <= 120) return -6;
   return -8;
 }
 
 function getGainsSignal(participant: Participant) {
   if (!participant.gainCarriere) return 0;
-  const signal = Math.log10(participant.gainCarriere + 1) * 2 - 6;
-  return clamp(Math.round(signal), 0, 8);
+  const signal = Math.log10(participant.gainCarriere + 1) * 1 - 3;
+  return clamp(Math.round(signal), 0, 3);
 }
 
 function getPopularitySignal(participant: Participant) {
   if (!participant.nombreSuiveurs) return 0;
-  if (participant.nombreSuiveurs >= 1500) return 4;
-  if (participant.nombreSuiveurs >= 800) return 3;
-  if (participant.nombreSuiveurs >= 300) return 2;
-  if (participant.nombreSuiveurs >= 100) return 1;
+  if (participant.nombreSuiveurs >= 2000) return 1;
+  return 0;
+}
+
+function getIntrinsicValueSignal(
+  scoreIntrinseque: number,
+  cote: number | null,
+  nombrePartants: number
+) {
+  if (cote === null || !Number.isFinite(cote) || cote <= 1) return 0;
+  void nombrePartants;
+
+  const probaMarche = 1 / cote;
+  const probaAlgo = clamp(scoreIntrinseque / 100, 0.03, 0.55);
+  const edge = probaAlgo - probaMarche;
+
+  if (edge >= 0.18) return 8;
+  if (edge >= 0.12) return 6;
+  if (edge >= 0.06) return 4;
+  if (edge >= 0.02) return 2;
+  if (edge <= -0.18) return -4;
+  if (edge <= -0.10) return -2;
+
   return 0;
 }
 
@@ -447,11 +470,11 @@ function getVictorySignal(participant: Participant, stats: MusicStats) {
   const winRate = participant.nombreVictoires / total;
 
   let signal = 0;
-  signal += stats.nbVictoires >= 2 ? 8 : stats.nbVictoires === 1 ? 4 : 0;
-  signal += winRate >= 0.18 ? 6 : winRate >= 0.1 ? 3 : 0;
+  signal += stats.nbVictoires >= 2 ? 9 : stats.nbVictoires === 1 ? 5 : 0;
+  signal += winRate >= 0.20 ? 7 : winRate >= 0.12 ? 4 : winRate >= 0.06 ? 2 : 0;
   signal += stats.recentPositions.includes(1) ? 3 : 0;
 
-  return clamp(signal, 0, 15);
+  return clamp(signal, 0, 16);
 }
 
 function getPodiumSignal(participant: Participant, stats: MusicStats) {
@@ -459,35 +482,51 @@ function getPodiumSignal(participant: Participant, stats: MusicStats) {
   const placeRate = participant.nombrePlaces / total;
 
   let signal = 0;
-  signal += stats.nbPodiums >= 3 ? 8 : stats.nbPodiums >= 2 ? 5 : stats.nbPodiums >= 1 ? 2 : 0;
-  signal += placeRate >= 0.45 ? 6 : placeRate >= 0.3 ? 3 : 0;
-  signal += stats.serie >= 2 ? 3 : 0;
+  signal += stats.nbPodiums >= 3 ? 9 : stats.nbPodiums >= 2 ? 6 : stats.nbPodiums >= 1 ? 3 : 0;
+  signal += placeRate >= 0.50 ? 7 : placeRate >= 0.35 ? 4 : placeRate >= 0.20 ? 2 : 0;
+  signal += stats.serie >= 3 ? 4 : stats.serie >= 2 ? 2 : 0;
 
-  return clamp(signal, 0, 14);
+  return clamp(signal, 0, 15);
 }
 
 function getFormSignal(stats: MusicStats) {
   let signal = 0;
-  signal += stats.ratioForme * 12;
-  signal += stats.trend > 1 ? 5 : stats.trend > 0.4 ? 2 : stats.trend < -1 ? -5 : stats.trend < -0.4 ? -2 : 0;
-  if (stats.averagePosition <= 3) signal += 4;
-  else if (stats.averagePosition <= 4.5) signal += 2;
+  signal += stats.ratioForme * 14;
+  signal +=
+    stats.trend > 1.2
+      ? 7
+      : stats.trend > 0.6
+        ? 4
+        : stats.trend > 0.2
+          ? 2
+          : stats.trend < -1
+            ? -6
+            : stats.trend < -0.4
+              ? -3
+              : 0;
+
+  if (stats.averagePosition <= 2.5) signal += 5;
+  else if (stats.averagePosition <= 3.5) signal += 3;
+  else if (stats.averagePosition <= 5) signal += 1;
   else if (stats.averagePosition >= 7) signal -= 3;
-  return clamp(Math.round(signal), -6, 16);
+  else if (stats.averagePosition >= 9) signal -= 5;
+
+  return clamp(Math.round(signal), -8, 18);
 }
 
 function getRegularitySignal(stats: MusicStats) {
   let signal = 0;
-  if (stats.fiabilite >= 0.9) signal += 10;
-  else if (stats.fiabilite >= 0.8) signal += 7;
-  else if (stats.fiabilite >= 0.7) signal += 4;
-  else if (stats.fiabilite < 0.55) signal -= 5;
+  if (stats.fiabilite >= 0.92) signal += 12;
+  else if (stats.fiabilite >= 0.85) signal += 9;
+  else if (stats.fiabilite >= 0.75) signal += 6;
+  else if (stats.fiabilite >= 0.65) signal += 3;
+  else if (stats.fiabilite < 0.5) signal -= 6;
 
   if (stats.nbDQ === 0 && stats.nbAbandons === 0 && stats.recentPositions.length >= 3) {
-    signal += 2;
+    signal += 3;
   }
 
-  return clamp(signal, -6, 14);
+  return clamp(signal, -6, 16);
 }
 
 function getTerrainReadabilitySignal(race: RaceSummary) {
@@ -652,6 +691,33 @@ function buildSignals(
         ? 6
         : 0;
   const risque = getRiskPenalty(participant, stats, parameters);
+  const scoreIntrinseque =
+    32 +
+    forme +
+    regularite +
+    victoire +
+    podium +
+    humain +
+    entraineur +
+    jockeyForme +
+    trainerTrack +
+    gains +
+    popularite +
+    stalle +
+    poids +
+    distance +
+    terrain +
+    meteo +
+    hippodrome +
+    ageSexe +
+    repos -
+    risque -
+    faute;
+  const valueIntrinseque = getIntrinsicValueSignal(
+    clamp(scoreIntrinseque, 0, 100),
+    participant.cote,
+    race.nombrePartants
+  );
 
   return {
     forme,
@@ -673,6 +739,7 @@ function buildSignals(
     hippodrome,
     ageSexe,
     repos,
+    valueIntrinseque,
     faute,
     risque,
   };
@@ -698,7 +765,8 @@ function computeBaseHorseScore(signaux: RunnerSignals) {
     signaux.meteo +
     signaux.hippodrome +
     signaux.ageSexe +
-    signaux.repos;
+    signaux.repos +
+    signaux.valueIntrinseque;
 
   const negatives = signaux.risque + signaux.faute;
   return clamp(32 + positives - negatives, 0, 100);
@@ -1597,6 +1665,22 @@ export function analyzeRaceWithParameters(
     ranked.find((runner) => runner.prediction.decision === "SURVEILLANCE") ??
     ranked[0] ??
     null;
+  const pepiteDuJour =
+    ranked
+      .filter(
+        (runner) =>
+          (runner.cote ?? 0) >= 5.0 &&
+          runner.prediction.scoreCheval >= 52 &&
+          runner.prediction.confiance >= 4.5 &&
+          runner.signaux.valueIntrinseque >= 2 &&
+          runner.prediction.decision !== "REJET" &&
+          runner.numPmu !== (favori?.numPmu ?? -1)
+      )
+      .sort((a, b) => {
+        const ratioA = a.prediction.scoreCheval / Math.max(a.cote ?? 1, 1);
+        const ratioB = b.prediction.scoreCheval / Math.max(b.cote ?? 1, 1);
+        return ratioB - ratioA;
+      })[0] ?? null;
   const soliditeFavori = buildFavoriteSolidity(favori, ranked.slice(0, 5));
   const recommandation = buildRecommendationRefined(
     buildRecommendation(lisibilite, favori, soliditeFavori),
@@ -1625,6 +1709,7 @@ export function analyzeRaceWithParameters(
     ranking: ranked,
     top5: ranked.slice(0, 5),
     favori,
+    pepiteDuJour,
     soliditeFavori,
     recommandation,
     scoreConfiance,

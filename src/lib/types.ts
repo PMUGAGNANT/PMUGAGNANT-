@@ -103,6 +103,7 @@ export interface RunnerSignals {
   hippodrome: number;
   ageSexe: number;
   repos: number;
+  valueIntrinseque: number;
   risque: number;
   faute: number;
 }
@@ -241,6 +242,7 @@ export interface RaceAnalysis {
   ranking: ScoredParticipant[];
   top5: ScoredParticipant[];
   favori: ScoredParticipant | null;
+  pepiteDuJour: ScoredParticipant | null;
   soliditeFavori: FavoriteSolidity | null;
   recommandation: Recommendation | null;
   scoreConfiance: ConfidenceScore | null;
