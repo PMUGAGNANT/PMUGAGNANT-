@@ -14,9 +14,7 @@ import { PromoVideoSection } from "@/components/ui/PromoVideoSection";
 import { RadarHero } from "@/components/ui/RadarHero";
 import { RecentResults } from "@/components/ui/RecentResults";
 import { SagesseFoules } from "@/components/ui/SagesseFoules";
-import { TelegramCTA } from "@/components/ui/TelegramCTA";
 import { TopParisStrip, type TopParisItem } from "@/components/ui/TopParisStrip";
-import { UserStreakCard } from "@/components/ui/UserStreakCard";
 import {
   formatDateToPmu,
   getMinutesUntilStart,
@@ -569,9 +567,8 @@ function PageContent() {
               {[
                 "Radar du jour",
                 "Top 3 jouables",
-                "Opportunités value",
-                "Mises bankroll",
-                "Courses vraiment jouables",
+                "Programme trié",
+                "Bilan réel",
               ].map((label) => (
                 <span key={label} className="app-pill text-xs">
                   {label}
@@ -586,8 +583,8 @@ function PageContent() {
               {[
                 "Cheval du jour et niveau de confiance",
                 "Top 3 jouables quand le signal est propre",
-                "Tri du programme par urgence ou qualité",
-                "Bilan réel sans enjoliver les pertes",
+                "Programme trié sans bruit",
+                "Bilan réel, gains et pertes",
               ].map((item) => (
                 <p key={item} className="text-sm leading-6 text-[var(--pmu-text-soft)]">
                   {item}
@@ -595,29 +592,6 @@ function PageContent() {
               ))}
             </div>
           </div>
-        </div>
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <div className="app-card p-5">
-          <p className="app-label">Date active</p>
-          <p className="mt-3 text-2xl font-black capitalize tracking-tight text-[var(--pmu-text)]">{formatRelativeDay(selectedDate)}</p>
-          <p className="mt-1 text-sm text-[var(--pmu-text-muted)]">{formatDisplayDate(selectedDate)}</p>
-        </div>
-        <div className="app-card p-5">
-          <p className="app-label">Programme</p>
-          <p className="mt-3 text-3xl font-black tracking-tight text-[var(--pmu-text)]">{races.length}</p>
-          <p className="mt-1 text-sm text-[var(--pmu-text-muted)]">{summaryStats.meetings} réunions chargées</p>
-        </div>
-        <div className="app-card p-5">
-          <p className="app-label">Courses jouables</p>
-          <p className="mt-3 text-3xl font-black tracking-tight text-[var(--pmu-primary)]">{summaryStats.playable}</p>
-          <p className="mt-1 text-sm text-[var(--pmu-text-muted)]">signaux validés par le moteur</p>
-        </div>
-        <div className="app-card p-5">
-          <p className="app-label">Départs proches</p>
-          <p className="mt-3 text-3xl font-black tracking-tight text-[var(--pmu-text)]">{summaryStats.closingSoon}</p>
-          <p className="mt-1 text-sm text-[var(--pmu-text-muted)]">courses à moins d’une heure</p>
         </div>
       </section>
 
@@ -668,52 +642,87 @@ function PageContent() {
 
       {topParisItems.length ? <TopParisStrip items={topParisItems} /> : null}
 
-      <section className="grid gap-4 xl:grid-cols-[1.1fr,0.9fr]">
-        <div className="app-card p-5 md:p-6">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-            <div>
-              <p className="app-kicker">Pilotage du jour</p>
-              <h2 className="mt-2 text-2xl font-black tracking-tight text-[var(--pmu-text)] md:text-3xl">{formatDisplayDate(selectedDate)}</h2>
-              <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">
-                Change de journée sans quitter l’écran principal. Le tri et le radar se recalculent automatiquement.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => setSelectedDate(addDays(selectedDate, -1))} className="app-button-secondary">
-                Jour précédent
-              </button>
-              <button type="button" onClick={() => setSelectedDate(getTodayDateStr())} className="app-button-secondary">
-                Aujourd’hui
-              </button>
-              <button type="button" onClick={() => setSelectedDate(addDays(selectedDate, 1))} className="app-button-secondary">
-                Jour suivant
-              </button>
-            </div>
+      <section className="grid gap-4 xl:grid-cols-[1.1fr,0.9fr] xl:items-start">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="app-card p-5">
+            <p className="app-label">Date active</p>
+            <p className="mt-3 text-2xl font-black capitalize tracking-tight text-[var(--pmu-text)]">{formatRelativeDay(selectedDate)}</p>
+            <p className="mt-1 text-sm text-[var(--pmu-text-muted)]">{formatDisplayDate(selectedDate)}</p>
+          </div>
+          <div className="app-card p-5">
+            <p className="app-label">Programme</p>
+            <p className="mt-3 text-3xl font-black tracking-tight text-[var(--pmu-text)]">{races.length}</p>
+            <p className="mt-1 text-sm text-[var(--pmu-text-muted)]">{summaryStats.meetings} réunions chargées</p>
+          </div>
+          <div className="app-card p-5">
+            <p className="app-label">Courses jouables</p>
+            <p className="mt-3 text-3xl font-black tracking-tight text-[var(--pmu-primary)]">{summaryStats.playable}</p>
+            <p className="mt-1 text-sm text-[var(--pmu-text-muted)]">signaux validés par le moteur</p>
+          </div>
+          <div className="app-card p-5">
+            <p className="app-label">Départs proches</p>
+            <p className="mt-3 text-3xl font-black tracking-tight text-[var(--pmu-text)]">{summaryStats.closingSoon}</p>
+            <p className="mt-1 text-sm text-[var(--pmu-text-muted)]">courses à moins d’une heure</p>
           </div>
         </div>
 
         <div className="app-card p-5 md:p-6">
-          <p className="app-kicker">Date rapide</p>
-          <label className="mt-3 block">
-            <span className="sr-only">Choisir une date</span>
-            <input
-              type="date"
-              className="app-input"
-              value={toIsoDate(selectedDate)}
-              onChange={(event) => setSelectedDate(normalizeDateParam(event.target.value.replaceAll("-", "")))}
-            />
-          </label>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="app-card-muted px-4 py-3">
-              <p className="app-label">Pistes chaudes</p>
-              <p className="mt-2 text-xl font-black text-[var(--pmu-text)]">{summaryStats.hot}</p>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+              <div>
+                <p className="app-kicker">Pilotage du jour</p>
+                <h2 className="mt-2 text-2xl font-black tracking-tight text-[var(--pmu-text)] md:text-3xl">{formatDisplayDate(selectedDate)}</h2>
+                <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">
+                  Change de journée sans quitter l’écran principal. Le tri et le radar se recalculent automatiquement.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2 xl:max-w-[18rem] xl:justify-end">
+                <button type="button" onClick={() => setSelectedDate(addDays(selectedDate, -1))} className="app-button-secondary">
+                  Jour précédent
+                </button>
+                <button type="button" onClick={() => setSelectedDate(getTodayDateStr())} className="app-button-secondary">
+                  Aujourd’hui
+                </button>
+                <button type="button" onClick={() => setSelectedDate(addDays(selectedDate, 1))} className="app-button-secondary">
+                  Jour suivant
+                </button>
+              </div>
             </div>
-            <div className="app-card-muted px-4 py-3">
-              <p className="app-label">Tri actif</p>
-              <p className="mt-2 text-xl font-black text-[var(--pmu-text)]">
-                {SORT_OPTIONS.find((option) => option.value === sortMode)?.label ?? "Par heure"}
-              </p>
+
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr),auto,auto] lg:items-center">
+              <label className="block">
+                <span className="sr-only">Choisir une date</span>
+                <input
+                  type="date"
+                  className="app-input"
+                  value={toIsoDate(selectedDate)}
+                  onChange={(event) => setSelectedDate(normalizeDateParam(event.target.value.replaceAll("-", "")))}
+                />
+              </label>
+              <div className="app-card-muted px-4 py-3">
+                <p className="app-label">Pistes chaudes</p>
+                <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">{summaryStats.hot}</p>
+              </div>
+              <div className="app-card-muted px-4 py-3">
+                <p className="app-label">Tri actif</p>
+                <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
+                  {SORT_OPTIONS.find((option) => option.value === sortMode)?.label ?? "Par heure"}
+                </p>
+              </div>
+            </div>
+
+            <div className="border-t border-[var(--pmu-border)] pt-4">
+              <div className="app-section-heading">
+                <div>
+                  <p className="app-kicker">Programme trié</p>
+                  <h2 className="app-section-title">Opportunités détectées</h2>
+                </div>
+                <p className="max-w-xl text-sm leading-6 text-[var(--pmu-text-soft)]">
+                  Chaque carte = une décision. Trie par heure, note, urgence ou enjeu.
+                </p>
+              </div>
+              <FilterPills options={SORT_OPTIONS} value={sortMode} onChange={setSortMode} />
             </div>
           </div>
         </div>
@@ -726,19 +735,6 @@ function PageContent() {
           le signal 1 h / 🔴 Signal actif.
         </section>
       ) : null}
-
-      <section className="app-card p-5 md:p-6">
-        <div className="app-section-heading">
-          <div>
-            <p className="app-kicker">Programme trié</p>
-            <h2 className="app-section-title">Opportunités détectées</h2>
-          </div>
-          <p className="max-w-2xl text-sm leading-6 text-[var(--pmu-text-soft)]">
-            Chaque carte = une décision. Trie par heure, note, urgence ou enjeu.
-          </p>
-        </div>
-        <FilterPills options={SORT_OPTIONS} value={sortMode} onChange={setSortMode} />
-      </section>
 
       {error ? (
         <section
@@ -821,12 +817,7 @@ function PageContent() {
         </section>
       ) : null}
 
-      <section className="grid gap-4 xl:grid-cols-[1.15fr,0.85fr] xl:items-start">
-        <PerformanceProof />
-        <UserStreakCard />
-      </section>
-
-      <RecentResults />
+      <PerformanceProof />
 
       {quinteDuJour ? (
         <section className="grid gap-4 lg:grid-cols-2">
@@ -843,9 +834,10 @@ function PageContent() {
         </section>
       ) : null}
 
-      <PromoVideoSection />
-      <TelegramCTA />
+      <RecentResults />
+
       <HowItWorks />
+      <PromoVideoSection />
 
     </div>
   );

@@ -11,6 +11,8 @@ type NavItem = {
   href: string;
   label: string;
   Icon: () => ReactNode;
+  external?: boolean;
+  meta?: string;
 };
 
 function IconCourses() {
@@ -57,6 +59,15 @@ function IconResultats() {
   );
 }
 
+function IconTelegram() {
+  return (
+    <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 4L3.8 10.6a1 1 0 00.06 1.9l4.84 1.5 1.5 4.84a1 1 0 001.9.06L20 3.98A.75.75 0 0021 4z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.72 13.28L20.5 4.5" />
+    </svg>
+  );
+}
+
 function IconProfil() {
   return (
     <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -70,16 +81,35 @@ const navItems: NavItem[] = [
   { href: "/mes-paris", label: "Mes Paris", Icon: IconParis },
   { href: "/bilan", label: "Bilan", Icon: IconBilan },
   { href: "/resultats", label: "Résultats", Icon: IconResultats },
+  {
+    href: "https://t.me/pmupredictionbot?start=pmugagnant",
+    label: "Telegram",
+    Icon: IconTelegram,
+    external: true,
+    meta: "Bot",
+  },
   { href: "/blog", label: "Blog", Icon: IconBlog },
   { href: "/premium", label: "Premium", Icon: IconProfil },
 ];
 
-function isActive(pathname: string, href: string) {
+function isActive(pathname: string, href: string, external = false) {
+  if (external) {
+    return false;
+  }
+
   if (href === "/") {
     return pathname === "/";
   }
 
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function itemClass(active: boolean) {
+  return `group relative flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-semibold transition ${
+    active
+      ? "bg-[var(--pmu-surface-2)] text-[var(--pmu-primary)]"
+      : "text-[var(--pmu-text-muted)] hover:bg-[var(--pmu-surface-2)] hover:text-[var(--pmu-text)]"
+  }`;
 }
 
 export function Sidebar() {
@@ -121,11 +151,11 @@ export function Sidebar() {
           href="/"
           className="flex items-center gap-3 rounded-2xl px-2 py-2 transition hover:bg-[var(--pmu-surface-2)]"
         >
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--pmu-primary)]/40 bg-[var(--pmu-primary-soft)] text-sm font-black text-[var(--pmu-primary)] shadow-[var(--pmu-glow)]">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--pmu-primary)]/25 bg-[var(--pmu-primary-soft)] text-sm font-black text-[var(--pmu-primary)]">
             PG
           </div>
           <div className="min-w-0">
-            <p className="truncate text-lg font-black tracking-tight text-[var(--pmu-text)]">PMU GAGNANT</p>
+            <p className="truncate text-lg font-black tracking-tight text-[var(--pmu-text)]">PMU Gagnant</p>
             <p className="truncate text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--pmu-text-muted)]">
               Pronostics & discipline
             </p>
@@ -136,24 +166,41 @@ export function Sidebar() {
           <SidebarSearch />
         </div>
 
-        <nav className="space-y-1">
+        <nav className="mt-4 space-y-1">
           {(navItems ?? []).map((item) => {
-            const active = isActive(pathname, item.href);
+            const active = isActive(pathname, item.href, item.external);
             const Icon = item.Icon;
+
+            if (item.external) {
+              return (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={itemClass(active)}
+                >
+                  <span className="absolute left-0 top-1/2 h-9 w-1 -translate-y-1/2 rounded-full bg-transparent transition" />
+                  <Icon />
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  {item.meta ? (
+                    <span className="rounded-full border border-[var(--pmu-border-strong)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--pmu-text-soft)]">
+                      {item.meta}
+                    </span>
+                  ) : null}
+                </a>
+              );
+            }
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`group relative flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-semibold transition ${
-                  active
-                    ? "bg-[var(--pmu-surface-2)] text-[var(--pmu-primary)]"
-                    : "text-[var(--pmu-text-muted)] hover:bg-[var(--pmu-surface-2)] hover:text-[var(--pmu-text)]"
-                }`}
+                className={itemClass(active)}
               >
                 <span
                   className={`absolute left-0 top-1/2 h-9 w-1 -translate-y-1/2 rounded-full transition ${
-                    active ? "bg-[var(--pmu-primary)] shadow-[0_0_12px_var(--pmu-primary)]" : "bg-transparent"
+                    active ? "bg-[var(--pmu-primary)]" : "bg-transparent"
                   }`}
                 />
                 <Icon />
