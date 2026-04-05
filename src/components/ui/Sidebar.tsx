@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
+
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
+
 import { SidebarProgramme } from "./SidebarProgramme";
 import { SidebarSearch } from "./SidebarSearch";
 import { ThemeToggle } from "./ThemeToggle";
@@ -167,12 +169,6 @@ export function Sidebar() {
           <SidebarSearch />
         </div>
 
-        <Suspense
-          fallback={<div className="mt-4 h-52 animate-pulse rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface)]" />}
-        >
-          <SidebarProgramme />
-        </Suspense>
-
         <nav className="mt-4 space-y-1">
           {(navItems ?? []).map((item) => {
             const active = isActive(pathname, item.href, item.external);
@@ -200,19 +196,29 @@ export function Sidebar() {
             }
 
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={itemClass(active)}
-              >
-                <span
-                  className={`absolute left-0 top-1/2 h-9 w-1 -translate-y-1/2 rounded-full transition ${
-                    active ? "bg-[var(--pmu-primary)]" : "bg-transparent"
-                  }`}
-                />
-                <Icon />
-                <span>{item.label}</span>
-              </Link>
+              <div key={item.href} className="space-y-1">
+                <Link href={item.href} className={itemClass(active)}>
+                  <span
+                    className={`absolute left-0 top-1/2 h-9 w-1 -translate-y-1/2 rounded-full transition ${
+                      active ? "bg-[var(--pmu-primary)]" : "bg-transparent"
+                    }`}
+                  />
+                  <Icon />
+                  <span>{item.label}</span>
+                </Link>
+
+                {item.href === "/" ? (
+                  <Suspense
+                    fallback={
+                      <div className="ml-3 rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface)] p-3">
+                        <div className="h-10 animate-pulse rounded-xl bg-[var(--pmu-surface-2)]" />
+                      </div>
+                    }
+                  >
+                    <SidebarProgramme />
+                  </Suspense>
+                ) : null}
+              </div>
             );
           })}
         </nav>

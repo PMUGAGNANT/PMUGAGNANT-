@@ -66,6 +66,16 @@ function getRaceStatus(race: RaceSummary) {
   return race.heureDepart;
 }
 
+function formatDiscipline(race: RaceSummary) {
+  if (race.estTrot) {
+    return "Attelé";
+  }
+  if (race.estPlat) {
+    return "Plat";
+  }
+  return race.discipline || "Discipline";
+}
+
 function getReunionGroups(races: RaceSummary[]) {
   const map = new Map<number, RaceSummary[]>();
 
@@ -96,6 +106,7 @@ export function SidebarProgramme() {
   const searchParams = useSearchParams();
   const selectedDate = normalizeDateParam(searchParams.get("date"));
 
+  const [isOpen, setIsOpen] = useState(false);
   const [tab, setTab] = useState<SidebarProgrammeTab>("courses");
   const [races, setRaces] = useState<RaceSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,13 +143,12 @@ export function SidebarProgramme() {
         }
       });
 
-    return () => {
-      controller.abort();
-    };
+    return () => controller.abort();
   }, [selectedDate]);
 
   const sortedRaces = useMemo(() => sortRaces(races).slice(0, 6), [races]);
   const reunionGroups = useMemo(() => getReunionGroups(races).slice(0, 6), [races]);
+  const reunionCount = reunionGroups.length;
 
   const currentCourseKey = useMemo(() => {
     const match = pathname.match(/^\/course\/(\d+)\/(\d+)$/);
@@ -150,127 +160,206 @@ export function SidebarProgramme() {
   }, [pathname]);
 
   return (
-    <section className="mt-4 rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface)] p-3">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <p className="app-kicker text-[10px]">Programme rapide</p>
-          <p className="mt-1 text-xs font-semibold text-[var(--pmu-text-soft)]">{getDateLabel(selectedDate)}</p>
+    <section className="ml-3 overflow-hidden rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface)]">
+      <button
+        type="button"
+        className="flex w-full items-center gap-3 px-3 py-3 text-left transition hover:bg-[var(--pmu-surface-2)]"
+        onClick={() => setIsOpen((current) => !current)}
+        aria-expanded={isOpen}
+        aria-controls="sidebar-programme-panel"
+      >
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] text-[var(--pmu-text)]">
+          <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6.5h12M4 10h12M4 13.5h8" />
+          </svg>
         </div>
-        <a
-          href={selectedDate === getTodayDateStr() ? "/" : `/?date=${selectedDate}`}
-          className="text-[11px] font-semibold text-[var(--pmu-text-muted)] transition hover:text-[var(--pmu-text)]"
-        >
-          Voir tout
-        </a>
-      </div>
 
-      <div className="mt-3 flex gap-2">
-        <button
-          type="button"
-          className={`flex-1 rounded-xl px-3 py-2 text-xs font-bold transition ${
-            tab === "courses"
-              ? "bg-[var(--pmu-surface-2)] text-[var(--pmu-text)]"
-              : "text-[var(--pmu-text-muted)] hover:bg-[var(--pmu-surface-2)]"
-          }`}
-          onClick={() => setTab("courses")}
-        >
-          Courses
-        </button>
-        <button
-          type="button"
-          className={`flex-1 rounded-xl px-3 py-2 text-xs font-bold transition ${
-            tab === "reunions"
-              ? "bg-[var(--pmu-surface-2)] text-[var(--pmu-text)]"
-              : "text-[var(--pmu-text-muted)] hover:bg-[var(--pmu-surface-2)]"
-          }`}
-          onClick={() => setTab("reunions")}
-        >
-          Réunions
-        </button>
-      </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-black text-[var(--pmu-text)]">Programme PMU</p>
+          <p className="mt-0.5 truncate text-[11px] text-[var(--pmu-text-soft)]">
+            Courses / Réunions • {sortedRaces.length} accès • {getDateLabel(selectedDate)}
+          </p>
+        </div>
 
-      <div className="mt-3 space-y-2">
-        {loading
-          ? Array.from({ length: 4 }, (_, index) => (
-              <div
-                key={index}
-                className="h-14 animate-pulse rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)]"
-              />
-            ))
-          : null}
+        <div className="flex items-center gap-2">
+          <span className="rounded-full border border-[var(--pmu-border)] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
+            {isOpen ? "Ouvert" : "Fermé"}
+          </span>
+          <svg
+            className={`h-4 w-4 shrink-0 text-[var(--pmu-text-muted)] transition-transform ${isOpen ? "rotate-180" : ""}`}
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            aria-hidden
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 7.5l5 5 5-5" />
+          </svg>
+        </div>
+      </button>
 
-        {!loading && error ? (
-          <div className="rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-3 text-xs leading-5 text-[var(--pmu-text-soft)]">
-            {error}
-          </div>
-        ) : null}
-
-        {!loading && !error && tab === "courses" && sortedRaces.length === 0 ? (
-          <div className="rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-3 text-xs leading-5 text-[var(--pmu-text-soft)]">
-            Aucune course chargée pour cette journée.
-          </div>
-        ) : null}
-
-        {!loading && !error && tab === "courses"
-          ? sortedRaces.map((race) => {
-              const raceKey = `${race.reunion}-${race.course}`;
-              const active = currentCourseKey === raceKey;
-              return (
-                <button
-                  key={`${race.dateStr}-${raceKey}`}
-                  type="button"
-                  className={`w-full rounded-xl border px-3 py-3 text-left transition ${
-                    active
-                      ? "border-[var(--pmu-primary)] bg-[var(--pmu-primary-soft)]"
-                      : "border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] hover:border-[var(--pmu-border-strong)]"
-                  }`}
-                  onClick={() => router.push(`/course/${race.reunion}/${race.course}?date=${selectedDate}`)}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-black uppercase tracking-[0.12em] text-[var(--pmu-text)]">
-                      R{race.reunion} C{race.course}
-                    </span>
-                    <span className="text-[11px] font-semibold text-[var(--pmu-primary)]">{getRaceStatus(race)}</span>
-                  </div>
-                  <p className="mt-1 truncate text-sm font-semibold text-[var(--pmu-text)]">{race.hippodrome}</p>
-                  <p className="mt-1 truncate text-[11px] leading-5 text-[var(--pmu-text-soft)]">{race.nomCourse}</p>
-                </button>
-              );
-            })
-          : null}
-
-        {!loading && !error && tab === "reunions" && reunionGroups.length === 0 ? (
-          <div className="rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-3 text-xs leading-5 text-[var(--pmu-text-soft)]">
-            Aucune réunion chargée pour cette journée.
-          </div>
-        ) : null}
-
-        {!loading && !error && tab === "reunions"
-          ? reunionGroups.map((group) => (
+      {isOpen ? (
+        <div id="sidebar-programme-panel" className="border-t border-[var(--pmu-border)] p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex gap-2 rounded-2xl bg-[var(--pmu-surface-2)] p-1">
               <button
-                key={`${selectedDate}-reunion-${group.reunion}`}
                 type="button"
-                className="w-full rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-3 text-left transition hover:border-[var(--pmu-border-strong)]"
-                onClick={() =>
-                  router.push(`/course/${group.firstRace.reunion}/${group.firstRace.course}?date=${selectedDate}`)
-                }
+                className={`rounded-xl px-3 py-2 text-xs font-bold transition ${
+                  tab === "courses"
+                    ? "bg-[var(--pmu-bg)] text-[var(--pmu-text)]"
+                    : "text-[var(--pmu-text-muted)] hover:text-[var(--pmu-text)]"
+                }`}
+                onClick={() => setTab("courses")}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-black uppercase tracking-[0.12em] text-[var(--pmu-text)]">
-                    R{group.reunion}
-                  </span>
-                  <span className="text-[11px] font-semibold text-[var(--pmu-text-muted)]">
-                    {group.firstTime} → {group.lastTime}
-                  </span>
-                </div>
-                <p className="mt-1 truncate text-sm font-semibold text-[var(--pmu-text)]">{group.hippodrome}</p>
-                <p className="mt-1 text-[11px] leading-5 text-[var(--pmu-text-soft)]">
-                  {group.count} courses • ouvre la première fiche
-                </p>
+                Courses
               </button>
-            ))
-          : null}
-      </div>
+              <button
+                type="button"
+                className={`rounded-xl px-3 py-2 text-xs font-bold transition ${
+                  tab === "reunions"
+                    ? "bg-[var(--pmu-bg)] text-[var(--pmu-text)]"
+                    : "text-[var(--pmu-text-muted)] hover:text-[var(--pmu-text)]"
+                }`}
+                onClick={() => setTab("reunions")}
+              >
+                Réunions
+              </button>
+            </div>
+
+            <a
+              href={selectedDate === getTodayDateStr() ? "/" : `/?date=${selectedDate}`}
+              className="text-[11px] font-semibold text-[var(--pmu-text-muted)] transition hover:text-[var(--pmu-text)]"
+            >
+              Voir tout
+            </a>
+          </div>
+
+          <div className="mt-3 max-h-[22rem] space-y-2 overflow-y-auto pr-1">
+            {loading
+              ? Array.from({ length: 4 }, (_, index) => (
+                  <div
+                    key={index}
+                    className="h-20 animate-pulse rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)]"
+                  />
+                ))
+              : null}
+
+            {!loading && error ? (
+              <div className="rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-3 text-xs leading-5 text-[var(--pmu-text-soft)]">
+                {error}
+              </div>
+            ) : null}
+
+            {!loading && !error && tab === "courses" && sortedRaces.length === 0 ? (
+              <div className="rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-3 text-xs leading-5 text-[var(--pmu-text-soft)]">
+                Aucune course chargée pour cette journée.
+              </div>
+            ) : null}
+
+            {!loading && !error && tab === "courses"
+              ? sortedRaces.map((race) => {
+                  const raceKey = `${race.reunion}-${race.course}`;
+                  const active = currentCourseKey === raceKey;
+
+                  return (
+                    <button
+                      key={`${race.dateStr}-${raceKey}`}
+                      type="button"
+                      className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
+                        active
+                          ? "border-[var(--pmu-primary)] bg-[var(--pmu-primary-soft)]"
+                          : "border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] hover:border-[var(--pmu-border-strong)]"
+                      }`}
+                      onClick={() => router.push(`/course/${race.reunion}/${race.course}?date=${selectedDate}`)}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 flex-1 gap-3">
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[var(--pmu-bg)] text-center">
+                            <span className="text-sm font-black uppercase leading-none tracking-tight text-[var(--pmu-text)]">
+                              R{race.reunion}
+                              <br />
+                              C{race.course}
+                            </span>
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-base font-black text-[var(--pmu-text)]">{race.hippodrome}</p>
+                            <p className="mt-0.5 line-clamp-2 text-[13px] font-semibold leading-5 text-[var(--pmu-text)]">
+                              {race.nomCourse}
+                            </p>
+                            <p className="mt-1 text-[11px] leading-5 text-[var(--pmu-text-soft)]">
+                              {formatDiscipline(race)} • {race.distance} m • {race.nombrePartants} partants
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="shrink-0 text-right">
+                          <p className="text-sm font-black text-[var(--pmu-text)]">{race.heureDepart}</p>
+                          <span
+                            className={`mt-2 inline-flex rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] ${
+                              active
+                                ? "bg-[var(--pmu-bg)] text-[var(--pmu-primary)]"
+                                : "bg-[var(--pmu-bg)] text-[var(--pmu-text-soft)]"
+                            }`}
+                          >
+                            {getRaceStatus(race)}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })
+              : null}
+
+            {!loading && !error && tab === "reunions" && reunionGroups.length === 0 ? (
+              <div className="rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-3 text-xs leading-5 text-[var(--pmu-text-soft)]">
+                Aucune réunion chargée pour cette journée.
+              </div>
+            ) : null}
+
+            {!loading && !error && tab === "reunions"
+              ? reunionGroups.map((group) => (
+                  <button
+                    key={`${selectedDate}-reunion-${group.reunion}`}
+                    type="button"
+                    className="w-full rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-3 text-left transition hover:border-[var(--pmu-border-strong)]"
+                    onClick={() =>
+                      router.push(`/course/${group.firstRace.reunion}/${group.firstRace.course}?date=${selectedDate}`)
+                    }
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 flex-1 gap-3">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[var(--pmu-bg)] text-center">
+                          <span className="text-base font-black uppercase leading-none tracking-tight text-[var(--pmu-text)]">
+                            R{group.reunion}
+                          </span>
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-base font-black text-[var(--pmu-text)]">{group.hippodrome}</p>
+                          <p className="mt-1 text-[12px] leading-5 text-[var(--pmu-text-soft)]">
+                            {group.count} courses • première fiche en ouverture
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            <span className="rounded-full bg-[var(--pmu-bg)] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--pmu-text-soft)]">
+                              {group.firstTime} → {group.lastTime}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <span className="shrink-0 text-sm font-black text-[var(--pmu-text)]">{group.firstTime}</span>
+                    </div>
+                  </button>
+                ))
+              : null}
+          </div>
+
+          <div className="mt-3 rounded-2xl border border-dashed border-[var(--pmu-border)] px-3 py-2 text-[11px] leading-5 text-[var(--pmu-text-soft)]">
+            Déroule ce dossier pour faire défiler les fenêtres Courses / Réunions comme un mini-programme PMU.
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
