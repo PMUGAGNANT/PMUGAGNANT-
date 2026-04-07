@@ -21,13 +21,13 @@ export function ThemeToggle({ compact = false, className = "" }: ThemeToggleProp
       } ${className}`}
       style={{ color: "var(--pmu-text)" }}
       aria-pressed={isWarm}
-      aria-label={isWarm ? "Passer au mode sombre" : "Passer au mode chaleureux"}
-      title={isWarm ? "Mode sombre (premium)" : "Mode chaleureux"}
+      aria-label={isWarm ? "Passer au mode nuit" : "Passer au mode clair"}
+      title={isWarm ? "Mode nuit" : "Mode clair"}
     >
       <span className="text-base leading-none" aria-hidden>
         {isWarm ? "🌙" : "☀️"}
       </span>
-      <span className="text-[var(--pmu-text-soft)]">{compact ? (isWarm ? "Sombre" : "Chaleur") : isWarm ? "Mode sombre" : "Mode chaleureux"}</span>
+      <span className="text-[var(--pmu-text-soft)]">{compact ? (isWarm ? "Nuit" : "Clair") : isWarm ? "Mode nuit" : "Mode clair"}</span>
     </button>
   );
 }

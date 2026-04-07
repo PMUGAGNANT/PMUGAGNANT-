@@ -2,6 +2,7 @@ import { toIsoDate } from "@/lib/date-utils";
 import { getSupabaseAdminClient, getSupabaseAdminConfigError } from "@/lib/supabase";
 import type {
   CourseRecordRow,
+  PredictionStageSnapshotRow,
   PredictionRow,
   RaceAnalysis,
   RaceSummary,
@@ -19,6 +20,14 @@ function getAdmin() {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function isMissingRelationError(error: { code?: string; message?: string } | null | undefined) {
+  if (!error) {
+    return false;
+  }
+
+  return error.code === "42P01" || error.message?.toLowerCase().includes("prediction_stage_snapshots") === true;
 }
 
 export function buildPredictionRows(
@@ -91,6 +100,56 @@ export function buildCourseRecord(
   };
 }
 
+export function buildPredictionStageSnapshot(
+  dateStr: string,
+  race: RaceSummary,
+  analysis: RaceAnalysis,
+  rows: PredictionRow[],
+  stage: ScoreStage,
+  notes: string[] = []
+): PredictionStageSnapshotRow {
+  const ranking = analysis.ranking ?? [];
+  const selection =
+    rows.find((row) => row.decision === "VALIDE") ??
+    rows.find((row) => row.decision === "SURVEILLANCE") ??
+    rows[0] ??
+    null;
+  const favori = analysis.favori ?? ranking[0] ?? null;
+  const marketFavorite = rows
+    .filter((row) => {
+      const currentOdds = row.cote_depart ?? row.cote_matin;
+      return currentOdds !== null && Number.isFinite(currentOdds) && currentOdds > 0;
+    })
+    .slice()
+    .sort((left, right) => (left.cote_depart ?? left.cote_matin ?? 999) - (right.cote_depart ?? right.cote_matin ?? 999))[0] ?? null;
+
+  return {
+    date: toIsoDate(dateStr),
+    reunion: race.reunion,
+    course: race.course,
+    stage,
+    hippodrome: race.hippodrome,
+    lisibilite: analysis.prediction.lisibilite,
+    score_lisibilite: analysis.prediction.scoreLisibilite,
+    coefficient_lisibilite: analysis.prediction.coefficientLisibilite,
+    decision_course: analysis.prediction.decisionCourse,
+    selection_num: selection?.cheval_num ?? null,
+    selection_nom: selection?.cheval_nom ?? null,
+    selection_decision: selection?.decision ?? null,
+    selection_confiance: selection?.confiance ?? null,
+    selection_pari: selection?.pari_conseille ?? null,
+    selection_cote: selection?.cote_depart ?? selection?.cote_matin ?? null,
+    favori_num: favori?.numPmu ?? null,
+    favori_nom: favori?.nom ?? null,
+    favori_cote: favori?.cote ?? favori?.coteMatin ?? null,
+    market_favorite_num: marketFavorite?.cheval_num ?? null,
+    market_favorite_nom: marketFavorite?.cheval_nom ?? null,
+    market_favorite_cote: marketFavorite?.cote_depart ?? marketFavorite?.cote_matin ?? null,
+    notes: notes.length > 0 ? notes : null,
+    updated_at: nowIso(),
+  };
+}
+
 export async function upsertPredictions(rows: PredictionRow[]) {
   if (rows.length === 0) return;
 
@@ -112,6 +171,21 @@ export async function upsertCourseRecord(row: CourseRecordRow) {
 
   if (error) {
     throw new Error(`Course upsert failed: ${error.message}`);
+  }
+}
+
+export async function upsertPredictionStageSnapshot(row: PredictionStageSnapshotRow) {
+  const admin = getAdmin();
+  const { error } = await admin.from("prediction_stage_snapshots").upsert(row, {
+    onConflict: "date,reunion,course,stage",
+  });
+
+  if (isMissingRelationError(error)) {
+    return;
+  }
+
+  if (error) {
+    throw new Error(`Prediction stage snapshot upsert failed: ${error.message}`);
   }
 }
 
@@ -147,6 +221,27 @@ export async function getCourseRecord(dateStr: string, reunion: number, course: 
   }
 
   return (data ?? null) as CourseRecordRow | null;
+}
+
+export async function listPredictionStageSnapshots(dateStr: string, reunion: number, course: number) {
+  const admin = getAdmin();
+  const { data, error } = await admin
+    .from("prediction_stage_snapshots")
+    .select("*")
+    .eq("date", toIsoDate(dateStr))
+    .eq("reunion", reunion)
+    .eq("course", course)
+    .order("updated_at", { ascending: true });
+
+  if (isMissingRelationError(error)) {
+    return [] as PredictionStageSnapshotRow[];
+  }
+
+  if (error) {
+    throw new Error(`Prediction stage snapshot fetch failed: ${error.message}`);
+  }
+
+  return (data ?? []) as PredictionStageSnapshotRow[];
 }
 
 export async function listPredictionsByDate(dateStr: string) {

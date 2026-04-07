@@ -4,9 +4,11 @@ import { attachFaultRates, upsertFaultRates } from "@/lib/horse-faults";
 import { getAllRaces, getFinalReports, getParticipants } from "@/lib/pmu-api";
 import {
   buildCourseRecord,
+  buildPredictionStageSnapshot,
   buildPredictionRows,
   getRacePredictions,
   upsertCourseRecord,
+  upsertPredictionStageSnapshot,
   upsertPredictions,
 } from "@/lib/prediction-store";
 import { analyzeRaceWithParameters } from "@/lib/predictions";
@@ -349,6 +351,9 @@ export async function runMorningAnalysis(dateStr: string) {
     const current = await processRace(dateStr, race, parameters, "MATIN");
     await upsertCourseRecord(buildCourseRecord(dateStr, race, current.analysis));
     await upsertPredictions(current.rows);
+    await upsertPredictionStageSnapshot(
+      buildPredictionStageSnapshot(dateStr, race, current.analysis, current.rows, "MATIN")
+    );
     return current;
   });
 
@@ -396,6 +401,19 @@ export async function runPreRaceSecondPass(
 
     await upsertCourseRecord(buildCourseRecord(dateStr, race, current.analysis));
     await upsertPredictions(updatedRows);
+    await upsertPredictionStageSnapshot(
+      buildPredictionStageSnapshot(
+        dateStr,
+        race,
+        current.analysis,
+        updatedRows,
+        "T10",
+        alerts.slice(0, 3).map((alert) => {
+          const details = alert.extra.length > 0 ? ` (${alert.extra.join(", ")})` : "";
+          return `#${alert.chevalNum} ${alert.chevalNom} -> ${alert.decision}${details}`;
+        })
+      )
+    );
 
     return {
       race,
@@ -443,6 +461,19 @@ export async function runResultSync(dateStr: string, options: RangeOptions = {})
 
     await upsertCourseRecord(buildCourseRecord(dateStr, race, current.analysis));
     await upsertPredictions(settledRows);
+    await upsertPredictionStageSnapshot(
+      buildPredictionStageSnapshot(
+        dateStr,
+        race,
+        current.analysis,
+        settledRows,
+        "RESULTAT",
+        settledRows
+          .filter((row) => row.resultat_gagnant || row.resultat_place)
+          .slice(0, 3)
+          .map((row) => `#${row.cheval_num} ${row.cheval_nom} ${row.resultat_gagnant ? "gagnant" : "place"}`)
+      )
+    );
 
     return {
       race,

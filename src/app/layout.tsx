@@ -28,7 +28,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  themeColor: "#060606",
+  themeColor: "#f7f2e8",
 };
 
 export default function RootLayout({
@@ -44,7 +44,7 @@ export default function RootLayout({
         </a>
         <LiveStatsBanner />
         <Script id="pmu-theme-init" strategy="beforeInteractive">
-          {`(function(){try{var k='pmu-theme';var v=localStorage.getItem(k);if(v==='warm'||v==='dark')document.documentElement.setAttribute('data-theme',v);}catch(e){}})();`}
+          {`(function(){try{var k='pmu-theme';var v=localStorage.getItem(k);if(v==='warm'||v==='dark'){document.documentElement.setAttribute('data-theme',v);}else{document.documentElement.setAttribute('data-theme','warm');}}catch(e){document.documentElement.setAttribute('data-theme','warm');}})();`}
         </Script>
         <ThemeProvider>
           <ThemeMetaColor />

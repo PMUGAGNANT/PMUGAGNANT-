@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { asArray } from "@/lib/array-utils";
 import {
@@ -12,6 +12,7 @@ import { ReferralCard } from "@/components/ui/ReferralCard";
 import { UserStreakCard } from "@/components/ui/UserStreakCard";
 
 const GREEN = "var(--pmu-primary)";
+const BLUE = "var(--pmu-accent-blue)";
 const DARK = "var(--pmu-text)";
 const CARD = "var(--pmu-surface)";
 const BORDER = "var(--pmu-border)";
@@ -33,11 +34,181 @@ interface Bet {
   created_at: string;
 }
 
+interface PerformanceBucket {
+  label: string;
+  bets: number;
+  stake: number;
+  profit: number;
+  roi: number;
+  hitRate: number;
+}
+
+interface ProfitPoint {
+  label: string;
+  profit: number;
+  cumulativeProfit: number;
+}
+
+type BankrollProfile = "prudent" | "equilibre" | "offensif";
+
+interface BankrollSettings {
+  bankrollBase: number;
+  maxBetsPerDay: number;
+  stopLoss: number;
+  stakeCapPct: number;
+  profile: BankrollProfile;
+}
+
+const BANKROLL_STORAGE_KEY = "pmu-bankroll-settings";
+
+const BANKROLL_PROFILE_LABELS: Record<BankrollProfile, string> = {
+  prudent: "Prudent",
+  equilibre: "Equilibre",
+  offensif: "Offensif",
+};
+
+const BANKROLL_PROFILE_HINTS: Record<BankrollProfile, string> = {
+  prudent: "Expose moins de capital et privilegie les tickets les plus propres.",
+  equilibre: "Le meilleur compromis entre discipline et opportunites jouables.",
+  offensif: "Accepte plus de variance pour exploiter davantage les edges du moteur.",
+};
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function round1(value: number) {
+  return Math.round(value * 10) / 10;
+}
+
+function normalizeBankrollSettings(value: Partial<BankrollSettings> | null | undefined): BankrollSettings {
+  return {
+    bankrollBase: clamp(Math.round(value?.bankrollBase ?? 1000), 50, 200000),
+    maxBetsPerDay: clamp(Math.round(value?.maxBetsPerDay ?? 3), 1, 12),
+    stopLoss: clamp(Math.round(value?.stopLoss ?? 40), 5, 5000),
+    stakeCapPct: clamp(Number(value?.stakeCapPct ?? 4), 1, 20),
+    profile: value?.profile === "prudent" || value?.profile === "offensif" ? value.profile : "equilibre",
+  };
+}
+
+function getDefaultBankrollSettings(): BankrollSettings {
+  return normalizeBankrollSettings(null);
+}
+
+function getProfileStakeMultiplier(profile: BankrollProfile) {
+  if (profile === "prudent") return 0.75;
+  if (profile === "offensif") return 1.2;
+  return 1;
+}
+
+function getProfileRiskLabel(profile: BankrollProfile) {
+  if (profile === "prudent") return "Risque contenu";
+  if (profile === "offensif") return "Risque plus agressif";
+  return "Risque maitrise";
+}
+
 function formatEuros(value: number) {
   return `${new Intl.NumberFormat("fr-FR", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(value)} EUR`;
+}
+
+function formatPercent(value: number) {
+  return `${new Intl.NumberFormat("fr-FR", {
+    minimumFractionDigits: value % 1 === 0 ? 0 : 1,
+    maximumFractionDigits: 1,
+  }).format(value)}%`;
+}
+
+function formatSignedEuros(value: number) {
+  return `${value >= 0 ? "+" : ""}${formatEuros(value)}`;
+}
+
+function formatSignedPercent(value: number) {
+  return `${value >= 0 ? "+" : ""}${formatPercent(value)}`;
+}
+
+function toTimestamp(value: string) {
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function buildPerformanceBuckets(bets: Bet[], getLabel: (bet: Bet) => string): PerformanceBucket[] {
+  const grouped = new Map<
+    string,
+    {
+      bets: number;
+      settled: number;
+      wins: number;
+      stake: number;
+      profit: number;
+    }
+  >();
+
+  for (const bet of bets) {
+    const rawLabel = getLabel(bet).trim();
+    const label = rawLabel.length > 0 ? rawLabel : "Autre";
+    const current = grouped.get(label) ?? {
+      bets: 0,
+      settled: 0,
+      wins: 0,
+      stake: 0,
+      profit: 0,
+    };
+
+    current.bets += 1;
+    current.stake += bet.mise;
+
+    if (bet.gain !== null) {
+      current.settled += 1;
+      current.profit += bet.gain;
+      if (bet.gain > 0) {
+        current.wins += 1;
+      }
+    }
+
+    grouped.set(label, current);
+  }
+
+  return Array.from(grouped.entries())
+    .map(([label, value]) => ({
+      label,
+      bets: value.bets,
+      stake: value.stake,
+      profit: value.profit,
+      roi: value.stake > 0 ? (value.profit / value.stake) * 100 : 0,
+      hitRate: value.settled > 0 ? (value.wins / value.settled) * 100 : 0,
+    }))
+    .sort((left, right) => {
+      if (right.profit !== left.profit) {
+        return right.profit - left.profit;
+      }
+      return right.bets - left.bets;
+    });
+}
+
+function buildProfitTimeline(bets: Bet[], maxPoints: number): ProfitPoint[] {
+  const settled = bets
+    .filter((bet) => bet.gain !== null)
+    .slice()
+    .sort((left, right) => toTimestamp(left.created_at) - toTimestamp(right.created_at));
+
+  if (settled.length === 0) {
+    return [];
+  }
+
+  const points = settled.slice(-maxPoints);
+  let cumulativeProfit = 0;
+
+  return points.map((bet) => {
+    cumulativeProfit += bet.gain ?? 0;
+    return {
+      label: `${bet.date_str.slice(0, 2)}/${bet.date_str.slice(2, 4)}`,
+      profit: bet.gain ?? 0,
+      cumulativeProfit,
+    };
+  });
 }
 
 function MesParisFallback() {
@@ -75,6 +246,9 @@ function MesParisContent() {
   const [autoCheckoutStarted, setAutoCheckoutStarted] = useState(false);
   const [showBottomNav, setShowBottomNav] = useState(false);
   const autoCheckoutRequested = searchParams.get("billing") === "checkout";
+  const [bankrollSettings, setBankrollSettings] = useState<BankrollSettings>(() =>
+    getDefaultBankrollSettings()
+  );
 
   const fetchBets = useCallback(
     async (signal?: AbortSignal) => {
@@ -167,6 +341,28 @@ function MesParisContent() {
       window.removeEventListener("resize", syncBottomNavVisibility);
     };
   }, []);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(BANKROLL_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Partial<BankrollSettings>;
+      setBankrollSettings(normalizeBankrollSettings(parsed));
+    } catch {
+      setBankrollSettings(getDefaultBankrollSettings());
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        BANKROLL_STORAGE_KEY,
+        JSON.stringify(bankrollSettings)
+      );
+    } catch {
+      // Ignore local persistence failures on the client.
+    }
+  }, [bankrollSettings]);
 
   useEffect(() => {
     let cancelled = false;
@@ -389,6 +585,70 @@ function MesParisContent() {
   const wonCount = bets.filter((b) => b.statut === "GAGNE").length;
   const placedCount = bets.filter((b) => b.statut === "PLACE").length;
   const totalGain = bets.filter((b) => b.gain !== null).reduce((sum, b) => sum + (b.gain || 0), 0);
+  const settledBets = bets.filter((b) => b.gain !== null);
+  const totalStake = bets.reduce((sum, bet) => sum + bet.mise, 0);
+  const pendingStake = bets
+    .filter((bet) => bet.statut === "EN_ATTENTE")
+    .reduce((sum, bet) => sum + bet.mise, 0);
+  const realisedProfit = settledBets.reduce((sum, bet) => sum + (bet.gain ?? 0), 0);
+  const roi =
+    totalStake > 0 ? (realisedProfit / totalStake) * 100 : 0;
+  const averageStake =
+    bets.length > 0 ? totalStake / bets.length : 0;
+  const recommendedMaxStake = Math.max(
+    1,
+    Math.round(
+      bankrollSettings.bankrollBase *
+        (bankrollSettings.stakeCapPct / 100) *
+        getProfileStakeMultiplier(bankrollSettings.profile)
+    )
+  );
+  const remainingStopLoss = bankrollSettings.stopLoss + Math.min(realisedProfit, 0);
+  const stopLossReached = realisedProfit < 0 && Math.abs(realisedProfit) >= bankrollSettings.stopLoss;
+  const remainingBetSlots = Math.max(0, bankrollSettings.maxBetsPerDay - pendingCount);
+  const bankrollHealthLabel =
+    stopLossReached
+      ? "Stop loss atteint"
+      : pendingStake > recommendedMaxStake * 2
+        ? "Exposition tendue"
+      : realisedProfit >= 0
+          ? "Discipline saine"
+          : "Sous surveillance";
+
+  const recentSettledBets = useMemo(
+    () =>
+      settledBets
+        .slice()
+        .sort((left, right) => toTimestamp(right.created_at) - toTimestamp(left.created_at))
+        .slice(0, 8),
+    [settledBets]
+  );
+  const recentForm = useMemo(
+    () =>
+      recentSettledBets.map((bet) => ({
+        key: bet.id,
+        label: bet.statut === "GAGNE" ? "G" : bet.statut === "PLACE" ? "P" : "L",
+        tone: bet.gain !== null && bet.gain > 0 ? GREEN : "var(--pmu-red)",
+      })),
+    [recentSettledBets]
+  );
+  const trackPerformance = useMemo(
+    () => buildPerformanceBuckets(settledBets, (bet) => bet.hippodrome).slice(0, 3),
+    [settledBets]
+  );
+  const betTypePerformance = useMemo(
+    () => buildPerformanceBuckets(settledBets, (bet) => bet.type_pari).slice(0, 3),
+    [settledBets]
+  );
+  const profitTimeline = useMemo(() => buildProfitTimeline(bets, 10), [bets]);
+  const timelineMaxAbs = useMemo(
+    () => Math.max(...profitTimeline.map((point) => Math.abs(point.cumulativeProfit)), 1),
+    [profitTimeline]
+  );
+  const bestTrack = trackPerformance[0] ?? null;
+  const weakestTrack = trackPerformance.length > 1 ? trackPerformance[trackPerformance.length - 1] : null;
+  const bestBetType = betTypePerformance[0] ?? null;
+  const latestSettledBet = recentSettledBets[0] ?? null;
 
   const statusConfig: Record<string, { bg: string; color: string; label: string }> = {
     EN_ATTENTE: {
@@ -698,6 +958,322 @@ function MesParisContent() {
           <section
             style={{
               display: "grid",
+              gridTemplateColumns: "minmax(0,1.15fr) minmax(280px,0.85fr)",
+              gap: 16,
+              marginBottom: 18,
+            }}
+          >
+            <div
+              style={{
+                background: CARD,
+                borderRadius: 24,
+                padding: 20,
+                boxShadow: "var(--pmu-shadow)",
+                border: `1px solid ${BORDER}`,
+                display: "grid",
+                gap: 16,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 11, color: "var(--pmu-text-muted)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 800, marginBottom: 8 }}>
+                  Mode bankroll discipline
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: DARK, letterSpacing: "-0.8px", marginBottom: 6 }}>
+                  Pilotage du risque en direct
+                </div>
+                <div style={{ fontSize: 14, lineHeight: "21px", color: "var(--pmu-text-muted)" }}>
+                  Regle ton bankroll, ton stop loss et ton exposition max pour rester selectif meme
+                  quand plusieurs tickets paraissent jouables.
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                  gap: 12,
+                }}
+              >
+                <label style={{ display: "grid", gap: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--pmu-text-muted)" }}>
+                    Bankroll de reference
+                  </span>
+                  <input
+                    type="number"
+                    min={50}
+                    max={200000}
+                    value={bankrollSettings.bankrollBase}
+                    onChange={(event) =>
+                      setBankrollSettings((current) =>
+                        normalizeBankrollSettings({
+                          ...current,
+                          bankrollBase: Number(event.target.value),
+                        })
+                      )
+                    }
+                    style={{
+                      width: "100%",
+                      borderRadius: 14,
+                      border: `1px solid ${BORDER}`,
+                      background: "var(--pmu-surface-2)",
+                      color: DARK,
+                      padding: "12px 14px",
+                      fontSize: 14,
+                      fontWeight: 700,
+                    }}
+                  />
+                </label>
+
+                <label style={{ display: "grid", gap: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--pmu-text-muted)" }}>
+                    Max paris / jour
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={bankrollSettings.maxBetsPerDay}
+                    onChange={(event) =>
+                      setBankrollSettings((current) =>
+                        normalizeBankrollSettings({
+                          ...current,
+                          maxBetsPerDay: Number(event.target.value),
+                        })
+                      )
+                    }
+                    style={{
+                      width: "100%",
+                      borderRadius: 14,
+                      border: `1px solid ${BORDER}`,
+                      background: "var(--pmu-surface-2)",
+                      color: DARK,
+                      padding: "12px 14px",
+                      fontSize: 14,
+                      fontWeight: 700,
+                    }}
+                  />
+                </label>
+
+                <label style={{ display: "grid", gap: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--pmu-text-muted)" }}>
+                    Stop loss journalier
+                  </span>
+                  <input
+                    type="number"
+                    min={5}
+                    max={5000}
+                    value={bankrollSettings.stopLoss}
+                    onChange={(event) =>
+                      setBankrollSettings((current) =>
+                        normalizeBankrollSettings({
+                          ...current,
+                          stopLoss: Number(event.target.value),
+                        })
+                      )
+                    }
+                    style={{
+                      width: "100%",
+                      borderRadius: 14,
+                      border: `1px solid ${BORDER}`,
+                      background: "var(--pmu-surface-2)",
+                      color: DARK,
+                      padding: "12px 14px",
+                      fontSize: 14,
+                      fontWeight: 700,
+                    }}
+                  />
+                </label>
+
+                <label style={{ display: "grid", gap: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--pmu-text-muted)" }}>
+                    Exposition max / ticket
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    step={0.5}
+                    value={bankrollSettings.stakeCapPct}
+                    onChange={(event) =>
+                      setBankrollSettings((current) =>
+                        normalizeBankrollSettings({
+                          ...current,
+                          stakeCapPct: Number(event.target.value),
+                        })
+                      )
+                    }
+                    style={{
+                      width: "100%",
+                      borderRadius: 14,
+                      border: `1px solid ${BORDER}`,
+                      background: "var(--pmu-surface-2)",
+                      color: DARK,
+                      padding: "12px 14px",
+                      fontSize: 14,
+                      fontWeight: 700,
+                    }}
+                  />
+                </label>
+              </div>
+
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {(["prudent", "equilibre", "offensif"] as BankrollProfile[]).map((profile) => {
+                  const active = bankrollSettings.profile === profile;
+                  return (
+                    <button
+                      key={profile}
+                      type="button"
+                      onClick={() =>
+                        setBankrollSettings((current) =>
+                          normalizeBankrollSettings({ ...current, profile })
+                        )
+                      }
+                      style={{
+                        border: `1px solid ${active ? GREEN : BORDER}`,
+                        borderRadius: 999,
+                        padding: "10px 14px",
+                        background: active
+                          ? "color-mix(in srgb, var(--pmu-primary) 15%, transparent)"
+                          : "transparent",
+                        color: active ? GREEN : DARK,
+                        fontWeight: 800,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {BANKROLL_PROFILE_LABELS[profile]}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                  gap: 12,
+                }}
+              >
+                {[
+                  {
+                    label: "Stake max recommande",
+                    value: formatEuros(recommendedMaxStake),
+                    tone: GREEN,
+                    hint: `${formatPercent(bankrollSettings.stakeCapPct)} de bankroll ajuste par le profil`,
+                  },
+                  {
+                    label: "Stop loss restant",
+                    value: formatEuros(Math.max(0, remainingStopLoss)),
+                    tone: stopLossReached ? "var(--pmu-red)" : "var(--pmu-orange)",
+                    hint: stopLossReached ? "Pause recommandee sur la journee" : "Marge de perte encore acceptable",
+                  },
+                  {
+                    label: "Slots de jeu restants",
+                    value: `${remainingBetSlots}`,
+                    tone: remainingBetSlots === 0 ? "var(--pmu-red)" : "var(--pmu-accent-blue)",
+                    hint: `${pendingCount} ticket(s) en attente actuellement`,
+                  },
+                  {
+                    label: "Mise moyenne",
+                    value: bets.length > 0 ? formatEuros(Math.round(averageStake)) : "0 EUR",
+                    tone: averageStake > recommendedMaxStake ? "var(--pmu-red)" : DARK,
+                    hint: averageStake > recommendedMaxStake ? "Au-dessus de la discipline cible" : "Dans la zone discipline",
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    style={{
+                      borderRadius: 18,
+                      padding: 16,
+                      background: "var(--pmu-surface-2)",
+                      border: `1px solid ${BORDER}`,
+                    }}
+                  >
+                    <div style={{ fontSize: 11, color: "var(--pmu-text-muted)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>
+                      {item.label}
+                    </div>
+                    <div style={{ fontSize: 24, fontWeight: 900, color: item.tone, letterSpacing: "-0.5px", marginBottom: 6 }}>
+                      {item.value}
+                    </div>
+                    <div style={{ fontSize: 12, lineHeight: "18px", color: "var(--pmu-text-muted)" }}>
+                      {item.hint}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: CARD,
+                borderRadius: 24,
+                padding: 20,
+                boxShadow: "var(--pmu-shadow)",
+                border: `1px solid ${BORDER}`,
+                display: "grid",
+                gap: 14,
+                alignContent: "start",
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 11, color: "var(--pmu-text-muted)", textTransform: "uppercase", letterSpacing: "0.12em", fontWeight: 800, marginBottom: 8 }}>
+                  Etat de sante
+                </div>
+                <div style={{ fontSize: 24, fontWeight: 900, color: bankrollHealthLabel === "Discipline saine" ? GREEN : bankrollHealthLabel === "Exposition tendue" ? "var(--pmu-orange)" : "var(--pmu-red)" }}>
+                  {bankrollHealthLabel}
+                </div>
+                <div style={{ fontSize: 13, lineHeight: "20px", color: "var(--pmu-text-muted)", marginTop: 8 }}>
+                  {BANKROLL_PROFILE_HINTS[bankrollSettings.profile]}
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gap: 10 }}>
+                {[
+                  {
+                    title: "Exposition en cours",
+                    body: pendingStake > recommendedMaxStake * 2
+                      ? `Tu as ${formatEuros(pendingStake)} deja engages, soit une exposition elevee pour le profil ${BANKROLL_PROFILE_LABELS[bankrollSettings.profile].toLowerCase()}.`
+                      : `Tu as ${formatEuros(pendingStake)} engages sur les tickets en attente, ce qui reste coherent avec ton cadre de jeu.`,
+                    tone: pendingStake > recommendedMaxStake * 2 ? "var(--pmu-orange)" : GREEN,
+                  },
+                  {
+                    title: "ROI courant",
+                    body: totalStake > 0
+                      ? `Le portefeuille affiche ${formatPercent(round1(roi))} de ROI realise sur ${formatEuros(totalStake)} de mise totale.`
+                      : "Le ROI apparaitra une fois les premiers tickets enregistres et regles.",
+                    tone: roi >= 0 ? GREEN : "var(--pmu-red)",
+                  },
+                  {
+                    title: "Lecture de risque",
+                    body: stopLossReached
+                      ? "Le stop loss est touche. La meilleure decision est de stopper la journee plutot que de se refaire."
+                      : `Profil ${BANKROLL_PROFILE_LABELS[bankrollSettings.profile]} actif: ${getProfileRiskLabel(bankrollSettings.profile)} avec cap ticket ${formatPercent(bankrollSettings.stakeCapPct)}.`,
+                    tone: stopLossReached ? "var(--pmu-red)" : BLUE,
+                  },
+                ].map((insight) => (
+                  <div
+                    key={insight.title}
+                    style={{
+                      padding: 14,
+                      borderRadius: 18,
+                      background: "var(--pmu-surface-2)",
+                      border: `1px solid ${BORDER}`,
+                    }}
+                  >
+                    <div style={{ fontSize: 12, fontWeight: 800, color: insight.tone, marginBottom: 6 }}>
+                      {insight.title}
+                    </div>
+                    <div style={{ fontSize: 13, lineHeight: "20px", color: "var(--pmu-text-muted)" }}>
+                      {insight.body}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section
+            style={{
+              display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
               gap: 10,
               marginBottom: 14,
@@ -730,6 +1306,273 @@ function MesParisContent() {
                 <div style={{ fontSize: 10, color: "var(--pmu-text-muted)", marginTop: 2 }}>{item.label}</div>
               </div>
             ))}
+          </section>
+
+          <section
+            style={{
+              display: "grid",
+              gridTemplateColumns: "minmax(0, 1.3fr) minmax(280px, 0.9fr)",
+              gap: 16,
+              marginBottom: 18,
+            }}
+          >
+            <div
+              style={{
+                background: CARD,
+                borderRadius: 26,
+                border: `1px solid ${BORDER}`,
+                boxShadow: "var(--pmu-shadow)",
+                padding: 20,
+                display: "grid",
+                gap: 16,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: BLUE }}>
+                    Lecture performance
+                  </div>
+                  <div style={{ fontSize: 24, fontWeight: 900, color: DARK, marginTop: 4 }}>
+                    Forme et angles forts
+                  </div>
+                </div>
+                {recentForm.length > 0 ? (
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                    {recentForm.map((item) => (
+                      <span
+                        key={item.key}
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: 999,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          background: `color-mix(in srgb, ${item.tone} 16%, transparent)`,
+                          color: item.tone,
+                          fontSize: 12,
+                          fontWeight: 900,
+                        }}
+                      >
+                        {item.label}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                  gap: 12,
+                }}
+              >
+                {[
+                  {
+                    label: "Meilleur hippodrome",
+                    value: bestTrack ? bestTrack.label : "A definir",
+                    hint: bestTrack ? `${formatSignedPercent(round1(bestTrack.roi))} de ROI sur ${bestTrack.bets} tickets` : "Pas assez d'historique regle",
+                    tone: bestTrack && bestTrack.roi >= 0 ? GREEN : BLUE,
+                  },
+                  {
+                    label: "Type le plus rentable",
+                    value: bestBetType ? bestBetType.label : "A definir",
+                    hint: bestBetType ? `${formatSignedPercent(round1(bestBetType.roi))} de ROI sur ${bestBetType.bets} tickets` : "Les paris regles apparaitront ici",
+                    tone: bestBetType && bestBetType.roi >= 0 ? GREEN : BLUE,
+                  },
+                  {
+                    label: "Dernier ticket regle",
+                    value: latestSettledBet ? latestSettledBet.cheval_nom : "En attente",
+                    hint: latestSettledBet ? `${latestSettledBet.type_pari} · ${formatSignedEuros(latestSettledBet.gain ?? 0)}` : "Aucun resultat disponible pour l'instant",
+                    tone: latestSettledBet && (latestSettledBet.gain ?? 0) >= 0 ? GREEN : "var(--pmu-red)",
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    style={{
+                      borderRadius: 20,
+                      padding: 16,
+                      background: "var(--pmu-surface-2)",
+                      border: `1px solid ${BORDER}`,
+                    }}
+                  >
+                    <div style={{ fontSize: 11, fontWeight: 800, color: item.tone, marginBottom: 8 }}>{item.label}</div>
+                    <div style={{ fontSize: 18, fontWeight: 900, color: DARK, marginBottom: 6 }}>{item.value}</div>
+                    <div style={{ fontSize: 12, lineHeight: "18px", color: "var(--pmu-text-muted)" }}>{item.hint}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+                {[
+                  {
+                    title: "Top hippodromes",
+                    rows: trackPerformance,
+                    empty: "Les hippodromes les plus lisibles apparaitront ici.",
+                  },
+                  {
+                    title: "Top types de pari",
+                    rows: betTypePerformance,
+                    empty: "Gagnant vs place deviendra plus lisible avec davantage de tickets regles.",
+                  },
+                ].map((block) => (
+                  <div
+                    key={block.title}
+                    style={{
+                      borderRadius: 20,
+                      padding: 16,
+                      background: "var(--pmu-surface-2)",
+                      border: `1px solid ${BORDER}`,
+                    }}
+                  >
+                    <div style={{ fontSize: 13, fontWeight: 800, color: DARK, marginBottom: 10 }}>{block.title}</div>
+                    {block.rows.length === 0 ? (
+                      <div style={{ fontSize: 12, color: "var(--pmu-text-muted)", lineHeight: "18px" }}>{block.empty}</div>
+                    ) : (
+                      <div style={{ display: "grid", gap: 10 }}>
+                        {block.rows.map((row) => (
+                          <div key={row.label} style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 800, color: DARK }}>{row.label}</div>
+                              <div style={{ fontSize: 11, color: "var(--pmu-text-muted)" }}>
+                                {row.bets} tickets · hit {formatPercent(round1(row.hitRate))}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ fontSize: 13, fontWeight: 900, color: row.roi >= 0 ? GREEN : "var(--pmu-red)" }}>
+                                {formatSignedPercent(round1(row.roi))}
+                              </div>
+                              <div style={{ fontSize: 11, color: "var(--pmu-text-muted)" }}>{formatSignedEuros(row.profit)}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: CARD,
+                borderRadius: 26,
+                border: `1px solid ${BORDER}`,
+                boxShadow: "var(--pmu-shadow)",
+                padding: 20,
+                display: "grid",
+                gap: 14,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: GREEN }}>
+                  Courbe de gain
+                </div>
+                <div style={{ fontSize: 24, fontWeight: 900, color: DARK, marginTop: 4 }}>
+                  Profit realise recent
+                </div>
+              </div>
+
+              {profitTimeline.length === 0 ? (
+                <div
+                  style={{
+                    minHeight: 220,
+                    borderRadius: 20,
+                    border: `1px dashed ${BORDER}`,
+                    background: "var(--pmu-surface-2)",
+                    display: "grid",
+                    placeItems: "center",
+                    textAlign: "center",
+                    color: "var(--pmu-text-muted)",
+                    fontSize: 13,
+                    lineHeight: "20px",
+                    padding: 24,
+                  }}
+                >
+                  La courbe apparaitra des que plusieurs tickets seront regles.
+                </div>
+              ) : (
+                <div
+                  style={{
+                    minHeight: 220,
+                    borderRadius: 20,
+                    border: `1px solid ${BORDER}`,
+                    background: "linear-gradient(180deg, color-mix(in srgb, var(--pmu-primary-soft) 35%, transparent), transparent 40%), var(--pmu-surface-2)",
+                    padding: 16,
+                    display: "flex",
+                    alignItems: "flex-end",
+                    gap: 10,
+                  }}
+                >
+                  {profitTimeline.map((point, index) => {
+                    const height = `${Math.max((Math.abs(point.cumulativeProfit) / timelineMaxAbs) * 100, 14)}%`;
+                    const positive = point.cumulativeProfit >= 0;
+
+                    return (
+                      <div
+                        key={`${point.label}-${index}`}
+                        style={{
+                          flex: 1,
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "flex-end",
+                          alignItems: "center",
+                          gap: 8,
+                          minWidth: 0,
+                        }}
+                      >
+                        <div style={{ fontSize: 10, fontWeight: 800, color: positive ? GREEN : "var(--pmu-red)" }}>
+                          {formatSignedEuros(point.cumulativeProfit)}
+                        </div>
+                        <div
+                          style={{
+                            width: "100%",
+                            maxWidth: 34,
+                            height,
+                            minHeight: 24,
+                            borderRadius: 999,
+                            background: positive
+                              ? "linear-gradient(180deg, var(--pmu-primary-bright), var(--pmu-primary))"
+                              : "linear-gradient(180deg, color-mix(in srgb, var(--pmu-red) 70%, white), var(--pmu-red))",
+                            boxShadow: positive
+                              ? "0 16px 28px color-mix(in srgb, var(--pmu-primary) 26%, transparent)"
+                              : "0 16px 28px color-mix(in srgb, var(--pmu-red) 22%, transparent)",
+                          }}
+                        />
+                        <div style={{ fontSize: 10, color: "var(--pmu-text-muted)", whiteSpace: "nowrap" }}>{point.label}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div style={{ display: "grid", gap: 10 }}>
+                {[
+                  bestTrack
+                    ? `Le meilleur angle actuel est ${bestTrack.label} avec ${formatSignedPercent(round1(bestTrack.roi))} de ROI.`
+                    : "Le meilleur angle apparaitra apres quelques tickets regles.",
+                  weakestTrack && weakestTrack !== bestTrack
+                    ? `Le point de vigilance actuel est ${weakestTrack.label}, moins rentable sur ton historique recent.`
+                    : "Aucun angle faible net n'apparait encore dans l'historique.",
+                ].map((sentence) => (
+                  <div
+                    key={sentence}
+                    style={{
+                      padding: 14,
+                      borderRadius: 18,
+                      background: "var(--pmu-surface-2)",
+                      border: `1px solid ${BORDER}`,
+                      fontSize: 13,
+                      lineHeight: "19px",
+                      color: "var(--pmu-text-muted)",
+                    }}
+                  >
+                    {sentence}
+                  </div>
+                ))}
+              </div>
+            </div>
           </section>
 
           {pendingCount > 0 ? (

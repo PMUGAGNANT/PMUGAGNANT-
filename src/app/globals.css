@@ -66,6 +66,65 @@
   --pmu-card-inset: none;
 }
 
+/* Refonte 2026 : le clair devient le thème par défaut */
+:root {
+  --pmu-bg: #f7f2e8;
+  --pmu-bg-mid: #efe6d7;
+  --pmu-surface: #fffdfa;
+  --pmu-surface-2: #f8f1e5;
+  --pmu-surface-highlight: #f1e7d7;
+  --pmu-border: rgba(110, 85, 60, 0.12);
+  --pmu-border-strong: rgba(110, 85, 60, 0.24);
+  --pmu-primary: #0f766e;
+  --pmu-primary-bright: #14b8a6;
+  --pmu-primary-soft: rgba(15, 118, 110, 0.12);
+  --pmu-primary-fade: rgba(15, 118, 110, 0.07);
+  --pmu-accent-blue: #2563eb;
+  --pmu-accent-violet: #a16207;
+  --pmu-text: #1f1720;
+  --pmu-text-muted: #6f665d;
+  --pmu-text-soft: #5a5148;
+  --pmu-red: #dc2626;
+  --pmu-orange: #c2410c;
+  --pmu-blue: #57534e;
+  --pmu-shadow: 0 24px 64px rgba(91, 70, 46, 0.12);
+  --pmu-shadow-sm: 0 10px 28px rgba(91, 70, 46, 0.09);
+  --pmu-glow: 0 0 56px rgba(20, 184, 166, 0.12);
+  --pmu-glow-soft: 0 28px 64px -18px rgba(20, 184, 166, 0.16);
+  --pmu-on-primary: #fffdfa;
+  --pmu-on-danger: #fffaf8;
+  --pmu-card-inset: inset 0 1px 0 rgba(255, 255, 255, 0.68);
+}
+
+[data-theme="dark"] {
+  --pmu-bg: #07110f;
+  --pmu-bg-mid: #0b1714;
+  --pmu-surface: #0f1d1a;
+  --pmu-surface-2: #132521;
+  --pmu-surface-highlight: #19302b;
+  --pmu-border: rgba(154, 184, 176, 0.12);
+  --pmu-border-strong: rgba(154, 184, 176, 0.22);
+  --pmu-primary: #34d399;
+  --pmu-primary-bright: #6ee7b7;
+  --pmu-primary-soft: rgba(52, 211, 153, 0.15);
+  --pmu-primary-fade: rgba(52, 211, 153, 0.07);
+  --pmu-accent-blue: #60a5fa;
+  --pmu-accent-violet: #c084fc;
+  --pmu-text: #f4f7f5;
+  --pmu-text-muted: #9aa8a2;
+  --pmu-text-soft: #85928d;
+  --pmu-red: #f87171;
+  --pmu-orange: #f59e0b;
+  --pmu-blue: #94a3b8;
+  --pmu-shadow: 0 24px 64px rgba(0, 0, 0, 0.52);
+  --pmu-shadow-sm: 0 8px 24px rgba(0, 0, 0, 0.34);
+  --pmu-glow: 0 0 56px rgba(52, 211, 153, 0.14);
+  --pmu-glow-soft: 0 28px 64px -18px rgba(52, 211, 153, 0.22);
+  --pmu-on-primary: #052019;
+  --pmu-on-danger: #ffffff;
+  --pmu-card-inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
 * {
   box-sizing: border-box;
   min-width: 0;
@@ -200,6 +259,103 @@ svg {
   .pmu-confidence-ring {
     transition: none;
   }
+}
+
+/* Refonte visuelle claire par defaut */
+body {
+  background-color: var(--pmu-bg);
+  background-image:
+    radial-gradient(ellipse 130% 68% at 50% -30%, rgba(251, 191, 36, 0.18), transparent 54%),
+    radial-gradient(ellipse 55% 46% at 100% 2%, rgba(20, 184, 166, 0.11), transparent 44%),
+    radial-gradient(ellipse 46% 40% at -6% 38%, rgba(194, 65, 12, 0.08), transparent 42%),
+    radial-gradient(ellipse 90% 48% at 50% 110%, rgba(120, 90, 60, 0.08), transparent 50%),
+    linear-gradient(175deg, #fffdfa 0%, var(--pmu-bg) 45%, #eadfcd 100%);
+}
+
+body::before {
+  background-image:
+    linear-gradient(rgba(103, 78, 54, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(103, 78, 54, 0.045) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.14) 0%, rgba(0, 0, 0, 0.06) 48%, transparent 85%);
+}
+
+body::after {
+  background: radial-gradient(ellipse 75% 45% at 50% 0%, rgba(251, 191, 36, 0.06), transparent 52%);
+}
+
+[data-theme="dark"] body {
+  background-image:
+    radial-gradient(ellipse 140% 70% at 50% -35%, rgba(52, 211, 153, 0.16), transparent 55%),
+    radial-gradient(ellipse 55% 45% at 100% -8%, rgba(96, 165, 250, 0.08), transparent 48%),
+    radial-gradient(ellipse 50% 42% at -8% 35%, rgba(52, 211, 153, 0.06), transparent 42%),
+    radial-gradient(ellipse 100% 55% at 50% 115%, rgba(0, 0, 0, 0.55), transparent 52%),
+    linear-gradient(175deg, var(--pmu-bg-mid) 0%, var(--pmu-bg) 38%, #04100d 100%);
+}
+
+[data-theme="dark"] body::before {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0.12) 52%, transparent 88%);
+}
+
+[data-theme="dark"] body::after {
+  background: radial-gradient(ellipse 75% 45% at 50% 0%, rgba(52, 211, 153, 0.05), transparent 52%);
+}
+
+.app-card,
+.app-surface,
+.premium-surface,
+.app-card-muted {
+  box-shadow: var(--pmu-card-inset), var(--pmu-shadow-sm);
+}
+
+.app-card {
+  background: linear-gradient(165deg, #fffdfa 0%, #fbf5eb 56%, #f2e8d9 100%);
+  border: 1px solid color-mix(in srgb, var(--pmu-border) 82%, var(--pmu-primary) 10%);
+}
+
+.app-card::before {
+  background: radial-gradient(ellipse 85% 50% at 10% -8%, rgba(251, 191, 36, 0.12), transparent 50%);
+}
+
+.app-card:hover {
+  box-shadow: var(--pmu-card-inset), var(--pmu-shadow), 0 0 0 1px color-mix(in srgb, var(--pmu-primary) 14%, transparent);
+}
+
+.app-surface,
+.premium-surface {
+  background: linear-gradient(168deg, #fffdfa 0%, #f7efe3 100%);
+  border: 1px solid color-mix(in srgb, var(--pmu-border) 78%, var(--pmu-primary) 8%);
+}
+
+.app-button-secondary {
+  background: rgba(255, 253, 250, 0.72);
+}
+
+.app-button-secondary:hover {
+  background: rgba(255, 253, 250, 0.94);
+}
+
+[data-theme="dark"] .app-card {
+  background: linear-gradient(165deg, color-mix(in srgb, var(--pmu-surface-highlight) 38%, var(--pmu-surface)) 0%, var(--pmu-surface) 55%, color-mix(in srgb, var(--pmu-surface) 94%, black) 100%);
+  border: 1px solid color-mix(in srgb, var(--pmu-border) 88%, var(--pmu-primary) 12%);
+  box-shadow: var(--pmu-card-inset), var(--pmu-shadow-sm), 0 0 0 1px rgba(52, 211, 153, 0.045), var(--pmu-glow-soft);
+}
+
+[data-theme="dark"] .app-card::before {
+  background: radial-gradient(ellipse 90% 55% at 12% -12%, rgba(52, 211, 153, 0.09), transparent 52%);
+}
+
+[data-theme="dark"] .app-card:hover {
+  box-shadow: var(--pmu-card-inset), var(--pmu-shadow), 0 0 0 1px color-mix(in srgb, var(--pmu-primary) 20%, transparent), var(--pmu-glow);
+}
+
+[data-theme="dark"] .app-surface,
+[data-theme="dark"] .premium-surface {
+  background: linear-gradient(168deg, color-mix(in srgb, var(--pmu-surface-highlight) 55%, var(--pmu-surface)) 0%, var(--pmu-surface) 100%);
 }
 
 .pmu-radar-score {

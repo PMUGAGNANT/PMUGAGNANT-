@@ -14,6 +14,8 @@ import { PromoVideoSection } from "@/components/ui/PromoVideoSection";
 import { RadarHero } from "@/components/ui/RadarHero";
 import { RecentResults } from "@/components/ui/RecentResults";
 import { SagesseFoules } from "@/components/ui/SagesseFoules";
+import { TelegramCTA } from "@/components/ui/TelegramCTA";
+import { TicketPlaybookStrip, type TicketPlaybookItem } from "@/components/ui/TicketPlaybookStrip";
 import { TopParisStrip, type TopParisItem } from "@/components/ui/TopParisStrip";
 import {
   formatDateToPmu,
@@ -39,6 +41,7 @@ import type { Lisibilite, PredictionDecision, RaceSummary } from "@/lib/types";
 type ScoreStage = "preview_2h" | "preview_1h" | "final_30m" | "finished";
 type SortMode = "hour" | "score" | "urgent" | "allocation";
 type HomeSecondaryPanel = "performance" | "results" | "demo" | "method" | "quinte";
+type VisibilityMode = "all" | "readable";
 
 type RaceScore = {
   dateStr: string;
@@ -354,6 +357,95 @@ function getTopParisItems(items: FeaturedRace[], navigate: (race: RaceSummary) =
     }));
 }
 
+function getTicketPlaybookItems(
+  items: FeaturedRace[],
+  navigate: (race: RaceSummary) => void
+): TicketPlaybookItem[] {
+  const ranked = asArray<FeaturedRace>(items)
+    .filter((item) => item.status !== "resultat")
+    .sort((a, b) => b.confidence - a.confidence);
+
+  if (ranked.length === 0) {
+    return [];
+  }
+
+  const prudent =
+    ranked.find(
+      (item) =>
+        item.score?.pick?.betType === "PLACE" ||
+        item.score?.decision === "SURVEILLANCE" ||
+        item.score?.lisibilite === "LISIBLE"
+    ) ?? ranked[0];
+  const offensif =
+    ranked.find(
+      (item) =>
+        item.status === "jouable" &&
+        item.score?.pick?.betType === "GAGNANT" &&
+        item.confidence >= SEUIL_JOUABLE
+    ) ?? ranked[0];
+  const equilibre =
+    ranked.find(
+      (item) =>
+        item.race.reunion !== prudent.race.reunion ||
+        item.race.course !== prudent.race.course
+    ) ?? ranked[Math.min(1, ranked.length - 1)] ?? ranked[0];
+
+  const unique = new Map<string, TicketPlaybookItem>();
+
+  const candidates: Array<{
+    profile: TicketPlaybookItem["profile"];
+    item: FeaturedRace;
+    summary: string;
+  }> = [
+    {
+      profile: "prudent",
+      item: prudent,
+      summary:
+        prudent.score?.pick?.betType === "PLACE"
+          ? "Base la plus stable du jour pour jouer avec discipline et limiter la variance."
+          : "Lecture propre pour rester selectif sans forcer un ticket trop agressif.",
+    },
+    {
+      profile: "equilibre",
+      item: equilibre,
+      summary:
+        "Le meilleur compromis entre lisibilite, confiance et execution sans surjouer la course.",
+    },
+    {
+      profile: "offensif",
+      item: offensif,
+      summary:
+        "Le ticket le plus assumable quand on cherche une vraie edge et un potentiel plus offensif.",
+    },
+  ];
+
+  for (const candidate of candidates) {
+    const key = candidate.profile;
+    const current = candidate.item;
+    unique.set(key, {
+      profile: candidate.profile,
+      title: current.race.nomCourse,
+      subtitle: `${current.race.hippodrome} • ${current.race.heureDepart}`,
+      horse: getPickLabel(current.score),
+      stake: formatStake(
+        current.score?.pick?.confidence
+          ? Math.max(6, Math.round(current.score.pick.confidence * 2.5))
+          : candidate.profile === "offensif"
+            ? 10
+            : candidate.profile === "prudent"
+              ? 6
+              : 8
+      ),
+      betType: getBetTypeLabel(current.score),
+      confidence: current.confidence,
+      summary: candidate.summary,
+      onClick: () => navigate(current.race),
+    });
+  }
+
+  return Array.from(unique.values());
+}
+
 function PageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -362,6 +454,7 @@ function PageContent() {
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [sortMode, setSortMode] = useState<SortMode>("hour");
   const [secondaryPanel, setSecondaryPanel] = useState<HomeSecondaryPanel>("performance");
+  const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>("all");
   const [races, setRaces] = useState<RaceSummary[]>([]);
   const [scores, setScores] = useState<RaceScore[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -375,6 +468,10 @@ function PageContent() {
       if (storedSort === "hour" || storedSort === "score" || storedSort === "urgent" || storedSort === "allocation") {
         setSortMode(storedSort);
       }
+      const storedVisibility = window.localStorage.getItem("pmu-visibility-mode");
+      if (storedVisibility === "all" || storedVisibility === "readable") {
+        setVisibilityMode(storedVisibility);
+      }
     } catch (effectError) {
       console.error(effectError);
     }
@@ -383,10 +480,11 @@ function PageContent() {
   useEffect(() => {
     try {
       window.localStorage.setItem("pmu-sort-mode", sortMode);
+      window.localStorage.setItem("pmu-visibility-mode", visibilityMode);
     } catch (effectError) {
       console.error(effectError);
     }
-  }, [sortMode]);
+  }, [sortMode, visibilityMode]);
 
   useEffect(() => {
     try {
@@ -491,7 +589,7 @@ function PageContent() {
     };
   }, [selectedDate, fetchRevision]);
 
-  const featuredRaces = useMemo(() => {
+  const allFeaturedRaces = useMemo(() => {
     const safeScores = normalizeScoresPayload(
       scores as unknown as ScoresResponse["scores"],
       selectedDate
@@ -501,6 +599,14 @@ function PageContent() {
     const rows = sortFeaturedRaces(buildFeaturedRaces(safeRaces, map), sortMode);
     return asArray<FeaturedRace>(rows);
   }, [races, scores, sortMode, selectedDate]);
+
+  const featuredRaces = useMemo(() => {
+    const rows = asArray<FeaturedRace>(allFeaturedRaces);
+    if (visibilityMode === "readable") {
+      return rows.filter((item) => item.score?.lisibilite === "LISIBLE" || item.score == null);
+    }
+    return rows;
+  }, [allFeaturedRaces, visibilityMode]);
 
   const navigateToRace = useCallback(
     (race: RaceSummary) => {
@@ -528,6 +634,10 @@ function PageContent() {
     [radarRace]
   );
   const topParisItems = useMemo(() => getTopParisItems(featuredRaces, navigateToRace), [featuredRaces, navigateToRace]);
+  const ticketPlaybookItems = useMemo(
+    () => getTicketPlaybookItems(featuredRaces, navigateToRace),
+    [featuredRaces, navigateToRace]
+  );
 
   const quinteDuJour = useMemo(() => {
     const list = asArray<FeaturedRace>(featuredRaces);
@@ -661,6 +771,9 @@ function PageContent() {
         />
       ) : null}
 
+      <TelegramCTA />
+
+      {ticketPlaybookItems.length ? <TicketPlaybookStrip items={ticketPlaybookItems} /> : null}
       {topParisItems.length ? <TopParisStrip items={topParisItems} /> : null}
 
       <section className="app-card p-5 md:p-6">
@@ -723,7 +836,36 @@ function PageContent() {
                 Chaque carte pousse une décision. Trie vite, garde la lecture utile, puis ouvre la bonne course.
               </p>
             </div>
-            <FilterPills options={SORT_OPTIONS} value={sortMode} onChange={setSortMode} />
+            <div className="flex flex-col gap-3">
+              <FilterPills options={SORT_OPTIONS} value={sortMode} onChange={setSortMode} />
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: "all", label: "Tout le programme" },
+                  { value: "readable", label: "Courses lisibles" },
+                ].map((option) => {
+                  const active = visibilityMode === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setVisibilityMode(option.value as VisibilityMode)}
+                      className="rounded-full border px-3 py-2 text-xs font-bold uppercase tracking-[0.14em] transition"
+                      style={{
+                        borderColor: active
+                          ? "color-mix(in srgb, var(--pmu-primary) 40%, transparent)"
+                          : "var(--pmu-border)",
+                        background: active
+                          ? "color-mix(in srgb, var(--pmu-primary) 12%, transparent)"
+                          : "transparent",
+                        color: active ? "var(--pmu-primary)" : "var(--pmu-text-muted)",
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       </section>

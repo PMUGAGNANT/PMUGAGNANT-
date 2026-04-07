@@ -4,6 +4,7 @@ import { analyzeRaceWithParameters, getMinutesUntilStart } from "@/lib/analysis"
 import { attachFaultRates } from "@/lib/horse-faults";
 import { loadAlgoParameters } from "@/lib/config";
 import { badRequest, serverError } from "@/lib/api-response";
+import { listPredictionStageSnapshots } from "@/lib/prediction-store";
 import { normalizeRequestedDate, parsePositiveInteger } from "@/lib/request-utils";
 import { getRequestSubscriptionState } from "@/lib/subscription";
 import type { Participant, RaceSummary } from "@/lib/types";
@@ -64,6 +65,7 @@ export async function GET(
     // Get participants and enrich them with historical risk signals.
     const participants = await attachFaultRates(await getParticipants(date, rNum, cNum));
     const officialArrival = buildOfficialArrival(participants);
+    const timelineSnapshots = await listPredictionStageSnapshots(date, rNum, cNum).catch(() => []);
 
     // Check if pronostic should be revealed (30 min before start)
     const minutesUntil = getMinutesUntilStart(courseInfo.heureDepart, courseInfo.dateStr);
@@ -91,6 +93,7 @@ export async function GET(
         pronoAvailable,
         isFinished,
         analysis,
+        timelineSnapshots,
         paywall:
           !isFinished && !subscriptionState.isSubscribed
             ? {
@@ -119,6 +122,7 @@ export async function GET(
       pronoAvailable,
       isFinished,
       analysis,
+      timelineSnapshots,
       paywall: null,
     });
   } catch (error) {
