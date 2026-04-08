@@ -5,7 +5,19 @@ import { getAllRaces, getFinalReports, getParticipants } from "@/lib/pmu-api";
 import {
   buildCourseRecord,
   buildPredictionRows,
+  buildRaceEngineRunRow,
+  buildRunnerFeatureSnapshots,
+  buildRunnerMarketSnapshots,
+  buildRunnerOutcomeRows,
+  buildRunnerScoreSnapshots,
+  completeRaceEngineRun,
+  createRaceEngineRun,
+  failRaceEngineRun,
   getRacePredictions,
+  upsertRunnerFeatureSnapshots,
+  upsertRunnerMarketSnapshots,
+  upsertRunnerOutcomes,
+  upsertRunnerScoreSnapshots,
   upsertCourseRecord,
   upsertPredictions,
 } from "@/lib/prediction-store";
@@ -33,6 +45,11 @@ interface ProcessedRace {
   participants: Participant[];
   analysis: RaceAnalysis;
   rows: PredictionRow[];
+  instrumentation: {
+    runId: string;
+    featureSnapshots: ReturnType<typeof buildRunnerFeatureSnapshots>;
+    marketSnapshots: ReturnType<typeof buildRunnerMarketSnapshots>;
+  };
 }
 
 interface SelectionAlert {
@@ -127,16 +144,44 @@ async function processRace(
   );
 
   await upsertFaultRates(participants);
+  const run = await createRaceEngineRun(
+    buildRaceEngineRunRow(dateStr, race, stage, parameters, participants.length)
+  );
+  const runId = run.id;
 
-  const analysis = analyzeRaceWithParameters(race, participants, parameters);
-  const rows = buildPredictionRows(dateStr, race, analysis, stage);
+  if (!runId) {
+    throw new Error("Race engine run id missing after insert.");
+  }
 
-  return {
-    race,
-    participants,
-    analysis,
-    rows,
-  };
+  try {
+    const analysis = analyzeRaceWithParameters(race, participants, parameters);
+    const rows = buildPredictionRows(dateStr, race, analysis, stage);
+
+    return {
+      race,
+      participants,
+      analysis,
+      rows,
+      instrumentation: {
+        runId,
+        featureSnapshots: buildRunnerFeatureSnapshots(
+          runId,
+          dateStr,
+          race,
+          stage,
+          participants,
+          analysis
+        ),
+        marketSnapshots: buildRunnerMarketSnapshots(dateStr, race, stage, participants),
+      },
+    };
+  } catch (error) {
+    await failRaceEngineRun(
+      runId,
+      error instanceof Error ? error.message : String(error)
+    );
+    throw error;
+  }
 }
 
 function getPrimarySelection(processed: ProcessedRace): SelectionAlert | null {
@@ -173,6 +218,41 @@ async function processInBatches<T, R>(
   }
 
   return all;
+}
+
+async function persistProcessedRace(
+  dateStr: string,
+  processed: ProcessedRace,
+  rows: PredictionRow[],
+  extra?: {
+    outcomeRows?: ReturnType<typeof buildRunnerOutcomeRows>;
+  }
+) {
+  try {
+    await upsertCourseRecord(buildCourseRecord(dateStr, processed.race, processed.analysis));
+    await upsertPredictions(rows);
+    await upsertRunnerMarketSnapshots(processed.instrumentation.marketSnapshots);
+    await upsertRunnerFeatureSnapshots(processed.instrumentation.featureSnapshots);
+    await upsertRunnerScoreSnapshots(
+      buildRunnerScoreSnapshots(processed.instrumentation.runId, rows, processed.analysis)
+    );
+
+    if (extra?.outcomeRows && extra.outcomeRows.length > 0) {
+      await upsertRunnerOutcomes(extra.outcomeRows);
+    }
+
+    await completeRaceEngineRun(processed.instrumentation.runId, processed.analysis);
+  } catch (error) {
+    try {
+      await failRaceEngineRun(
+        processed.instrumentation.runId,
+        error instanceof Error ? error.message : String(error)
+      );
+    } catch {
+      /* ignore */
+    }
+    throw error;
+  }
 }
 
 function adjustDecisionAfterPreRace(
@@ -347,8 +427,7 @@ export async function runMorningAnalysis(dateStr: string) {
   const races = await getAllRaces(dateStr);
   const processed = await processInBatches(races, async (race) => {
     const current = await processRace(dateStr, race, parameters, "MATIN");
-    await upsertCourseRecord(buildCourseRecord(dateStr, race, current.analysis));
-    await upsertPredictions(current.rows);
+    await persistProcessedRace(dateStr, current, current.rows);
     return current;
   });
 
@@ -394,8 +473,7 @@ export async function runPreRaceSecondPass(
       parameters
     );
 
-    await upsertCourseRecord(buildCourseRecord(dateStr, race, current.analysis));
-    await upsertPredictions(updatedRows);
+    await persistProcessedRace(dateStr, current, updatedRows);
 
     return {
       race,
@@ -441,8 +519,9 @@ export async function runResultSync(dateStr: string, options: RangeOptions = {})
       settlePredictionRow(row, participantByHorse.get(row.cheval_num), reports)
     );
 
-    await upsertCourseRecord(buildCourseRecord(dateStr, race, current.analysis));
-    await upsertPredictions(settledRows);
+    await persistProcessedRace(dateStr, current, settledRows, {
+      outcomeRows: buildRunnerOutcomeRows(dateStr, race, current.participants, reports),
+    });
 
     return {
       race,

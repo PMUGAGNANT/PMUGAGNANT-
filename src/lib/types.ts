@@ -1,6 +1,15 @@
 export type Lisibilite = "LISIBLE" | "COMPLEXE" | "LOTERIE";
 export type PredictionDecision = "VALIDE" | "SURVEILLANCE" | "REJET";
 export type ScoreStage = "MATIN" | "T10" | "RESULTAT";
+export type EngineRunStatus = "RUNNING" | "COMPLETED" | "FAILED";
+export type SegmentKey =
+  | "TROT_ATTELE"
+  | "TROT_MONTE"
+  | "PLAT_SPRINT"
+  | "PLAT_MILE"
+  | "PLAT_LONG"
+  | "OBSTACLE"
+  | "QUINTE";
 export type SignalVariation =
   | "FORTE_BAISSE"
   | "BAISSE"
@@ -395,6 +404,90 @@ export interface CourseRecordRow {
   coefficient_lisibilite: number | null;
   decision_course: PredictionDecision | null;
   updated_at?: string;
+}
+
+export interface RaceEngineRunRow {
+  id?: string;
+  date: string;
+  reunion: number;
+  course: number;
+  stage: ScoreStage;
+  segment_key: SegmentKey;
+  engine_version: string;
+  config_version: string;
+  lisibilite?: Lisibilite | null;
+  score_lisibilite?: number | null;
+  decision_course?: PredictionDecision | null;
+  runner_count: number;
+  started_at: string;
+  finished_at?: string | null;
+  status: EngineRunStatus;
+  error_message?: string | null;
+  created_at?: string;
+}
+
+export interface RunnerFeatureSnapshotRow {
+  id?: string;
+  run_id: string;
+  date: string;
+  reunion: number;
+  course: number;
+  stage: ScoreStage;
+  segment_key: SegmentKey;
+  cheval_num: number;
+  cheval_nom: string;
+  payload: Record<string, unknown>;
+  created_at?: string;
+}
+
+export interface RunnerScoreSnapshotRow {
+  id?: string;
+  run_id: string;
+  cheval_num: number;
+  score_expert: number;
+  score_lisibilite_adjusted: number;
+  proba_raw?: number | null;
+  proba_calibrated?: number | null;
+  market_edge?: number | null;
+  confidence_score?: number | null;
+  value_index?: number | null;
+  decision: PredictionDecision;
+  bet_type: "GAGNANT" | "PLACE";
+  stake_base: number;
+  stake_final: number;
+  blend_payload: Record<string, unknown>;
+  reason_codes: string[];
+  created_at?: string;
+}
+
+export interface RunnerMarketSnapshotRow {
+  id?: string;
+  date: string;
+  reunion: number;
+  course: number;
+  cheval_num: number;
+  snapshot_stage: ScoreStage;
+  cote?: number | null;
+  cote_reference?: number | null;
+  variation_pct?: number | null;
+  signal_variation?: SignalVariation | null;
+  ferrure?: string | null;
+  created_at?: string;
+}
+
+export interface RunnerOutcomeRow {
+  id?: string;
+  date: string;
+  reunion: number;
+  course: number;
+  cheval_num: number;
+  ordre_arrivee?: number | null;
+  resultat_gagnant: boolean;
+  resultat_place: boolean;
+  rapport_gagnant?: number | null;
+  rapport_place?: number | null;
+  non_partant: boolean;
+  created_at?: string;
 }
 
 export type RaceStatus = "upcoming" | "prono_available" | "live" | "finished";
