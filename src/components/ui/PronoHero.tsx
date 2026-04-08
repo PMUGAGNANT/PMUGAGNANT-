@@ -38,158 +38,103 @@ export function PronoHero({
   lisibilite,
   onClick,
 }: PronoHeroProps) {
-  const scoreLabel = useMemo(
-    () => interpretScoreForBeginner(confidence),
-    [confidence]
-  );
-  const lisLabel = useMemo(
-    () => lisibiliteForBeginner(lisibilite ?? "COMPLEXE"),
-    [lisibilite]
-  );
+  const scoreLabel = useMemo(() => interpretScoreForBeginner(confidence), [confidence]);
+  const lisLabel = useMemo(() => lisibiliteForBeginner(lisibilite ?? "COMPLEXE"), [lisibilite]);
   const betLabel = useMemo(() => betTypeForBeginner(betType), [betType]);
   const barPct = Math.min(100, Math.max(0, (confidence / 10) * 100));
-
-  const gainPotentiel =
-    cote && cote > 0 ? Math.round(cote * 5 * 100) / 100 : null;
+  const gainPotentiel = cote && cote > 0 ? Math.round(cote * 5 * 100) / 100 : null;
 
   return (
-    <section
-      className="relative w-full overflow-hidden rounded-2xl border"
-      style={{
-        borderColor: "var(--pmu-border)",
-        background: `linear-gradient(168deg, ${scoreLabel.color}08 0%, var(--pmu-surface) 46%, var(--pmu-surface) 100%)`,
-        boxShadow: "0 6px 18px rgba(0, 0, 0, 0.28)",
-      }}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2 px-5 pb-1 pt-3">
-        <span
-          className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-black uppercase tracking-[0.12em]"
-          style={{
-            background: `${scoreLabel.color}14`,
-            color: scoreLabel.color,
-            border: `1px solid ${scoreLabel.color}26`,
-          }}
-        >
-          {scoreLabel.emoji} {scoreLabel.label}
-        </span>
-        <span
-          className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold"
-          style={{
-            background: "var(--pmu-surface-2)",
-            color: "var(--pmu-text-muted)",
-          }}
-        >
-          {lisLabel.emoji} {lisLabel.label}
-        </span>
-      </div>
-
-      <div className="px-5 pb-1 text-center">
-        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-muted)]">
-          Cheval du jour
-        </p>
-        <h2
-          className="mt-1 text-2xl font-black tracking-tight md:text-3xl"
-          style={{ color: "var(--pmu-text)" }}
-        >
-          N°{horseNum} <span style={{ color: scoreLabel.color }}>{horseName}</span>
-        </h2>
-        <p className="mt-1 text-sm font-semibold text-[var(--pmu-text-soft)]">
-          {hippodrome} • R{reunion}C{course} • {heureDepart}
-        </p>
-        <p className="mt-1 text-xs text-[var(--pmu-text-muted)]">{courseName}</p>
-      </div>
-
-      <div className="mx-auto max-w-sm px-5 pt-2">
-        <div className="flex items-center justify-between text-sm">
-          <span className="font-bold text-[var(--pmu-text-muted)]">
-            Confiance du moteur
-          </span>
-          <span
-            className="font-black tabular-nums"
-            style={{ color: scoreLabel.color }}
-          >
-            {Math.round(confidence * 10) / 10}/10
-          </span>
-        </div>
-        <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-[var(--pmu-surface-2)]">
-          <div
-            className="h-full rounded-full transition-all duration-1000"
-            style={{
-              width: `${barPct}%`,
-              background: `linear-gradient(90deg, ${scoreLabel.color}CC, ${scoreLabel.color})`,
-            }}
-          />
-        </div>
-      </div>
-
-      <div className="mx-auto mt-3 grid max-w-sm gap-2 px-5 sm:grid-cols-2">
-        <div
-          className="rounded-lg px-3 py-2 text-center"
-          style={{ background: "var(--pmu-surface-2)" }}
-        >
-          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--pmu-text-muted)]">
-            Pari conseillé
-          </p>
-          <p className="mt-1 text-base font-black text-[var(--pmu-text)]">
-            {betLabel.label}
-          </p>
-          <p className="mt-0.5 text-[10px] text-[var(--pmu-text-muted)]">
-            {betLabel.tooltip}
-          </p>
-        </div>
-        <div
-          className="rounded-lg px-3 py-2 text-center"
-          style={{ background: "var(--pmu-surface-2)" }}
-        >
-          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--pmu-text-muted)]">
-            {cote ? "Cote actuelle" : "Mise conseillée"}
-          </p>
-          <p className="mt-1 text-base font-black text-[var(--pmu-text)]">
-            {cote ? `${cote}` : "5€"}
-          </p>
-          {gainPotentiel && (
-            <p
-              className="mt-0.5 text-[10px] font-bold"
-              style={{ color: "var(--pmu-primary)" }}
+    <section className="app-page-hero p-5 md:p-7">
+      <div className="relative z-[1] grid gap-5 xl:grid-cols-[1.1fr,0.9fr] xl:items-end">
+        <div className="space-y-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em]"
+              style={{
+                background: `color-mix(in srgb, ${scoreLabel.color} 16%, var(--pmu-surface))`,
+                color: scoreLabel.color,
+                border: `1px solid color-mix(in srgb, ${scoreLabel.color} 28%, transparent)`,
+              }}
             >
-              Gain potentiel ≈ {gainPotentiel}€
+              {scoreLabel.emoji} Cheval du jour
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_84%,transparent)] px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--pmu-text-muted)]">
+              {lisLabel.emoji} {lisLabel.label}
+            </span>
+          </div>
+
+          <div>
+            <p className="app-kicker">Selection maitre</p>
+            <h2 className="mt-3 text-4xl font-black leading-[0.95] text-[var(--pmu-text)] md:text-6xl">
+              N°{horseNum}{" "}
+              <span style={{ color: scoreLabel.color }}>{horseName}</span>
+            </h2>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
+              {hippodrome} · R{reunion}C{course} · {heureDepart}. Le moteur pousse ce ticket en tete du board avec une lecture suffisamment propre pour passer a l&apos;action.
             </p>
-          )}
-        </div>
-      </div>
+            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--pmu-text-muted)]">
+              {courseName}
+            </p>
+          </div>
 
-      {topFacteurs.length > 0 && (
-        <div className="mx-auto mt-2 max-w-sm px-5">
-          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[var(--pmu-text-muted)]">
-            Pourquoi lui ?
-          </p>
-          <ul className="mt-1.5 space-y-1">
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="app-stat-card px-4 py-4">
+              <p className="app-label">Confiance</p>
+              <p className="mt-2 text-3xl font-black" style={{ color: scoreLabel.color }}>
+                {Math.round(confidence * 10) / 10}/10
+              </p>
+            </div>
+            <div className="app-stat-card px-4 py-4">
+              <p className="app-label">Pari conseille</p>
+              <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">{betLabel.label}</p>
+            </div>
+            <div className="app-stat-card px-4 py-4">
+              <p className="app-label">{cote ? "Cote" : "Mise repere"}</p>
+              <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">{cote ? `${cote}` : "5 EUR"}</p>
+              {gainPotentiel ? (
+                <p className="mt-1 text-xs font-semibold text-[var(--pmu-text-soft)]">Gain potentiel env. {gainPotentiel} EUR</p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        <div className="app-card-muted p-5">
+          <div className="flex items-center justify-between gap-3">
+            <p className="app-kicker text-[10px]">Lecture rapide</p>
+            <span className="text-sm font-black" style={{ color: scoreLabel.color }}>
+              {scoreLabel.label}
+            </span>
+          </div>
+
+          <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-[var(--pmu-bg)]">
+            <div
+              className="h-full rounded-full transition-all duration-1000"
+              style={{
+                width: `${barPct}%`,
+                background: `linear-gradient(90deg, ${scoreLabel.color}CC, ${scoreLabel.color})`,
+              }}
+            />
+          </div>
+
+          <div className="mt-5 space-y-3">
             {topFacteurs.slice(0, 3).map((factor, index) => (
-              <li
-                key={index}
-                className="flex items-start gap-2 text-xs text-[var(--pmu-text-soft)]"
+              <div
+                key={`${factor}-${index}`}
+                className="rounded-[1rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_75%,transparent)] px-4 py-3 text-sm leading-6 text-[var(--pmu-text-soft)]"
               >
-                <span style={{ color: scoreLabel.color }}>•</span>
-                <span>{factor}</span>
-              </li>
+                <span className="mr-2 font-black" style={{ color: scoreLabel.color }}>
+                  0{index + 1}
+                </span>
+                {factor}
+              </div>
             ))}
-          </ul>
+          </div>
+
+          <button type="button" onClick={onClick} className="app-button-primary mt-5 w-full">
+            Voir l&apos;analyse complete
+          </button>
         </div>
-      )}
-
-      <div className="flex justify-center px-5 pb-4 pt-3">
-        <button
-          type="button"
-          onClick={onClick}
-          className="app-button-primary w-full max-w-xs rounded-lg py-3 text-sm font-black"
-        >
-          Voir l’analyse complète →
-        </button>
-      </div>
-
-      <div className="border-t border-[var(--pmu-border)] px-5 py-2 text-center text-[10px] text-[var(--pmu-text-muted)]">
-        Les paris comportent des risques. Ne misez que ce que vous êtes prêt à
-        perdre.
       </div>
     </section>
   );

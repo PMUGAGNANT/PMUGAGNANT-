@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope } from "next/font/google";
+import { Fraunces, Sora } from "next/font/google";
 import Script from "next/script";
 import { AppShell } from "@/components/ui/AppShell";
 import { GlossaryPanel } from "@/components/ui/Glossary";
@@ -11,7 +11,17 @@ import { ThemeMetaColor } from "@/components/ui/ThemeMetaColor";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import "./globals.css";
 
-const manrope = Manrope({ subsets: ["latin"], display: "swap" });
+const uiFont = Sora({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-ui",
+});
+
+const displayFont = Fraunces({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-display",
+});
 
 export const metadata: Metadata = {
   title: "PMU Gagnant - Pronostics PMU assistés par IA",
@@ -28,7 +38,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  themeColor: "#060606",
+  themeColor: "#07141c",
 };
 
 export default function RootLayout({
@@ -38,7 +48,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
-      <body className={`${manrope.className} min-h-screen text-[var(--pmu-text)] antialiased`}>
+      <body
+        className={`${uiFont.variable} ${displayFont.variable} min-h-screen text-[var(--pmu-text)] antialiased`}
+      >
         <a href="#main-content" className="pmu-skip-link">
           Aller au contenu
         </a>

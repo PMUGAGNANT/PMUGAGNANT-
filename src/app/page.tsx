@@ -567,13 +567,13 @@ function PageContent() {
   }, [quinteDuJour, secondaryPanel]);
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <section className="app-card overflow-hidden p-5 md:p-6">
-        <div className="grid gap-5 xl:grid-cols-[1.15fr,0.85fr] xl:items-end">
+    <div className="mx-auto flex w-full max-w-[92rem] flex-col gap-8">
+      <section className="app-page-hero p-6 md:p-8">
+        <div className="relative z-[1] grid gap-6 xl:grid-cols-[1.15fr,0.85fr] xl:items-end">
           <div className="space-y-4">
             <div className="space-y-2">
-              <p className="app-kicker">Tableau de bord du jour</p>
-              <h1 className="max-w-4xl text-2xl font-black leading-tight tracking-tight text-[var(--pmu-text)] md:text-4xl">
+              <p className="app-kicker">Salle de decision</p>
+              <h1 className="max-w-4xl text-4xl font-black leading-[0.95] text-[var(--pmu-text)] md:text-6xl">
                 Cheval du jour, top jouables et programme trié au même endroit.
               </h1>
               <p className="max-w-3xl text-sm leading-6 text-[var(--pmu-text-soft)] md:text-base">
@@ -599,18 +599,22 @@ function PageContent() {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="app-card-muted px-4 py-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="app-stat-card px-5 py-4">
               <p className="app-label">Date active</p>
-              <p className="mt-2 text-lg font-black capitalize text-[var(--pmu-text)]">{formatRelativeDay(selectedDate)}</p>
+              <p className="mt-2 text-xl font-black capitalize text-[var(--pmu-text)]">{formatRelativeDay(selectedDate)}</p>
             </div>
-            <div className="app-card-muted px-4 py-3">
+            <div className="app-stat-card px-5 py-4">
               <p className="app-label">Programme</p>
-              <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">{races.length}</p>
+              <p className="mt-2 text-3xl font-black text-[var(--pmu-text)]">{races.length}</p>
             </div>
-            <div className="app-card-muted px-4 py-3">
+            <div className="app-stat-card px-5 py-4">
               <p className="app-label">Jouables</p>
-              <p className="mt-2 text-2xl font-black text-[var(--pmu-primary)]">{summaryStats.playable}</p>
+              <p className="mt-2 text-3xl font-black text-[var(--pmu-primary)]">{summaryStats.playable}</p>
+            </div>
+            <div className="app-stat-card px-5 py-4">
+              <p className="app-label">Signal chaud</p>
+              <p className="mt-2 text-3xl font-black text-[var(--pmu-text)]">{summaryStats.closingSoon}</p>
             </div>
           </div>
         </div>
@@ -663,7 +667,7 @@ function PageContent() {
 
       {topParisItems.length ? <TopParisStrip items={topParisItems} /> : null}
 
-      <section className="app-card p-5 md:p-6">
+      <section className="app-card p-6 md:p-7">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div>
@@ -687,7 +691,7 @@ function PageContent() {
             </div>
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr),auto,auto,auto] lg:items-center">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr),repeat(3,minmax(0,180px))] lg:items-center">
             <label className="block">
               <span className="sr-only">Choisir une date</span>
               <input
@@ -728,7 +732,7 @@ function PageContent() {
         </div>
       </section>
 
-      <section className="app-section-heading">
+      <section className="app-section-heading rounded-[1.8rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_78%,transparent)] px-5 py-5 md:px-6">
         <div>
           <p className="app-kicker">Programme du jour</p>
           <h2 className="app-section-title">Les courses à ouvrir maintenant</h2>
@@ -881,7 +885,7 @@ function PageContent() {
 function HomePageSkeletonFallback() {
   return (
     <div
-      className="mx-auto flex w-full max-w-6xl flex-col gap-6"
+      className="mx-auto flex w-full max-w-[92rem] flex-col gap-8"
       aria-busy="true"
       aria-label="Chargement du programme"
     >

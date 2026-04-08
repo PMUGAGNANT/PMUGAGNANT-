@@ -54,12 +54,13 @@ export function LiveStatsBanner() {
         : "neutral";
 
   return (
-    <div className="sticky top-0 z-[100] border-b border-[var(--pmu-border)] lg:pl-[240px]">
+    <div className="sticky top-0 z-[100] px-3 pt-3 lg:pl-[21rem] lg:pr-4">
       <div
-        className="h-10 overflow-x-auto overflow-y-hidden"
+        className="h-11 overflow-x-auto overflow-y-hidden rounded-full border border-[var(--pmu-border)]"
         style={{
-          background: "color-mix(in srgb, var(--pmu-bg) 90%, transparent)",
-          backdropFilter: "blur(12px)",
+          background: "color-mix(in srgb, var(--pmu-bg) 86%, transparent)",
+          backdropFilter: "blur(16px)",
+          boxShadow: "var(--pmu-shadow-sm)",
         }}
       >
         <div
