@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { RaceProfile } from "@/lib/client-race-scoring";
 import type { EloProfile } from "@/lib/elo-scoring";
 import { getEloGlobalBadgeStyle } from "@/lib/elo-scoring";
@@ -11,6 +11,7 @@ import {
   eloForBeginner,
   translateFactors,
 } from "@/lib/beginner-labels";
+import { AccordionPanel } from "@/components/ui/AccordionPanel";
 import { WhyThisHorse } from "@/components/ui/WhyThisHorse";
 
 export type CourseCardProps = {
@@ -61,6 +62,7 @@ export function CourseCard({
   pickBetType,
   topFacteurs,
 }: CourseCardProps) {
+  const [openPanel, setOpenPanel] = useState<"analysis" | "ticket" | "why" | null>(null);
   const interpreted = useMemo(() => interpretScore(displayScore), [displayScore]);
   const beginnerLabel = useMemo(() => interpretScoreForBeginner(displayScore), [displayScore]);
   const eloLabel = useMemo(() => eloForBeginner(eloProfile.eloGlobal), [eloProfile.eloGlobal]);
@@ -83,6 +85,9 @@ export function CourseCard({
     label: profile.ticketNums.length > 1 ? "Selection" : "Cheval retenu",
     value: ticketStr,
   });
+  const ticketSummary = lines.find((row) => row.label === "Selection" || row.label === "Cheval retenu")?.value ?? "â€”";
+  const whySummary =
+    pickNum && translatedFactors.length > 0 ? `${translatedFactors.length} signaux` : "En attente";
 
   const buttonStyle =
     displayScore >= 9
@@ -140,46 +145,76 @@ export function CourseCard({
         <p className="mt-2 text-sm font-medium leading-6 text-[var(--pmu-text-soft)]">{subtitleLine}</p>
       </div>
 
-      <div className="rounded-[1.3rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_84%,transparent)] px-3 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--pmu-text-muted)]">
-            Fiabilite de l&apos;analyse
-          </span>
-          <span
-            className="rounded-full px-2.5 py-1 text-[11px] font-black"
-            style={{
-              color: eloBadge.color,
-              background: "color-mix(in srgb, var(--pmu-surface-highlight) 55%, transparent)",
-            }}
-          >
-            {eloLabel.label}
-          </span>
-        </div>
-        <p className="mt-2 text-[11px] leading-5 text-[var(--pmu-text-soft)]">{eloLabel.tooltip}</p>
+      <div className="space-y-2.5">
+        <AccordionPanel
+          kicker="Bloc analyse"
+          title="Fiabilite de l'analyse"
+          summary={eloLabel.label}
+          open={openPanel === "analysis"}
+          onToggle={(next) => setOpenPanel(next ? "analysis" : null)}
+        >
+          <div className="rounded-[1.1rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_86%,transparent)] px-3 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--pmu-text-muted)]">
+                Lecture du moteur
+              </span>
+              <span
+                className="rounded-full px-2.5 py-1 text-[11px] font-black"
+                style={{
+                  color: eloBadge.color,
+                  background: "color-mix(in srgb, var(--pmu-surface-highlight) 55%, transparent)",
+                }}
+              >
+                {eloLabel.label}
+              </span>
+            </div>
+            <p className="mt-2 text-[11px] leading-5 text-[var(--pmu-text-soft)]">{eloLabel.tooltip}</p>
+          </div>
+        </AccordionPanel>
+
+        <AccordionPanel
+          kicker="Bloc ticket"
+          title="Cheval retenu et reperes"
+          summary={ticketSummary}
+          open={openPanel === "ticket"}
+          onToggle={(next) => setOpenPanel(next ? "ticket" : null)}
+        >
+          <ul className="grid gap-2 text-sm">
+            {lines.map((row) => (
+              <li
+                key={row.label}
+                className="flex justify-between gap-3 rounded-[1rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] px-3 py-2"
+              >
+                <span className="font-semibold text-[var(--pmu-text-muted)]">{row.label}</span>
+                <span className="font-black text-[var(--pmu-text)]">{row.value}</span>
+              </li>
+            ))}
+          </ul>
+        </AccordionPanel>
+
+        <AccordionPanel
+          kicker="Bloc lecture"
+          title={pickNum ? `Pourquoi NÂ°${pickNum} ?` : "Pourquoi ce cheval ?"}
+          summary={whySummary}
+          open={openPanel === "why"}
+          onToggle={(next) => setOpenPanel(next ? "why" : null)}
+        >
+          {pickNum && translatedFactors.length > 0 ? (
+            <WhyThisHorse
+              horseName={pickNom ?? ""}
+              horseNum={pickNum}
+              topFacteurs={translatedFactors}
+              confidence={pickConfidence ?? displayScore}
+              betType={pickBetType}
+              mode="compact"
+            />
+          ) : (
+            <p className="text-sm leading-6 text-[var(--pmu-text-soft)]">
+              Les facteurs detailles arrivent avec un ticket plus ferme ou au prochain signal actif.
+            </p>
+          )}
+        </AccordionPanel>
       </div>
-
-      <ul className="grid gap-2 text-sm">
-        {lines.map((row) => (
-          <li
-            key={row.label}
-            className="flex justify-between gap-3 rounded-[1rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_88%,transparent)] px-3 py-2"
-          >
-            <span className="font-semibold text-[var(--pmu-text-muted)]">{row.label}</span>
-            <span className="font-black text-[var(--pmu-text)]">{row.value}</span>
-          </li>
-        ))}
-      </ul>
-
-      {pickNum && translatedFactors.length > 0 ? (
-        <WhyThisHorse
-          horseName={pickNom ?? ""}
-          horseNum={pickNum}
-          topFacteurs={translatedFactors}
-          confidence={pickConfidence ?? displayScore}
-          betType={pickBetType}
-          mode="compact"
-        />
-      ) : null}
 
       <div className="space-y-2.5">
         <div className="h-2.5 w-full overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--pmu-surface-2)_78%,transparent)]">

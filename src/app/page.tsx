@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { AccordionPanel } from "@/components/ui/AccordionPanel";
 import { ComparatifIA } from "@/components/ui/ComparatifIA";
 import { CourseCard } from "@/components/ui/CourseCard";
 import { FilterPills } from "@/components/ui/FilterPills";
@@ -361,7 +362,7 @@ function PageContent() {
 
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [sortMode, setSortMode] = useState<SortMode>("hour");
-  const [secondaryPanel, setSecondaryPanel] = useState<HomeSecondaryPanel>("performance");
+  const [secondaryPanel, setSecondaryPanel] = useState<HomeSecondaryPanel | null>("performance");
   const [races, setRaces] = useState<RaceSummary[]>([]);
   const [scores, setScores] = useState<RaceScore[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -842,40 +843,52 @@ function PageContent() {
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="space-y-3">
           {secondaryPanels.map((panel) => {
-            const active = secondaryPanel === panel.key;
+            const open = secondaryPanel === panel.key;
+            const summary =
+              panel.key === "performance"
+                ? "ROI et hit rate"
+                : panel.key === "results"
+                  ? "Suivi recent"
+                  : panel.key === "demo"
+                    ? "Video produit"
+                    : panel.key === "method"
+                      ? "Processus"
+                      : "Consensus IA";
+
             return (
-              <button
+              <AccordionPanel
                 key={panel.key}
-                type="button"
-                className={`app-pill ${active ? "app-pill--active" : ""}`}
-                onClick={() => setSecondaryPanel(panel.key)}
+                kicker="Bloc deroulant"
+                title={panel.label}
+                summary={summary}
+                open={open}
+                onToggle={(next) => setSecondaryPanel(next ? panel.key : null)}
+                bodyClassName="pt-4"
               >
-                {panel.label}
-              </button>
+                {panel.key === "performance" ? <PerformanceProof /> : null}
+                {panel.key === "results" ? <RecentResults /> : null}
+                {panel.key === "demo" ? <PromoVideoSection /> : null}
+                {panel.key === "method" ? <HowItWorks /> : null}
+                {panel.key === "quinte" && quinteDuJour ? (
+                  <section className="grid gap-4 lg:grid-cols-2">
+                    <SagesseFoules
+                      raceId={`${selectedDate}-R${quinteDuJour.race.reunion}C${quinteDuJour.race.course}`}
+                      raceLabel={`${quinteDuJour.race.nomCourse} (R${quinteDuJour.race.reunion}C${quinteDuJour.race.course})`}
+                    />
+                    <ComparatifIA
+                      dateStr={selectedDate}
+                      reunion={quinteDuJour.race.reunion}
+                      course={quinteDuJour.race.course}
+                      nomCourse={quinteDuJour.race.nomCourse}
+                    />
+                  </section>
+                ) : null}
+              </AccordionPanel>
             );
           })}
         </div>
-
-        {secondaryPanel === "performance" ? <PerformanceProof /> : null}
-        {secondaryPanel === "results" ? <RecentResults /> : null}
-        {secondaryPanel === "demo" ? <PromoVideoSection /> : null}
-        {secondaryPanel === "method" ? <HowItWorks /> : null}
-        {secondaryPanel === "quinte" && quinteDuJour ? (
-          <section className="grid gap-4 lg:grid-cols-2">
-            <SagesseFoules
-              raceId={`${selectedDate}-R${quinteDuJour.race.reunion}C${quinteDuJour.race.course}`}
-              raceLabel={`${quinteDuJour.race.nomCourse} (R${quinteDuJour.race.reunion}C${quinteDuJour.race.course})`}
-            />
-            <ComparatifIA
-              dateStr={selectedDate}
-              reunion={quinteDuJour.race.reunion}
-              course={quinteDuJour.race.course}
-              nomCourse={quinteDuJour.race.nomCourse}
-            />
-          </section>
-        ) : null}
       </section>
 
     </div>
