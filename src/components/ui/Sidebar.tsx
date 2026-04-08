@@ -170,7 +170,7 @@ export function Sidebar() {
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-[19rem] p-4 lg:flex">
       <div className="relative flex h-full w-full flex-col overflow-hidden rounded-[2rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-bg)_86%,transparent)] shadow-[var(--pmu-shadow)] backdrop-blur-xl">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,color-mix(in_srgb,var(--pmu-primary)_16%,transparent),transparent_34%),radial-gradient(circle_at_bottom_left,color-mix(in_srgb,var(--pmu-orange)_12%,transparent),transparent_24%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,color-mix(in_srgb,var(--pmu-primary)_16%,transparent),transparent_34%),radial-gradient(circle_at_bottom_left,color-mix(in_srgb,var(--pmu-accent-blue)_12%,transparent),transparent_24%)]" />
         <div className="relative flex h-full flex-col px-4 py-5">
           <Link
             href="/"
@@ -182,7 +182,7 @@ export function Sidebar() {
             <div className="min-w-0">
               <p className="app-brand-wordmark truncate text-lg font-black text-[var(--pmu-text)]">PMU Gagnant</p>
               <p className="truncate text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--pmu-text-muted)]">
-                Racing desk
+                Control room
               </p>
             </div>
           </Link>

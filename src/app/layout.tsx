@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Sora } from "next/font/google";
+import { Sora, Space_Grotesk } from "next/font/google";
 import Script from "next/script";
 import { AppShell } from "@/components/ui/AppShell";
 import { GlossaryPanel } from "@/components/ui/Glossary";
@@ -17,7 +17,7 @@ const uiFont = Sora({
   variable: "--font-ui",
 });
 
-const displayFont = Fraunces({
+const displayFont = Space_Grotesk({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-display",
@@ -38,7 +38,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  themeColor: "#07141c",
+  themeColor: "#050b14",
 };
 
 export default function RootLayout({

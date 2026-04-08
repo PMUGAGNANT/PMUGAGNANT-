@@ -65,7 +65,7 @@ export function PronoHero({
           </div>
 
           <div>
-            <p className="app-kicker">Selection maitre</p>
+            <p className="app-kicker">Selection du moment</p>
             <h2 className="mt-3 text-4xl font-black leading-[0.95] text-[var(--pmu-text)] md:text-6xl">
               N°{horseNum}{" "}
               <span style={{ color: scoreLabel.color }}>{horseName}</span>

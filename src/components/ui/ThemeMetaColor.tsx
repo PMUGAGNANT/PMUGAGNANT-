@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 import { useTheme } from "./ThemeProvider";
 
-const THEME_COLOR_DARK = "#07141c";
-const THEME_COLOR_WARM = "#f4ede2";
+const THEME_COLOR_DARK = "#050b14";
+const THEME_COLOR_WARM = "#f6f8fc";
 
 /**
  * Met à jour la balise theme-color du navigateur selon dark / warm
