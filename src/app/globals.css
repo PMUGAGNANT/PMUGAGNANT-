@@ -571,6 +571,15 @@ svg {
   box-shadow: var(--pmu-shadow-sm);
 }
 
+.pmu-scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.pmu-scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
 /* ——— Accessibilité : focus clavier visible ——— */
 :where(
   a,
