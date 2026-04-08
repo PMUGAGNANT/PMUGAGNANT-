@@ -26,8 +26,14 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <div className="app-shell">
       <Sidebar />
-      <div id="main-content" className="app-shell__content relative z-10" tabIndex={-1}>
-        {children}
+      <div className="app-shell__main">
+        <main
+          id="main-content"
+          className="app-shell__content relative z-10"
+          tabIndex={-1}
+        >
+          {children}
+        </main>
       </div>
       <BottomNav />
     </div>

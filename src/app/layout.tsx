@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Sora, Space_Grotesk } from "next/font/google";
+import { Manrope, Outfit } from "next/font/google";
 import Script from "next/script";
 import { AppShell } from "@/components/ui/AppShell";
 import { GlossaryPanel } from "@/components/ui/Glossary";
@@ -11,25 +11,27 @@ import { ThemeMetaColor } from "@/components/ui/ThemeMetaColor";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import "./globals.css";
 
-const uiFont = Sora({
+const uiFont = Manrope({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-ui",
 });
 
-const displayFont = Space_Grotesk({
+const displayFont = Outfit({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-display",
 });
 
 export const metadata: Metadata = {
-  title: "PMU Gagnant - Pronostics PMU assistés par IA",
-  description: "PMU Gagnant aide à repérer les meilleures courses PMU chaque jour avec une lecture claire et disciplinée.",
+  title: "PMU Gagnant | Radar PMU et decisions de course",
+  description:
+    "PMU Gagnant aide a reperer les meilleures courses PMU chaque jour avec une lecture claire, rapide et disciplinee.",
   manifest: "/manifest.json",
   openGraph: {
-    title: "PMU Gagnant - Pronostics PMU assistés par IA",
-    description: "PMU Gagnant aide à repérer les meilleures courses PMU chaque jour avec une lecture claire et disciplinée.",
+    title: "PMU Gagnant | Radar PMU et decisions de course",
+    description:
+      "PMU Gagnant aide a reperer les meilleures courses PMU chaque jour avec une lecture claire, rapide et disciplinee.",
     type: "website",
   },
 };
@@ -38,7 +40,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  themeColor: "#f6f8fc",
+  themeColor: "#f3f6fb",
 };
 
 export default function RootLayout({

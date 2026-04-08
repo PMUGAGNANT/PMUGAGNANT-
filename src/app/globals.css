@@ -651,3 +651,230 @@ svg {
     scroll-behavior: auto !important;
   }
 }
+
+/* V6 shell overrides */
+
+:root {
+  --pmu-bg: #08111b;
+  --pmu-bg-mid: #101a28;
+  --pmu-surface: rgba(15, 25, 40, 0.92);
+  --pmu-surface-2: rgba(19, 32, 49, 0.96);
+  --pmu-surface-highlight: #1c314c;
+  --pmu-border: rgba(157, 175, 200, 0.12);
+  --pmu-border-strong: rgba(178, 198, 224, 0.24);
+  --pmu-primary: #4d9fff;
+  --pmu-primary-bright: #7ed4ff;
+  --pmu-primary-soft: rgba(77, 159, 255, 0.16);
+  --pmu-primary-fade: rgba(77, 159, 255, 0.08);
+  --pmu-accent-blue: #738aff;
+  --pmu-accent-violet: #8a86ff;
+  --pmu-text: #eef4fb;
+  --pmu-text-muted: #93a3bb;
+  --pmu-text-soft: #b3c0d3;
+  --pmu-red: #ff6f78;
+  --pmu-orange: #f5b24b;
+  --pmu-blue: #7baeff;
+  --pmu-shadow: 0 30px 80px rgba(2, 8, 20, 0.42);
+  --pmu-shadow-sm: 0 14px 34px rgba(2, 8, 20, 0.22);
+  --pmu-glow: 0 0 0 1px rgba(77, 159, 255, 0.12), 0 22px 50px rgba(77, 159, 255, 0.12);
+  --pmu-glow-soft: 0 0 0 1px rgba(77, 159, 255, 0.08), 0 10px 24px rgba(77, 159, 255, 0.08);
+  --pmu-on-primary: #03111f;
+}
+
+[data-theme="warm"] {
+  --pmu-bg: #f3f6fb;
+  --pmu-bg-mid: #e8eef6;
+  --pmu-surface: rgba(255, 255, 255, 0.94);
+  --pmu-surface-2: rgba(239, 244, 251, 0.98);
+  --pmu-surface-highlight: #ffffff;
+  --pmu-border: rgba(101, 120, 146, 0.13);
+  --pmu-border-strong: rgba(96, 127, 173, 0.24);
+  --pmu-primary: #0f6fe8;
+  --pmu-primary-bright: #28b8ff;
+  --pmu-primary-soft: rgba(15, 111, 232, 0.1);
+  --pmu-primary-fade: rgba(15, 111, 232, 0.06);
+  --pmu-accent-blue: #527aff;
+  --pmu-accent-violet: #796fff;
+  --pmu-text: #0d1727;
+  --pmu-text-muted: #64748b;
+  --pmu-text-soft: #536275;
+  --pmu-red: #d94f59;
+  --pmu-orange: #cb8d25;
+  --pmu-blue: #3e6fcb;
+  --pmu-shadow: 0 26px 68px rgba(66, 84, 108, 0.12);
+  --pmu-shadow-sm: 0 12px 28px rgba(66, 84, 108, 0.08);
+  --pmu-glow: 0 0 0 1px rgba(15, 111, 232, 0.08), 0 18px 40px rgba(15, 111, 232, 0.08);
+  --pmu-glow-soft: 0 0 0 1px rgba(15, 111, 232, 0.06), 0 8px 22px rgba(15, 111, 232, 0.05);
+  --pmu-on-primary: #f8fbff;
+}
+
+html {
+  color-scheme: dark;
+}
+
+[data-theme="warm"] {
+  color-scheme: light;
+}
+
+body {
+  background-image:
+    radial-gradient(circle at top right, rgba(77, 159, 255, 0.16), transparent 0 24rem),
+    radial-gradient(circle at bottom left, rgba(115, 138, 255, 0.12), transparent 0 22rem),
+    linear-gradient(180deg, #09121d 0%, var(--pmu-bg) 38%, #050b14 100%);
+}
+
+[data-theme="warm"] body {
+  background-image:
+    radial-gradient(circle at top right, rgba(40, 184, 255, 0.11), transparent 0 22rem),
+    radial-gradient(circle at bottom left, rgba(82, 122, 255, 0.09), transparent 0 20rem),
+    linear-gradient(180deg, #fbfcff 0%, var(--pmu-bg) 42%, #e7edf6 100%);
+}
+
+body::before {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 80px 80px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.18) 0%, transparent 72%);
+  opacity: 0.28;
+}
+
+[data-theme="warm"] body::before {
+  background-image:
+    linear-gradient(rgba(90, 110, 140, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(90, 110, 140, 0.035) 1px, transparent 1px);
+  background-size: 72px 72px;
+  opacity: 0.2;
+}
+
+body::after {
+  background:
+    radial-gradient(circle at 50% -10%, rgba(77, 159, 255, 0.08), transparent 0 24rem),
+    radial-gradient(circle at 50% 120%, rgba(115, 138, 255, 0.08), transparent 0 28rem);
+}
+
+[data-theme="warm"] body::after {
+  background:
+    radial-gradient(circle at 50% -10%, rgba(15, 111, 232, 0.08), transparent 0 24rem),
+    radial-gradient(circle at 50% 120%, rgba(82, 122, 255, 0.06), transparent 0 26rem);
+}
+
+h1,
+h2,
+h3,
+.app-section-title,
+.app-display,
+.app-brand-wordmark {
+  letter-spacing: -0.05em;
+}
+
+.app-shell {
+  min-height: 100vh;
+  position: relative;
+}
+
+.app-shell__main {
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+.app-shell__content {
+  width: min(100%, 88rem);
+  margin: 0 auto;
+  padding: 1.2rem 1rem 7rem;
+}
+
+.app-surface,
+.premium-surface,
+.dark-surface {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--pmu-surface-highlight) 56%, var(--pmu-surface)) 0%,
+    var(--pmu-surface) 100%
+  );
+  border: 1px solid var(--pmu-border);
+  box-shadow: var(--pmu-shadow-sm);
+}
+
+.app-card {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--pmu-surface-highlight) 64%, var(--pmu-surface)) 0%,
+    var(--pmu-surface) 100%
+  );
+  border-radius: 1.5rem;
+  box-shadow: var(--pmu-shadow-sm);
+}
+
+.app-card::before {
+  inset: -18% auto auto 10%;
+  width: 12rem;
+  height: 12rem;
+  opacity: 0.28;
+}
+
+.app-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--pmu-glow-soft);
+}
+
+.app-card-muted {
+  background: color-mix(in srgb, var(--pmu-surface-2) 92%, transparent);
+  border-radius: 1.35rem;
+}
+
+.app-pill {
+  background: color-mix(in srgb, var(--pmu-surface) 85%, transparent);
+  border-radius: 999px;
+  padding: 0.65rem 1rem;
+}
+
+.app-pill--active {
+  background: color-mix(in srgb, var(--pmu-primary) 10%, var(--pmu-surface));
+}
+
+.app-button-primary {
+  border-radius: 1rem;
+  padding: 0.88rem 1.15rem;
+  box-shadow: 0 14px 24px color-mix(in srgb, var(--pmu-primary) 20%, transparent);
+}
+
+.app-button-primary:hover {
+  box-shadow: 0 16px 28px color-mix(in srgb, var(--pmu-primary) 22%, transparent);
+}
+
+.app-button-secondary {
+  border-radius: 1rem;
+  padding: 0.88rem 1.15rem;
+  background: color-mix(in srgb, var(--pmu-surface) 88%, transparent);
+}
+
+.app-input {
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--pmu-surface) 92%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 12%, transparent);
+}
+
+.premium-surface,
+.dark-surface {
+  border-radius: 1.75rem;
+}
+
+@media (min-width: 640px) {
+  .app-shell__content {
+    padding: 1.45rem 1.35rem 6.5rem;
+  }
+}
+
+@media (min-width: 1100px) {
+  .app-shell__main {
+    margin-left: 22rem;
+  }
+
+  .app-shell__content {
+    width: min(100%, 96rem);
+    max-width: none;
+    padding: 1.75rem 2rem 4rem;
+  }
+}
