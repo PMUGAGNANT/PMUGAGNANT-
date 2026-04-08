@@ -53,11 +53,11 @@ function getThemeFromStorage(): PmuTheme {
   if (fromDom === "warm" || fromDom === "dark") {
     return fromDom;
   }
-  return "dark";
+  return "warm";
 }
 
 function getServerSnapshot(): PmuTheme {
-  return "dark";
+  return "warm";
 }
 
 type ThemeContextValue = {

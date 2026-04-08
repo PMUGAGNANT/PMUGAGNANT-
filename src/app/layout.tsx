@@ -38,7 +38,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  themeColor: "#050b14",
+  themeColor: "#f6f8fc",
 };
 
 export default function RootLayout({
@@ -47,7 +47,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr">
+    <html lang="fr" data-theme="warm">
       <body
         className={`${uiFont.variable} ${displayFont.variable} min-h-screen text-[var(--pmu-text)] antialiased`}
       >
@@ -56,7 +56,7 @@ export default function RootLayout({
         </a>
         <LiveStatsBanner />
         <Script id="pmu-theme-init" strategy="beforeInteractive">
-          {`(function(){try{var k='pmu-theme';var v=localStorage.getItem(k);if(v==='warm'||v==='dark')document.documentElement.setAttribute('data-theme',v);}catch(e){}})();`}
+          {`(function(){try{var k='pmu-theme-v2';var v=localStorage.getItem(k);document.documentElement.setAttribute('data-theme',v==='dark'?'dark':'warm');}catch(e){document.documentElement.setAttribute('data-theme','warm');}})();`}
         </Script>
         <ThemeProvider>
           <ThemeMetaColor />

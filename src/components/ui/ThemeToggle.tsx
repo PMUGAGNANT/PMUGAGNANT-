@@ -10,7 +10,7 @@ type ThemeToggleProps = {
 export function ThemeToggle({ compact = false, className = "" }: ThemeToggleProps) {
   const { theme, toggleTheme } = useTheme();
   const isWarm = theme === "warm";
-  const label = isWarm ? "Atelier" : "Nocturne";
+  const label = isWarm ? "Clair" : "Nuit";
 
   return (
     <button
@@ -21,8 +21,8 @@ export function ThemeToggle({ compact = false, className = "" }: ThemeToggleProp
       } ${className}`}
       style={{ color: "var(--pmu-text)", boxShadow: "var(--pmu-shadow-sm)" }}
       aria-pressed={isWarm}
-      aria-label={isWarm ? "Passer au mode sombre" : "Passer au mode chaleureux"}
-      title={isWarm ? "Mode sombre" : "Mode chaleureux"}
+      aria-label={isWarm ? "Passer au mode nuit" : "Passer au mode clair"}
+      title={isWarm ? "Mode nuit" : "Mode clair"}
     >
       <span
         className="relative inline-flex h-6 w-11 items-center rounded-full border border-[var(--pmu-border)] bg-[var(--pmu-bg)] px-1"
@@ -30,11 +30,11 @@ export function ThemeToggle({ compact = false, className = "" }: ThemeToggleProp
       >
         <span
           className={`h-4 w-4 rounded-full transition-all duration-300 ${
-            isWarm ? "translate-x-5 bg-[var(--pmu-orange)]" : "translate-x-0 bg-[var(--pmu-primary)]"
+            isWarm ? "translate-x-5 bg-[var(--pmu-primary)]" : "translate-x-0 bg-[var(--pmu-accent-violet)]"
           }`}
         />
       </span>
-      <span className="text-[var(--pmu-text-soft)]">{compact ? label : `Palette ${label}`}</span>
+      <span className="text-[var(--pmu-text-soft)]">{compact ? label : `Theme ${label}`}</span>
     </button>
   );
 }
