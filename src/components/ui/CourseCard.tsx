@@ -1,18 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AccordionPanel } from "@/components/ui/AccordionPanel";
+import { WhyThisHorse } from "@/components/ui/WhyThisHorse";
+import {
+  eloForBeginner,
+  interpretScoreForBeginner,
+  translateFactors,
+} from "@/lib/beginner-labels";
 import type { RaceProfile } from "@/lib/client-race-scoring";
 import type { EloProfile } from "@/lib/elo-scoring";
 import { getEloGlobalBadgeStyle } from "@/lib/elo-scoring";
 import type { IndiceOuverture } from "@/lib/ouverture";
 import { interpretScore } from "@/lib/scoring-policy";
-import {
-  interpretScoreForBeginner,
-  eloForBeginner,
-  translateFactors,
-} from "@/lib/beginner-labels";
-import { AccordionPanel } from "@/components/ui/AccordionPanel";
-import { WhyThisHorse } from "@/components/ui/WhyThisHorse";
 
 export type CourseCardProps = {
   raceTitle: string;
@@ -43,7 +43,7 @@ function ctaLabel(score: number): string {
   if (score >= 9) return "Ouvrir le signal";
   if (score >= 7) return "Voir la selection";
   if (score >= 5) return "Surveiller la course";
-  return "Lire quand meme";
+  return "Lire la course";
 }
 
 export function CourseCard({
@@ -62,61 +62,58 @@ export function CourseCard({
   pickBetType,
   topFacteurs,
 }: CourseCardProps) {
-  const [openPanel, setOpenPanel] = useState<"analysis" | "ticket" | "why" | null>(null);
+  const [openPanel, setOpenPanel] = useState<"analysis" | "ticket" | "why" | null>(
+    null
+  );
   const interpreted = useMemo(() => interpretScore(displayScore), [displayScore]);
-  const beginnerLabel = useMemo(() => interpretScoreForBeginner(displayScore), [displayScore]);
-  const eloLabel = useMemo(() => eloForBeginner(eloProfile.eloGlobal), [eloProfile.eloGlobal]);
-  const eloBadge = useMemo(() => getEloGlobalBadgeStyle(eloProfile.eloGlobal), [eloProfile.eloGlobal]);
+  const beginnerLabel = useMemo(
+    () => interpretScoreForBeginner(displayScore),
+    [displayScore]
+  );
+  const eloLabel = useMemo(
+    () => eloForBeginner(eloProfile.eloGlobal),
+    [eloProfile.eloGlobal]
+  );
+  const eloBadge = useMemo(
+    () => getEloGlobalBadgeStyle(eloProfile.eloGlobal),
+    [eloProfile.eloGlobal]
+  );
   const progressPct = Math.min(100, Math.max(0, (displayScore / 10) * 100));
   const countdownUrgent = minutesUntilStart > 0 && minutesUntilStart < 30;
-
-  const translatedFactors = useMemo(() => translateFactors(topFacteurs ?? []), [topFacteurs]);
+  const translatedFactors = useMemo(
+    () => translateFactors(topFacteurs ?? []),
+    [topFacteurs]
+  );
 
   const lines: Array<{ label: string; value: string }> = [];
   if (profile.favoriFragileNum != null) {
-    lines.push({ label: "Favori fragile", value: `N°${profile.favoriFragileNum}` });
+    lines.push({ label: "Favori fragile", value: `#${profile.favoriFragileNum}` });
   }
   if (profile.valueBetNum != null) {
-    lines.push({ label: "Spot value", value: `N°${profile.valueBetNum}` });
+    lines.push({ label: "Spot value", value: `#${profile.valueBetNum}` });
   }
 
-  const ticketStr = profile.ticketNums.length ? profile.ticketNums.map((n) => `N°${n}`).join(" · ") : "—";
+  const ticketStr = profile.ticketNums.length
+    ? profile.ticketNums.map((n) => `#${n}`).join(" - ")
+    : "A confirmer";
   lines.push({
     label: profile.ticketNums.length > 1 ? "Selection" : "Cheval retenu",
     value: ticketStr,
   });
-  const ticketSummary = lines.find((row) => row.label === "Selection" || row.label === "Cheval retenu")?.value ?? "â€”";
-  const whySummary =
-    pickNum && translatedFactors.length > 0 ? `${translatedFactors.length} signaux` : "En attente";
 
-  const buttonStyle =
-    displayScore >= 9
-      ? {
-          background: "linear-gradient(135deg, var(--pmu-primary), var(--pmu-primary-bright))",
-          color: "var(--pmu-on-primary)",
-        }
-      : displayScore >= 7
-        ? {
-            background:
-              "linear-gradient(135deg, color-mix(in srgb, var(--pmu-primary) 88%, #0f766e), var(--pmu-primary))",
-            color: "var(--pmu-on-primary)",
-          }
-        : displayScore >= 5
-          ? {
-              background:
-                "linear-gradient(135deg, var(--pmu-orange), color-mix(in srgb, var(--pmu-orange) 70%, white))",
-              color: "#1f1610",
-            }
-          : {
-              background: "color-mix(in srgb, var(--pmu-surface-2) 92%, transparent)",
-              color: "var(--pmu-text)",
-            };
+  const ticketSummary =
+    lines.find((row) => row.label === "Selection" || row.label === "Cheval retenu")
+      ?.value ?? "A confirmer";
+  const whySummary =
+    pickNum && translatedFactors.length > 0
+      ? `${translatedFactors.length} signaux`
+      : "Lecture en attente";
 
   return (
-    <article className="app-card flex w-full flex-col gap-4 p-5 text-left hover:border-[var(--pmu-border-strong)]">
+    <article className="app-card flex h-full w-full flex-col gap-5 p-5 text-left">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div
-          className="inline-flex max-w-[72%] items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.18em]"
+          className="inline-flex max-w-[78%] items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em]"
           style={{
             color: beginnerLabel.color,
             backgroundColor: `color-mix(in srgb, ${beginnerLabel.color} 14%, var(--pmu-surface))`,
@@ -128,32 +125,57 @@ export function CourseCard({
         </div>
 
         <div
-          className={`rounded-full border px-3 py-1 font-mono text-xs font-bold tabular-nums ${
+          className={`rounded-full border px-3 py-1.5 font-mono text-xs font-bold tabular-nums ${
             countdownUrgent
               ? "border-[color-mix(in_srgb,var(--pmu-red)_35%,transparent)] text-[var(--pmu-red)]"
               : "border-[var(--pmu-border)] text-[var(--pmu-text-muted)]"
           }`}
         >
           <span className="text-[var(--pmu-text)]">{timeLabel}</span>
-          <span className="mx-1 opacity-60">•</span>
+          <span className="mx-1 opacity-60">-</span>
           <span>{formatCountdown(minutesUntilStart)}</span>
         </div>
       </div>
 
       <div>
-        <h3 className="text-xl font-black leading-tight text-[var(--pmu-text)] md:text-[1.65rem]">{raceTitle}</h3>
-        <p className="mt-2 text-sm font-medium leading-6 text-[var(--pmu-text-soft)]">{subtitleLine}</p>
+        <h3 className="text-[1.45rem] font-black leading-[1.02] text-[var(--pmu-text)] md:text-[1.8rem]">
+          {raceTitle}
+        </h3>
+        <p className="mt-2 text-sm font-medium leading-6 text-[var(--pmu-text-soft)]">
+          {subtitleLine}
+        </p>
       </div>
 
-      <div className="space-y-2.5">
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="app-card-muted px-4 py-4">
+          <p className="app-label">Score</p>
+          <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+            {displayScore.toFixed(1)}/10
+          </p>
+        </div>
+        <div className="app-card-muted px-4 py-4">
+          <p className="app-label">Ticket</p>
+          <p className="mt-2 text-sm font-black text-[var(--pmu-text)]">
+            {ticketSummary}
+          </p>
+        </div>
+        <div className="app-card-muted px-4 py-4">
+          <p className="app-label">Lecture</p>
+          <p className="mt-2 text-sm font-black" style={{ color: eloBadge.color }}>
+            {eloLabel.label}
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-3">
         <AccordionPanel
           kicker="Bloc analyse"
-          title="Fiabilite de l'analyse"
+          title="Fiabilite du signal"
           summary={eloLabel.label}
           open={openPanel === "analysis"}
           onToggle={(next) => setOpenPanel(next ? "analysis" : null)}
         >
-          <div className="rounded-[1.1rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_86%,transparent)] px-3 py-3">
+          <div className="rounded-[1.1rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_86%,transparent)] px-4 py-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--pmu-text-muted)]">
                 Lecture du moteur
@@ -162,19 +184,30 @@ export function CourseCard({
                 className="rounded-full px-2.5 py-1 text-[11px] font-black"
                 style={{
                   color: eloBadge.color,
-                  background: "color-mix(in srgb, var(--pmu-surface-highlight) 55%, transparent)",
+                  background:
+                    "color-mix(in srgb, var(--pmu-surface-highlight) 55%, transparent)",
                 }}
               >
                 {eloLabel.label}
               </span>
             </div>
-            <p className="mt-2 text-[11px] leading-5 text-[var(--pmu-text-soft)]">{eloLabel.tooltip}</p>
+            <p className="mt-3 text-sm leading-6 text-[var(--pmu-text-soft)]">
+              {eloLabel.tooltip}
+            </p>
+            {indiceOuverture ? (
+              <p className="mt-3 text-xs font-semibold leading-6 text-[var(--pmu-text-muted)]">
+                <span style={{ color: indiceOuverture.color }}>
+                  {indiceOuverture.emoji}
+                </span>{" "}
+                Lisibilite {indiceOuverture.label} ({indiceOuverture.score}/10)
+              </p>
+            ) : null}
           </div>
         </AccordionPanel>
 
         <AccordionPanel
           kicker="Bloc ticket"
-          title="Cheval retenu et reperes"
+          title="Selection et reperes"
           summary={ticketSummary}
           open={openPanel === "ticket"}
           onToggle={(next) => setOpenPanel(next ? "ticket" : null)}
@@ -183,10 +216,14 @@ export function CourseCard({
             {lines.map((row) => (
               <li
                 key={row.label}
-                className="flex justify-between gap-3 rounded-[1rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] px-3 py-2"
+                className="flex justify-between gap-3 rounded-[1rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] px-4 py-3"
               >
-                <span className="font-semibold text-[var(--pmu-text-muted)]">{row.label}</span>
-                <span className="font-black text-[var(--pmu-text)]">{row.value}</span>
+                <span className="font-semibold text-[var(--pmu-text-muted)]">
+                  {row.label}
+                </span>
+                <span className="font-black text-[var(--pmu-text)]">
+                  {row.value}
+                </span>
               </li>
             ))}
           </ul>
@@ -194,7 +231,7 @@ export function CourseCard({
 
         <AccordionPanel
           kicker="Bloc lecture"
-          title={pickNum ? `Pourquoi NÂ°${pickNum} ?` : "Pourquoi ce cheval ?"}
+          title={pickNum ? `Pourquoi #${pickNum} ?` : "Pourquoi ce cheval ?"}
           summary={whySummary}
           open={openPanel === "why"}
           onToggle={(next) => setOpenPanel(next ? "why" : null)}
@@ -210,7 +247,8 @@ export function CourseCard({
             />
           ) : (
             <p className="text-sm leading-6 text-[var(--pmu-text-soft)]">
-              Les facteurs detailles arrivent avec un ticket plus ferme ou au prochain signal actif.
+              Les facteurs detailles arrivent avec un ticket plus ferme ou au
+              prochain signal actif.
             </p>
           )}
         </AccordionPanel>
@@ -229,31 +267,18 @@ export function CourseCard({
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-sm font-black tabular-nums text-[var(--pmu-text)]">
-            {Math.round(displayScore * 10) / 10}/10
+            {displayScore.toFixed(1)}/10
           </span>
           <span className="text-sm font-black" style={{ color: interpreted.color }}>
             {beginnerLabel.label} {beginnerLabel.emoji}
           </span>
         </div>
-
-        {indiceOuverture ? (
-          <p className="text-[10px] font-medium leading-snug text-[var(--pmu-text-soft)]">
-            <span style={{ color: indiceOuverture.color }}>{indiceOuverture.emoji}</span>{" "}
-            <span className="uppercase tracking-[0.08em] text-[var(--pmu-text-muted)]">Lisibilite</span> ·{" "}
-            {indiceOuverture.label} ({indiceOuverture.score}/10)
-          </p>
-        ) : null}
       </div>
 
       <button
         type="button"
         onClick={onClick}
-        className="w-full shrink-0 rounded-full border px-4 py-3 text-center text-sm font-bold transition hover:-translate-y-px"
-        style={{
-          ...buttonStyle,
-          borderColor: "color-mix(in srgb, var(--pmu-border-strong) 55%, transparent)",
-          boxShadow: "var(--pmu-shadow-sm)",
-        }}
+        className="app-button-primary mt-auto w-full"
       >
         {ctaLabel(displayScore)}
       </button>

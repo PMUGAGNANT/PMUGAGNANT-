@@ -16,13 +16,6 @@ import { RadarHero } from "@/components/ui/RadarHero";
 import { RecentResults } from "@/components/ui/RecentResults";
 import { SagesseFoules } from "@/components/ui/SagesseFoules";
 import { TopParisStrip, type TopParisItem } from "@/components/ui/TopParisStrip";
-import {
-  formatDateToPmu,
-  getMinutesUntilStart,
-  getTodayDateStr,
-  parsePmuDate,
-  toIsoDate,
-} from "@/lib/date-utils";
 import { asArray } from "@/lib/array-utils";
 import { translateFactors } from "@/lib/beginner-labels";
 import {
@@ -32,6 +25,13 @@ import {
   SEUIL_JOUABLE,
   type ApiRaceScoreLite,
 } from "@/lib/client-race-scoring";
+import {
+  formatDateToPmu,
+  getMinutesUntilStart,
+  getTodayDateStr,
+  parsePmuDate,
+  toIsoDate,
+} from "@/lib/date-utils";
 import { estimateEloProfileForProgrammeCard } from "@/lib/elo-scoring";
 import { estimateIndiceOuvertureListe } from "@/lib/ouverture";
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
@@ -39,7 +39,12 @@ import type { Lisibilite, PredictionDecision, RaceSummary } from "@/lib/types";
 
 type ScoreStage = "preview_2h" | "preview_1h" | "final_30m" | "finished";
 type SortMode = "hour" | "score" | "urgent" | "allocation";
-type HomeSecondaryPanel = "performance" | "results" | "demo" | "method" | "quinte";
+type HomeSecondaryPanel =
+  | "performance"
+  | "results"
+  | "demo"
+  | "method"
+  | "quinte";
 
 type RaceScore = {
   dateStr: string;
@@ -77,14 +82,49 @@ type RacesResponse = {
 
 type ScoresResponse = {
   success: boolean;
-  scores?: RaceScore[] | Record<string, Omit<RaceScore, "dateStr" | "reunion" | "course">> | null;
+  scores?:
+    | RaceScore[]
+    | Record<string, Omit<RaceScore, "dateStr" | "reunion" | "course">>
+    | null;
 };
+
+type FeaturedRace = {
+  race: RaceSummary;
+  score?: RaceScore;
+  scoreValue: number;
+  minutesUntilStart: number;
+  confidence: number;
+  status: "jouable" | "surveillance" | "passer" | "resultat";
+  hint: string;
+};
+
+type PriorityCard = {
+  key: string;
+  title: string;
+  subtitle: string;
+  value: string;
+  description: string;
+  tone: "primary" | "warning" | "neutral";
+  race?: FeaturedRace | null;
+};
+
+const SORT_OPTIONS: Array<{ value: SortMode; label: string }> = [
+  { value: "hour", label: "Par heure" },
+  { value: "score", label: "Meilleure note" },
+  { value: "urgent", label: "A suivre vite" },
+  { value: "allocation", label: "Gros enjeux" },
+];
 
 function normalizeScoresPayload(
   raw: ScoresResponse["scores"],
   dateStr: string
 ): RaceScore[] {
-  if (raw == null || typeof raw === "string" || typeof raw === "number" || typeof raw === "boolean") {
+  if (
+    raw == null ||
+    typeof raw === "string" ||
+    typeof raw === "number" ||
+    typeof raw === "boolean"
+  ) {
     return [];
   }
 
@@ -97,60 +137,39 @@ function normalizeScoresPayload(
     );
   }
 
-  if (typeof raw === "object") {
-    return Object.entries(raw).flatMap(([key, entry]) => {
-      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
-        return [];
-      }
-      const [reunionStr, courseStr] = key.split("-");
-      const reunion = Number(reunionStr);
-      const course = Number(courseStr);
-      if (!Number.isFinite(reunion) || !Number.isFinite(course)) {
-        return [];
-      }
-      return [
-        {
-          dateStr,
-          reunion,
-          course,
-          ...entry,
-        } satisfies RaceScore,
-      ];
-    });
-  }
+  return Object.entries(raw).flatMap(([key, entry]) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      return [];
+    }
 
-  return [];
+    const [reunionStr, courseStr] = key.split("-");
+    const reunion = Number(reunionStr);
+    const course = Number(courseStr);
+
+    if (!Number.isFinite(reunion) || !Number.isFinite(course)) {
+      return [];
+    }
+
+    return [
+      {
+        dateStr,
+        reunion,
+        course,
+        ...entry,
+      } satisfies RaceScore,
+    ];
+  });
 }
 
 function coerceRaceSummaries(raw: unknown): RaceSummary[] {
   return Array.isArray(raw)
-    ? raw.filter((race): race is RaceSummary =>
-        race != null && String((race as RaceSummary).pays ?? "").toUpperCase() === "FRA"
+    ? raw.filter(
+        (race): race is RaceSummary =>
+          race != null &&
+          String((race as RaceSummary).pays ?? "").toUpperCase() === "FRA"
       )
     : [];
 }
-
-type FeaturedRace = {
-  race: RaceSummary;
-  score?: RaceScore;
-  scoreValue: number;
-  minutesUntilStart: number;
-  noteLabel: string;
-  confidence: number;
-  status: "jouable" | "surveillance" | "passer" | "resultat";
-  /** Texte carte programme */
-  reason: string;
-  /** Phrase radar (confiance / contexte) */
-  radarSentence: string;
-  radarRatio: number;
-};
-
-const SORT_OPTIONS: Array<{ value: SortMode; label: string }> = [
-  { value: "hour", label: "Par heure" },
-  { value: "score", label: "Meilleure note" },
-  { value: "urgent", label: "À suivre vite" },
-  { value: "allocation", label: "Gros enjeux" },
-];
 
 function normalizeDateParam(value: string | null) {
   return value && /^\d{8}$/.test(value) ? value : getTodayDateStr();
@@ -173,25 +192,15 @@ function formatDisplayDate(dateStr: string) {
 function formatRelativeDay(dateStr: string) {
   const today = getTodayDateStr();
 
-  if (dateStr === today) {
-    return "Aujourd’hui";
-  }
-
-  if (dateStr === addDays(today, 1)) {
-    return "Demain";
-  }
-
-  if (dateStr === addDays(today, -1)) {
-    return "Hier";
-  }
+  if (dateStr === today) return "Aujourd'hui";
+  if (dateStr === addDays(today, 1)) return "Demain";
+  if (dateStr === addDays(today, -1)) return "Hier";
 
   return formatDisplayDate(dateStr);
 }
 
 function formatStake(value?: number | null) {
-  if (!value) {
-    return "8 €";
-  }
+  if (!value) return "8 EUR";
 
   return new Intl.NumberFormat("fr-FR", {
     style: "currency",
@@ -201,48 +210,45 @@ function formatStake(value?: number | null) {
 }
 
 function formatDiscipline(race: RaceSummary) {
-  if (race.estTrot) {
-    return "Attelé";
-  }
-
-  if (race.estPlat) {
-    return "Plat";
-  }
-
+  if (race.estTrot) return "Attele";
+  if (race.estPlat) return "Plat";
   return race.discipline || "Discipline";
 }
 
 function formatRaceMeta(race: RaceSummary) {
   return [race.heureDepart, `${race.nombrePartants} partants`, `${race.distance} m`]
     .filter(Boolean)
-    .join(" • ");
+    .join(" - ");
 }
 
 function formatCourseMeta(race: RaceSummary) {
   return [formatDiscipline(race), `${race.nombrePartants} partants`, `${race.distance} m`]
     .filter(Boolean)
-    .join(" • ");
+    .join(" - ");
 }
 
 function getStageLabel(stage?: ScoreStage) {
   switch (stage) {
     case "preview_2h":
-      return "Fenêtre 2 h";
+      return "Fenetre 2 h";
     case "preview_1h":
-      return "Signal dans 1h";
+      return "Signal dans 1 h";
     case "final_30m":
-      return "🔴 Signal actif";
+      return "Signal actif";
     case "finished":
-      return "🏁 Résultat";
+      return "Resultat";
     default:
       return "Analyse";
   }
 }
 
-function toApiRaceScoreLite(score: RaceScore | undefined): ApiRaceScoreLite | undefined {
+function toApiRaceScoreLite(
+  score: RaceScore | undefined
+): ApiRaceScoreLite | undefined {
   if (!score) {
     return undefined;
   }
+
   return {
     score: score.score,
     scoreDetailsLocked: score.scoreLocked === true,
@@ -256,7 +262,7 @@ function toApiRaceScoreLite(score: RaceScore | undefined): ApiRaceScoreLite | un
 
 function getPickLabel(score?: RaceScore) {
   if (!score?.pick?.numPmu && !score?.pick?.nom) {
-    return "Ticket principal en préparation";
+    return "Ticket principal en preparation";
   }
 
   const num = score?.pick?.numPmu ? `${score.pick.numPmu}` : "";
@@ -270,43 +276,49 @@ function getBetTypeLabel(score?: RaceScore) {
 
 function getRaceHint(race: RaceSummary, score?: RaceScore) {
   if (score?.stage === "finished") {
-    return "La course est bouclée. Ouvre le détail pour revoir le ticket et le résultat final.";
+    return "La course est terminee. Ouvre le detail pour revoir le ticket et le resultat final.";
   }
 
   if (score?.playable && score.decision === "VALIDE") {
-    return "Signal validé. La lecture est assez propre pour être exécutée avec discipline.";
+    return "Signal valide. La course reste executable avec une lecture propre.";
   }
 
   if (score?.decision === "SURVEILLANCE") {
-    return "Lecture prudente. Le profil reste jouable mais demande plus de sélectivité.";
+    return "Lecture prudente. Le spot est encore jouable mais demande plus de selectivite.";
   }
 
   if (race.estQuinte) {
-    return "Profil Quinté. Regarde surtout la lisibilité et la cohérence du ticket principal.";
+    return "Profil Quinte. Regarde surtout la lisibilite et la coherence du ticket principal.";
   }
 
-  return "Base lisible. On garde la course au radar en attendant un ticket plus ferme.";
+  return "Base lisible. On garde cette course visible en attendant un ticket plus ferme.";
 }
 
-function buildFeaturedRaces(races: unknown, scoresMap: Map<string, RaceScore>) {
-  const list = Array.isArray(races) ? races : [];
-  return list.map((race) => {
+function buildFeaturedRaces(
+  races: RaceSummary[],
+  scoresMap: Map<string, RaceScore>
+) {
+  return races.map((race) => {
     const key = `${race.reunion}-${race.course}`;
     const score = scoresMap.get(key);
-    const minutesUntilStart = Math.max(0, Math.round(getMinutesUntilStart(race.heureDepart, race.dateStr)));
-    const client = computeClientRaceScore(race, toApiRaceScoreLite(score), minutesUntilStart);
+    const minutesUntilStart = Math.max(
+      0,
+      Math.round(getMinutesUntilStart(race.heureDepart, race.dateStr))
+    );
+    const client = computeClientRaceScore(
+      race,
+      toApiRaceScoreLite(score),
+      minutesUntilStart
+    );
 
     return {
       race,
       score,
       scoreValue: client.displayScore,
       minutesUntilStart,
-      noteLabel: getStageLabel(score?.stage),
       confidence: client.displayScore,
       status: client.playTier,
-      reason: getRaceHint(race, score),
-      radarSentence: client.radarSentence,
-      radarRatio: client.radarRatio,
+      hint: getRaceHint(race, score),
     } satisfies FeaturedRace;
   });
 }
@@ -328,16 +340,26 @@ function sortFeaturedRaces(items: FeaturedRace[], sortMode: SortMode) {
 }
 
 function getRadarRace(items: FeaturedRace[]) {
-  const list = asArray<FeaturedRace>(items).filter((item) => item.status !== "resultat");
+  const list = asArray<FeaturedRace>(items).filter(
+    (item) => item.status !== "resultat"
+  );
+
   if (list.length === 0) {
     return asArray<FeaturedRace>(items)[0] ?? null;
   }
+
   const jouables = list.filter((item) => item.status === "jouable");
   const pool = jouables.length > 0 ? jouables : list;
-  return pool.reduce((best, cur) => (cur.radarRatio > best.radarRatio ? cur : best), pool[0]!);
+  return pool.reduce(
+    (best, cur) => (cur.scoreValue > best.scoreValue ? cur : best),
+    pool[0]!
+  );
 }
 
-function getTopParisItems(items: FeaturedRace[], navigate: (race: RaceSummary) => void): TopParisItem[] {
+function getTopParisItems(
+  items: FeaturedRace[],
+  navigate: (race: RaceSummary) => void
+): TopParisItem[] {
   return asArray<FeaturedRace>(items)
     .filter((item) => item.status === "jouable" && item.confidence >= SEUIL_JOUABLE)
     .sort((a, b) => b.confidence - a.confidence)
@@ -345,14 +367,75 @@ function getTopParisItems(items: FeaturedRace[], navigate: (race: RaceSummary) =
     .map((item, index) => ({
       rank: index + 1,
       title: item.race.nomCourse,
-      subtitle: `${item.race.hippodrome} • ${item.race.heureDepart}`,
+      subtitle: `${item.race.hippodrome} - ${item.race.heureDepart}`,
       horse: getPickLabel(item.score),
-      stake: formatStake(item.score?.pick?.confidence ? Math.max(6, Math.round(item.score.pick.confidence * 2.5)) : 8),
+      stake: formatStake(
+        item.score?.pick?.confidence
+          ? Math.max(6, Math.round(item.score.pick.confidence * 2.5))
+          : 8
+      ),
       betType: getBetTypeLabel(item.score),
       confidence: item.confidence,
       sourceLabel: "Jouable",
       onClick: () => navigate(item.race),
     }));
+}
+
+function getPriorityCards(items: FeaturedRace[]): PriorityCard[] {
+  const list = asArray<FeaturedRace>(items);
+  const playable = list.find((item) => item.status === "jouable") ?? null;
+  const surveillance = list.find((item) => item.status === "surveillance") ?? null;
+  const closingSoon =
+    [...list]
+      .filter((item) => item.status !== "resultat")
+      .sort((a, b) => a.minutesUntilStart - b.minutesUntilStart)
+      .find((item) => item.minutesUntilStart <= 45) ??
+    list.find((item) => item.status !== "resultat") ??
+    null;
+
+  return [
+    {
+      key: "playable",
+      title: "Priorite 1",
+      subtitle: playable ? getStageLabel(playable.score?.stage) : "Aucune validation",
+      value: playable ? getPickLabel(playable.score) : "A suivre",
+      description: playable
+        ? playable.hint
+        : "Le moteur ne pousse pas encore de ticket vraiment propre pour cette journee.",
+      tone: "primary",
+      race: playable,
+    },
+    {
+      key: "watch",
+      title: "Sous surveillance",
+      subtitle: surveillance
+        ? `${surveillance.scoreValue.toFixed(1)}/10`
+        : "Pas de spot prudent",
+      value: surveillance
+        ? `R${surveillance.race.reunion}C${surveillance.race.course}`
+        : "Rien a surveiller",
+      description: surveillance
+        ? surveillance.hint
+        : "Le board reste calme : pas de profil intermediaire a garder ouvert pour le moment.",
+      tone: "warning",
+      race: surveillance,
+    },
+    {
+      key: "timing",
+      title: "Fenetre courte",
+      subtitle: closingSoon
+        ? `${closingSoon.minutesUntilStart} min`
+        : "Aucun depart proche",
+      value: closingSoon
+        ? `R${closingSoon.race.reunion}C${closingSoon.race.course}`
+        : "Programme calme",
+      description: closingSoon
+        ? `Le timing peut devenir prioritaire sur ${closingSoon.race.hippodrome}.`
+        : "Aucune course ne demande d'ouverture immediate sur les prochaines minutes.",
+      tone: "neutral",
+      race: closingSoon,
+    },
+  ];
 }
 
 function PageContent() {
@@ -362,18 +445,23 @@ function PageContent() {
 
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [sortMode, setSortMode] = useState<SortMode>("hour");
-  const [secondaryPanel, setSecondaryPanel] = useState<HomeSecondaryPanel | null>("performance");
+  const [secondaryPanel, setSecondaryPanel] =
+    useState<HomeSecondaryPanel | null>("performance");
   const [races, setRaces] = useState<RaceSummary[]>([]);
   const [scores, setScores] = useState<RaceScore[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  /** NIVEAU 5 — incrément pour forcer un re-fetch sans changer la date (retry UX) */
   const [fetchRevision, setFetchRevision] = useState(0);
 
   useEffect(() => {
     try {
       const storedSort = window.localStorage.getItem("pmu-sort-mode");
-      if (storedSort === "hour" || storedSort === "score" || storedSort === "urgent" || storedSort === "allocation") {
+      if (
+        storedSort === "hour" ||
+        storedSort === "score" ||
+        storedSort === "urgent" ||
+        storedSort === "allocation"
+      ) {
         setSortMode(storedSort);
       }
     } catch (effectError) {
@@ -404,7 +492,8 @@ function PageContent() {
         return;
       }
 
-      const nextPath = selectedDate === getTodayDateStr() ? "/" : `/?date=${selectedDate}`;
+      const nextPath =
+        selectedDate === getTodayDateStr() ? "/" : `/?date=${selectedDate}`;
       router.replace(nextPath, { scroll: false });
     } catch (effectError) {
       console.error(effectError);
@@ -427,7 +516,9 @@ function PageContent() {
             const {
               data: { session },
             } = await supabase.auth.getSession();
-            authorization = session?.access_token ? `Bearer ${session.access_token}` : "";
+            authorization = session?.access_token
+              ? `Bearer ${session.access_token}`
+              : "";
           } catch (sessionError) {
             console.error(sessionError);
             authorization = "";
@@ -441,7 +532,9 @@ function PageContent() {
           fetch(scoresUrl, {
             cache: "no-store",
             signal: ac.signal,
-            headers: authorization ? { Authorization: authorization } : undefined,
+            headers: authorization
+              ? { Authorization: authorization }
+              : undefined,
           }),
         ]);
 
@@ -451,7 +544,7 @@ function PageContent() {
 
         const racesJson = (await racesResponse.json()) as RacesResponse;
         if (!racesJson.success) {
-          throw new Error("Le service courses a renvoyé une réponse invalide.");
+          throw new Error("Le service courses a renvoye une reponse invalide.");
         }
 
         let scoresJson: ScoresResponse = { success: true, scores: [] };
@@ -462,7 +555,9 @@ function PageContent() {
         if (!cancelled) {
           setRaces(coerceRaceSummaries(racesJson.races));
           setScores(
-            scoresJson.success ? normalizeScoresPayload(scoresJson.scores, selectedDate) : []
+            scoresJson.success
+              ? normalizeScoresPayload(scoresJson.scores, selectedDate)
+              : []
           );
         }
       } catch (loadError) {
@@ -472,11 +567,14 @@ function PageContent() {
         if (loadError instanceof Error && loadError.name === "AbortError") {
           return;
         }
-        if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : "Impossible de charger la page Courses.");
-          setRaces([]);
-          setScores([]);
-        }
+
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Impossible de charger la page Courses."
+        );
+        setRaces([]);
+        setScores([]);
       } finally {
         if (!cancelled) {
           setIsLoading(false);
@@ -493,15 +591,19 @@ function PageContent() {
   }, [selectedDate, fetchRevision]);
 
   const featuredRaces = useMemo(() => {
-    const safeScores = normalizeScoresPayload(
-      scores as unknown as ScoresResponse["scores"],
-      selectedDate
+    const map = new Map(
+      normalizeScoresPayload(scores, selectedDate).map((score) => [
+        `${score.reunion}-${score.course}`,
+        score,
+      ])
     );
-    const map = new Map(safeScores.map((score) => [`${score.reunion}-${score.course}`, score]));
-    const safeRaces = coerceRaceSummaries(races);
-    const rows = sortFeaturedRaces(buildFeaturedRaces(safeRaces, map), sortMode);
+    const rows = sortFeaturedRaces(
+      buildFeaturedRaces(coerceRaceSummaries(races), map),
+      sortMode
+    );
+
     return asArray<FeaturedRace>(rows);
-  }, [races, scores, sortMode, selectedDate]);
+  }, [races, scores, selectedDate, sortMode]);
 
   const navigateToRace = useCallback(
     (race: RaceSummary) => {
@@ -511,6 +613,7 @@ function PageContent() {
   );
 
   const radarRace = useMemo(() => getRadarRace(featuredRaces), [featuredRaces]);
+
   const radarProfile = useMemo(
     () =>
       radarRace
@@ -528,34 +631,47 @@ function PageContent() {
         : null,
     [radarRace]
   );
-  const topParisItems = useMemo(() => getTopParisItems(featuredRaces, navigateToRace), [featuredRaces, navigateToRace]);
 
-  const quinteDuJour = useMemo(() => {
-    const list = asArray<FeaturedRace>(featuredRaces);
-    return list.find((f) => f.race.estQuinte) ?? null;
-  }, [featuredRaces]);
+  const topParisItems = useMemo(
+    () => getTopParisItems(featuredRaces, navigateToRace),
+    [featuredRaces, navigateToRace]
+  );
+
+  const quinteDuJour = useMemo(
+    () => featuredRaces.find((item) => item.race.estQuinte) ?? null,
+    [featuredRaces]
+  );
 
   const summaryStats = useMemo(() => {
-    const raceList = coerceRaceSummaries(races);
-    const meetings = new Set(raceList.map((race) => race.reunion)).size;
-    const fr = asArray<FeaturedRace>(featuredRaces);
-    const playable = fr.filter((item) => item.status === "jouable").length;
-    const hot = fr.filter((item) => item.confidence >= SEUIL_JOUABLE).length;
-    const closingSoon = fr.filter((item) => item.status !== "resultat" && item.minutesUntilStart <= 60).length;
+    const meetings = new Set(races.map((race) => race.reunion)).size;
+    const playable = featuredRaces.filter(
+      (item) => item.status === "jouable"
+    ).length;
+    const hot = featuredRaces.filter(
+      (item) => item.confidence >= SEUIL_JOUABLE
+    ).length;
+    const closingSoon = featuredRaces.filter(
+      (item) => item.status !== "resultat" && item.minutesUntilStart <= 60
+    ).length;
 
     return { meetings, playable, hot, closingSoon };
   }, [featuredRaces, races]);
 
+  const priorityCards = useMemo(
+    () => getPriorityCards(featuredRaces),
+    [featuredRaces]
+  );
+
   const secondaryPanels = useMemo(() => {
     const base: Array<{ key: HomeSecondaryPanel; label: string }> = [
       { key: "performance", label: "Performance" },
-      { key: "results", label: "Résultats" },
-      { key: "demo", label: "Démo vidéo" },
-      { key: "method", label: "Méthode" },
+      { key: "results", label: "Resultats" },
+      { key: "demo", label: "Demo produit" },
+      { key: "method", label: "Methode" },
     ];
 
     if (quinteDuJour) {
-      base.push({ key: "quinte", label: "Quinté" });
+      base.push({ key: "quinte", label: "Quinte du jour" });
     }
 
     return base;
@@ -568,31 +684,46 @@ function PageContent() {
   }, [quinteDuJour, secondaryPanel]);
 
   return (
-    <div className="mx-auto flex w-full max-w-[92rem] flex-col gap-8">
+    <div className="mx-auto flex w-full max-w-[96rem] flex-col gap-6 lg:gap-8">
       <section className="app-page-hero p-6 md:p-8">
         <div className="relative z-[1] grid gap-6 xl:grid-cols-[1.15fr,0.85fr] xl:items-end">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <p className="app-kicker">Salle de decision</p>
-              <h1 className="max-w-4xl text-4xl font-black leading-[0.95] text-[var(--pmu-text)] md:text-6xl">
-                Cheval du jour, top jouables et programme trié au même endroit.
+          <div className="space-y-5">
+            <div className="space-y-3">
+              <p className="app-kicker">Board du jour</p>
+              <h1 className="max-w-4xl text-4xl font-black leading-[0.92] text-[var(--pmu-text)] md:text-6xl">
+                Une home qui pousse les bonnes courses en premier.
               </h1>
-              <p className="max-w-3xl text-sm leading-6 text-[var(--pmu-text-soft)] md:text-base">
-                L’accueil sert d’écran de décision. Le reste vit plus bas dans un panneau secondaire, mieux rangé.
+              <p className="max-w-3xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
+                La page d&apos;accueil devient un vrai poste de pilotage : on
+                trie, on ouvre, on surveille et on garde la meilleure decision
+                visible sans fouiller partout.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <button type="button" onClick={() => router.push("/resultats")} className="app-button-secondary">
-                Voir les résultats
+              <button
+                type="button"
+                onClick={() => router.push("/premium")}
+                className="app-button-primary"
+              >
+                Voir l&apos;offre premium
               </button>
-              <button type="button" onClick={() => router.push("/premium")} className="app-button-primary">
-                Voir l’offre premium
+              <button
+                type="button"
+                onClick={() => router.push("/resultats")}
+                className="app-button-secondary"
+              >
+                Ouvrir les resultats
               </button>
             </div>
 
             <div className="flex flex-wrap gap-2 text-xs font-semibold text-[var(--pmu-text-soft)]">
-              {["Cheval du jour", "Top 3 jouables", "Accès direct R/C", "Programme trié"].map((label) => (
+              {[
+                `Date ${formatRelativeDay(selectedDate)}`,
+                `${races.length} courses`,
+                `${summaryStats.playable} jouables`,
+                `Tri ${SORT_OPTIONS.find((option) => option.value === sortMode)?.label ?? "Par heure"}`,
+              ].map((label) => (
                 <span key={label} className="app-pill text-xs">
                   {label}
                 </span>
@@ -603,153 +734,268 @@ function PageContent() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="app-stat-card px-5 py-4">
               <p className="app-label">Date active</p>
-              <p className="mt-2 text-xl font-black capitalize text-[var(--pmu-text)]">{formatRelativeDay(selectedDate)}</p>
+              <p className="mt-2 text-xl font-black capitalize text-[var(--pmu-text)]">
+                {formatRelativeDay(selectedDate)}
+              </p>
             </div>
             <div className="app-stat-card px-5 py-4">
-              <p className="app-label">Programme</p>
-              <p className="mt-2 text-3xl font-black text-[var(--pmu-text)]">{races.length}</p>
+              <p className="app-label">Reunions</p>
+              <p className="mt-2 text-3xl font-black text-[var(--pmu-text)]">
+                {summaryStats.meetings}
+              </p>
             </div>
             <div className="app-stat-card px-5 py-4">
               <p className="app-label">Jouables</p>
-              <p className="mt-2 text-3xl font-black text-[var(--pmu-primary)]">{summaryStats.playable}</p>
+              <p className="mt-2 text-3xl font-black text-[var(--pmu-primary)]">
+                {summaryStats.playable}
+              </p>
             </div>
             <div className="app-stat-card px-5 py-4">
-              <p className="app-label">Signal chaud</p>
-              <p className="mt-2 text-3xl font-black text-[var(--pmu-text)]">{summaryStats.closingSoon}</p>
+              <p className="app-label">Departs proches</p>
+              <p className="mt-2 text-3xl font-black text-[var(--pmu-text)]">
+                {summaryStats.closingSoon}
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {radarRace && radarRace.score?.pick?.numPmu && radarRace.score?.pick?.nom ? (
-        <>
-          <PronoHero
-            horseName={radarRace.score.pick.nom}
-            horseNum={radarRace.score.pick.numPmu}
-            confidence={radarRace.confidence}
-            hippodrome={radarRace.race.hippodrome}
-            heureDepart={radarRace.race.heureDepart}
-            courseName={radarRace.race.nomCourse}
-            reunion={radarRace.race.reunion}
-            course={radarRace.race.course}
-            betType={radarRace.score.pick.betType}
-            cote={null}
-            topFacteurs={translateFactors(radarRace.score.pick.topFacteurs ?? [])}
-            lisibilite={radarRace.score?.lisibilite}
-            onClick={() => navigateToRace(radarRace.race)}
-          />
-          {radarRace.score?.pepiteDuJour?.numPmu && radarRace.score?.pepiteDuJour?.nom ? (
-            <PepiteCard
-              horseName={radarRace.score.pepiteDuJour.nom}
-              horseNum={radarRace.score.pepiteDuJour.numPmu}
-              confidence={radarRace.score.pepiteDuJour.confidence ?? 0}
-              cote={radarRace.score.pepiteDuJour.cote ?? null}
-              hippodrome={radarRace.race.hippodrome}
-              heureDepart={radarRace.race.heureDepart}
-              reunion={radarRace.race.reunion}
-              course={radarRace.race.course}
-              topFacteurs={translateFactors(radarRace.score.pepiteDuJour.topFacteurs ?? [])}
-              onClick={() => navigateToRace(radarRace.race)}
-            />
-          ) : null}
-        </>
-      ) : radarRace && radarProfile ? (
-        <RadarHero
-          raceTitle={`R${radarRace.race.reunion}C${radarRace.race.course} - ${radarRace.race.nomCourse}`}
-          hippodrome={radarRace.race.hippodrome}
-          raceMeta={formatRaceMeta(radarRace.race)}
-          displayScore={radarRace.scoreValue}
-          profile={radarProfile}
-          heureDepart={radarRace.race.heureDepart}
-          dateStr={radarRace.race.dateStr}
-          onClick={() => navigateToRace(radarRace.race)}
-        />
+      {radarRace ? (
+        <section className="grid gap-5 xl:grid-cols-[1.18fr,0.82fr]">
+          <div className="space-y-5">
+            {radarRace.score?.pick?.numPmu && radarRace.score?.pick?.nom ? (
+              <PronoHero
+                horseName={radarRace.score.pick.nom}
+                horseNum={radarRace.score.pick.numPmu}
+                confidence={radarRace.confidence}
+                hippodrome={radarRace.race.hippodrome}
+                heureDepart={radarRace.race.heureDepart}
+                courseName={radarRace.race.nomCourse}
+                reunion={radarRace.race.reunion}
+                course={radarRace.race.course}
+                betType={radarRace.score.pick.betType}
+                cote={null}
+                topFacteurs={translateFactors(
+                  radarRace.score.pick.topFacteurs ?? []
+                )}
+                lisibilite={radarRace.score.lisibilite}
+                onClick={() => navigateToRace(radarRace.race)}
+              />
+            ) : radarProfile ? (
+              <RadarHero
+                raceTitle={`R${radarRace.race.reunion}C${radarRace.race.course} - ${radarRace.race.nomCourse}`}
+                hippodrome={radarRace.race.hippodrome}
+                raceMeta={formatRaceMeta(radarRace.race)}
+                displayScore={radarRace.scoreValue}
+                profile={radarProfile}
+                heureDepart={radarRace.race.heureDepart}
+                dateStr={radarRace.race.dateStr}
+                onClick={() => navigateToRace(radarRace.race)}
+              />
+            ) : null}
+          </div>
+
+          <div className="grid gap-5">
+            {radarProfile ? (
+              <RadarHero
+                raceTitle={`R${radarRace.race.reunion}C${radarRace.race.course} - ${radarRace.race.nomCourse}`}
+                hippodrome={radarRace.race.hippodrome}
+                raceMeta={formatRaceMeta(radarRace.race)}
+                displayScore={radarRace.scoreValue}
+                profile={radarProfile}
+                heureDepart={radarRace.race.heureDepart}
+                dateStr={radarRace.race.dateStr}
+                onClick={() => navigateToRace(radarRace.race)}
+              />
+            ) : null}
+
+            {radarRace.score?.pepiteDuJour?.numPmu &&
+            radarRace.score?.pepiteDuJour?.nom ? (
+              <PepiteCard
+                horseName={radarRace.score.pepiteDuJour.nom}
+                horseNum={radarRace.score.pepiteDuJour.numPmu}
+                confidence={radarRace.score.pepiteDuJour.confidence ?? 0}
+                cote={radarRace.score.pepiteDuJour.cote ?? null}
+                hippodrome={radarRace.race.hippodrome}
+                heureDepart={radarRace.race.heureDepart}
+                reunion={radarRace.race.reunion}
+                course={radarRace.race.course}
+                topFacteurs={translateFactors(
+                  radarRace.score.pepiteDuJour.topFacteurs ?? []
+                )}
+                onClick={() => navigateToRace(radarRace.race)}
+              />
+            ) : (
+              <section className="app-card p-5 md:p-6">
+                <p className="app-kicker">Pepite</p>
+                <h2 className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+                  Pas de profil speculatif propre pour l&apos;instant
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-[var(--pmu-text-soft)]">
+                  Le board ne force pas une pepite sur chaque reunion. Quand
+                  elle existe, elle remonte ici avec son contexte et son niveau
+                  de risque.
+                </p>
+              </section>
+            )}
+          </div>
+        </section>
       ) : null}
 
-      {topParisItems.length ? <TopParisStrip items={topParisItems} /> : null}
+      {topParisItems.length > 0 ? <TopParisStrip items={topParisItems} /> : null}
 
       <section className="app-card p-6 md:p-7">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div className="grid gap-6 xl:grid-cols-[1.05fr,0.95fr] xl:items-end">
+          <div className="space-y-4">
             <div>
               <p className="app-kicker">Pilotage du jour</p>
-              <h2 className="mt-2 text-2xl font-black tracking-tight text-[var(--pmu-text)] md:text-3xl">{formatDisplayDate(selectedDate)}</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--pmu-text-soft)]">
-                Change de journée, trie le programme et ouvre directement la bonne course depuis la barre de gauche.
+              <h2 className="mt-2 text-3xl font-black capitalize tracking-tight text-[var(--pmu-text)]">
+                {formatDisplayDate(selectedDate)}
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--pmu-text-soft)]">
+                Change de journee, trie le programme et garde en haut de page
+                uniquement les spots qui meritent vraiment d&apos;etre ouverts.
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2 xl:max-w-[18rem] xl:justify-end">
-              <button type="button" onClick={() => setSelectedDate(addDays(selectedDate, -1))} className="app-button-secondary">
-                Jour précédent
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedDate(addDays(selectedDate, -1))}
+                className="app-button-secondary"
+              >
+                Jour precedent
               </button>
-              <button type="button" onClick={() => setSelectedDate(getTodayDateStr())} className="app-button-secondary">
-                Aujourd’hui
+              <button
+                type="button"
+                onClick={() => setSelectedDate(getTodayDateStr())}
+                className="app-button-secondary"
+              >
+                Aujourd&apos;hui
               </button>
-              <button type="button" onClick={() => setSelectedDate(addDays(selectedDate, 1))} className="app-button-secondary">
+              <button
+                type="button"
+                onClick={() => setSelectedDate(addDays(selectedDate, 1))}
+                className="app-button-secondary"
+              >
                 Jour suivant
               </button>
             </div>
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr),repeat(3,minmax(0,180px))] lg:items-center">
-            <label className="block">
-              <span className="sr-only">Choisir une date</span>
-              <input
-                type="date"
-                className="app-input"
-                value={toIsoDate(selectedDate)}
-                onChange={(event) => setSelectedDate(normalizeDateParam(event.target.value.replaceAll("-", "")))}
-              />
-            </label>
-            <div className="app-card-muted px-4 py-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="app-card-muted px-4 py-4">
               <p className="app-label">Programme</p>
-              <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">{races.length}</p>
+              <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+                {races.length}
+              </p>
             </div>
-            <div className="app-card-muted px-4 py-3">
-              <p className="app-label">Pistes chaudes</p>
-              <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">{summaryStats.hot}</p>
+            <div className="app-card-muted px-4 py-4">
+              <p className="app-label">Hot list</p>
+              <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+                {summaryStats.hot}
+              </p>
             </div>
-            <div className="app-card-muted px-4 py-3">
+            <div className="app-card-muted px-4 py-4">
               <p className="app-label">Tri actif</p>
-              <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
-                {SORT_OPTIONS.find((option) => option.value === sortMode)?.label ?? "Par heure"}
+              <p className="mt-2 text-sm font-black text-[var(--pmu-text)]">
+                {SORT_OPTIONS.find((option) => option.value === sortMode)?.label ??
+                  "Par heure"}
+              </p>
+            </div>
+            <div className="app-card-muted px-4 py-4">
+              <p className="app-label">Focus</p>
+              <p className="mt-2 text-sm font-black text-[var(--pmu-text)]">
+                {topParisItems.length > 0
+                  ? "Top 3 jouables"
+                  : "Programme complet"}
               </p>
             </div>
           </div>
+        </div>
 
-          <div className="border-t border-[var(--pmu-border)] pt-4">
-            <div className="app-section-heading">
-              <div>
-                <p className="app-kicker">Programme trié</p>
-                <h2 className="app-section-title">Opportunités détectées</h2>
+        <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,14rem),1fr] lg:items-center">
+          <label className="block">
+            <span className="sr-only">Choisir une date</span>
+            <input
+              type="date"
+              className="app-input"
+              value={toIsoDate(selectedDate)}
+              onChange={(event) =>
+                setSelectedDate(
+                  normalizeDateParam(event.target.value.replaceAll("-", ""))
+                )
+              }
+            />
+          </label>
+
+          <div className="border-t border-[var(--pmu-border)] pt-4 lg:border-t-0 lg:pt-0">
+            <FilterPills
+              options={SORT_OPTIONS}
+              value={sortMode}
+              onChange={setSortMode}
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-3">
+        {priorityCards.map((card) => {
+          const toneColor =
+            card.tone === "primary"
+              ? "var(--pmu-primary)"
+              : card.tone === "warning"
+                ? "var(--pmu-orange)"
+                : "var(--pmu-text)";
+
+          return (
+            <button
+              key={card.key}
+              type="button"
+              onClick={() => (card.race ? navigateToRace(card.race.race) : undefined)}
+              disabled={!card.race}
+              className="app-card flex h-full flex-col items-start gap-4 p-5 text-left disabled:cursor-default disabled:opacity-100"
+            >
+              <div className="flex w-full items-start justify-between gap-3">
+                <div>
+                  <p className="app-kicker">{card.title}</p>
+                  <h3 className="mt-2 text-xl font-black text-[var(--pmu-text)]">
+                    {card.value}
+                  </h3>
+                </div>
+                <span
+                  className="rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em]"
+                  style={{
+                    color: toneColor,
+                    borderColor: `color-mix(in srgb, ${toneColor} 24%, transparent)`,
+                    background: `color-mix(in srgb, ${toneColor} 10%, var(--pmu-surface))`,
+                  }}
+                >
+                  {card.subtitle}
+                </span>
               </div>
-              <p className="max-w-xl text-sm leading-6 text-[var(--pmu-text-soft)]">
-                Chaque carte pousse une décision. Trie vite, garde la lecture utile, puis ouvre la bonne course.
+
+              <p className="text-sm leading-6 text-[var(--pmu-text-soft)]">
+                {card.description}
               </p>
-            </div>
-            <FilterPills options={SORT_OPTIONS} value={sortMode} onChange={setSortMode} />
-          </div>
-        </div>
+
+              {card.race ? (
+                <div className="mt-auto flex flex-wrap gap-2">
+                  <span className="app-pill text-xs">
+                    {card.race.race.hippodrome}
+                  </span>
+                  <span className="app-pill text-xs">
+                    {card.race.race.heureDepart}
+                  </span>
+                  <span className="app-pill text-xs">
+                    {card.race.scoreValue.toFixed(1)}/10
+                  </span>
+                </div>
+              ) : null}
+            </button>
+          );
+        })}
       </section>
-
-      <section className="app-section-heading rounded-[1.8rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_78%,transparent)] px-5 py-5 md:px-6">
-        <div>
-          <p className="app-kicker">Programme du jour</p>
-          <h2 className="app-section-title">Les courses à ouvrir maintenant</h2>
-        </div>
-        <p className="max-w-xl text-sm leading-6 text-[var(--pmu-text-soft)]">
-          Le haut de page sert à décider vite. Le programme détaillé commence ici, trié selon ton mode actif.
-        </p>
-      </section>
-
-
-      {!isLoading && !error && featuredRaces.length > 0 && topParisItems.length === 0 ? (
-        <section className="app-card p-5 text-sm leading-6 text-[var(--pmu-text-soft)]">
-          Aucune course ne dépasse le seuil JOUABLE ({SEUIL_JOUABLE}/10) pour le Top 3 : les cartes « ⚠️ À surveiller » restent candidates, ou rafraîchis après
-          le signal 1 h / 🔴 Signal actif.
-        </section>
-      ) : null}
 
       {error ? (
         <section
@@ -757,32 +1003,59 @@ function PageContent() {
           role="alert"
           aria-live="assertive"
         >
-          <p className="text-lg font-bold text-[var(--pmu-red)]">Impossible de charger la page Courses</p>
-          <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">{error}</p>
+          <p className="text-lg font-bold text-[var(--pmu-red)]">
+            Impossible de charger la page Courses
+          </p>
+          <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">
+            {error}
+          </p>
           <button
             type="button"
             className="app-button-primary mt-4"
             onClick={() => setFetchRevision((revision) => revision + 1)}
           >
-            Réessayer
+            Reessayer
           </button>
         </section>
       ) : null}
 
+      {!isLoading && !error && featuredRaces.length > 0 && topParisItems.length === 0 ? (
+        <section className="app-card p-5 text-sm leading-6 text-[var(--pmu-text-soft)]">
+          Aucune course ne depasse encore le seuil jouable ({SEUIL_JOUABLE}
+          /10) pour le Top 3. Le board garde tout de meme les meilleurs spots
+          visibles dans la grille ci-dessous.
+        </section>
+      ) : null}
+
+      <section className="app-section-heading rounded-[1.8rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_78%,transparent)] px-5 py-5 md:px-6">
+        <div>
+          <p className="app-kicker">Board courses</p>
+          <h2 className="app-section-title">Le programme trie pour agir vite</h2>
+        </div>
+        <p className="max-w-xl text-sm leading-6 text-[var(--pmu-text-soft)]">
+          Chaque carte condense le score, le ticket et la lecture. Le but est
+          simple : ouvrir la bonne course sans perdre le fil du programme.
+        </p>
+      </section>
+
       {isLoading ? (
-        <section className="grid gap-5" aria-busy="true" aria-label="Chargement des courses">
-          {Array.from({ length: 5 }, (_, index) => (
+        <section
+          className="grid auto-rows-fr gap-5 2xl:grid-cols-2"
+          aria-busy="true"
+          aria-label="Chargement des courses"
+        >
+          {Array.from({ length: 4 }, (_, index) => (
             <div
               key={index}
-              className="app-card h-52 animate-pulse bg-[linear-gradient(180deg,var(--pmu-surface-highlight)_0%,var(--pmu-surface)_100%)]"
+              className="app-card h-80 animate-pulse bg-[linear-gradient(180deg,var(--pmu-surface-highlight)_0%,var(--pmu-surface)_100%)]"
             />
           ))}
         </section>
       ) : null}
 
-      {!isLoading && !error && asArray<FeaturedRace>(featuredRaces).length ? (
+      {!isLoading && !error && featuredRaces.length > 0 ? (
         <section className="grid auto-rows-fr items-stretch gap-5 2xl:grid-cols-2">
-          {asArray<FeaturedRace>(featuredRaces).map((item) => {
+          {featuredRaces.map((item) => {
             const profile = getRaceProfile({
               race: item.race,
               displayScore: item.scoreValue,
@@ -794,17 +1067,23 @@ function PageContent() {
                   }
                 : null,
             });
-            const eloProfile = estimateEloProfileForProgrammeCard(item.score?.pick?.confidence);
+            const eloProfile = estimateEloProfileForProgrammeCard(
+              item.score?.pick?.confidence
+            );
             const indiceListe = estimateIndiceOuvertureListe({
               displayScore: item.scoreValue,
               partants: item.race.nombrePartants,
               sigmaPct: eloProfile.sigma,
             });
+
             return (
               <CourseCard
                 key={`${item.race.reunion}-${item.race.course}`}
                 raceTitle={`R${item.race.reunion}C${item.race.course} - ${item.race.nomCourse}`}
-                subtitleLine={[item.race.hippodrome, formatCourseMeta(item.race)].join(" • ")}
+                subtitleLine={[
+                  item.race.hippodrome,
+                  formatCourseMeta(item.race),
+                ].join(" - ")}
                 timeLabel={item.race.heureDepart}
                 minutesUntilStart={item.minutesUntilStart}
                 displayScore={item.scoreValue}
@@ -823,11 +1102,14 @@ function PageContent() {
         </section>
       ) : null}
 
-      {!isLoading && !error && !featuredRaces.length ? (
+      {!isLoading && !error && featuredRaces.length === 0 ? (
         <section className="app-card p-8 text-center">
-          <p className="text-xl font-bold text-[var(--pmu-text)]">Aucune course exploitable pour cette date</p>
+          <p className="text-xl font-bold text-[var(--pmu-text)]">
+            Aucune course exploitable pour cette date
+          </p>
           <p className="mt-3 text-sm leading-6 text-[var(--pmu-text-soft)]">
-            Change de journée ou recharge la page. Le moteur n’a pas encore remonté de programme utilisable.
+            Change de journee ou recharge la page. Le moteur n&apos;a pas encore
+            remonte de programme utilisable.
           </p>
         </section>
       ) : null}
@@ -835,11 +1117,14 @@ function PageContent() {
       <section className="space-y-4">
         <div className="app-section-heading">
           <div>
-            <p className="app-kicker">Panneau secondaire</p>
-            <h2 className="app-section-title">Preuves, démo et méthode</h2>
+            <p className="app-kicker">Preuves et methode</p>
+            <h2 className="app-section-title">
+              Le panneau secondaire garde le reste proprement range
+            </h2>
           </div>
           <p className="max-w-xl text-sm leading-6 text-[var(--pmu-text-soft)]">
-            Le cœur produit reste au-dessus. Ici, tu ouvres seulement le bloc complémentaire dont tu as besoin.
+            La decision vit plus haut. Ici, on ouvre seulement les preuves, la
+            demo ou le bloc Quinte quand on en a besoin.
           </p>
         </div>
 
@@ -855,7 +1140,7 @@ function PageContent() {
                     ? "Video produit"
                     : panel.key === "method"
                       ? "Processus"
-                      : "Consensus IA";
+                      : "Consensus";
 
             return (
               <AccordionPanel
@@ -870,27 +1155,37 @@ function PageContent() {
                 {panel.key === "performance" ? <PerformanceProof /> : null}
                 {panel.key === "results" ? <RecentResults /> : null}
                 {panel.key === "demo" ? <PromoVideoSection /> : null}
-                {panel.key === "method" ? <HowItWorks /> : null}
+                {panel.key === "method" ? (
+                  <div className="grid gap-4 xl:grid-cols-[0.9fr,1.1fr]">
+                    <HowItWorks />
+                    <PerformanceProof />
+                  </div>
+                ) : null}
                 {panel.key === "quinte" && quinteDuJour ? (
-                  <section className="grid gap-4 lg:grid-cols-2">
-                    <SagesseFoules
-                      raceId={`${selectedDate}-R${quinteDuJour.race.reunion}C${quinteDuJour.race.course}`}
-                      raceLabel={`${quinteDuJour.race.nomCourse} (R${quinteDuJour.race.reunion}C${quinteDuJour.race.course})`}
-                    />
-                    <ComparatifIA
-                      dateStr={selectedDate}
-                      reunion={quinteDuJour.race.reunion}
-                      course={quinteDuJour.race.course}
-                      nomCourse={quinteDuJour.race.nomCourse}
-                    />
-                  </section>
+                  <div className="grid gap-4 xl:grid-cols-[0.95fr,1.05fr]">
+                    <section className="grid gap-4">
+                      <SagesseFoules
+                        raceId={`${selectedDate}-R${quinteDuJour.race.reunion}C${quinteDuJour.race.course}`}
+                        raceLabel={`${quinteDuJour.race.nomCourse} (R${quinteDuJour.race.reunion}C${quinteDuJour.race.course})`}
+                      />
+                      <RecentResults />
+                    </section>
+                    <section className="grid gap-4">
+                      <ComparatifIA
+                        dateStr={selectedDate}
+                        reunion={quinteDuJour.race.reunion}
+                        course={quinteDuJour.race.course}
+                        nomCourse={quinteDuJour.race.nomCourse}
+                      />
+                      <PromoVideoSection />
+                    </section>
+                  </div>
                 ) : null}
               </AccordionPanel>
             );
           })}
         </div>
       </section>
-
     </div>
   );
 }
@@ -898,24 +1193,31 @@ function PageContent() {
 function HomePageSkeletonFallback() {
   return (
     <div
-      className="mx-auto flex w-full max-w-[92rem] flex-col gap-8"
+      className="mx-auto flex w-full max-w-[96rem] flex-col gap-6 lg:gap-8"
       aria-busy="true"
       aria-label="Chargement du programme"
     >
-      <div className="app-card h-56 animate-pulse bg-[linear-gradient(180deg,var(--pmu-surface-highlight)_0%,var(--pmu-surface)_100%)]" />
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }, (_, i) => (
+      <div className="app-page-hero h-64 animate-pulse" />
+      <div className="grid gap-5 xl:grid-cols-[1.18fr,0.82fr]">
+        <div className="app-card h-[24rem] animate-pulse bg-[linear-gradient(180deg,var(--pmu-surface-highlight)_0%,var(--pmu-surface)_100%)]" />
+        <div className="grid gap-5">
+          <div className="app-card h-[15rem] animate-pulse bg-[linear-gradient(180deg,var(--pmu-surface-highlight)_0%,var(--pmu-surface)_100%)]" />
+          <div className="app-card h-[15rem] animate-pulse bg-[linear-gradient(180deg,var(--pmu-surface-highlight)_0%,var(--pmu-surface)_100%)]" />
+        </div>
+      </div>
+      <div className="grid gap-4 xl:grid-cols-3">
+        {Array.from({ length: 3 }, (_, index) => (
           <div
-            key={i}
-            className="app-card h-32 animate-pulse bg-[linear-gradient(180deg,var(--pmu-surface-highlight)_0%,var(--pmu-surface)_100%)]"
+            key={index}
+            className="app-card h-56 animate-pulse bg-[linear-gradient(180deg,var(--pmu-surface-highlight)_0%,var(--pmu-surface)_100%)]"
           />
         ))}
       </div>
-      <div className="grid gap-5">
-        {Array.from({ length: 3 }, (_, i) => (
+      <div className="grid gap-5 2xl:grid-cols-2">
+        {Array.from({ length: 4 }, (_, index) => (
           <div
-            key={i}
-            className="app-card h-52 animate-pulse bg-[linear-gradient(180deg,var(--pmu-surface-highlight)_0%,var(--pmu-surface)_100%)]"
+            key={index}
+            className="app-card h-80 animate-pulse bg-[linear-gradient(180deg,var(--pmu-surface-highlight)_0%,var(--pmu-surface)_100%)]"
           />
         ))}
       </div>
