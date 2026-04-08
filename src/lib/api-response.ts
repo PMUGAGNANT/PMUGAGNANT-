@@ -8,7 +8,7 @@ export function badRequest(message: string, details?: Record<string, unknown>) {
   );
 }
 
-export function unauthorized(message = "Acc?s non autoris?.") {
+export function unauthorized(message = "Accès non autorisé.") {
   return NextResponse.json({ success: false, error: message }, { status: 401 });
 }
 
