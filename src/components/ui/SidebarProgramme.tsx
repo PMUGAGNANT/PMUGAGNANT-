@@ -158,15 +158,13 @@ export function SidebarProgramme() {
 
   const [isOpen, setIsOpen] = useState(false);
   const [tab, setTab] = useState<SidebarProgrammeTab>("reunions");
-  const [selectedReunion, setSelectedReunion] = useState<number | null>(null);
+  const [selectedReunionPreference, setSelectedReunionPreference] = useState<number | null>(null);
   const [races, setRaces] = useState<RaceSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadedDate, setLoadedDate] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
-    setLoading(true);
-    setError(null);
 
     void fetch(`/api/races?date=${selectedDate}`, {
       cache: "no-store",
@@ -179,6 +177,8 @@ export function SidebarProgramme() {
         }
 
         setRaces(filterPmuFranceRaces(Array.isArray(payload.races) ? payload.races : []));
+        setError(null);
+        setLoadedDate(selectedDate);
       })
       .catch((fetchError) => {
         if (fetchError instanceof Error && fetchError.name === "AbortError") {
@@ -187,18 +187,18 @@ export function SidebarProgramme() {
 
         setRaces([]);
         setError(fetchError instanceof Error ? fetchError.message : "Programme indisponible.");
+        setLoadedDate(selectedDate);
       })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
-      });
 
     return () => controller.abort();
   }, [selectedDate]);
 
-  const sortedRaces = useMemo(() => sortRaces(races), [races]);
-  const reunionGroups = useMemo(() => buildReunionGroups(races), [races]);
+  const visibleRacesForDate = useMemo(
+    () => (loadedDate === selectedDate ? races : []),
+    [loadedDate, races, selectedDate],
+  );
+  const sortedRaces = useMemo(() => sortRaces(visibleRacesForDate), [visibleRacesForDate]);
+  const reunionGroups = useMemo(() => buildReunionGroups(visibleRacesForDate), [visibleRacesForDate]);
 
   const currentRoute = useMemo(() => {
     const match = pathname.match(/^\/course\/(\d+)\/(\d+)$/);
@@ -211,20 +211,15 @@ export function SidebarProgramme() {
     };
   }, [pathname]);
 
-  useEffect(() => {
+  const selectedReunion = useMemo(() => {
     if (reunionGroups.length === 0) {
-      setSelectedReunion(null);
-      return;
+      return null;
     }
 
-    setSelectedReunion((current) => {
-      if (current && reunionGroups.some((group) => group.reunion === current)) {
-        return current;
-      }
-
-      return reunionGroups[0]?.reunion ?? null;
-    });
-  }, [reunionGroups]);
+    return reunionGroups.some((group) => group.reunion === selectedReunionPreference)
+      ? selectedReunionPreference
+      : reunionGroups[0]?.reunion ?? null;
+  }, [reunionGroups, selectedReunionPreference]);
 
   const selectedGroup = useMemo(
     () => reunionGroups.find((group) => group.reunion === selectedReunion) ?? null,
@@ -240,9 +235,11 @@ export function SidebarProgramme() {
   }, [selectedReunion, sortedRaces]);
 
   const reunionSummary = useMemo(() => buildReunionSummary(visibleCourses), [visibleCourses]);
+  const loading = loadedDate !== selectedDate;
+  const visibleError = loadedDate === selectedDate ? error : null;
 
   function openReunion(reunion: number) {
-    setSelectedReunion(reunion);
+    setSelectedReunionPreference(reunion);
     setTab("courses");
   }
 
@@ -355,19 +352,19 @@ export function SidebarProgramme() {
                 ))
               : null}
 
-            {!loading && error ? (
+            {!loading && visibleError ? (
               <div className="rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-3 text-xs leading-5 text-[var(--pmu-text-soft)]">
-                {error}
+                {visibleError}
               </div>
             ) : null}
 
-            {!loading && !error && tab === "reunions" && reunionGroups.length === 0 ? (
+            {!loading && !visibleError && tab === "reunions" && reunionGroups.length === 0 ? (
               <div className="rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-3 text-xs leading-5 text-[var(--pmu-text-soft)]">
                 Aucune réunion chargée pour cette journée.
               </div>
             ) : null}
 
-            {!loading && !error && tab === "reunions"
+            {!loading && !visibleError && tab === "reunions"
               ? reunionGroups.map((group) => (
                   <button
                     key={`${selectedDate}-reunion-${group.reunion}`}
@@ -404,13 +401,13 @@ export function SidebarProgramme() {
                 ))
               : null}
 
-            {!loading && !error && tab === "courses" && visibleCourses.length === 0 ? (
+            {!loading && !visibleError && tab === "courses" && visibleCourses.length === 0 ? (
               <div className="rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-3 py-3 text-xs leading-5 text-[var(--pmu-text-soft)]">
                 Sélectionne une réunion pour voir ses courses.
               </div>
             ) : null}
 
-            {!loading && !error && tab === "courses"
+            {!loading && !visibleError && tab === "courses"
               ? visibleCourses.map((race) => {
                   const raceKey = `${race.reunion}-${race.course}`;
                   const active = currentRoute?.key === raceKey;

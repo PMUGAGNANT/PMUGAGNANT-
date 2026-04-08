@@ -221,7 +221,7 @@ function LockedCard({ previewLabel }: { previewLabel?: string | null }) {
       </div>
       <h2 className="text-xl font-black text-[var(--pmu-text)]">Pronostic Premium</h2>
       <p className="text-sm text-[var(--pmu-text-soft)]">
-        Le tableau des partants reste public, mais le ticket détaillé et la lecture complète sont réservés à l'accès Premium.
+        Le tableau des partants reste public, mais le ticket détaillé et la lecture complète sont réservés à l&apos;accès Premium.
       </p>
       {previewLabel ? (
         <p className="text-sm text-[var(--pmu-text)]">
@@ -297,7 +297,7 @@ function TopFiveCard({
     <section className="app-card rounded-2xl p-5">
       <div>
         <p className="app-kicker">Lecture moteur</p>
-        <h3 className="mt-2 app-section-title">Top 5 de l'algo</h3>
+        <h3 className="mt-2 app-section-title">Top 5 de l&apos;algo</h3>
       </div>
 
       <div className="mt-4 space-y-3">

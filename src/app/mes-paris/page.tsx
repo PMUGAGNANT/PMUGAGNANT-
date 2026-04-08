@@ -40,6 +40,22 @@ function formatEuros(value: number) {
   }).format(value)} EUR`;
 }
 
+function formatBonusExpiry(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "numeric",
+    month: "long",
+  }).format(parsed);
+}
+
 function MesParisFallback() {
   return (
     <div
@@ -64,8 +80,10 @@ function MesParisContent() {
   const [billingLoading, setBillingLoading] = useState(false);
   const [user, setUser] = useState<{ email?: string } | null>(null);
   const [error, setError] = useState("");
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isStripeSubscribed, setIsStripeSubscribed] = useState(false);
+  const [accessSource, setAccessSource] = useState<"FREE" | "PAID" | "BONUS">("FREE");
   const [subscriptionStatus, setSubscriptionStatus] = useState("FREE");
+  const [premiumAccessExpiresAt, setPremiumAccessExpiresAt] = useState<string | null>(null);
   const [billingNotice, setBillingNotice] = useState<{
     tone: "success" | "warning" | "loading";
     title: string;
@@ -114,7 +132,10 @@ function MesParisContent() {
           bets?: Bet[];
           solde?: number;
           isSubscribed?: boolean;
+          isStripeSubscribed?: boolean;
+          accessSource?: "FREE" | "PAID" | "BONUS";
           subscriptionStatus?: string;
+          premiumAccessExpiresAt?: string | null;
           error?: string;
         } = await res.json();
 
@@ -128,8 +149,12 @@ function MesParisContent() {
 
         setBets(asArray<Bet>(payload.bets));
         setSolde(typeof payload.solde === "number" && Number.isFinite(payload.solde) ? payload.solde : 1000);
-        setIsSubscribed(Boolean(payload.isSubscribed));
+        setIsStripeSubscribed(Boolean(payload.isStripeSubscribed));
+        setAccessSource(payload.accessSource ?? "FREE");
         setSubscriptionStatus(payload.subscriptionStatus ?? "FREE");
+        setPremiumAccessExpiresAt(
+          typeof payload.premiumAccessExpiresAt === "string" ? payload.premiumAccessExpiresAt : null
+        );
       } catch (loadError) {
         if (signal?.aborted) {
           return;
@@ -358,11 +383,11 @@ function MesParisContent() {
   );
 
   useEffect(() => {
-    if (!autoCheckoutRequested || autoCheckoutStarted || loading || billingLoading || !user) {
+      if (!autoCheckoutRequested || autoCheckoutStarted || loading || billingLoading || !user) {
       return;
     }
 
-    if (isSubscribed) {
+    if (isStripeSubscribed) {
       router.replace("/mes-paris");
       return;
     }
@@ -379,11 +404,14 @@ function MesParisContent() {
     autoCheckoutStarted,
     billingLoading,
     handleBilling,
-    isSubscribed,
+    isStripeSubscribed,
     loading,
     router,
     user,
   ]);
+
+  const hasBonusAccess = accessSource === "BONUS";
+  const bonusExpiryLabel = formatBonusExpiry(premiumAccessExpiresAt);
 
   const pendingCount = bets.filter((b) => b.statut === "EN_ATTENTE").length;
   const wonCount = bets.filter((b) => b.statut === "GAGNE").length;
@@ -627,15 +655,21 @@ function MesParisContent() {
                   fontWeight: 800,
                 }}
               >
-                {isSubscribed ? `Abonnement ${subscriptionStatus}` : "Compte gratuit"}
+                {isStripeSubscribed
+                  ? `Abonnement ${subscriptionStatus}`
+                  : hasBonusAccess
+                    ? "Accès bonus actif"
+                    : "Compte gratuit"}
               </div>
               <div style={{ fontSize: 12, lineHeight: "18px", color: "color-mix(in srgb, var(--pmu-text) 78%, transparent)" }}>
-                {isSubscribed
+                {isStripeSubscribed
                   ? "Ton espace premium est actif : pronostics complets, mises et tickets détaillés."
+                  : hasBonusAccess
+                    ? `Ton accès premium bonus est actif${bonusExpiryLabel ? ` jusqu'au ${bonusExpiryLabel}` : ""}. Tu peux déjà voir les pronostics complets, ou passer au mensuel quand tu veux.`
                   : "Passe en premium pour débloquer les opportunités value filtrées, les mises Kelly et les tickets optimisés."}
               </div>
               <button
-                onClick={() => handleBilling(isSubscribed ? "portal" : "checkout")}
+                onClick={() => handleBilling(isStripeSubscribed ? "portal" : "checkout")}
                 disabled={billingLoading}
                 style={{
                   border: "none",
@@ -649,11 +683,13 @@ function MesParisContent() {
               >
                 {billingLoading
                   ? "Ouverture..."
-                  : isSubscribed
+                  : isStripeSubscribed
                     ? "Gérer l’abonnement"
-                    : "Débloquer les pronostics premium"}
+                    : hasBonusAccess
+                      ? "Passer au premium mensuel"
+                      : "Débloquer les pronostics premium"}
               </button>
-              {!isSubscribed ? (
+              {!isStripeSubscribed ? (
                 <button
                   onClick={() => router.push("/premium")}
                   style={{
@@ -669,7 +705,7 @@ function MesParisContent() {
                   {"Voir le détail de l’offre"}
                 </button>
               ) : null}
-              {!isSubscribed ? (
+              {!isStripeSubscribed ? (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {[
                     "Top 5 complet",

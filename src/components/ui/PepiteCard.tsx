@@ -117,7 +117,7 @@ export function PepiteCard({
             className="w-full max-w-xs rounded-lg py-3 text-center text-sm font-black uppercase"
             style={{ background: "#FBB724", color: "#1a1200" }}
           >
-            Voir l'analyse complète →
+            Voir l&apos;analyse complète →
           </button>
         </div>
       </div>

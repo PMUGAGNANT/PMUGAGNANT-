@@ -1,6 +1,8 @@
 -- =============================================
 -- PMU AI - SQL Setup v9.2 for Supabase
 -- Run in Supabase > SQL Editor
+-- Then apply every file in supabase/migrations/ to enable
+-- the current premium, referral, push and hardening features.
 -- =============================================
 
 create extension if not exists pgcrypto;

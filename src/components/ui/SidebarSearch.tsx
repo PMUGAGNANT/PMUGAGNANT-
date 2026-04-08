@@ -76,10 +76,10 @@ export function SidebarSearch() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [results, setResults] = useState<SearchRunnerGroup[]>([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [resolvedRequestKey, setResolvedRequestKey] = useState("");
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -117,20 +117,15 @@ export function SidebarSearch() {
   useEffect(() => {
     abortRef.current?.abort();
 
-    if (debouncedQuery.length < 2) {
-      setLoading(false);
-      setError(null);
-      setResults([]);
-      setOpen(false);
-      setActiveIndex(-1);
+    const requestKey =
+      debouncedQuery.length >= 2 ? `${getTodayDateStr()}:${debouncedQuery}` : "";
+
+    if (!requestKey) {
       return;
     }
 
     const controller = new AbortController();
     abortRef.current = controller;
-    setLoading(true);
-    setError(null);
-    setOpen(true);
 
     void fetch(
       `/api/search-runners?q=${encodeURIComponent(debouncedQuery)}&date=${getTodayDateStr()}`,
@@ -146,7 +141,9 @@ export function SidebarSearch() {
         }
 
         setResults(payload.results ?? []);
+        setError(null);
         setActiveIndex(-1);
+        setResolvedRequestKey(requestKey);
       })
       .catch((fetchError) => {
         if (fetchError instanceof Error && fetchError.name === "AbortError") {
@@ -159,17 +156,17 @@ export function SidebarSearch() {
             ? fetchError.message
             : "Impossible de lancer la recherche.",
         );
+        setResolvedRequestKey(requestKey);
       })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
-      });
 
     return () => {
       controller.abort();
     };
   }, [debouncedQuery]);
+
+  const loading =
+    debouncedQuery.length >= 2 &&
+    resolvedRequestKey !== `${getTodayDateStr()}:${debouncedQuery}`;
 
   const options = useMemo<EntryOption[]>(
     () =>
@@ -195,9 +192,9 @@ export function SidebarSearch() {
     setDebouncedQuery("");
     setResults([]);
     setError(null);
-    setLoading(false);
     setOpen(false);
     setActiveIndex(-1);
+    setResolvedRequestKey("");
     requestAnimationFrame(() => {
       inputRef.current?.focus();
     });
@@ -269,9 +266,14 @@ export function SidebarSearch() {
             }
           }}
           onChange={(event) => {
-            setQuery(event.target.value);
-            if (event.target.value.trim().length >= 2) {
+            const nextValue = event.target.value;
+            setQuery(nextValue);
+            setError(null);
+            if (nextValue.trim().length >= 2) {
               setOpen(true);
+            } else {
+              setResults([]);
+              setResolvedRequestKey("");
             }
             setActiveIndex(-1);
           }}

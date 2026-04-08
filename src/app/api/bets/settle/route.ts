@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   createSupabaseRequestClient,
+  getSupabaseAdminClient,
   getSupabaseConfigError,
 } from "@/lib/supabase";
 import { getFinalReports, getParticipants } from "@/lib/pmu-api";
@@ -19,7 +20,15 @@ export async function POST(req: NextRequest) {
     return serverError(getSupabaseConfigError());
   }
 
-  const { data: { user }, error: authError } = await client.auth.getUser();
+  const admin = getSupabaseAdminClient();
+  if (!admin) {
+    return serverError("Supabase admin n'est pas configuré. Ajoutez SUPABASE_SERVICE_ROLE_KEY.");
+  }
+
+  const {
+    data: { user },
+    error: authError,
+  } = await client.auth.getUser();
   if (authError) {
     return serverError("Échec de l'authentification.", authError);
   }
@@ -35,7 +44,9 @@ export async function POST(req: NextRequest) {
     .eq("statut", "EN_ATTENTE");
 
   if (betsError) {
-    return serverError("Impossible de récupérer les paris en attente.", betsError, { userId: user.id });
+    return serverError("Impossible de récupérer les paris en attente.", betsError, {
+      userId: user.id,
+    });
   }
 
   if (!pendingBets || pendingBets.length === 0) {
@@ -49,7 +60,9 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (profileError) {
-    return serverError("Impossible de récupérer le solde du profil.", profileError, { userId: user.id });
+    return serverError("Impossible de récupérer le solde du profil.", profileError, {
+      userId: user.id,
+    });
   }
 
   let settledCount = 0;
@@ -85,7 +98,8 @@ export async function POST(req: NextRequest) {
         }
       } else if (position <= 3) {
         statut = "PLACE";
-        const report = reports.simplePlace[bet.cheval_num] ?? Math.max(1, (bet.cote ?? 0) * 0.3);
+        const report =
+          reports.simplePlace[bet.cheval_num] ?? Math.max(1, (bet.cote ?? 0) * 0.3);
         gain = Math.round((bet.mise * report - bet.mise) * 100) / 100;
         if (gain < 0) gain = 0;
         returnedToBalance = Math.round((bet.mise + gain) * 100) / 100;
@@ -94,10 +108,11 @@ export async function POST(req: NextRequest) {
         gain = -bet.mise;
       }
 
-      const { error: updateBetError } = await client
+      const { error: updateBetError } = await admin
         .from("bets")
         .update({ statut, gain })
-        .eq("id", bet.id);
+        .eq("id", bet.id)
+        .eq("user_id", user.id);
 
       if (updateBetError) {
         throw updateBetError;
@@ -119,13 +134,15 @@ export async function POST(req: NextRequest) {
   }
 
   if (totalReturnedToBalance > 0) {
-    const { error: updateProfileError } = await client
+    const { error: updateProfileError } = await admin
       .from("profiles")
       .update({ solde: currentSolde })
       .eq("id", user.id);
 
     if (updateProfileError) {
-      return serverError("Impossible de mettre à jour le solde du profil.", updateProfileError, { userId: user.id });
+      return serverError("Impossible de mettre à jour le solde du profil.", updateProfileError, {
+        userId: user.id,
+      });
     }
   }
 

@@ -103,6 +103,16 @@ Exécuter le script :
 supabase-setup.sql
 ```
 
+Puis appliquer les migrations de `supabase/migrations/` dans l'ordre :
+
+```bash
+002_user_streaks.sql
+003_referral.sql
+004_push_subscriptions.sql
+20260401120000_community_picks_and_quinte_cache.sql
+20260408143000_billing_and_access_hardening.sql
+```
+
 Il crée notamment les tables suivantes :
 
 - `profiles`
@@ -113,6 +123,8 @@ Il crée notamment les tables suivantes :
 - `courses`
 - `predictions`
 - `weekly_reports`
+- `push_subscriptions`
+- `community_picks`
 
 ### 4. Lancer l’application
 

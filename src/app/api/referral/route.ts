@@ -20,7 +20,7 @@ function getSiteUrl() {
 async function ensureReferralCode(
   userId: string,
   currentCode: string | null,
-  client: SupabaseClient
+  admin: SupabaseClient
 ) {
   const existingCode = normalizeReferralCode(currentCode);
   if (existingCode) {
@@ -29,7 +29,7 @@ async function ensureReferralCode(
 
   for (let attempt = 0; attempt < 4; attempt += 1) {
     const candidate = generateReferralCode();
-    const { data, error } = await client
+    const { data, error } = await admin
       .from("profiles")
       .update({ referral_code: candidate })
       .eq("id", userId)
@@ -42,7 +42,7 @@ async function ensureReferralCode(
     }
   }
 
-  const { data, error } = await client
+  const { data, error } = await admin
     .from("profiles")
     .select("referral_code")
     .eq("id", userId)
@@ -55,10 +55,32 @@ async function ensureReferralCode(
   return normalizeReferralCode(data.referral_code);
 }
 
+function extendPremiumAccessExpiry(
+  currentValue: string | null | undefined,
+  now: Date = new Date()
+) {
+  const current =
+    typeof currentValue === "string" && currentValue.trim() !== ""
+      ? new Date(currentValue)
+      : null;
+  const base =
+    current && !Number.isNaN(current.getTime()) && current.getTime() > now.getTime()
+      ? current
+      : now;
+  const extended = new Date(base.getTime());
+  extended.setUTCDate(extended.getUTCDate() + REFERRAL_BONUS_DAYS);
+  return extended.toISOString();
+}
+
 export async function GET(request: NextRequest) {
   const auth = await getAuthenticatedRequestUser(request);
   if ("errorResponse" in auth) {
     return auth.errorResponse;
+  }
+
+  const admin = getSupabaseAdminClient();
+  if (!admin) {
+    return serverError("Supabase admin n'est pas configure pour le parrainage.");
   }
 
   const { client, user } = auth;
@@ -76,7 +98,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const referralCode = await ensureReferralCode(user.id, profile.referral_code, client);
+    const referralCode = await ensureReferralCode(user.id, profile.referral_code, admin);
 
     return NextResponse.json({
       success: true,
@@ -125,7 +147,7 @@ export async function POST(request: NextRequest) {
   try {
     const { data: currentProfile, error: currentProfileError } = await client
       .from("profiles")
-      .select("id,referral_code,referred_by,referral_premium_days")
+      .select("id,referral_code,referred_by,referral_premium_days,premium_access_expires_at")
       .eq("id", user.id)
       .single();
 
@@ -141,7 +163,7 @@ export async function POST(request: NextRequest) {
 
     const { data: sponsorProfile, error: sponsorError } = await admin
       .from("profiles")
-      .select("id,referral_code,referral_count,referral_premium_days")
+      .select("id,referral_code,referral_count,referral_premium_days,premium_access_expires_at")
       .eq("referral_code", referralCode)
       .maybeSingle();
 
@@ -160,12 +182,20 @@ export async function POST(request: NextRequest) {
       return badRequest("Auto-parrainage impossible.");
     }
 
+    const currentPremiumAccessExpiresAt = extendPremiumAccessExpiry(
+      currentProfile.premium_access_expires_at
+    );
+    const sponsorPremiumAccessExpiresAt = extendPremiumAccessExpiry(
+      sponsorProfile.premium_access_expires_at
+    );
+
     const [currentUpdate, sponsorUpdate] = await Promise.all([
       admin
         .from("profiles")
         .update({
           referred_by: sponsorProfile.id,
           referral_premium_days: (currentProfile.referral_premium_days ?? 0) + REFERRAL_BONUS_DAYS,
+          premium_access_expires_at: currentPremiumAccessExpiresAt,
         })
         .eq("id", user.id),
       admin
@@ -173,6 +203,7 @@ export async function POST(request: NextRequest) {
         .update({
           referral_count: (sponsorProfile.referral_count ?? 0) + 1,
           referral_premium_days: (sponsorProfile.referral_premium_days ?? 0) + REFERRAL_BONUS_DAYS,
+          premium_access_expires_at: sponsorPremiumAccessExpiresAt,
         })
         .eq("id", sponsorProfile.id),
     ]);
