@@ -707,8 +707,32 @@ export async function upsertSegmentLearningState(row: SegmentLearningStateRow) {
 
 export async function upsertEngineCandidate(row: EngineCandidateRow) {
   const admin = getAdmin();
+  const { data: existing, error: existingError } = await admin
+    .from("engine_candidates")
+    .select("*")
+    .eq("segment_key", row.segment_key)
+    .eq("stage", row.stage)
+    .eq("engine_version", row.engine_version)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(`Engine candidate lookup failed: ${existingError.message}`);
+  }
+
+  const preservedStatus =
+    row.status === "SHADOW" &&
+    existing &&
+    existing.status !== "SHADOW" &&
+    existing.status !== "DRAFT"
+      ? existing.status
+      : row.status;
+  const preservedPromotedAt =
+    row.status === "SHADOW" && existing?.promoted_at ? existing.promoted_at : row.promoted_at;
+
   const payload = {
     ...row,
+    status: preservedStatus,
+    promoted_at: preservedPromotedAt ?? null,
     summary: row.summary ?? {},
   };
 
