@@ -66,6 +66,19 @@ test("pre-race accelere une course avec signal valide avant T-60", () => {
   assert.equal(decision.reason, "signal-valide-180m");
 });
 
+test("pre-race accelere une course verte du board avant T-60", () => {
+  const race = createRace({ heureDepart: "12:00" });
+  const decision = getPreRaceRefreshDecision(
+    race,
+    new Date("2026-04-09T08:30:00.000Z"),
+    { hasBoardGreenSignal: true }
+  );
+
+  assert.equal(decision.intervalMinutes, 30);
+  assert.equal(decision.due, true);
+  assert.equal(decision.reason, "board-verte-180m");
+});
+
 test("pre-race garde une course standard sur une cadence plus lente avant T-60", () => {
   const race = createRace({ heureDepart: "12:00" });
   const decision = getPreRaceRefreshDecision(

@@ -1,4 +1,8 @@
 import { loadAlgoParameters } from "@/lib/config";
+import {
+  computeClientRaceScore,
+  type ApiRaceScoreLite,
+} from "@/lib/client-race-scoring";
 import { getMinutesUntilStart } from "@/lib/date-utils";
 import { attachFaultRates, upsertFaultRates } from "@/lib/horse-faults";
 import { getAllRaces, getFinalReports, getParticipants } from "@/lib/pmu-api";
@@ -143,6 +147,48 @@ function getRaceKey(reunion: number, course: number) {
   return `${reunion}-${course}`;
 }
 
+function getCourseDecision(rows: PredictionRow[]): PredictionDecision {
+  if (rows.some((row) => row.decision === "VALIDE")) {
+    return "VALIDE";
+  }
+
+  if (rows.some((row) => row.decision === "SURVEILLANCE")) {
+    return "SURVEILLANCE";
+  }
+
+  return "REJET";
+}
+
+function getPrimaryRaceRow(rows: PredictionRow[]) {
+  return (
+    rows.find((row) => row.decision === "VALIDE") ??
+    rows.find((row) => row.decision === "SURVEILLANCE") ??
+    rows[0] ??
+    null
+  );
+}
+
+function getHomeScoreStage(
+  dateStr: string,
+  race: RaceSummary
+): ApiRaceScoreLite["stage"] {
+  const minutesUntilStart = getMinutesUntilStart(race.heureDepart, dateStr);
+
+  if (minutesUntilStart < -10) {
+    return "finished";
+  }
+
+  if (minutesUntilStart <= 30) {
+    return "final_30m";
+  }
+
+  if (minutesUntilStart <= 60) {
+    return "preview_1h";
+  }
+
+  return "preview_2h";
+}
+
 function hasStrongOddsVariation(row: PredictionRow) {
   if (
     row.signal_variation === "FORTE_BAISSE" ||
@@ -154,22 +200,76 @@ function hasStrongOddsVariation(row: PredictionRow) {
   return row.variation_cote !== null && Math.abs(row.variation_cote) >= 20;
 }
 
-function buildRefreshHintsByRace(rows: PredictionRow[]) {
+function hasBoardGreenSignal(dateStr: string, race: RaceSummary, rows: PredictionRow[]) {
+  const primaryRow = getPrimaryRaceRow(rows);
+  if (!primaryRow) {
+    return false;
+  }
+
+  const courseDecision = getCourseDecision(rows);
+  const stage = getHomeScoreStage(dateStr, race);
+  const playable =
+    stage !== "finished" &&
+    primaryRow.lisibilite !== "LOTERIE" &&
+    courseDecision !== "REJET" &&
+    rows.some((row) => row.decision === "VALIDE");
+  const apiLite: ApiRaceScoreLite = {
+    score: null,
+    scoreDetailsLocked: false,
+    stage,
+    lisibilite: primaryRow.lisibilite,
+    decision: courseDecision,
+    playable,
+    pick: {
+      numPmu: primaryRow.cheval_num,
+      nom: primaryRow.cheval_nom,
+      confidence: primaryRow.confiance,
+      betType: primaryRow.pari_conseille ?? null,
+      topFacteurs: null,
+    },
+  };
+
+  return (
+    computeClientRaceScore(
+      race,
+      apiLite,
+      Math.round(getMinutesUntilStart(race.heureDepart, dateStr))
+    ).playTier === "jouable"
+  );
+}
+
+function buildRefreshHintsByRace(dateStr: string, races: RaceSummary[], rows: PredictionRow[]) {
   const hintsByRace = new Map<string, RefreshPriorityHints>();
+  const raceByKey = new Map(
+    races.map((race) => [getRaceKey(race.reunion, race.course), race] as const)
+  );
+  const rowsByRace = new Map<string, PredictionRow[]>();
 
   for (const row of rows) {
     const key = getRaceKey(row.reunion, row.course);
+    const current = rowsByRace.get(key) ?? [];
+
+    current.push(row);
+    rowsByRace.set(key, current);
+  }
+
+  for (const [key, raceRows] of rowsByRace) {
+    const race = raceByKey.get(key);
     const current = hintsByRace.get(key) ?? {};
 
-    if (row.decision === "VALIDE") {
+    if (race && hasBoardGreenSignal(dateStr, race, raceRows)) {
+      current.hasBoardGreenSignal = true;
+    }
+
+    if (raceRows.some((row) => row.decision === "VALIDE")) {
       current.hasPlayableSignal = true;
     }
 
-    if (row.decision === "SURVEILLANCE") {
+    if (raceRows.some((row) => row.decision === "SURVEILLANCE")) {
       current.hasWatchSignal = true;
     }
 
-    if (hasStrongOddsVariation(row)) {
+    if (raceRows.some((row) => hasStrongOddsVariation(row))) {
       current.hasStrongOddsVariation = true;
     }
 
@@ -510,7 +610,11 @@ export async function runPreRaceSecondPass(
   const now = new Date();
   const refreshHintsByRace = explicitTarget
     ? new Map<string, RefreshPriorityHints>()
-    : buildRefreshHintsByRace(await listPredictionsByDate(dateStr));
+    : buildRefreshHintsByRace(
+        dateStr,
+        candidateRaces,
+        await listPredictionsByDate(dateStr)
+      );
   const scheduledRaces = candidateRaces.map((race) => ({
     race,
     refresh: getPreRaceRefreshDecision(

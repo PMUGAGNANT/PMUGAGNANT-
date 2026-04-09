@@ -2,6 +2,7 @@ import { getRaceTimestamp } from "@/lib/date-utils";
 import type { RaceSummary } from "@/lib/types";
 
 export type RefreshPriorityHints = {
+  hasBoardGreenSignal?: boolean;
   hasPlayableSignal?: boolean;
   hasWatchSignal?: boolean;
   hasStrongOddsVariation?: boolean;
@@ -57,15 +58,21 @@ function buildDecision(
 }
 
 function getPriorityProfile(race: RaceSummary, hints?: RefreshPriorityHints) {
+  const hasBoardGreenSignal = Boolean(hints?.hasBoardGreenSignal);
   const hasPlayableSignal = Boolean(hints?.hasPlayableSignal);
   const hasStrongOddsVariation = Boolean(hints?.hasStrongOddsVariation);
   const isPriorityRace =
-    race.estQuinte || hasPlayableSignal || hasStrongOddsVariation;
+    race.estQuinte ||
+    hasBoardGreenSignal ||
+    hasPlayableSignal ||
+    hasStrongOddsVariation;
 
   return {
     isPriorityRace,
     reasonTag: race.estQuinte
       ? "quinte"
+      : hasBoardGreenSignal
+        ? "board-verte"
       : hasPlayableSignal
         ? "signal-valide"
         : hasStrongOddsVariation
