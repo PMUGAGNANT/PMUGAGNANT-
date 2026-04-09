@@ -157,13 +157,6 @@ const SORT_OPTIONS: Array<{ value: SortMode; label: string }> = [
   { value: "allocation", label: "Gros enjeux" },
 ];
 
-const BOARD_FILTER_OPTIONS: Array<{ value: BoardFilter; label: string }> = [
-  { value: "all", label: "Toutes" },
-  { value: "jouable", label: "Vertes" },
-  { value: "surveillance", label: "Jaunes" },
-  { value: "passer", label: "Rouges" },
-];
-
 function normalizeScoresPayload(
   raw: ScoresResponse["scores"],
   dateStr: string
@@ -886,6 +879,29 @@ function PageContent() {
   const focusMinutesLabel = formatMinutesLabel(
     focusDetail?.minutesUntilStart ?? focusRace?.minutesUntilStart ?? null
   );
+  const boardCounts = useMemo(
+    () => ({
+      all: featuredRaces.length,
+      jouable: featuredRaces.filter((item) => item.status === "jouable").length,
+      surveillance: featuredRaces.filter((item) => item.status === "surveillance")
+        .length,
+      passer: featuredRaces.filter((item) => item.status === "passer").length,
+      resultat: featuredRaces.filter((item) => item.status === "resultat").length,
+    }),
+    [featuredRaces]
+  );
+  const boardFilterOptions = useMemo(
+    () => [
+      { value: "all" as const, label: `Toutes (${boardCounts.all})` },
+      { value: "jouable" as const, label: `Vertes (${boardCounts.jouable})` },
+      {
+        value: "surveillance" as const,
+        label: `Jaunes (${boardCounts.surveillance})`,
+      },
+      { value: "passer" as const, label: `Rouges (${boardCounts.passer})` },
+    ],
+    [boardCounts]
+  );
   const boardSections = useMemo(() => {
     const grouped: Record<BoardSectionKey, FeaturedRace[]> = {
       jouable: featuredRaces.filter((item) => item.status === "jouable"),
@@ -1409,7 +1425,7 @@ function PageContent() {
               </div>
               <div className="w-full max-w-2xl">
                 <FilterPills
-                  options={BOARD_FILTER_OPTIONS}
+                  options={boardFilterOptions}
                   value={boardFilter}
                   onChange={setBoardFilter}
                 />
@@ -1450,12 +1466,61 @@ function PageContent() {
                   {section.items.map((item) => renderBoardCard(item))}
                 </div>
               ) : (
-                <div className="app-card p-5 text-sm leading-6 text-[var(--pmu-text-soft)]">
-                  {section.key === "jouable"
-                    ? "Aucune course verte pour le moment. Le board garde seulement les sections jaune et rouge."
-                    : section.key === "surveillance"
-                      ? "Aucune course jaune n'a besoin d'etre gardee sous surveillance sur cette journee."
-                      : "Aucune course rouge ne remonte pour cette vue."}
+                <div className="app-card p-5">
+                  <p className="text-base font-black text-[var(--pmu-text)]">
+                    {section.key === "jouable"
+                      ? `0 course verte. Il reste ${boardCounts.surveillance} jaune${boardCounts.surveillance > 1 ? "s" : ""} et ${boardCounts.passer} rouge${boardCounts.passer > 1 ? "s" : ""}.`
+                      : section.key === "surveillance"
+                        ? `0 course jaune. Il reste ${boardCounts.jouable} verte${boardCounts.jouable > 1 ? "s" : ""} et ${boardCounts.passer} rouge${boardCounts.passer > 1 ? "s" : ""}.`
+                        : section.key === "passer"
+                          ? `0 course rouge. Il reste ${boardCounts.jouable} verte${boardCounts.jouable > 1 ? "s" : ""} et ${boardCounts.surveillance} jaune${boardCounts.surveillance > 1 ? "s" : ""}.`
+                          : "Aucune course dans cette vue."}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">
+                    {section.key === "jouable"
+                      ? "Le filtre Vertes isole uniquement les validations fortes. Les autres courses existent toujours dans les vues jaune et rouge."
+                      : section.key === "surveillance"
+                        ? "Le filtre Jaunes ne montre que les courses a garder sous radar, pas tout le programme."
+                        : section.key === "passer"
+                          ? "Le filtre Rouges ne montre que les courses a filtrer, pas l'ensemble du board."
+                          : "Change de filtre pour revenir au programme complet."}
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setBoardFilter("all")}
+                      className="app-button-secondary text-xs"
+                    >
+                      Voir tout
+                    </button>
+                    {section.key !== "jouable" && boardCounts.jouable > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => setBoardFilter("jouable")}
+                        className="app-button-secondary text-xs"
+                      >
+                        Voir les vertes
+                      </button>
+                    ) : null}
+                    {section.key !== "surveillance" && boardCounts.surveillance > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => setBoardFilter("surveillance")}
+                        className="app-button-secondary text-xs"
+                      >
+                        Voir les jaunes
+                      </button>
+                    ) : null}
+                    {section.key !== "passer" && boardCounts.passer > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => setBoardFilter("passer")}
+                        className="app-button-secondary text-xs"
+                      >
+                        Voir les rouges
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
               )}
             </section>
