@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   computeClientRaceScore,
@@ -202,20 +202,137 @@ function getLisibiliteLabel(lisibilite: Lisibilite | undefined) {
   };
 }
 
+function getPlayTierMeta(playTier: "jouable" | "surveillance" | "passer" | "resultat" | undefined) {
+  if (playTier === "jouable") {
+    return {
+      label: "A suivre",
+      badgeClass:
+        "border-[color-mix(in_srgb,var(--pmu-primary)_32%,transparent)] bg-[var(--pmu-primary-fade)] text-[var(--pmu-primary)]",
+      scoreClass: "text-[var(--pmu-primary)]",
+      railClass:
+        "bg-[linear-gradient(90deg,var(--pmu-primary)_0%,var(--pmu-primary-bright)_100%)]",
+    };
+  }
+
+  if (playTier === "surveillance") {
+    return {
+      label: "Sous radar",
+      badgeClass:
+        "border-[color-mix(in_srgb,var(--pmu-orange)_32%,transparent)] bg-[color-mix(in_srgb,var(--pmu-orange)_10%,transparent)] text-[var(--pmu-orange)]",
+      scoreClass: "text-[var(--pmu-orange)]",
+      railClass:
+        "bg-[linear-gradient(90deg,color-mix(in_srgb,var(--pmu-orange)_84%,white)_0%,var(--pmu-orange)_100%)]",
+    };
+  }
+
+  if (playTier === "resultat") {
+    return {
+      label: "Resultat",
+      badgeClass:
+        "border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] text-[var(--pmu-text-soft)]",
+      scoreClass: "text-[var(--pmu-text)]",
+      railClass:
+        "bg-[linear-gradient(90deg,color-mix(in_srgb,var(--pmu-text-soft)_86%,transparent)_0%,var(--pmu-text-soft)_100%)]",
+    };
+  }
+
+  return {
+    label: "A filtrer",
+    badgeClass:
+      "border-[color-mix(in_srgb,var(--pmu-red)_28%,transparent)] bg-[color-mix(in_srgb,var(--pmu-red)_8%,transparent)] text-[var(--pmu-red)]",
+    scoreClass: "text-[var(--pmu-text)]",
+    railClass:
+      "bg-[linear-gradient(90deg,color-mix(in_srgb,var(--pmu-red)_72%,white)_0%,var(--pmu-red)_100%)]",
+  };
+}
+
+function getRaceProfileMeta(status: string | undefined) {
+  if (status === "SIGNAL_FORT") {
+    return {
+      label: "Signal fort",
+      className:
+        "border-[color-mix(in_srgb,var(--pmu-primary)_30%,transparent)] bg-[var(--pmu-primary-fade)] text-[var(--pmu-primary)]",
+    };
+  }
+
+  if (status === "OPPORTUNITE_CACHEE") {
+    return {
+      label: "Value cachee",
+      className:
+        "border-[color-mix(in_srgb,var(--pmu-primary)_26%,transparent)] bg-[color-mix(in_srgb,var(--pmu-primary)_9%,transparent)] text-[var(--pmu-primary)]",
+    };
+  }
+
+  if (status === "COURSE_PIEGE") {
+    return {
+      label: "Course piege",
+      className:
+        "border-[color-mix(in_srgb,var(--pmu-orange)_28%,transparent)] bg-[color-mix(in_srgb,var(--pmu-orange)_9%,transparent)] text-[var(--pmu-orange)]",
+    };
+  }
+
+  if (status === "A_EVITER") {
+    return {
+      label: "A eviter",
+      className:
+        "border-[color-mix(in_srgb,var(--pmu-red)_28%,transparent)] bg-[color-mix(in_srgb,var(--pmu-red)_8%,transparent)] text-[var(--pmu-red)]",
+    };
+  }
+
+  if (status === "FAVORI_DANGEREUX") {
+    return {
+      label: "Favori fragile",
+      className:
+        "border-[color-mix(in_srgb,var(--pmu-red)_28%,transparent)] bg-[color-mix(in_srgb,var(--pmu-red)_8%,transparent)] text-[var(--pmu-red)]",
+    };
+  }
+
+  return {
+    label: "Suivi",
+    className:
+      "border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] text-[var(--pmu-text-soft)]",
+  };
+}
+
+function getWindowLabel(stage: ScoreStage | undefined, minutesUntilStart: number | null) {
+  if (stage === "finished" || (minutesUntilStart != null && minutesUntilStart <= -10)) {
+    return "Course terminee";
+  }
+
+  if (minutesUntilStart != null && minutesUntilStart <= 8) {
+    return "Live desk";
+  }
+
+  if (stage === "final_30m") {
+    return "Radar final";
+  }
+
+  if (stage === "preview_1h") {
+    return "Radar 1h";
+  }
+
+  if (stage === "preview_2h") {
+    return "Radar 2h";
+  }
+
+  return "Programme du jour";
+}
+
 function QuinteSkeleton() {
   return (
-    <section className="rounded-[1.55rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] p-3.5">
+    <section className="overflow-hidden rounded-[1.65rem] border border-[var(--pmu-border)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--pmu-surface-highlight)_34%,var(--pmu-surface))_0%,color-mix(in_srgb,var(--pmu-surface)_92%,transparent)_100%)] p-4">
       <div className="space-y-3 animate-pulse">
         <div className="h-3 w-28 rounded-full bg-[color-mix(in_srgb,var(--pmu-text-muted)_16%,transparent)]" />
-        <div className="h-12 rounded-[1rem] bg-[color-mix(in_srgb,var(--pmu-surface-2)_84%,transparent)]" />
+        <div className="h-20 rounded-[1.2rem] bg-[color-mix(in_srgb,var(--pmu-surface-2)_84%,transparent)]" />
         <div className="h-24 rounded-[1.2rem] bg-[color-mix(in_srgb,var(--pmu-surface-2)_84%,transparent)]" />
+        <div className="h-11 rounded-[1rem] bg-[color-mix(in_srgb,var(--pmu-primary)_12%,transparent)]" />
       </div>
     </section>
   );
 }
 
 export function SidebarQuinteCard() {
-  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const selectedDate = normalizeDateParam(searchParams.get("date"));
   const [state, setState] = useState<SidebarQuinteState>({ status: "loading" });
@@ -352,12 +469,20 @@ export function SidebarQuinteCard() {
 
   if (state.status === "empty") {
     return (
-      <section className="rounded-[1.55rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] p-3.5">
-        <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[var(--pmu-text-muted)]">
-          Quinte du jour
+      <section className="overflow-hidden rounded-[1.65rem] border border-[var(--pmu-border)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--pmu-surface-highlight)_34%,var(--pmu-surface))_0%,color-mix(in_srgb,var(--pmu-surface)_92%,transparent)_100%)] p-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[var(--pmu-text-muted)]">
+            Quinte du jour
+          </p>
+          <span className="rounded-full border border-[var(--pmu-border)] px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
+            Programme
+          </span>
+        </div>
+        <p className="mt-3 text-sm font-bold text-[var(--pmu-text)]">
+          Aucun repere Quinte remonte pour cette journee.
         </p>
-        <p className="mt-3 text-sm leading-6 text-[var(--pmu-text-soft)]">
-          Pas de course Quinte detectee pour cette journee.
+        <p className="mt-2 text-xs leading-5 text-[var(--pmu-text-soft)]">
+          Le bloc se remplit des qu&apos;une course Quinte apparait dans le programme PMU.
         </p>
       </section>
     );
@@ -365,11 +490,19 @@ export function SidebarQuinteCard() {
 
   if (state.status === "error") {
     return (
-      <section className="rounded-[1.55rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] p-3.5">
-        <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[var(--pmu-text-muted)]">
-          Quinte du jour
+      <section className="overflow-hidden rounded-[1.65rem] border border-[var(--pmu-border)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--pmu-surface-highlight)_34%,var(--pmu-surface))_0%,color-mix(in_srgb,var(--pmu-surface)_92%,transparent)_100%)] p-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[var(--pmu-text-muted)]">
+            Quinte du jour
+          </p>
+          <span className="rounded-full border border-[color-mix(in_srgb,var(--pmu-red)_24%,transparent)] bg-[color-mix(in_srgb,var(--pmu-red)_8%,transparent)] px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.12em] text-[var(--pmu-red)]">
+            Indispo
+          </span>
+        </div>
+        <p className="mt-3 text-sm font-bold text-[var(--pmu-text)]">
+          Bloc Quinte temporairement indisponible.
         </p>
-        <p className="mt-3 text-sm leading-6 text-[var(--pmu-text-soft)]">
+        <p className="mt-2 text-xs leading-5 text-[var(--pmu-text-soft)]">
           {state.message}
         </p>
       </section>
@@ -377,9 +510,20 @@ export function SidebarQuinteCard() {
   }
 
   const { race, score } = state;
+  const coursePath = `/course/${race.reunion}/${race.course}`;
+  const courseHref = `${coursePath}?date=${selectedDate}`;
+  const isCurrentCourse = pathname === coursePath;
   const statusBadge = getStatusBadge(minutesUntilStart ?? 999);
   const lisibilite = getLisibiliteLabel(score?.lisibilite);
+  const playTierMeta = getPlayTierMeta(scoreSummary?.playTier);
+  const raceProfileMeta = getRaceProfileMeta(raceProfile?.status);
+  const windowLabel = getWindowLabel(score?.stage, minutesUntilStart);
   const scoreValue = scoreSummary ? scoreSummary.displayScore.toFixed(1) : "--";
+  const scoreProgress = scoreSummary ? Math.max(12, Math.min(100, scoreSummary.displayScore * 10)) : 16;
+  const numberBadge =
+    score?.pick?.numPmu != null && Number.isFinite(score.pick.numPmu)
+      ? String(score.pick.numPmu).padStart(2, "0")
+      : null;
   const selectionTitle =
     score?.pick?.numPmu || score?.pick?.nom
       ? `N${score?.pick?.numPmu ?? "--"} ${score?.pick?.nom ?? "Selection"}`
@@ -390,102 +534,169 @@ export function SidebarQuinteCard() {
           : "Analyse en consolidation";
   const selectionCopy =
     score?.pick?.topFacteurs?.slice(0, 2).join(" - ") ||
+    scoreSummary?.radarSentence ||
     score?.recommendation ||
     (score?.scoreLocked
       ? "Le bloc Quinte du jour est repere, mais le ticket detaille reste reserve aux comptes premium."
       : "Le bloc se complete quand la course entre dans la fenetre d'analyse.");
+  const ticketLine =
+    raceProfile?.ticketNums && raceProfile.ticketNums.length > 1
+      ? raceProfile.ticketNums.join(" - ")
+      : null;
 
   return (
-    <section className="rounded-[1.55rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] p-3.5">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[var(--pmu-text-muted)]">
-          Quinte du jour
-        </p>
-        <span
-          className={`rounded-full border px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.12em] ${statusBadge.className}`}
-        >
-          {statusBadge.label}
-        </span>
-      </div>
+    <section className="overflow-hidden rounded-[1.65rem] border border-[var(--pmu-border)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--pmu-surface-highlight)_36%,var(--pmu-surface))_0%,color-mix(in_srgb,var(--pmu-surface)_92%,transparent)_100%)] shadow-[var(--pmu-shadow-sm)]">
+      <div className="relative p-4">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_top,color-mix(in_srgb,var(--pmu-primary)_16%,transparent),transparent_68%)] opacity-80" />
 
-      <div className="rounded-[1.25rem] border border-[color-mix(in_srgb,var(--pmu-primary)_18%,transparent)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--pmu-surface-highlight)_56%,var(--pmu-surface))_0%,color-mix(in_srgb,var(--pmu-surface-2)_78%,var(--pmu-surface))_100%)] p-4 shadow-[var(--pmu-shadow-sm)]">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-[var(--pmu-primary)]">
+        <div className="relative flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[var(--pmu-text-muted)]">
+              Quinte du jour
+            </p>
+            <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-primary)]">
               R{race.reunion}C{race.course}
             </p>
-            <h3 className="mt-2 line-clamp-2 text-lg font-black leading-tight text-[var(--pmu-text)]">
-              {race.nomCourse}
-            </h3>
-            <p className="mt-2 text-xs leading-5 text-[var(--pmu-text-soft)]">
-              {race.hippodrome} - {race.heureDepart} - {race.nombrePartants} partants
-            </p>
           </div>
-
-          <div className="rounded-[1rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_86%,transparent)] px-3 py-2 text-right">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--pmu-text-muted)]">
-              Radar
-            </p>
-            <p className="mt-1 text-2xl font-black tracking-[-0.05em] text-[var(--pmu-text)]">
-              {scoreValue}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-2">
           <span
-            className={`rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] ${lisibilite.className}`}
+            className={`rounded-full border px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.12em] ${statusBadge.className}`}
           >
-            {lisibilite.label}
-          </span>
-          {raceProfile ? (
-            <span className="rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_86%,transparent)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
-              {raceProfile.label}
-            </span>
-          ) : null}
-          <span className="rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_86%,transparent)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
-            Quinte PMU
+            {statusBadge.label}
           </span>
         </div>
 
-        <div className="mt-4 rounded-[1.15rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] p-4">
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--pmu-text-muted)]">
-            Lecture du moteur
-          </p>
-          <h4 className="mt-2 text-base font-black leading-tight text-[var(--pmu-text)]">
-            {selectionTitle}
-          </h4>
-          <p className="mt-2 text-xs leading-5 text-[var(--pmu-text-soft)]">
-            {selectionCopy}
-          </p>
+        <div className="relative mt-4 rounded-[1.4rem] border border-[color-mix(in_srgb,var(--pmu-primary)_18%,transparent)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--pmu-surface-highlight)_66%,var(--pmu-surface))_0%,color-mix(in_srgb,var(--pmu-surface-2)_88%,var(--pmu-surface))_100%)] p-4 shadow-[var(--pmu-shadow-sm)]">
+          <div className="grid grid-cols-[1fr_auto] gap-3">
+            <div className="min-w-0">
+              <h3 className="line-clamp-2 text-[1.05rem] font-black leading-tight text-[var(--pmu-text)]">
+                {race.nomCourse}
+              </h3>
+              <p className="mt-2 text-xs leading-5 text-[var(--pmu-text-soft)]">
+                {race.hippodrome} - {race.heureDepart} - {race.nombrePartants} partants
+              </p>
+            </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            {score?.pick?.betType ? (
-              <span className="rounded-full border border-[color-mix(in_srgb,var(--pmu-primary)_30%,transparent)] bg-[var(--pmu-primary-fade)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-primary)]">
-                {formatBetTypeLabelFr(score.pick.betType)}
+            <div className="min-w-[5.15rem] rounded-[1.2rem] border border-[color-mix(in_srgb,var(--pmu-primary)_20%,transparent)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] px-3 py-3 text-center shadow-[var(--pmu-shadow-sm)]">
+              <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[var(--pmu-text-muted)]">
+                Radar
+              </p>
+              <p
+                className={`mt-1 text-[2rem] font-black tracking-[-0.06em] ${playTierMeta.scoreClass}`}
+              >
+                {scoreValue}
+              </p>
+              <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
+                /10
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--pmu-surface)_88%,transparent)]">
+            <div
+              className={`h-full rounded-full ${playTierMeta.railClass}`}
+              style={{ width: `${scoreProgress}%` }}
+            />
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span
+              className={`rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] ${playTierMeta.badgeClass}`}
+            >
+              {playTierMeta.label}
+            </span>
+            <span
+              className={`rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] ${lisibilite.className}`}
+            >
+              {lisibilite.label}
+            </span>
+            <span
+              className={`rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] ${raceProfileMeta.className}`}
+            >
+              {raceProfileMeta.label}
+            </span>
+          </div>
+
+          <div className="mt-4 rounded-[1.25rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] p-3.5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--pmu-text-muted)]">
+                  Ticket moteur
+                </p>
+                <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
+                  {windowLabel}
+                </p>
+              </div>
+              {score?.pick?.confidence ? (
+                <ConfidenceBadge score={score.pick.confidence} compact />
+              ) : null}
+            </div>
+
+            <div className="mt-3 flex items-start gap-3">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[1.1rem] border border-[color-mix(in_srgb,var(--pmu-primary)_20%,transparent)] bg-[color-mix(in_srgb,var(--pmu-primary)_10%,var(--pmu-surface))] text-lg font-black text-[var(--pmu-text)] shadow-[var(--pmu-shadow-sm)]">
+                {numberBadge ?? "Q+"}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="text-[0.98rem] font-black leading-tight text-[var(--pmu-text)]">
+                  {selectionTitle}
+                </h4>
+                <p className="mt-2 text-xs leading-5 text-[var(--pmu-text-soft)]">
+                  {selectionCopy}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_84%,transparent)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
+                Quinte PMU
               </span>
-            ) : null}
-            {score?.pick?.confidence ? (
-              <ConfidenceBadge score={score.pick.confidence} compact />
+              {score?.pick?.betType ? (
+                <span className="rounded-full border border-[color-mix(in_srgb,var(--pmu-primary)_30%,transparent)] bg-[var(--pmu-primary-fade)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-primary)]">
+                  {formatBetTypeLabelFr(score.pick.betType)}
+                </span>
+              ) : null}
+              {ticketLine ? (
+                <span className="rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_84%,transparent)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
+                  Ticket {ticketLine}
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="rounded-[1.05rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] px-3 py-2.5">
+              <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-[var(--pmu-text-muted)]">
+                Lecture
+              </p>
+              <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">
+                {windowLabel}
+              </p>
+            </div>
+            <div className="rounded-[1.05rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] px-3 py-2.5">
+              <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-[var(--pmu-text-muted)]">
+                Route
+              </p>
+              <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">
+                {isCurrentCourse ? "Ouverte" : "A ouvrir"}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 flex gap-2">
+            {isCurrentCourse ? (
+              <span className="app-button-secondary flex-1 justify-center text-xs opacity-80">
+                Course ouverte
+              </span>
+            ) : (
+              <Link href={courseHref} className="app-button-primary flex-1 text-xs">
+                Ouvrir la course
+              </Link>
+            )}
+            {score?.scoreLocked ? (
+              <Link href="/premium" className="app-button-secondary text-xs">
+                Debloquer
+              </Link>
             ) : null}
           </div>
-        </div>
-
-        <div className="mt-4 flex gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              router.push(`/course/${race.reunion}/${race.course}?date=${selectedDate}`)
-            }
-            className="app-button-primary flex-1 text-xs"
-          >
-            Ouvrir la course
-          </button>
-          {score?.scoreLocked ? (
-            <Link href="/premium" className="app-button-secondary text-xs">
-              Premium
-            </Link>
-          ) : null}
         </div>
       </div>
     </section>
