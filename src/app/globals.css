@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --pmu-sidebar-width: 24.5rem;
-  --pmu-sidebar-offset: 25.75rem;
+  --pmu-sidebar-width: 27rem;
+  --pmu-sidebar-gap: 1.25rem;
+  --pmu-sidebar-offset: calc(var(--pmu-sidebar-width) + var(--pmu-sidebar-gap));
   --pmu-bg: #050b14;
   --pmu-bg-mid: #0b1324;
   --pmu-surface: rgba(9, 17, 30, 0.88);

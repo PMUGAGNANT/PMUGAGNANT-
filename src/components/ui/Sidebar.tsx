@@ -156,7 +156,7 @@ function isActive(pathname: string, href: string, external = false) {
 }
 
 function navItemClass(active: boolean) {
-  return `group relative flex items-start gap-3 rounded-[1.25rem] border px-4 py-3.5 transition ${
+  return `group relative flex items-start gap-3 rounded-[1.2rem] border px-3.5 py-3 transition ${
     active
       ? "border-[color-mix(in_srgb,var(--pmu-primary)_28%,transparent)] bg-[color-mix(in_srgb,var(--pmu-primary)_11%,var(--pmu-surface))] shadow-[var(--pmu-shadow-sm)]"
       : "border-[color-mix(in_srgb,var(--pmu-border)_72%,transparent)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] hover:border-[var(--pmu-border-strong)] hover:bg-[color-mix(in_srgb,var(--pmu-surface-highlight)_68%,var(--pmu-surface))]"
@@ -301,19 +301,19 @@ export function Sidebar() {
   const thumbOffset = scrollState.progress * thumbTravel;
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-[24.5rem] p-4 lg:flex">
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-[var(--pmu-sidebar-width)] p-4 lg:flex">
       <div className="relative flex h-full w-full flex-col overflow-hidden rounded-[2rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-bg)_90%,transparent)] shadow-[var(--pmu-shadow)] backdrop-blur-2xl">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,color-mix(in_srgb,var(--pmu-primary)_14%,transparent),transparent_34%),radial-gradient(circle_at_bottom_left,color-mix(in_srgb,var(--pmu-accent-blue)_8%,transparent),transparent_28%)]" />
 
-        <div className="relative flex h-full flex-col p-4">
-          <div className="rounded-[1.55rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] p-4 shadow-[var(--pmu-shadow-sm)]">
+        <div className="relative flex h-full flex-col p-3.5">
+          <div className="rounded-[1.55rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] p-3.5 shadow-[var(--pmu-shadow-sm)]">
             <div className="flex items-start justify-between gap-3">
               <Link href="/" className="flex min-w-0 items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-[1.1rem] border border-[color-mix(in_srgb,var(--pmu-primary)_24%,transparent)] bg-[var(--pmu-primary-soft)] text-sm font-black text-[var(--pmu-primary)]">
+                <div className="flex h-11 w-11 items-center justify-center rounded-[1rem] border border-[color-mix(in_srgb,var(--pmu-primary)_24%,transparent)] bg-[var(--pmu-primary-soft)] text-sm font-black text-[var(--pmu-primary)]">
                   PG
                 </div>
                 <div className="min-w-0">
-                  <p className="app-brand-wordmark truncate text-[1.15rem] font-black text-[var(--pmu-text)]">
+                  <p className="app-brand-wordmark truncate text-[1.12rem] font-black text-[var(--pmu-text)]">
                     PMU Gagnant
                   </p>
                   <p className="truncate text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--pmu-text-muted)]">
@@ -327,13 +327,13 @@ export function Sidebar() {
               </span>
             </div>
 
-            <p className="mt-4 text-sm leading-6 text-[var(--pmu-text-soft)]">
-              Une interface plus nette pour trouver la bonne course, lire le
-              signal principal et garder une decision propre.
+            <p className="mt-3 text-[13px] leading-5 text-[var(--pmu-text-soft)]">
+              Trouver la bonne course, lire le signal principal et ouvrir le
+              ticket utile sans perdre le fil.
             </p>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_86%,transparent)] px-3 py-1.5 text-[11px] font-bold text-[var(--pmu-text-soft)]">
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_86%,transparent)] px-3 py-1.5 text-[10px] font-bold text-[var(--pmu-text-soft)]">
                 <span
                   className={`h-2 w-2 rounded-full ${
                     isConnected ? "bg-emerald-400" : "bg-[var(--pmu-border-strong)]"
@@ -341,29 +341,29 @@ export function Sidebar() {
                 />
                 {isConnected ? "Session active" : "Session locale"}
               </span>
-              <span className="inline-flex items-center rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_86%,transparent)] px-3 py-1.5 text-[11px] font-bold text-[var(--pmu-text-soft)]">
+              <span className="inline-flex items-center rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_86%,transparent)] px-3 py-1.5 text-[10px] font-bold text-[var(--pmu-text-soft)]">
                 Desktop nav
               </span>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="mt-3 grid grid-cols-2 gap-2">
               <Link href="/premium" className="app-button-primary text-xs">
                 Voir l&apos;offre
               </Link>
               <Link href="/bilan" className="app-button-secondary text-xs">
-                Ouvrir le bilan
+                Voir le bilan
               </Link>
             </div>
           </div>
 
-          <div className="relative mt-4 min-h-0 flex-1">
+          <div className="relative mt-3.5 min-h-0 flex-1">
             <div
               ref={scrollViewportRef}
-              className="pmu-scrollbar-hidden h-full overflow-y-auto pr-8"
+              className="pmu-scrollbar-hidden h-full overflow-y-auto pr-7"
             >
-              <div ref={scrollContentRef} className="space-y-4 pb-2">
-                <section className="rounded-[1.45rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] p-3.5">
-                  <div className="mb-3 flex items-center justify-between gap-3">
+              <div ref={scrollContentRef} className="space-y-3.5 pb-2">
+                <section className="rounded-[1.4rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] p-3">
+                  <div className="mb-2.5 flex items-center justify-between gap-3">
                     <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[var(--pmu-text-muted)]">
                       Recherche
                     </p>
@@ -388,8 +388,8 @@ export function Sidebar() {
                   <SidebarQuinteCard />
                 </Suspense>
 
-                <section className="rounded-[1.55rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] p-3.5">
-                  <div className="mb-3 flex items-center justify-between gap-3">
+                <section className="rounded-[1.45rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] p-3">
+                  <div className="mb-2.5 flex items-center justify-between gap-3">
                     <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[var(--pmu-text-muted)]">
                       Navigation
                     </p>
@@ -400,7 +400,7 @@ export function Sidebar() {
                     ) : null}
                   </div>
 
-                  <nav className="space-y-2">
+                  <nav className="space-y-1.5">
                     {navItems.map((item) => {
                       const active = isActive(pathname, item.href, item.external);
                       const Icon = item.Icon;
@@ -414,7 +414,7 @@ export function Sidebar() {
                             rel="noopener noreferrer"
                             className={navItemClass(false)}
                           >
-                            <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--pmu-surface-2)_92%,transparent)] text-[var(--pmu-text-soft)]">
+                            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--pmu-surface-2)_92%,transparent)] text-[var(--pmu-text-soft)]">
                               <Icon />
                             </span>
                             <span className="min-w-0 flex-1">
@@ -426,7 +426,7 @@ export function Sidebar() {
                                   </span>
                                 ) : null}
                               </span>
-                              <span className="mt-1 block text-xs leading-5 text-[var(--pmu-text-muted)]">
+                              <span className="mt-1 block line-clamp-2 text-[11px] leading-[1.1rem] text-[var(--pmu-text-muted)]">
                                 {item.description}
                               </span>
                             </span>
@@ -438,7 +438,7 @@ export function Sidebar() {
                         <div key={item.href} className="space-y-2">
                           <Link href={item.href} className={navItemClass(active)}>
                             <span
-                              className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                              className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
                                 active
                                   ? "bg-[var(--pmu-primary-soft)] text-[var(--pmu-primary)]"
                                   : "bg-[color-mix(in_srgb,var(--pmu-surface-2)_92%,transparent)] text-[var(--pmu-text-soft)]"
@@ -450,12 +450,12 @@ export function Sidebar() {
                               <span className="block text-sm font-black text-[var(--pmu-text)]">
                                 {item.label}
                               </span>
-                              <span className="mt-1 block text-xs leading-5 text-[var(--pmu-text-muted)]">
+                              <span className="mt-1 block line-clamp-2 text-[11px] leading-[1.1rem] text-[var(--pmu-text-muted)]">
                                 {item.description}
                               </span>
                             </span>
                             <span
-                              className={`mt-1 h-2.5 w-2.5 rounded-full ${
+                              className={`mt-1 h-2 w-2 rounded-full ${
                                 active
                                   ? "bg-[var(--pmu-primary)]"
                                   : "bg-[var(--pmu-border-strong)]"
@@ -482,7 +482,7 @@ export function Sidebar() {
                   </nav>
                 </section>
 
-                <section className="grid gap-2 rounded-[1.45rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] p-3.5">
+                <section className="grid gap-2 rounded-[1.4rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] p-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[var(--pmu-text-muted)]">

@@ -252,22 +252,22 @@ export function SidebarProgramme() {
   }
 
   return (
-    <section className="mt-2 overflow-hidden rounded-[1.35rem] border border-[var(--pmu-border)] bg-[linear-gradient(180deg,var(--pmu-surface)_0%,color-mix(in_srgb,var(--pmu-surface)_84%,var(--pmu-bg)_16%)_100%)] shadow-[0_4px_18px_rgba(0,0,0,0.18)]">
+    <section className="mt-2 overflow-hidden rounded-[1.25rem] border border-[var(--pmu-border)] bg-[linear-gradient(180deg,var(--pmu-surface)_0%,color-mix(in_srgb,var(--pmu-surface)_84%,var(--pmu-bg)_16%)_100%)] shadow-[0_4px_18px_rgba(0,0,0,0.18)]">
       <button
         type="button"
-        className="flex w-full items-center gap-3 px-3 py-3 text-left transition hover:bg-[color-mix(in_srgb,var(--pmu-surface-2)_80%,transparent)]"
+        className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-[color-mix(in_srgb,var(--pmu-surface-2)_80%,transparent)]"
         onClick={() => setIsOpen((current) => !current)}
         aria-expanded={isOpen}
         aria-controls="sidebar-programme-panel"
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] text-[var(--pmu-text)]">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] text-[var(--pmu-text)]">
           <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 6.5h12M4 10h12M4 13.5h8" />
           </svg>
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black text-[var(--pmu-text)]">Programme du jour</p>
+          <p className="text-[13px] font-black text-[var(--pmu-text)]">Programme du jour</p>
           <p className="mt-0.5 truncate text-[11px] text-[var(--pmu-text-soft)]">
             {reunionGroups.length} réunions • {formatDateLabel(selectedDate)}
           </p>
@@ -279,7 +279,7 @@ export function SidebarProgramme() {
       </button>
 
       {isOpen ? (
-        <div id="sidebar-programme-panel" className="border-t border-[var(--pmu-border)] bg-[var(--pmu-surface)] p-3">
+        <div id="sidebar-programme-panel" className="border-t border-[var(--pmu-border)] bg-[var(--pmu-surface)] p-2.5">
           <div className="flex items-center gap-2 rounded-2xl bg-[var(--pmu-surface-2)] p-1">
             <button
               type="button"

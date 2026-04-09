@@ -360,7 +360,7 @@ function buildSelectionCopy({
 
 function QuinteSkeleton() {
   return (
-    <section className="overflow-hidden rounded-[1.65rem] border border-[var(--pmu-border)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--pmu-surface-highlight)_34%,var(--pmu-surface))_0%,color-mix(in_srgb,var(--pmu-surface)_92%,transparent)_100%)] p-4">
+    <section className="overflow-hidden rounded-[1.55rem] border border-[var(--pmu-border)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--pmu-surface-highlight)_34%,var(--pmu-surface))_0%,color-mix(in_srgb,var(--pmu-surface)_92%,transparent)_100%)] p-3.5">
       <div className="space-y-3 animate-pulse">
         <div className="h-3 w-28 rounded-full bg-[color-mix(in_srgb,var(--pmu-text-muted)_16%,transparent)]" />
         <div className="h-20 rounded-[1.2rem] bg-[color-mix(in_srgb,var(--pmu-surface-2)_84%,transparent)]" />
@@ -509,7 +509,7 @@ export function SidebarQuinteCard() {
 
   if (state.status === "empty") {
     return (
-      <section className="overflow-hidden rounded-[1.65rem] border border-[var(--pmu-border)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--pmu-surface-highlight)_34%,var(--pmu-surface))_0%,color-mix(in_srgb,var(--pmu-surface)_92%,transparent)_100%)] p-4">
+      <section className="overflow-hidden rounded-[1.55rem] border border-[var(--pmu-border)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--pmu-surface-highlight)_34%,var(--pmu-surface))_0%,color-mix(in_srgb,var(--pmu-surface)_92%,transparent)_100%)] p-3.5">
         <div className="flex items-center justify-between gap-3">
           <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[var(--pmu-text-muted)]">
             Quinte du jour
@@ -530,7 +530,7 @@ export function SidebarQuinteCard() {
 
   if (state.status === "error") {
     return (
-      <section className="overflow-hidden rounded-[1.65rem] border border-[var(--pmu-border)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--pmu-surface-highlight)_34%,var(--pmu-surface))_0%,color-mix(in_srgb,var(--pmu-surface)_92%,transparent)_100%)] p-4">
+      <section className="overflow-hidden rounded-[1.55rem] border border-[var(--pmu-border)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--pmu-surface-highlight)_34%,var(--pmu-surface))_0%,color-mix(in_srgb,var(--pmu-surface)_92%,transparent)_100%)] p-3.5">
         <div className="flex items-center justify-between gap-3">
           <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[var(--pmu-text-muted)]">
             Quinte du jour
@@ -584,8 +584,8 @@ export function SidebarQuinteCard() {
       : null;
 
   return (
-    <section className="overflow-hidden rounded-[1.65rem] border border-[var(--pmu-border)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--pmu-surface-highlight)_36%,var(--pmu-surface))_0%,color-mix(in_srgb,var(--pmu-surface)_92%,transparent)_100%)] shadow-[var(--pmu-shadow-sm)]">
-      <div className="relative p-4">
+    <section className="overflow-hidden rounded-[1.55rem] border border-[var(--pmu-border)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--pmu-surface-highlight)_36%,var(--pmu-surface))_0%,color-mix(in_srgb,var(--pmu-surface)_92%,transparent)_100%)] shadow-[var(--pmu-shadow-sm)]">
+      <div className="relative p-3.5">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_top,color-mix(in_srgb,var(--pmu-primary)_16%,transparent),transparent_68%)] opacity-80" />
 
         <div className="relative flex items-center justify-between gap-3">
@@ -604,23 +604,23 @@ export function SidebarQuinteCard() {
           </span>
         </div>
 
-        <div className="relative mt-4 rounded-[1.4rem] border border-[color-mix(in_srgb,var(--pmu-primary)_18%,transparent)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--pmu-surface-highlight)_66%,var(--pmu-surface))_0%,color-mix(in_srgb,var(--pmu-surface-2)_88%,var(--pmu-surface))_100%)] p-4 shadow-[var(--pmu-shadow-sm)]">
-          <div className="grid grid-cols-[1fr_auto] gap-3">
+        <div className="relative mt-3.5 rounded-[1.3rem] border border-[color-mix(in_srgb,var(--pmu-primary)_18%,transparent)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--pmu-surface-highlight)_66%,var(--pmu-surface))_0%,color-mix(in_srgb,var(--pmu-surface-2)_88%,var(--pmu-surface))_100%)] p-3.5 shadow-[var(--pmu-shadow-sm)]">
+          <div className="grid grid-cols-[minmax(0,1fr)_4.9rem] gap-3">
             <div className="min-w-0">
-              <h3 className="line-clamp-2 text-[1.05rem] font-black leading-tight text-[var(--pmu-text)]">
+              <h3 className="line-clamp-2 text-[1rem] font-black leading-tight text-[var(--pmu-text)]">
                 {race.nomCourse}
               </h3>
-              <p className="mt-2 text-xs leading-5 text-[var(--pmu-text-soft)]">
+              <p className="mt-1.5 text-[11px] leading-5 text-[var(--pmu-text-soft)]">
                 {race.hippodrome} - {race.heureDepart} - {race.nombrePartants} partants
               </p>
             </div>
 
-            <div className="min-w-[5.15rem] rounded-[1.2rem] border border-[color-mix(in_srgb,var(--pmu-primary)_20%,transparent)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] px-3 py-3 text-center shadow-[var(--pmu-shadow-sm)]">
+            <div className="min-w-[4.9rem] rounded-[1.1rem] border border-[color-mix(in_srgb,var(--pmu-primary)_20%,transparent)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] px-2.5 py-2.5 text-center shadow-[var(--pmu-shadow-sm)]">
               <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[var(--pmu-text-muted)]">
                 Radar
               </p>
               <p
-                className={`mt-1 text-[2rem] font-black tracking-[-0.06em] ${playTierMeta.scoreClass}`}
+                className={`mt-1 text-[1.8rem] font-black tracking-[-0.06em] ${playTierMeta.scoreClass}`}
               >
                 {scoreValue}
               </p>
@@ -637,25 +637,25 @@ export function SidebarQuinteCard() {
             />
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap gap-1.5">
             <span
-              className={`rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] ${playTierMeta.badgeClass}`}
+              className={`rounded-full border px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] ${playTierMeta.badgeClass}`}
             >
               {playTierMeta.label}
             </span>
             <span
-              className={`rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] ${lisibilite.className}`}
+              className={`rounded-full border px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] ${lisibilite.className}`}
             >
               {lisibilite.label}
             </span>
             <span
-              className={`rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] ${raceProfileMeta.className}`}
+              className={`rounded-full border px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] ${raceProfileMeta.className}`}
             >
               {raceProfileMeta.label}
             </span>
           </div>
 
-          <div className="mt-4 rounded-[1.25rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] p-3.5">
+          <div className="mt-3.5 rounded-[1.15rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] p-3">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--pmu-text-muted)]">
@@ -670,47 +670,47 @@ export function SidebarQuinteCard() {
               ) : null}
             </div>
 
-            <div className="mt-3 flex items-start gap-3">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[1.1rem] border border-[color-mix(in_srgb,var(--pmu-primary)_20%,transparent)] bg-[color-mix(in_srgb,var(--pmu-primary)_10%,var(--pmu-surface))] text-lg font-black text-[var(--pmu-text)] shadow-[var(--pmu-shadow-sm)]">
+            <div className="mt-3 grid grid-cols-[3.2rem_minmax(0,1fr)] gap-3">
+              <div className="flex h-[3.2rem] w-[3.2rem] shrink-0 items-center justify-center rounded-[1rem] border border-[color-mix(in_srgb,var(--pmu-primary)_20%,transparent)] bg-[color-mix(in_srgb,var(--pmu-primary)_10%,var(--pmu-surface))] text-base font-black text-[var(--pmu-text)] shadow-[var(--pmu-shadow-sm)]">
                 {numberBadge ?? "Q+"}
               </div>
               <div className="min-w-0 flex-1">
-                <h4 className="text-[0.98rem] font-black leading-tight text-[var(--pmu-text)]">
+                <h4 className="text-[0.95rem] font-black leading-tight text-[var(--pmu-text)]">
                   {selectionTitle}
                 </h4>
-                <p className="mt-2 line-clamp-3 text-xs leading-5 text-[var(--pmu-text-soft)]">
+                <p className="mt-1.5 line-clamp-2 text-[11px] leading-[1.1rem] text-[var(--pmu-text-soft)]">
                   {selectionCopy}
                 </p>
               </div>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_84%,transparent)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              <span className="rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_84%,transparent)] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
                 Quinte PMU
               </span>
               {score?.pick?.betType ? (
-                <span className="rounded-full border border-[color-mix(in_srgb,var(--pmu-primary)_30%,transparent)] bg-[var(--pmu-primary-fade)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-primary)]">
+                <span className="rounded-full border border-[color-mix(in_srgb,var(--pmu-primary)_30%,transparent)] bg-[var(--pmu-primary-fade)] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-primary)]">
                   {formatBetTypeLabelFr(score.pick.betType)}
                 </span>
               ) : null}
               {ticketLine ? (
-                <span className="rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_84%,transparent)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
+                <span className="rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_84%,transparent)] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
                   Ticket {ticketLine}
                 </span>
               ) : null}
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className="rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            <span className="rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
               {windowLabel}
             </span>
-            <span className="rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
+            <span className="rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
               {isCurrentCourse ? "Course ouverte" : "Acces rapide"}
             </span>
           </div>
 
-          <div className="mt-4 flex gap-2">
+          <div className="mt-3 flex gap-2">
             {isCurrentCourse ? (
               <span className="app-button-secondary flex-1 justify-center text-xs opacity-80">
                 Course ouverte
