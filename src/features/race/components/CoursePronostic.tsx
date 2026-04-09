@@ -1,20 +1,10 @@
 "use client";
 
 import type { CourseParticipantRow } from "@/features/race/components/ParticipantsTable";
-
-type CoursePronosticData = {
-  favoris?: Array<number | string>;
-  top5?: Array<number | string>;
-  scoreConfiance?: number | null;
-  valueBet?: number | string | null;
-  miseConseil?: number | null;
-  recommandation?: string | null;
-  betType?: string | null;
-  pourquoi?: string[];
-};
+import type { PronosticCardData } from "@/features/race/lib/race-page-model";
 
 interface CoursePronosticProps {
-  pronostic: CoursePronosticData;
+  pronostic: PronosticCardData;
   participants: CourseParticipantRow[] | null | undefined;
 }
 
@@ -38,7 +28,7 @@ function formatBetType(value?: string | null) {
 }
 
 function getSelectedHorse(
-  pronostic: CoursePronosticData,
+  pronostic: PronosticCardData,
   participants: CourseParticipantRow[] | null | undefined
 ) {
   const safeParticipants = Array.isArray(participants) ? participants : [];
@@ -73,7 +63,7 @@ function factorToSentence(raw: string) {
 }
 
 function buildReasons(
-  pronostic: CoursePronosticData,
+  pronostic: PronosticCardData,
   selectedHorse: CourseParticipantRow
 ) {
   const reasons = new Set<string>();
@@ -124,7 +114,7 @@ function buildReasons(
   return [...reasons].slice(0, 4);
 }
 
-function getVerdictLabel(pronostic: CoursePronosticData) {
+function getVerdictLabel(pronostic: PronosticCardData) {
   const recommendation = normalizeKey(pronostic.recommandation ?? "");
 
   if (pronostic.valueBet) {

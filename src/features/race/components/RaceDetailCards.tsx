@@ -1,0 +1,266 @@
+import Link from "next/link";
+
+import type {
+  ArrivalRow,
+  CourseParticipantRow,
+} from "@/features/race/components/ParticipantsTable";
+import { RaceStatusPill } from "@/features/race/components/RaceStatusPill";
+import {
+  formatDiscipline,
+  formatMinutesLabel,
+  type PronosticCardData,
+  type RaceCourseInfo,
+  type RacePaywallPreview,
+} from "@/features/race/lib/race-page-model";
+import {
+  getPriorityToneColor,
+  type RacePriorityBadge,
+} from "@/lib/race-priority";
+
+export function LockedTicketCard({
+  previewLabel,
+  previewLisibilite,
+  previewRecommendation,
+}: {
+  previewLabel?: string | null;
+  previewLisibilite?: string | null;
+  previewRecommendation?: string | null;
+}) {
+  return (
+    <section className="app-card p-5 md:p-6">
+      <div className="flex flex-wrap items-center gap-2">
+        <RaceStatusPill label="Reserve premium" tone="warning" />
+        {previewLisibilite ? <span className="app-pill text-xs">{previewLisibilite}</span> : null}
+      </div>
+
+      <h2 className="mt-4 text-3xl font-black text-[var(--pmu-text)]">
+        Le ticket detaille est verrouille
+      </h2>
+      <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
+        Le tableau des partants reste accessible, mais la lecture complete du
+        moteur et le ticket d&apos;execution sont reserves a l&apos;acces Premium.
+      </p>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <div className="app-card-muted px-4 py-4">
+          <p className="app-label">Cheval repere</p>
+          <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
+            {previewLabel || "Signal en cours"}
+          </p>
+        </div>
+        <div className="app-card-muted px-4 py-4">
+          <p className="app-label">Orientation</p>
+          <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
+            {previewRecommendation || "Lecture a confirmer"}
+          </p>
+        </div>
+      </div>
+
+      <Link href="/premium" className="app-button-primary mt-5 inline-flex">
+        Debloquer le pronostic premium
+      </Link>
+    </section>
+  );
+}
+
+export function AnalysisPendingCard() {
+  return (
+    <section className="app-card p-5 md:p-6">
+      <RaceStatusPill label="Analyse en cours" tone="neutral" />
+      <h2 className="mt-4 text-3xl font-black text-[var(--pmu-text)]">
+        Le moteur termine la lecture
+      </h2>
+      <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
+        Les partants sont deja visibles, mais le ticket n&apos;est pas encore
+        assez ferme pour etre affiche ici.
+      </p>
+    </section>
+  );
+}
+
+export function TopFiveCard({
+  top5,
+  participants,
+}: {
+  top5: Array<number | string>;
+  participants: CourseParticipantRow[];
+}) {
+  if (top5.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="app-card p-5 md:p-6">
+      <div className="app-section-heading">
+        <div>
+          <p className="app-kicker">Lecture moteur</p>
+          <h2 className="app-section-title">Top 5 de l&apos;algo</h2>
+        </div>
+      </div>
+
+      <div className="grid gap-3">
+        {top5.map((numero, index) => {
+          const participant = participants.find(
+            (item) => String(item.numero) === String(numero)
+          );
+
+          return (
+            <div
+              key={`${numero}-${index}`}
+              className="flex items-center justify-between gap-3 rounded-[1.15rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_92%,transparent)] px-4 py-3"
+            >
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--pmu-primary-soft)] text-sm font-black text-[var(--pmu-primary)]">
+                  {index + 1}
+                </span>
+                <div>
+                  <p className="font-black text-[var(--pmu-text)]">
+                    No {numero} {participant?.nom || `Cheval ${numero}`}
+                  </p>
+                  <p className="text-sm text-[var(--pmu-text-soft)]">
+                    {participant?.entraineur ||
+                      participant?.jockey ||
+                      participant?.driver ||
+                      "Profil a confirmer"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-right text-sm">
+                <p className="font-black text-[var(--pmu-text)]">
+                  {Math.round(participant?.scoreIa ?? 0) || "--"}
+                </p>
+                <p className="text-[var(--pmu-text-soft)]">
+                  {typeof participant?.cote === "number"
+                    ? `Cote ${participant.cote.toFixed(1)}`
+                    : "Cote --"}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+export function OfficialArrivalCard({ arrivee }: { arrivee: ArrivalRow[] }) {
+  if (arrivee.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="app-card p-5 md:p-6">
+      <div className="app-section-heading">
+        <div>
+          <p className="app-kicker">Resultat officiel</p>
+          <h2 className="app-section-title">Arrivee officielle</h2>
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {arrivee.map((row, index) => (
+          <div
+            key={`${row.numPmu}-${index}`}
+            className="rounded-[1.2rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_92%,transparent)] px-4 py-4 text-center"
+          >
+            <p className="app-label">{index + 1}e place</p>
+            <p className="mt-2 text-3xl font-black text-[var(--pmu-text)]">
+              {row.numPmu}
+            </p>
+            <p className="mt-1 text-sm text-[var(--pmu-text-soft)]">{row.nom}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export function CourseDeskCard({
+  courseInfo,
+  minutesUntilStart,
+  pronostic,
+  paywallRequired,
+  paywallPreview,
+  isFinished,
+  refreshPriority,
+}: {
+  courseInfo: RaceCourseInfo;
+  minutesUntilStart?: number | null;
+  pronostic: PronosticCardData | null;
+  paywallRequired: boolean;
+  paywallPreview?: RacePaywallPreview | null;
+  isFinished: boolean;
+  refreshPriority?: RacePriorityBadge | null;
+}) {
+  const mainHorse = pronostic?.favoris?.[0] ?? paywallPreview?.favori?.numPmu ?? null;
+
+  return (
+    <section className="app-card p-5 md:p-6">
+      <div className="app-section-heading">
+        <div>
+          <p className="app-kicker">Desk course</p>
+          <h2 className="app-section-title">Lecture rapide</h2>
+        </div>
+        <RaceStatusPill
+          label={isFinished ? "Terminee" : paywallRequired ? "Preview" : "Active"}
+          tone={isFinished ? "neutral" : paywallRequired ? "warning" : "primary"}
+        />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="app-card-muted px-4 py-4">
+          <p className="app-label">Discipline</p>
+          <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
+            {formatDiscipline(courseInfo.discipline)}
+          </p>
+        </div>
+        <div className="app-card-muted px-4 py-4">
+          <p className="app-label">Fenetre</p>
+          <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
+            {formatMinutesLabel(minutesUntilStart)}
+          </p>
+        </div>
+        <div className="app-card-muted px-4 py-4">
+          <p className="app-label">Cheval principal</p>
+          <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
+            {mainHorse ? `No ${mainHorse}` : "A confirmer"}
+          </p>
+        </div>
+        <div className="app-card-muted px-4 py-4">
+          <p className="app-label">Pari</p>
+          <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
+            {pronostic?.betType || paywallPreview?.recommendation || "En attente"}
+          </p>
+        </div>
+        {refreshPriority ? (
+          <div className="app-card-muted px-4 py-4 sm:col-span-2">
+            <p className="app-label">Cadence moteur</p>
+            <p
+              className="mt-2 text-lg font-black"
+              style={{ color: getPriorityToneColor(refreshPriority.tone) }}
+            >
+              {refreshPriority.label}
+            </p>
+            <p className="mt-1 text-sm leading-6 text-[var(--pmu-text-soft)]">
+              {refreshPriority.detail}
+            </p>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-4 rounded-[1.2rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] p-4">
+        <p className="app-label">Contexte piste</p>
+        <p className="mt-2 text-sm leading-7 text-[var(--pmu-text-soft)]">
+          {[
+            courseInfo.terrain ? `Terrain ${courseInfo.terrain}` : null,
+            courseInfo.meteo ? `Meteo ${courseInfo.meteo}` : null,
+            courseInfo.nombrePartants ? `${courseInfo.nombrePartants} partants` : null,
+          ]
+            .filter(Boolean)
+            .join(" - ") || "Le contexte piste est encore en consolidation."}
+        </p>
+      </div>
+    </section>
+  );
+}
