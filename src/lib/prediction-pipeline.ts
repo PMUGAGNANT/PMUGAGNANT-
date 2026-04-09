@@ -3,6 +3,10 @@ import { getMinutesUntilStart } from "@/lib/date-utils";
 import { attachFaultRates, upsertFaultRates } from "@/lib/horse-faults";
 import { getAllRaces, getFinalReports, getParticipants } from "@/lib/pmu-api";
 import {
+  getPreRaceRefreshDecision,
+  getResultRefreshDecision,
+} from "@/lib/race-refresh-policy";
+import {
   buildCourseRecord,
   buildPredictionRows,
   buildRaceEngineRunRow,
@@ -455,14 +459,20 @@ export async function runPreRaceSecondPass(
   options: RangeOptions = {}
 ) {
   const parameters = await loadAlgoParameters();
-  const races = (await getAllRaces(dateStr)).filter((race) => {
-    if (!keepRace(race, options)) {
-      return false;
-    }
-
-    const minutesUntil = getMinutesUntilStart(race.heureDepart, race.dateStr);
-    return minutesUntil <= 10 && minutesUntil >= -15;
-  });
+  const explicitTarget =
+    (options.reunion !== null && options.reunion !== undefined) ||
+    (options.course !== null && options.course !== undefined);
+  const candidateRaces = (await getAllRaces(dateStr)).filter((race) =>
+    keepRace(race, options)
+  );
+  const now = new Date();
+  const scheduledRaces = candidateRaces.map((race) => ({
+    race,
+    refresh: getPreRaceRefreshDecision(race, now),
+  }));
+  const races = explicitTarget
+    ? candidateRaces
+    : scheduledRaces.filter((entry) => entry.refresh.due).map((entry) => entry.race);
 
   const processed = await processInBatches(races, async (race) => {
     const baselineRows = await getRacePredictions(dateStr, race.reunion, race.course);
@@ -490,7 +500,12 @@ export async function runPreRaceSecondPass(
   return {
     success: true,
     date: dateStr,
+    scheduleMode: explicitTarget ? "manual" : "dynamic-windows",
+    racesConsidered: candidateRaces.length,
     racesProcessed: processed.length,
+    racesSkippedBySchedule: explicitTarget
+      ? 0
+      : scheduledRaces.filter((entry) => !entry.refresh.due).length,
     updatedPredictions: processed.reduce((sum, race) => sum + race.updatedRows.length, 0),
     alerts,
   };
@@ -498,13 +513,22 @@ export async function runPreRaceSecondPass(
 
 export async function runResultSync(dateStr: string, options: RangeOptions = {}) {
   const parameters = await loadAlgoParameters();
-  const races = (await getAllRaces(dateStr)).filter((race) => {
-    if (!keepRace(race, options)) {
-      return false;
-    }
-
-    return getMinutesUntilStart(race.heureDepart, race.dateStr) < -10;
-  });
+  const explicitTarget =
+    (options.reunion !== null && options.reunion !== undefined) ||
+    (options.course !== null && options.course !== undefined);
+  const candidateRaces = (await getAllRaces(dateStr)).filter((race) =>
+    keepRace(race, options)
+  );
+  const now = new Date();
+  const scheduledRaces = candidateRaces.map((race) => ({
+    race,
+    refresh: getResultRefreshDecision(race, now),
+  }));
+  const races = explicitTarget
+    ? candidateRaces.filter(
+        (race) => getMinutesUntilStart(race.heureDepart, race.dateStr) < -10
+      )
+    : scheduledRaces.filter((entry) => entry.refresh.due).map((entry) => entry.race);
 
   const processed = await processInBatches(races, async (race) => {
     const current = await processRace(dateStr, race, parameters, "RESULTAT");
@@ -532,7 +556,12 @@ export async function runResultSync(dateStr: string, options: RangeOptions = {})
   return {
     success: true,
     date: dateStr,
+    scheduleMode: explicitTarget ? "manual" : "dynamic-windows",
+    racesConsidered: candidateRaces.length,
     racesProcessed: processed.length,
+    racesSkippedBySchedule: explicitTarget
+      ? Math.max(candidateRaces.length - races.length, 0)
+      : scheduledRaces.filter((entry) => !entry.refresh.due).length,
     settledPredictions: processed.reduce((sum, race) => sum + race.settledRows.length, 0),
   };
 }
