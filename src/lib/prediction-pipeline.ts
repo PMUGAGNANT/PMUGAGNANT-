@@ -3,7 +3,7 @@ import {
   computeClientRaceScore,
   type ApiRaceScoreLite,
 } from "@/lib/client-race-scoring";
-import { getMinutesUntilStart } from "@/lib/date-utils";
+import { getMinutesUntilStart, getTodayDateStr as getTodayDateStrFromUtils, parsePmuDate } from "@/lib/date-utils";
 import { attachFaultRates, upsertFaultRates } from "@/lib/horse-faults";
 import { getAllRaces, getFinalReports, getParticipants } from "@/lib/pmu-api";
 import {
@@ -669,6 +669,8 @@ export async function runResultSync(dateStr: string, options: RangeOptions = {})
   const explicitTarget =
     (options.reunion !== null && options.reunion !== undefined) ||
     (options.course !== null && options.course !== undefined);
+  const isHistoricalDate =
+    parsePmuDate(dateStr).getTime() < parsePmuDate(getTodayDateStrFromUtils()).getTime();
   const candidateRaces = (await getAllRaces(dateStr)).filter((race) =>
     keepRace(race, options)
   );
@@ -677,7 +679,9 @@ export async function runResultSync(dateStr: string, options: RangeOptions = {})
     race,
     refresh: getResultRefreshDecision(race, now),
   }));
-  const races = explicitTarget
+  const races = isHistoricalDate
+    ? candidateRaces
+    : explicitTarget
     ? candidateRaces.filter(
         (race) => getMinutesUntilStart(race.heureDepart, race.dateStr) < -10
       )
@@ -709,10 +713,16 @@ export async function runResultSync(dateStr: string, options: RangeOptions = {})
   return {
     success: true,
     date: dateStr,
-    scheduleMode: explicitTarget ? "manual" : "dynamic-windows",
+    scheduleMode: isHistoricalDate
+      ? "historical-backfill"
+      : explicitTarget
+        ? "manual"
+        : "dynamic-windows",
     racesConsidered: candidateRaces.length,
     racesProcessed: processed.length,
-    racesSkippedBySchedule: explicitTarget
+    racesSkippedBySchedule: isHistoricalDate
+      ? 0
+      : explicitTarget
       ? Math.max(candidateRaces.length - races.length, 0)
       : scheduledRaces.filter((entry) => !entry.refresh.due).length,
     settledPredictions: processed.reduce((sum, race) => sum + race.settledRows.length, 0),
