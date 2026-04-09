@@ -644,17 +644,31 @@ export async function listRunnerScoreSnapshotsByRunIds(runIds: string[]) {
   }
 
   const admin = getAdmin();
-  const { data, error } = await admin
-    .from("runner_score_snapshots")
-    .select("*")
-    .in("run_id", runIds)
-    .order("created_at", { ascending: true });
+  const chunkSize = 200;
+  const rows: RunnerScoreSnapshotRow[] = [];
 
-  if (error) {
-    throw new Error(`Runner score snapshots by run ids fetch failed: ${error.message}`);
+  for (let index = 0; index < runIds.length; index += chunkSize) {
+    const chunk = runIds.slice(index, index + chunkSize);
+    const { data, error } = await admin
+      .from("runner_score_snapshots")
+      .select("*")
+      .in("run_id", chunk)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      throw new Error(`Runner score snapshots by run ids fetch failed: ${error.message}`);
+    }
+
+    rows.push(...((data ?? []) as RunnerScoreSnapshotRow[]));
   }
 
-  return (data ?? []) as RunnerScoreSnapshotRow[];
+  rows.sort((left, right) => {
+    if ((left.created_at ?? "") < (right.created_at ?? "")) return -1;
+    if ((left.created_at ?? "") > (right.created_at ?? "")) return 1;
+    return 0;
+  });
+
+  return rows;
 }
 
 export async function listRunnerOutcomesBetween(startIso: string, endIso: string) {
