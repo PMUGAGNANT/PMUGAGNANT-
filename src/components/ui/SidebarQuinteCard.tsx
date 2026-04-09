@@ -10,6 +10,10 @@ import {
   type ApiRaceScoreLite,
 } from "@/lib/client-race-scoring";
 import { getMinutesUntilStart, getTodayDateStr } from "@/lib/date-utils";
+import {
+  getPriorityToneColor,
+  getRacePriorityBadge,
+} from "@/lib/race-priority";
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 import type { Lisibilite, PredictionDecision, RaceSummary } from "@/lib/types";
 import { ConfidenceBadge } from "./ConfidenceBadge";
@@ -503,6 +507,18 @@ export function SidebarQuinteCard() {
     });
   }, [readyState, scoreSummary]);
 
+  const priorityBadge = useMemo(() => {
+    if (!readyState) {
+      return null;
+    }
+
+    return getRacePriorityBadge({
+      race: readyState.race,
+      status: scoreSummary?.playTier ?? "passer",
+      decision: readyState.score?.decision,
+    });
+  }, [readyState, scoreSummary]);
+
   if (state.status === "loading") {
     return <QuinteSkeleton />;
   }
@@ -638,6 +654,22 @@ export function SidebarQuinteCard() {
           </div>
 
           <div className="mt-3 flex flex-wrap gap-1.5">
+            {priorityBadge ? (
+              <span
+                className="rounded-full border px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em]"
+                style={{
+                  color: getPriorityToneColor(priorityBadge.tone),
+                  borderColor: `color-mix(in srgb, ${getPriorityToneColor(
+                    priorityBadge.tone
+                  )} 24%, transparent)`,
+                  background: `color-mix(in srgb, ${getPriorityToneColor(
+                    priorityBadge.tone
+                  )} 10%, var(--pmu-surface))`,
+                }}
+              >
+                {priorityBadge.label}
+              </span>
+            ) : null}
             <span
               className={`rounded-full border px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] ${playTierMeta.badgeClass}`}
             >
@@ -705,6 +737,11 @@ export function SidebarQuinteCard() {
             <span className="rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
               {windowLabel}
             </span>
+            {priorityBadge ? (
+              <span className="rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
+                {priorityBadge.detail}
+              </span>
+            ) : null}
             <span className="rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
               {isCurrentCourse ? "Course ouverte" : "Acces rapide"}
             </span>

@@ -12,6 +12,10 @@ import type { RaceProfile } from "@/lib/client-race-scoring";
 import type { EloProfile } from "@/lib/elo-scoring";
 import { getEloGlobalBadgeStyle } from "@/lib/elo-scoring";
 import type { IndiceOuverture } from "@/lib/ouverture";
+import {
+  getPriorityToneColor,
+  type RacePriorityBadge,
+} from "@/lib/race-priority";
 import { interpretScore } from "@/lib/scoring-policy";
 
 export type CourseCardProps = {
@@ -29,11 +33,7 @@ export type CourseCardProps = {
   pickConfidence?: number | null;
   pickBetType?: string | null;
   topFacteurs?: string[];
-  priorityBadge?: {
-    label: string;
-    detail: string;
-    tone: "primary" | "warning" | "neutral";
-  } | null;
+  priorityBadge?: RacePriorityBadge | null;
 };
 
 function formatCountdown(minutes: number): string {
@@ -90,12 +90,9 @@ export function CourseCard({
     () => translateFactors(topFacteurs ?? []),
     [topFacteurs]
   );
-  const priorityToneColor =
-    priorityBadge?.tone === "primary"
-      ? "var(--pmu-primary)"
-      : priorityBadge?.tone === "warning"
-        ? "var(--pmu-orange)"
-        : "var(--pmu-text-muted)";
+  const priorityToneColor = priorityBadge
+    ? getPriorityToneColor(priorityBadge.tone)
+    : "var(--pmu-text-muted)";
 
   const lines: Array<{ label: string; value: string }> = [];
   if (profile.favoriFragileNum != null) {
