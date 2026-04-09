@@ -719,21 +719,29 @@ export async function upsertEngineCandidate(row: EngineCandidateRow) {
     throw new Error(`Engine candidate lookup failed: ${existingError.message}`);
   }
 
+  const nextSummary = row.summary ?? {};
+  const existingSummary = (existing?.summary as Record<string, unknown> | undefined) ?? {};
+  const summaryChanged = JSON.stringify(existingSummary) !== JSON.stringify(nextSummary);
+
   const preservedStatus =
     row.status === "SHADOW" &&
     existing &&
-    existing.status !== "SHADOW" &&
-    existing.status !== "DRAFT"
+    (
+      existing.status === "PROMOTED" ||
+      (existing.status === "REJECTED" && !summaryChanged)
+    )
       ? existing.status
       : row.status;
   const preservedPromotedAt =
-    row.status === "SHADOW" && existing?.promoted_at ? existing.promoted_at : row.promoted_at;
+    preservedStatus === "PROMOTED" && existing?.promoted_at
+      ? existing.promoted_at
+      : row.promoted_at;
 
   const payload = {
     ...row,
     status: preservedStatus,
     promoted_at: preservedPromotedAt ?? null,
-    summary: row.summary ?? {},
+    summary: nextSummary,
   };
 
   const { data, error } = await admin
