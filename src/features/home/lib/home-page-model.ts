@@ -90,6 +90,20 @@ export type PriorityCard = {
   race?: FeaturedRace | null;
 };
 
+export type HomeSummaryStats = {
+  meetings: number;
+  playable: number;
+};
+
+export type HomeBoardSection = {
+  key: BoardSectionKey;
+  items: FeaturedRace[];
+  label: string;
+  title: string;
+  description: string;
+  color: string;
+};
+
 export type FocusParticipant = {
   numPmu?: number | string | null;
   numero?: number | string | null;
