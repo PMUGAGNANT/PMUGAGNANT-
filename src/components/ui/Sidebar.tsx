@@ -14,6 +14,7 @@ import {
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 
 import { SidebarProgramme } from "./SidebarProgramme";
+import { SidebarQuinteCard } from "./SidebarQuinteCard";
 import { SidebarSearch } from "./SidebarSearch";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -372,6 +373,20 @@ export function Sidebar() {
                   </div>
                   <SidebarSearch />
                 </section>
+
+                <Suspense
+                  fallback={
+                    <div className="rounded-[1.55rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] p-3.5">
+                      <div className="space-y-3 animate-pulse">
+                        <div className="h-3 w-28 rounded-full bg-[color-mix(in_srgb,var(--pmu-text-muted)_16%,transparent)]" />
+                        <div className="h-12 rounded-[1rem] bg-[color-mix(in_srgb,var(--pmu-surface-2)_84%,transparent)]" />
+                        <div className="h-24 rounded-[1.2rem] bg-[color-mix(in_srgb,var(--pmu-surface-2)_84%,transparent)]" />
+                      </div>
+                    </div>
+                  }
+                >
+                  <SidebarQuinteCard />
+                </Suspense>
 
                 <section className="rounded-[1.55rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] p-3.5">
                   <div className="mb-3 flex items-center justify-between gap-3">
