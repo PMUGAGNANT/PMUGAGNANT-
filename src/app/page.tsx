@@ -8,11 +8,8 @@ import { ComparatifIA } from "@/components/ui/ComparatifIA";
 import { CourseCard } from "@/components/ui/CourseCard";
 import { FilterPills } from "@/components/ui/FilterPills";
 import { HowItWorks } from "@/components/ui/HowItWorks";
-import { PepiteCard } from "@/components/ui/PepiteCard";
 import { PerformanceProof } from "@/components/ui/PerformanceProof";
-import { PronoHero } from "@/components/ui/PronoHero";
 import { PromoVideoSection } from "@/components/ui/PromoVideoSection";
-import { RadarHero } from "@/components/ui/RadarHero";
 import { RecentResults } from "@/components/ui/RecentResults";
 import { SagesseFoules } from "@/components/ui/SagesseFoules";
 import { TopParisStrip, type TopParisItem } from "@/components/ui/TopParisStrip";
@@ -106,6 +103,52 @@ type PriorityCard = {
   description: string;
   tone: "primary" | "warning" | "neutral";
   race?: FeaturedRace | null;
+};
+
+type FocusParticipant = {
+  numPmu?: number | string | null;
+  numero?: number | string | null;
+  nom?: string | null;
+  jockey?: string | null;
+  driver?: string | null;
+  entraineur?: string | null;
+  cote?: number | null;
+  prediction?: {
+    confiance?: number | null;
+    scoreCheval?: number | null;
+    typePariConseille?: string | null;
+    topFacteurs?: string[] | null;
+  } | null;
+};
+
+type FocusDetailResponse = {
+  success?: boolean;
+  participants?: FocusParticipant[] | number | null;
+  minutesUntilStart?: number | null;
+  pronoAvailable?: boolean;
+  isFinished?: boolean;
+  analysis?: {
+    ranking?: FocusParticipant[] | null;
+    favori?: FocusParticipant | null;
+    recommandation?: {
+      decision?: string | null;
+    } | null;
+    scoreConfiance?: {
+      score?: number | null;
+      facteurs?: string[] | null;
+    } | null;
+  } | null;
+  paywall?: {
+    required?: boolean;
+    preview?: {
+      lisibilite?: string | null;
+      recommendation?: string | null;
+      favori?: {
+        numPmu?: number | string | null;
+        nom?: string | null;
+      } | null;
+    } | null;
+  } | null;
 };
 
 const SORT_OPTIONS: Array<{ value: SortMode; label: string }> = [
@@ -215,16 +258,50 @@ function formatDiscipline(race: RaceSummary) {
   return race.discipline || "Discipline";
 }
 
-function formatRaceMeta(race: RaceSummary) {
-  return [race.heureDepart, `${race.nombrePartants} partants`, `${race.distance} m`]
-    .filter(Boolean)
-    .join(" - ");
-}
-
 function formatCourseMeta(race: RaceSummary) {
   return [formatDiscipline(race), `${race.nombrePartants} partants`, `${race.distance} m`]
     .filter(Boolean)
     .join(" - ");
+}
+
+function formatMinutesLabel(value?: number | null) {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return "Horaire PMU";
+  }
+
+  const roundedMinutes = Math.round(value);
+
+  if (roundedMinutes <= -10) return "Course reglee";
+  if (roundedMinutes <= 0) return "Depart imminent";
+  if (roundedMinutes < 60) return `${roundedMinutes} min`;
+
+  const hours = Math.floor(roundedMinutes / 60);
+  const minutes = roundedMinutes % 60;
+  return minutes === 0 ? `${hours} h` : `${hours} h ${minutes}`;
+}
+
+function formatOddsLabel(value?: number | null) {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return "--";
+  }
+
+  return value.toFixed(1);
+}
+
+function getParticipantNum(participant: FocusParticipant) {
+  const raw = participant.numPmu ?? participant.numero;
+  return typeof raw === "number" ? raw : Number(raw);
+}
+
+function normalizeFocusParticipants(raw: FocusParticipant[] | number | null | undefined) {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  return raw.filter((participant) => {
+    const num = getParticipantNum(participant);
+    return Number.isFinite(num);
+  });
 }
 
 function getStageLabel(stage?: ScoreStage) {
@@ -450,7 +527,9 @@ function PageContent() {
   const [races, setRaces] = useState<RaceSummary[]>([]);
   const [scores, setScores] = useState<RaceScore[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFocusLoading, setIsFocusLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [focusDetail, setFocusDetail] = useState<FocusDetailResponse | null>(null);
   const [fetchRevision, setFetchRevision] = useState(0);
 
   useEffect(() => {
@@ -614,24 +693,6 @@ function PageContent() {
 
   const radarRace = useMemo(() => getRadarRace(featuredRaces), [featuredRaces]);
 
-  const radarProfile = useMemo(
-    () =>
-      radarRace
-        ? getRaceProfile({
-            race: radarRace.race,
-            displayScore: radarRace.scoreValue,
-            pick: radarRace.score?.pick
-              ? {
-                  numPmu: radarRace.score.pick.numPmu,
-                  cote: null,
-                  confidence: radarRace.score.pick.confidence,
-                }
-              : null,
-          })
-        : null,
-    [radarRace]
-  );
-
   const topParisItems = useMemo(
     () => getTopParisItems(featuredRaces, navigateToRace),
     [featuredRaces, navigateToRace]
@@ -641,6 +702,8 @@ function PageContent() {
     () => featuredRaces.find((item) => item.race.estQuinte) ?? null,
     [featuredRaces]
   );
+
+  const focusRace = quinteDuJour ?? radarRace ?? null;
 
   const summaryStats = useMemo(() => {
     const meetings = new Set(races.map((race) => race.reunion)).size;
@@ -683,164 +746,415 @@ function PageContent() {
     }
   }, [quinteDuJour, secondaryPanel]);
 
+  useEffect(() => {
+    if (!focusRace) {
+      setFocusDetail(null);
+      setIsFocusLoading(false);
+      return;
+    }
+
+    const ac = new AbortController();
+    let cancelled = false;
+
+    async function loadFocusDetail() {
+      setIsFocusLoading(true);
+
+      try {
+        let authorization = "";
+        if (hasSupabaseConfig()) {
+          try {
+            const supabase = getSupabaseBrowserClient();
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
+            authorization = session?.access_token
+              ? `Bearer ${session.access_token}`
+              : "";
+          } catch (sessionError) {
+            console.error(sessionError);
+          }
+        }
+
+        const response = await fetch(
+          `/api/race/${focusRace.race.reunion}/${focusRace.race.course}?date=${selectedDate}`,
+          {
+            cache: "no-store",
+            signal: ac.signal,
+            headers: authorization
+              ? { Authorization: authorization }
+              : undefined,
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Le desk course n'est pas disponible.");
+        }
+
+        const payload = (await response.json()) as FocusDetailResponse;
+
+        if (!cancelled) {
+          setFocusDetail(payload.success === false ? null : payload);
+        }
+      } catch (focusError) {
+        if (cancelled) {
+          return;
+        }
+        if (focusError instanceof Error && focusError.name === "AbortError") {
+          return;
+        }
+        console.error(focusError);
+        setFocusDetail(null);
+      } finally {
+        if (!cancelled) {
+          setIsFocusLoading(false);
+        }
+      }
+    }
+
+    void loadFocusDetail();
+
+    return () => {
+      cancelled = true;
+      ac.abort();
+    };
+  }, [focusRace, selectedDate]);
+
+  const focusParticipants = useMemo(() => {
+    const ranking = normalizeFocusParticipants(focusDetail?.analysis?.ranking);
+    if (ranking.length > 0) {
+      return ranking.slice(0, 6);
+    }
+
+    return normalizeFocusParticipants(focusDetail?.participants)
+      .sort((left, right) => {
+        const leftScore = left.prediction?.scoreCheval ?? -1;
+        const rightScore = right.prediction?.scoreCheval ?? -1;
+
+        if (rightScore !== leftScore) {
+          return rightScore - leftScore;
+        }
+
+        const leftCote = left.cote ?? Number.POSITIVE_INFINITY;
+        const rightCote = right.cote ?? Number.POSITIVE_INFINITY;
+        return leftCote - rightCote;
+      })
+      .slice(0, 6);
+  }, [focusDetail]);
+
+  const focusDisplayScore = focusRace ? focusRace.scoreValue.toFixed(1) : "--";
+  const focusLisibilite =
+    focusRace?.score?.lisibilite ??
+    focusDetail?.paywall?.preview?.lisibilite ??
+    "COMPLEXE";
+  const focusBetType = focusRace?.score?.pick?.betType
+    ? formatBetTypeLabelFr(focusRace.score.pick.betType)
+    : focusDetail?.analysis?.recommandation?.decision ??
+      focusDetail?.paywall?.preview?.recommendation ??
+      "En attente";
+  const focusPickTitle = focusRace?.score?.pick?.numPmu || focusRace?.score?.pick?.nom
+    ? `#${focusRace?.score?.pick?.numPmu ?? "--"} ${focusRace?.score?.pick?.nom ?? "Selection"}`
+    : focusDetail?.paywall?.preview?.favori?.numPmu ||
+        focusDetail?.paywall?.preview?.favori?.nom
+      ? `#${focusDetail?.paywall?.preview?.favori?.numPmu ?? "--"} ${focusDetail?.paywall?.preview?.favori?.nom ?? "Favori"}`
+      : "Ticket principal en preparation";
+  const focusFactors = translateFactors(
+    focusRace?.score?.pick?.topFacteurs ??
+      focusDetail?.analysis?.scoreConfiance?.facteurs ??
+      []
+  ).slice(0, 3);
+  const focusMinutesLabel = formatMinutesLabel(
+    focusDetail?.minutesUntilStart ?? focusRace?.minutesUntilStart ?? null
+  );
+
   return (
     <div className="mx-auto flex w-full max-w-[96rem] flex-col gap-6 lg:gap-8">
-      <section className="app-page-hero p-6 md:p-8">
-        <div className="relative z-[1] grid gap-6 xl:grid-cols-[1.15fr,0.85fr] xl:items-end">
-          <div className="space-y-5">
-            <div className="space-y-3">
-              <p className="app-kicker">Board du jour</p>
-              <h1 className="max-w-4xl text-4xl font-black leading-[0.92] text-[var(--pmu-text)] md:text-6xl">
-                Une home qui pousse les bonnes courses en premier.
-              </h1>
-              <p className="max-w-3xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
-                La page d&apos;accueil devient un vrai poste de pilotage : on
-                trie, on ouvre, on surveille et on garde la meilleure decision
-                visible sans fouiller partout.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => router.push("/premium")}
-                className="app-button-primary"
-              >
-                Voir l&apos;offre premium
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push("/resultats")}
-                className="app-button-secondary"
-              >
-                Ouvrir les resultats
-              </button>
-            </div>
-
-            <div className="flex flex-wrap gap-2 text-xs font-semibold text-[var(--pmu-text-soft)]">
-              {[
-                `Date ${formatRelativeDay(selectedDate)}`,
-                `${races.length} courses`,
-                `${summaryStats.playable} jouables`,
-                `Tri ${SORT_OPTIONS.find((option) => option.value === sortMode)?.label ?? "Par heure"}`,
-              ].map((label) => (
-                <span key={label} className="app-pill text-xs">
-                  {label}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="app-stat-card px-5 py-4">
-              <p className="app-label">Date active</p>
-              <p className="mt-2 text-xl font-black capitalize text-[var(--pmu-text)]">
-                {formatRelativeDay(selectedDate)}
-              </p>
-            </div>
-            <div className="app-stat-card px-5 py-4">
-              <p className="app-label">Reunions</p>
-              <p className="mt-2 text-3xl font-black text-[var(--pmu-text)]">
-                {summaryStats.meetings}
-              </p>
-            </div>
-            <div className="app-stat-card px-5 py-4">
-              <p className="app-label">Jouables</p>
-              <p className="mt-2 text-3xl font-black text-[var(--pmu-primary)]">
-                {summaryStats.playable}
-              </p>
-            </div>
-            <div className="app-stat-card px-5 py-4">
-              <p className="app-label">Departs proches</p>
-              <p className="mt-2 text-3xl font-black text-[var(--pmu-text)]">
-                {summaryStats.closingSoon}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {radarRace ? (
-        <section className="grid gap-5 xl:grid-cols-[1.18fr,0.82fr]">
-          <div className="space-y-5">
-            {radarRace.score?.pick?.numPmu && radarRace.score?.pick?.nom ? (
-              <PronoHero
-                horseName={radarRace.score.pick.nom}
-                horseNum={radarRace.score.pick.numPmu}
-                confidence={radarRace.confidence}
-                hippodrome={radarRace.race.hippodrome}
-                heureDepart={radarRace.race.heureDepart}
-                courseName={radarRace.race.nomCourse}
-                reunion={radarRace.race.reunion}
-                course={radarRace.race.course}
-                betType={radarRace.score.pick.betType}
-                cote={null}
-                topFacteurs={translateFactors(
-                  radarRace.score.pick.topFacteurs ?? []
-                )}
-                lisibilite={radarRace.score.lisibilite}
-                onClick={() => navigateToRace(radarRace.race)}
-              />
-            ) : radarProfile ? (
-              <RadarHero
-                raceTitle={`R${radarRace.race.reunion}C${radarRace.race.course} - ${radarRace.race.nomCourse}`}
-                hippodrome={radarRace.race.hippodrome}
-                raceMeta={formatRaceMeta(radarRace.race)}
-                displayScore={radarRace.scoreValue}
-                profile={radarProfile}
-                heureDepart={radarRace.race.heureDepart}
-                dateStr={radarRace.race.dateStr}
-                onClick={() => navigateToRace(radarRace.race)}
-              />
-            ) : null}
-          </div>
-
-          <div className="grid gap-5">
-            {radarProfile ? (
-              <RadarHero
-                raceTitle={`R${radarRace.race.reunion}C${radarRace.race.course} - ${radarRace.race.nomCourse}`}
-                hippodrome={radarRace.race.hippodrome}
-                raceMeta={formatRaceMeta(radarRace.race)}
-                displayScore={radarRace.scoreValue}
-                profile={radarProfile}
-                heureDepart={radarRace.race.heureDepart}
-                dateStr={radarRace.race.dateStr}
-                onClick={() => navigateToRace(radarRace.race)}
-              />
-            ) : null}
-
-            {radarRace.score?.pepiteDuJour?.numPmu &&
-            radarRace.score?.pepiteDuJour?.nom ? (
-              <PepiteCard
-                horseName={radarRace.score.pepiteDuJour.nom}
-                horseNum={radarRace.score.pepiteDuJour.numPmu}
-                confidence={radarRace.score.pepiteDuJour.confidence ?? 0}
-                cote={radarRace.score.pepiteDuJour.cote ?? null}
-                hippodrome={radarRace.race.hippodrome}
-                heureDepart={radarRace.race.heureDepart}
-                reunion={radarRace.race.reunion}
-                course={radarRace.race.course}
-                topFacteurs={translateFactors(
-                  radarRace.score.pepiteDuJour.topFacteurs ?? []
-                )}
-                onClick={() => navigateToRace(radarRace.race)}
-              />
-            ) : (
-              <section className="app-card p-5 md:p-6">
-                <p className="app-kicker">Pepite</p>
-                <h2 className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
-                  Pas de profil speculatif propre pour l&apos;instant
-                </h2>
-                <p className="mt-3 text-sm leading-6 text-[var(--pmu-text-soft)]">
-                  Le board ne force pas une pepite sur chaque reunion. Quand
-                  elle existe, elle remonte ici avec son contexte et son niveau
-                  de risque.
+      {focusRace ? (
+        <section className="grid gap-5 xl:grid-cols-[0.34fr,0.66fr] xl:items-start">
+          <aside className="app-card p-5 md:p-6 xl:sticky xl:top-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="app-kicker">
+                  {focusRace.race.estQuinte ? "Quinte du jour" : "Course du jour"}
                 </p>
+                <p className="mt-2 text-3xl font-black text-[var(--pmu-text)]">
+                  R{focusRace.race.reunion}C{focusRace.race.course}
+                </p>
+              </div>
+              <span className="app-pill text-[11px]">
+                {focusLisibilite.toLowerCase()}
+              </span>
+            </div>
+
+            <h1 className="mt-5 text-[2rem] font-black leading-[0.94] text-[var(--pmu-text)]">
+              {focusRace.race.nomCourse}
+            </h1>
+            <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">
+              {focusRace.hint}
+            </p>
+
+            <div className="mt-5 grid gap-3">
+              <div className="app-card-muted px-4 py-4">
+                <p className="app-label">Radar</p>
+                <p className="mt-2 text-3xl font-black text-[var(--pmu-primary)]">
+                  {focusDisplayScore}/10
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                <div className="app-card-muted px-4 py-4">
+                  <p className="app-label">Fenetre</p>
+                  <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
+                    {focusMinutesLabel}
+                  </p>
+                </div>
+                <div className="app-card-muted px-4 py-4">
+                  <p className="app-label">Partants</p>
+                  <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
+                    {focusRace.race.nombrePartants}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-2">
+              <span className="app-pill text-xs">{focusRace.race.hippodrome}</span>
+              <span className="app-pill text-xs">{focusRace.race.heureDepart}</span>
+              <span className="app-pill text-xs">{formatCourseMeta(focusRace.race)}</span>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => navigateToRace(focusRace.race)}
+                className="app-button-primary w-full"
+              >
+                Ouvrir la course
+              </button>
+              {focusDetail?.paywall?.required ? (
+                <button
+                  type="button"
+                  onClick={() => router.push("/premium")}
+                  className="app-button-secondary w-full"
+                >
+                  Debloquer le ticket
+                </button>
+              ) : null}
+            </div>
+          </aside>
+
+          <section className="app-card p-6 md:p-7">
+            <div className="app-section-heading">
+              <div>
+                <p className="app-kicker">Fenetre complete</p>
+                <h2 className="app-section-title">
+                  Partants, prediction et lecture dans le meme panneau
+                </h2>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="app-pill text-xs">
+                  {formatRelativeDay(selectedDate)}
+                </span>
+                <span className="app-pill text-xs">
+                  {focusRace.score?.stage
+                    ? getStageLabel(focusRace.score.stage)
+                    : "Lecture programme"}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid gap-6 xl:grid-cols-[0.92fr,1.08fr]">
+              <div className="space-y-4">
+                <section className="rounded-[1.45rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] p-5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="app-label">Ticket principal</p>
+                      <h3 className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+                        {focusPickTitle}
+                      </h3>
+                    </div>
+                    <span className="rounded-full border border-[color-mix(in_srgb,var(--pmu-primary)_26%,transparent)] bg-[var(--pmu-primary-fade)] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-[var(--pmu-primary)]">
+                      {focusBetType}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="app-card-muted px-4 py-4">
+                      <p className="app-label">Score</p>
+                      <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+                        {focusDisplayScore}/10
+                      </p>
+                    </div>
+                    <div className="app-card-muted px-4 py-4">
+                      <p className="app-label">Fenetre</p>
+                      <p className="mt-2 text-sm font-black text-[var(--pmu-text)]">
+                        {focusMinutesLabel}
+                      </p>
+                    </div>
+                    <div className="app-card-muted px-4 py-4">
+                      <p className="app-label">Programme</p>
+                      <p className="mt-2 text-sm font-black text-[var(--pmu-text)]">
+                        {focusRace.race.hippodrome}
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="mt-4 text-sm leading-7 text-[var(--pmu-text-soft)]">
+                    {focusDetail?.paywall?.required
+                      ? "Les partants restent visibles, mais le ticket detaille se renforce avec l'acces premium."
+                      : focusRace.hint}
+                  </p>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {focusFactors.length > 0
+                      ? focusFactors.map((factor) => (
+                          <span key={factor} className="app-pill text-xs">
+                            {factor}
+                          </span>
+                        ))
+                      : [
+                          focusRace.race.estQuinte ? "Course Quinte" : "Course cible",
+                          `${focusRace.race.nombrePartants} partants`,
+                          focusMinutesLabel,
+                        ].map((factor) => (
+                          <span key={factor} className="app-pill text-xs">
+                            {factor}
+                          </span>
+                        ))}
+                  </div>
+                </section>
+
+                <section className="rounded-[1.45rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] p-5">
+                  <p className="app-label">Board rapide</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div className="app-card-muted px-4 py-4">
+                      <p className="app-label">Date</p>
+                      <p className="mt-2 text-sm font-black capitalize text-[var(--pmu-text)]">
+                        {formatRelativeDay(selectedDate)}
+                      </p>
+                    </div>
+                    <div className="app-card-muted px-4 py-4">
+                      <p className="app-label">Reunions</p>
+                      <p className="mt-2 text-sm font-black text-[var(--pmu-text)]">
+                        {summaryStats.meetings} actives
+                      </p>
+                    </div>
+                    <div className="app-card-muted px-4 py-4">
+                      <p className="app-label">Jouables</p>
+                      <p className="mt-2 text-sm font-black text-[var(--pmu-text)]">
+                        {summaryStats.playable} spots
+                      </p>
+                    </div>
+                    <div className="app-card-muted px-4 py-4">
+                      <p className="app-label">Tri</p>
+                      <p className="mt-2 text-sm font-black text-[var(--pmu-text)]">
+                        {SORT_OPTIONS.find((option) => option.value === sortMode)?.label ?? "Par heure"}
+                      </p>
+                    </div>
+                  </div>
+                </section>
+              </div>
+
+              <section className="rounded-[1.45rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="app-label">Partants visibles</p>
+                    <h3 className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+                      Les chevaux a garder a l&apos;ecran
+                    </h3>
+                  </div>
+                  <span className="app-pill text-xs">
+                    {focusParticipants.length > 0
+                      ? `${focusParticipants.length} lignes`
+                      : isFocusLoading
+                        ? "Chargement"
+                        : "Liste PMU"}
+                  </span>
+                </div>
+
+                <div className="mt-5 space-y-2">
+                  {isFocusLoading ? (
+                    Array.from({ length: 4 }, (_, index) => (
+                      <div
+                        key={index}
+                        className="h-20 animate-pulse rounded-[1.1rem] border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)]"
+                      />
+                    ))
+                  ) : focusParticipants.length > 0 ? (
+                    focusParticipants.map((participant) => {
+                      const num = getParticipantNum(participant);
+                      const confidence = participant.prediction?.confiance;
+                      const participantBet = participant.prediction?.typePariConseille;
+
+                      return (
+                        <div
+                          key={`${num}-${participant.nom ?? "cheval"}`}
+                          className="grid gap-3 rounded-[1.15rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_84%,transparent)] px-4 py-4 md:grid-cols-[auto,1fr,auto]"
+                        >
+                          <div className="flex h-12 w-12 items-center justify-center rounded-[1rem] border border-[color-mix(in_srgb,var(--pmu-primary)_24%,transparent)] bg-[var(--pmu-primary-fade)] text-lg font-black text-[var(--pmu-text)]">
+                            {Number.isFinite(num) ? num : "--"}
+                          </div>
+
+                          <div>
+                            <p className="text-base font-black text-[var(--pmu-text)]">
+                              {participant.nom ?? "Cheval"}
+                            </p>
+                            <p className="mt-1 text-sm leading-6 text-[var(--pmu-text-soft)]">
+                              {participant.jockey ?? participant.driver ?? "Jockey non renseigne"}
+                              {participant.entraineur ? ` - ${participant.entraineur}` : ""}
+                            </p>
+                            {participant.prediction?.topFacteurs?.length ? (
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {translateFactors(participant.prediction.topFacteurs)
+                                  .slice(0, 2)
+                                  .map((factor) => (
+                                    <span key={factor} className="app-pill text-[11px]">
+                                      {factor}
+                                    </span>
+                                  ))}
+                              </div>
+                            ) : null}
+                          </div>
+
+                          <div className="text-left md:text-right">
+                            <p className="text-sm font-black text-[var(--pmu-text)]">
+                              Cote {formatOddsLabel(participant.cote)}
+                            </p>
+                            <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--pmu-text-muted)]">
+                              {confidence != null && Number.isFinite(confidence)
+                                ? `Confiance ${confidence.toFixed(1)}/10`
+                                : "Lecture PMU"}
+                            </p>
+                            <p className="mt-2 text-xs font-bold uppercase tracking-[0.12em] text-[var(--pmu-primary)]">
+                              {participantBet
+                                ? formatBetTypeLabelFr(participantBet)
+                                : "A suivre"}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="rounded-[1.15rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_84%,transparent)] px-4 py-5 text-sm leading-6 text-[var(--pmu-text-soft)]">
+                      Le detail course arrive ici avec les partants et la lecture prediction des que l&apos;API PMU remonte le bloc complet.
+                    </div>
+                  )}
+                </div>
               </section>
-            )}
-          </div>
+            </div>
+          </section>
         </section>
-      ) : null}
+      ) : (
+        <section className="app-page-hero p-6 md:p-8">
+          <p className="app-kicker">Board du jour</p>
+          <h1 className="mt-3 text-4xl font-black leading-[0.92] text-[var(--pmu-text)] md:text-6xl">
+            Le board attend le programme du jour.
+          </h1>
+          <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
+            Recharge la journee ou laisse le programme PMU remonter. La home
+            affichera ensuite directement la course focus a gauche et la
+            fenetre complete a droite.
+          </p>
+        </section>
+      )}
 
       {topParisItems.length > 0 ? <TopParisStrip items={topParisItems} /> : null}
 
