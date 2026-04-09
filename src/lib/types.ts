@@ -577,6 +577,13 @@ export interface EngineCandidateMetricRow {
   created_at?: string;
 }
 
+export interface CandidatePromotionDecision {
+  approved: boolean;
+  reason: string;
+  testMetric: EngineCandidateMetricRow | null;
+  validationMetric: EngineCandidateMetricRow | null;
+}
+
 export interface EnginePromotionRow {
   id?: string;
   candidate_id: string;

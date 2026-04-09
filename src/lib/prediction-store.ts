@@ -724,6 +724,65 @@ export async function upsertEngineCandidateMetrics(rows: EngineCandidateMetricRo
   }
 }
 
+export async function listEngineCandidatesByStatus(
+  status: EngineCandidateRow["status"],
+  stage: ScoreStage = "MATIN"
+) {
+  const admin = getAdmin();
+  const { data, error } = await admin
+    .from("engine_candidates")
+    .select("*")
+    .eq("status", status)
+    .eq("stage", stage)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(`Engine candidates by status fetch failed: ${error.message}`);
+  }
+
+  return (data ?? []) as EngineCandidateRow[];
+}
+
+export async function listEngineCandidateMetricsByCandidateIds(candidateIds: string[]) {
+  if (candidateIds.length === 0) {
+    return [] as EngineCandidateMetricRow[];
+  }
+
+  const admin = getAdmin();
+  const { data, error } = await admin
+    .from("engine_candidate_metrics")
+    .select("*")
+    .in("candidate_id", candidateIds)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(`Engine candidate metrics fetch failed: ${error.message}`);
+  }
+
+  return (data ?? []) as EngineCandidateMetricRow[];
+}
+
+export async function updateEngineCandidateStatus(
+  candidateId: string,
+  status: EngineCandidateRow["status"],
+  promotedAt?: string | null
+) {
+  const admin = getAdmin();
+  const payload: Record<string, unknown> = { status };
+  if (promotedAt !== undefined) {
+    payload.promoted_at = promotedAt;
+  }
+
+  const { error } = await admin
+    .from("engine_candidates")
+    .update(payload)
+    .eq("id", candidateId);
+
+  if (error) {
+    throw new Error(`Engine candidate status update failed: ${error.message}`);
+  }
+}
+
 export async function insertEnginePromotion(row: EnginePromotionRow) {
   const admin = getAdmin();
   const payload = {

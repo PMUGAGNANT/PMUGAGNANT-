@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ensureCronAuthorized } from "@/lib/cron-auth";
 import { runEngineLearning } from "@/lib/engine-learning";
+import { runEnginePromotion } from "@/lib/engine-promotion";
 import { getTodayDateStr } from "@/lib/pmu-api";
 import { runMorningAnalysis, runPreRaceSecondPass, runResultSync } from "@/lib/prediction-pipeline";
 import { runWeeklyReport } from "@/lib/weekly-reports";
@@ -18,6 +19,7 @@ export const maxDuration = 300;
  *   - prerace   : every 5 min (always)
  *   - results   : every 10 min (on the :00, :10, :20, :30, :40, :50)
  *   - learning  : once at ~04:00
+ *   - promotion : once at ~04:05
  *   - weekly    : Sunday at ~19:00
  */
 export async function GET(request: NextRequest) {
@@ -75,6 +77,17 @@ export async function GET(request: NextRequest) {
     } catch (e) {
       logger.error("cron.dispatch.learning_failed", e, { date });
       results.learning = { error: e instanceof Error ? e.message : "learning failed" };
+    }
+  }
+
+  if (hour === 4 && minute >= 5 && minute < 10) {
+    try {
+      results.promotion = await runEnginePromotion(now);
+    } catch (e) {
+      logger.error("cron.dispatch.promotion_failed", e, { date });
+      results.promotion = {
+        error: e instanceof Error ? e.message : "promotion failed",
+      };
     }
   }
 

@@ -15,7 +15,8 @@
     "cron:backtest": "tsx scripts/run-backtest.ts",
     "cron:backfill": "tsx scripts/run-historical-backfill.ts",
     "cron:calibration": "tsx scripts/run-calibration.ts",
-    "cron:learning": "tsx scripts/run-learning.ts"
+    "cron:learning": "tsx scripts/run-learning.ts",
+    "cron:promotion": "tsx scripts/run-promotion.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.9.0",

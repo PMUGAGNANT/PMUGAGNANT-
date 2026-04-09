@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "Job to run (dispatch, morning, prerace, results, calibration, learning, weekly)"
+        description: "Job to run (dispatch, morning, prerace, results, calibration, learning, promotion, weekly)"
         required: true
         type: choice
         options:
@@ -16,6 +16,7 @@ on:
           - results
           - calibration
           - learning
+          - promotion
           - weekly
 
 jobs:
@@ -83,6 +84,17 @@ jobs:
           curl -sf -X GET \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "${{ secrets.APP_URL }}/api/cron/learning" \
+            --max-time 290
+
+  promotion:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'promotion'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger engine promotion
+        run: |
+          curl -sf -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/promotion" \
             --max-time 290
 
   weekly:
