@@ -1,4 +1,5 @@
 import {
+  getSegmentLearningState,
   insertEnginePromotion,
   listEngineCandidateMetricsByCandidateIds,
   listEngineCandidatesByStatus,
@@ -25,6 +26,28 @@ function getMetricByRole(
 
 function round2(value: number) {
   return Math.round(value * 100) / 100;
+}
+
+function hasBusinessMetrics(metric: EngineCandidateMetricRow) {
+  return (
+    metric.roi !== null &&
+    metric.roi !== undefined &&
+    metric.hit_rate !== null &&
+    metric.hit_rate !== undefined &&
+    metric.false_positive_rate !== null &&
+    metric.false_positive_rate !== undefined
+  );
+}
+
+function shouldDeferPromotion(reason: string) {
+  return [
+    "missing-test-window",
+    "missing-validation-window",
+    "test-sample-insufficient",
+    "validation-sample-insufficient",
+    "test-business-metrics-missing",
+    "validation-business-metrics-missing",
+  ].includes(reason);
 }
 
 export function decideCandidatePromotion(
@@ -64,6 +87,24 @@ export function decideCandidatePromotion(
     return {
       approved: false,
       reason: "validation-sample-insufficient",
+      testMetric,
+      validationMetric,
+    };
+  }
+
+  if (!hasBusinessMetrics(testMetric)) {
+    return {
+      approved: false,
+      reason: "test-business-metrics-missing",
+      testMetric,
+      validationMetric,
+    };
+  }
+
+  if (!hasBusinessMetrics(validationMetric)) {
+    return {
+      approved: false,
+      reason: "validation-business-metrics-missing",
       testMetric,
       validationMetric,
     };
@@ -174,6 +215,16 @@ export async function runEnginePromotion(referenceDate = new Date()) {
     }
 
     if (!decision.approved) {
+      if (shouldDeferPromotion(decision.reason)) {
+        deferred.push({
+          candidateId: candidate.id,
+          segmentKey: candidate.segment_key,
+          reason: decision.reason,
+        });
+        continue;
+      }
+
+      const existingState = await getSegmentLearningState(candidate.segment_key, candidate.stage);
       await updateEngineCandidateStatus(candidate.id, "REJECTED", null);
       await insertEnginePromotion({
         candidate_id: candidate.id,
@@ -183,11 +234,14 @@ export async function runEnginePromotion(referenceDate = new Date()) {
       await upsertSegmentLearningState({
         segment_key: candidate.segment_key,
         stage: candidate.stage,
-        stable_version: candidate.parent_version,
+        stable_version: existingState?.stable_version ?? candidate.parent_version,
         challenger_version: null,
-        active_calibration_version: candidate.parent_version,
+        active_calibration_version:
+          existingState?.active_calibration_version ??
+          existingState?.stable_version ??
+          candidate.parent_version,
         last_learning_run_at: referenceDate.toISOString(),
-        last_promotion_at: null,
+        last_promotion_at: existingState?.last_promotion_at ?? null,
       } satisfies SegmentLearningStateRow);
       rejected.push({
         candidateId: candidate.id,

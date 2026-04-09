@@ -18,8 +18,7 @@ export const maxDuration = 300;
  *   - morning   : once at ~07:00
  *   - prerace   : every 5 min (always)
  *   - results   : every 10 min (on the :00, :10, :20, :30, :40, :50)
- *   - learning  : once at ~04:00
- *   - promotion : once at ~04:05
+ *   - learning+promotion : once at ~04:00 in sequence
  *   - weekly    : Sunday at ~19:00
  */
 export async function GET(request: NextRequest) {
@@ -77,10 +76,13 @@ export async function GET(request: NextRequest) {
     } catch (e) {
       logger.error("cron.dispatch.learning_failed", e, { date });
       results.learning = { error: e instanceof Error ? e.message : "learning failed" };
+      results.promotion = {
+        skipped: true,
+        reason: "learning-failed",
+      };
+      return NextResponse.json({ success: true, ...results });
     }
-  }
 
-  if (hour === 4 && minute >= 5 && minute < 10) {
     try {
       results.promotion = await runEnginePromotion(now);
     } catch (e) {

@@ -68,3 +68,28 @@ test("decideCandidatePromotion rejette un challenger si la validation regresse t
   assert.equal(decision.approved, false);
   assert.equal(decision.reason, "validation-calibration-regressed");
 });
+
+test("decideCandidatePromotion bloque une promotion sans metriques business exploitables", () => {
+  const decision = decideCandidatePromotion([
+    createMetric("TRAIN"),
+    createMetric("TEST", {
+      sample_size: 180,
+      roi: null,
+      hit_rate: null,
+      false_positive_rate: null,
+      calibration_error: 0.07,
+      drawdown: 10,
+    }),
+    createMetric("VALIDATION", {
+      sample_size: 60,
+      roi: 5,
+      hit_rate: 33,
+      false_positive_rate: 50,
+      calibration_error: 0.09,
+      drawdown: 14,
+    }),
+  ]);
+
+  assert.equal(decision.approved, false);
+  assert.equal(decision.reason, "test-business-metrics-missing");
+});

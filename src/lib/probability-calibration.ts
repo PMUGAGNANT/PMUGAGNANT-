@@ -4,6 +4,7 @@ import { listRecentPmuDates } from "@/lib/date-utils";
 import { getRaceSegmentKey, ENGINE_V6_VERSION } from "@/lib/engine-v6";
 import { attachFaultRates } from "@/lib/horse-faults";
 import {
+  getSegmentLearningState,
   replaceActiveSegmentCalibration,
   upsertSegmentLearningState,
 } from "@/lib/prediction-store";
@@ -399,14 +400,18 @@ export async function runProbabilityCalibration(days = 90, referenceDate = new D
       is_active: true,
     });
 
+    const existingState = await getSegmentLearningState(summary.segmentKey, "MATIN");
     const learningState: SegmentLearningStateRow = {
       segment_key: summary.segmentKey,
       stage: "MATIN",
-      stable_version: ENGINE_V6_VERSION,
-      challenger_version: null,
-      active_calibration_version: ENGINE_V6_VERSION,
+      stable_version: existingState?.stable_version ?? ENGINE_V6_VERSION,
+      challenger_version: existingState?.challenger_version ?? null,
+      active_calibration_version:
+        existingState?.active_calibration_version ??
+        existingState?.stable_version ??
+        ENGINE_V6_VERSION,
       last_learning_run_at: nowIso,
-      last_promotion_at: null,
+      last_promotion_at: existingState?.last_promotion_at ?? null,
     };
     await upsertSegmentLearningState(learningState);
   }

@@ -34,6 +34,8 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+const PAGINATED_FETCH_SIZE = 500;
+
 export function buildPredictionRows(
   dateStr: string,
   race: RaceSummary,
@@ -620,22 +622,35 @@ export async function listRaceEngineRunsBetween(
   stage: ScoreStage = "MATIN"
 ) {
   const admin = getAdmin();
-  const { data, error } = await admin
-    .from("race_engine_runs")
-    .select("*")
-    .eq("stage", stage)
-    .eq("status", "COMPLETED")
-    .gte("date", startIso)
-    .lte("date", endIso)
-    .order("date", { ascending: true })
-    .order("reunion", { ascending: true })
-    .order("course", { ascending: true });
+  const rows: RaceEngineRunRow[] = [];
 
-  if (error) {
-    throw new Error(`Race engine runs range fetch failed: ${error.message}`);
+  for (let from = 0; ; from += PAGINATED_FETCH_SIZE) {
+    const to = from + PAGINATED_FETCH_SIZE - 1;
+    const { data, error } = await admin
+      .from("race_engine_runs")
+      .select("*")
+      .eq("stage", stage)
+      .eq("status", "COMPLETED")
+      .gte("date", startIso)
+      .lte("date", endIso)
+      .order("date", { ascending: true })
+      .order("reunion", { ascending: true })
+      .order("course", { ascending: true })
+      .range(from, to);
+
+    if (error) {
+      throw new Error(`Race engine runs range fetch failed: ${error.message}`);
+    }
+
+    const page = (data ?? []) as RaceEngineRunRow[];
+    rows.push(...page);
+
+    if (page.length < PAGINATED_FETCH_SIZE) {
+      break;
+    }
   }
 
-  return (data ?? []) as RaceEngineRunRow[];
+  return rows;
 }
 
 export async function listRunnerScoreSnapshotsByRunIds(runIds: string[]) {
@@ -673,20 +688,52 @@ export async function listRunnerScoreSnapshotsByRunIds(runIds: string[]) {
 
 export async function listRunnerOutcomesBetween(startIso: string, endIso: string) {
   const admin = getAdmin();
-  const { data, error } = await admin
-    .from("runner_outcomes")
-    .select("*")
-    .gte("date", startIso)
-    .lte("date", endIso)
-    .order("date", { ascending: true })
-    .order("reunion", { ascending: true })
-    .order("course", { ascending: true });
+  const rows: RunnerOutcomeRow[] = [];
 
-  if (error) {
-    throw new Error(`Runner outcomes range fetch failed: ${error.message}`);
+  for (let from = 0; ; from += PAGINATED_FETCH_SIZE) {
+    const to = from + PAGINATED_FETCH_SIZE - 1;
+    const { data, error } = await admin
+      .from("runner_outcomes")
+      .select("*")
+      .gte("date", startIso)
+      .lte("date", endIso)
+      .order("date", { ascending: true })
+      .order("reunion", { ascending: true })
+      .order("course", { ascending: true })
+      .range(from, to);
+
+    if (error) {
+      throw new Error(`Runner outcomes range fetch failed: ${error.message}`);
+    }
+
+    const page = (data ?? []) as RunnerOutcomeRow[];
+    rows.push(...page);
+
+    if (page.length < PAGINATED_FETCH_SIZE) {
+      break;
+    }
   }
 
-  return (data ?? []) as RunnerOutcomeRow[];
+  return rows;
+}
+
+export async function getSegmentLearningState(
+  segmentKey: SegmentLearningStateRow["segment_key"],
+  stage: ScoreStage = "MATIN"
+) {
+  const admin = getAdmin();
+  const { data, error } = await admin
+    .from("segment_learning_state")
+    .select("*")
+    .eq("segment_key", segmentKey)
+    .eq("stage", stage)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Segment learning state fetch failed: ${error.message}`);
+  }
+
+  return (data ?? null) as SegmentLearningStateRow | null;
 }
 
 export async function upsertSegmentLearningState(row: SegmentLearningStateRow) {

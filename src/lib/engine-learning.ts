@@ -1,6 +1,7 @@
 import { ENGINE_V6_VERSION } from "@/lib/engine-v6";
 import { buildLearningWindows, type LearningWindow } from "@/lib/learning-windows";
 import {
+  getSegmentLearningState,
   listRaceEngineRunsBetween,
   listRunnerOutcomesBetween,
   listRunnerScoreSnapshotsByRunIds,
@@ -62,6 +63,39 @@ type SegmentAccumulator = {
   totalGain: number;
   profitSteps: number[];
 };
+
+function buildNextLearningState(
+  existingState: SegmentLearningStateRow | null,
+  candidate: EngineCandidateRow,
+  referenceIso: string
+): SegmentLearningStateRow {
+  const stableVersion =
+    existingState?.stable_version ?? candidate.parent_version ?? ENGINE_V6_VERSION;
+  const activeCalibrationVersion =
+    existingState?.active_calibration_version ?? stableVersion;
+
+  if (candidate.status === "PROMOTED") {
+    return {
+      segment_key: candidate.segment_key,
+      stage: candidate.stage,
+      stable_version: candidate.engine_version,
+      challenger_version: null,
+      active_calibration_version: candidate.engine_version,
+      last_learning_run_at: referenceIso,
+      last_promotion_at: candidate.promoted_at ?? existingState?.last_promotion_at ?? null,
+    };
+  }
+
+  return {
+    segment_key: candidate.segment_key,
+    stage: candidate.stage,
+    stable_version: stableVersion,
+    challenger_version: candidate.status === "SHADOW" ? candidate.engine_version : null,
+    active_calibration_version: activeCalibrationVersion,
+    last_learning_run_at: referenceIso,
+    last_promotion_at: existingState?.last_promotion_at ?? null,
+  };
+}
 
 function round2(value: number) {
   return Math.round(value * 100) / 100;
@@ -337,6 +371,7 @@ export function shouldCreateSegmentChallenger(segment: LearningSegmentSummary) {
 
 export async function runEngineLearning(referenceDate = new Date()) {
   const windows = buildLearningWindows(referenceDate);
+  const referenceIso = referenceDate.toISOString();
   const [trainWindow, testWindow, validationWindow] = await Promise.all(
     windows.map((window) => buildWindowSummary(window))
   );
@@ -374,12 +409,13 @@ export async function runEngineLearning(referenceDate = new Date()) {
   for (const trainSegment of eligibleSegments) {
     const testSegment = testBySegment.get(trainSegment.segmentKey) ?? null;
     const validationSegment = validationBySegment.get(trainSegment.segmentKey) ?? null;
+    const existingState = await getSegmentLearningState(trainSegment.segmentKey, "MATIN");
 
     const candidate = await upsertEngineCandidate({
       segment_key: trainSegment.segmentKey,
       stage: "MATIN",
       engine_version: candidateVersion,
-      parent_version: ENGINE_V6_VERSION,
+      parent_version: existingState?.stable_version ?? ENGINE_V6_VERSION,
       candidate_type: "CALIBRATION",
       status: "SHADOW",
       config_patch: {
@@ -477,15 +513,7 @@ export async function runEngineLearning(referenceDate = new Date()) {
 
     await upsertEngineCandidateMetrics(metricRows);
 
-    const learningState: SegmentLearningStateRow = {
-      segment_key: trainSegment.segmentKey,
-      stage: "MATIN",
-      stable_version: ENGINE_V6_VERSION,
-      challenger_version: candidateVersion,
-      active_calibration_version: ENGINE_V6_VERSION,
-      last_learning_run_at: referenceDate.toISOString(),
-      last_promotion_at: null,
-    };
+    const learningState = buildNextLearningState(existingState, candidate, referenceIso);
     await upsertSegmentLearningState(learningState);
 
     createdCandidates.push({
