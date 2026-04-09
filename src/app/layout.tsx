@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope, Outfit } from "next/font/google";
 import Script from "next/script";
-import { AppShell } from "@/components/ui/AppShell";
+import { AppShell } from "@/features/layout/components/AppShell";
 import { GlossaryPanel } from "@/components/ui/Glossary";
 import { LiveStatsBanner } from "@/components/ui/LiveStatsBanner";
 import { OnboardingModal } from "@/components/ui/OnboardingModal";
