@@ -29,6 +29,10 @@ import {
 } from "@/lib/date-utils";
 import { estimateEloProfileForProgrammeCard } from "@/lib/elo-scoring";
 import { estimateIndiceOuvertureListe } from "@/lib/ouverture";
+import {
+  getPreRaceRefreshDecision,
+  type RefreshPriorityHints,
+} from "@/lib/race-refresh-policy";
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 import type { Lisibilite, PredictionDecision, RaceSummary } from "@/lib/types";
 
@@ -92,6 +96,12 @@ type FeaturedRace = {
   confidence: number;
   status: "jouable" | "surveillance" | "passer" | "resultat";
   hint: string;
+};
+
+type BoardPriorityBadge = {
+  label: string;
+  detail: string;
+  tone: "primary" | "warning" | "neutral";
 };
 
 type PriorityCard = {
@@ -552,6 +562,100 @@ function getBoardSectionMeta(section: BoardSectionKey) {
   }
 }
 
+function getPriorityToneColor(tone: BoardPriorityBadge["tone"]) {
+  switch (tone) {
+    case "primary":
+      return "var(--pmu-primary)";
+    case "warning":
+      return "var(--pmu-orange)";
+    default:
+      return "var(--pmu-text-muted)";
+  }
+}
+
+function getRefreshHintsForBoardItem(item: FeaturedRace): RefreshPriorityHints {
+  return {
+    hasBoardGreenSignal: item.status === "jouable",
+    hasPlayableSignal: item.score?.decision === "VALIDE",
+    hasWatchSignal:
+      item.status === "surveillance" || item.score?.decision === "SURVEILLANCE",
+  };
+}
+
+function getRefreshDetailLabel(intervalMinutes: number | null) {
+  if (intervalMinutes === null) {
+    return "pas de cadence";
+  }
+
+  if (intervalMinutes <= 5) {
+    return "controle 5 min";
+  }
+
+  if (intervalMinutes === 10) {
+    return "suivi 10 min";
+  }
+
+  if (intervalMinutes === 30) {
+    return "suivi 30 min";
+  }
+
+  if (intervalMinutes === 60) {
+    return "suivi 1 h";
+  }
+
+  return `suivi ${intervalMinutes} min`;
+}
+
+function getBoardPriorityBadge(item: FeaturedRace): BoardPriorityBadge | null {
+  if (item.status === "resultat") {
+    return null;
+  }
+
+  const refresh = getPreRaceRefreshDecision(
+    item.race,
+    new Date(),
+    getRefreshHintsForBoardItem(item)
+  );
+
+  if (refresh.intervalMinutes === null) {
+    return null;
+  }
+
+  if (refresh.reason.startsWith("board-verte")) {
+    return {
+      label: "Suivi renforce",
+      detail: getRefreshDetailLabel(refresh.intervalMinutes),
+      tone: "primary",
+    };
+  }
+
+  if (refresh.reason.startsWith("quinte")) {
+    return {
+      label: "Quinte prioritaire",
+      detail: getRefreshDetailLabel(refresh.intervalMinutes),
+      tone: "warning",
+    };
+  }
+
+  if (refresh.reason.startsWith("signal-valide")) {
+    return {
+      label: "Signal moteur",
+      detail: getRefreshDetailLabel(refresh.intervalMinutes),
+      tone: "primary",
+    };
+  }
+
+  if (refresh.reason.startsWith("variation-forte")) {
+    return {
+      label: "Marche actif",
+      detail: getRefreshDetailLabel(refresh.intervalMinutes),
+      tone: "warning",
+    };
+  }
+
+  return null;
+}
+
 function PageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -856,6 +960,7 @@ function PageContent() {
   }, [focusDetail]);
 
   const focusDisplayScore = focusRace ? focusRace.scoreValue.toFixed(1) : "--";
+  const focusPriorityBadge = focusRace ? getBoardPriorityBadge(focusRace) : null;
   const focusLisibilite =
     focusRace?.score?.lisibilite ??
     focusDetail?.paywall?.preview?.lisibilite ??
@@ -948,6 +1053,7 @@ function PageContent() {
       partants: item.race.nombrePartants,
       sigmaPct: eloProfile.sigma,
     });
+    const priorityBadge = getBoardPriorityBadge(item);
 
     return (
       <CourseCard
@@ -967,6 +1073,7 @@ function PageContent() {
         pickConfidence={item.score?.pick?.confidence}
         pickBetType={item.score?.pick?.betType}
         topFacteurs={item.score?.pick?.topFacteurs}
+        priorityBadge={priorityBadge}
         onClick={() => navigateToRace(item.race)}
       />
     );
@@ -1025,6 +1132,22 @@ function PageContent() {
               <span className="app-pill text-xs">{focusRace.race.hippodrome}</span>
               <span className="app-pill text-xs">{focusRace.race.heureDepart}</span>
               <span className="app-pill text-xs">{formatCourseMeta(focusRace.race)}</span>
+              {focusPriorityBadge ? (
+                <span
+                  className="rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em]"
+                  style={{
+                    color: getPriorityToneColor(focusPriorityBadge.tone),
+                    borderColor: `color-mix(in srgb, ${getPriorityToneColor(
+                      focusPriorityBadge.tone
+                    )} 24%, transparent)`,
+                    background: `color-mix(in srgb, ${getPriorityToneColor(
+                      focusPriorityBadge.tone
+                    )} 10%, var(--pmu-surface))`,
+                  }}
+                >
+                  {focusPriorityBadge.label} · {focusPriorityBadge.detail}
+                </span>
+              ) : null}
             </div>
 
             <div className="mt-5 flex flex-wrap gap-3">

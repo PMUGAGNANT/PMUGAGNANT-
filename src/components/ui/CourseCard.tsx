@@ -29,6 +29,11 @@ export type CourseCardProps = {
   pickConfidence?: number | null;
   pickBetType?: string | null;
   topFacteurs?: string[];
+  priorityBadge?: {
+    label: string;
+    detail: string;
+    tone: "primary" | "warning" | "neutral";
+  } | null;
 };
 
 function formatCountdown(minutes: number): string {
@@ -61,6 +66,7 @@ export function CourseCard({
   pickConfidence,
   pickBetType,
   topFacteurs,
+  priorityBadge = null,
 }: CourseCardProps) {
   const [openPanel, setOpenPanel] = useState<"analysis" | "ticket" | "why" | null>(
     null
@@ -84,6 +90,12 @@ export function CourseCard({
     () => translateFactors(topFacteurs ?? []),
     [topFacteurs]
   );
+  const priorityToneColor =
+    priorityBadge?.tone === "primary"
+      ? "var(--pmu-primary)"
+      : priorityBadge?.tone === "warning"
+        ? "var(--pmu-orange)"
+        : "var(--pmu-text-muted)";
 
   const lines: Array<{ label: string; value: string }> = [];
   if (profile.favoriFragileNum != null) {
@@ -145,6 +157,22 @@ export function CourseCard({
           {subtitleLine}
         </p>
       </div>
+
+      {priorityBadge ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className="rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em]"
+            style={{
+              color: priorityToneColor,
+              borderColor: `color-mix(in srgb, ${priorityToneColor} 24%, transparent)`,
+              background: `color-mix(in srgb, ${priorityToneColor} 10%, var(--pmu-surface))`,
+            }}
+          >
+            {priorityBadge.label}
+          </span>
+          <span className="app-pill text-[11px]">{priorityBadge.detail}</span>
+        </div>
+      ) : null}
 
       <div className="grid gap-3 md:grid-cols-3">
         <div className="app-card-muted px-4 py-4">
