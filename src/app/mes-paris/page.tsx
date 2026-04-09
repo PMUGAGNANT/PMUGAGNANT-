@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { asArray } from "@/lib/array-utils";
 import {
@@ -10,11 +11,6 @@ import {
 } from "@/lib/supabase";
 import { ReferralCard } from "@/components/ui/ReferralCard";
 import { UserStreakCard } from "@/components/ui/UserStreakCard";
-
-const GREEN = "var(--pmu-primary)";
-const DARK = "var(--pmu-text)";
-const CARD = "var(--pmu-surface)";
-const BORDER = "var(--pmu-border)";
 
 interface Bet {
   id: string;
@@ -32,6 +28,35 @@ interface Bet {
   gain: number | null;
   created_at: string;
 }
+
+type BillingNotice = {
+  tone: "success" | "warning" | "loading";
+  title: string;
+  message: string;
+};
+
+const STATUS_CONFIG: Record<string, { label: string; color: string; background: string }> = {
+  EN_ATTENTE: {
+    label: "En attente",
+    color: "var(--pmu-orange)",
+    background: "color-mix(in srgb, var(--pmu-orange) 14%, transparent)",
+  },
+  GAGNE: {
+    label: "Gagne",
+    color: "var(--pmu-primary)",
+    background: "color-mix(in srgb, var(--pmu-primary) 14%, transparent)",
+  },
+  PLACE: {
+    label: "Place",
+    color: "var(--pmu-accent-blue)",
+    background: "color-mix(in srgb, var(--pmu-accent-blue) 18%, transparent)",
+  },
+  PERDU: {
+    label: "Perdu",
+    color: "var(--pmu-red)",
+    background: "color-mix(in srgb, var(--pmu-red) 14%, transparent)",
+  },
+};
 
 function formatEuros(value: number) {
   return `${new Intl.NumberFormat("fr-FR", {
@@ -56,23 +81,149 @@ function formatBonusExpiry(value: string | null) {
   }).format(parsed);
 }
 
-function MesParisFallback() {
+function NoticeCard({ notice }: { notice: BillingNotice }) {
+  const color =
+    notice.tone === "success"
+      ? "var(--pmu-primary)"
+      : notice.tone === "loading"
+        ? "var(--pmu-accent-blue)"
+        : "var(--pmu-orange)";
+
+  const background =
+    notice.tone === "success"
+      ? "var(--pmu-primary-fade)"
+      : notice.tone === "loading"
+        ? "color-mix(in srgb, var(--pmu-accent-blue) 10%, transparent)"
+        : "color-mix(in srgb, var(--pmu-orange) 8%, transparent)";
+
   return (
-    <div
+    <section
+      className="app-card p-5 md:p-6"
       style={{
-        width: "min(1180px, calc(100% - 20px))",
-        margin: "0 auto",
-        minHeight: "100vh",
-        background: `radial-gradient(circle at top left, var(--pmu-primary-fade), transparent 30%), linear-gradient(180deg, var(--pmu-bg) 0%, var(--pmu-bg-mid) 100%)`,
+        borderColor: `color-mix(in srgb, ${color} 26%, transparent)`,
+        background,
       }}
-    />
+    >
+      <p className="app-kicker" style={{ color }}>
+        Confirmation abonnement
+      </p>
+      <h2 className="mt-2 text-2xl font-black leading-tight text-[var(--pmu-text)]">
+        {notice.title}
+      </h2>
+      <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">
+        {notice.message}
+      </p>
+    </section>
   );
+}
+
+function SummaryCard({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: string | number;
+  tone?: "default" | "good" | "warn" | "bad";
+}) {
+  const color =
+    tone === "good"
+      ? "var(--pmu-primary)"
+      : tone === "warn"
+        ? "var(--pmu-orange)"
+        : tone === "bad"
+          ? "var(--pmu-red)"
+          : "var(--pmu-text)";
+
+  return (
+    <article className="app-stat-card px-5 py-4">
+      <p className="app-label">{label}</p>
+      <p className="mt-2 text-2xl font-black" style={{ color }}>
+        {value}
+      </p>
+    </article>
+  );
+}
+
+function BetHistoryCard({ bet }: { bet: Bet }) {
+  const status = STATUS_CONFIG[bet.statut] ?? STATUS_CONFIG.EN_ATTENTE;
+  const gainLabel =
+    bet.gain !== null
+      ? `${bet.gain >= 0 ? "+" : ""}${formatEuros(bet.gain)}`
+      : "Resultat en attente";
+
+  return (
+    <article className="app-card p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-[var(--pmu-text-soft)]">
+            R{bet.reunion}C{bet.course} - {bet.hippodrome}
+          </p>
+          <h3 className="mt-2 text-xl font-black leading-tight text-[var(--pmu-text)]">
+            N{bet.cheval_num} {bet.cheval_nom}
+          </h3>
+        </div>
+
+        <span
+          className="rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em]"
+          style={{
+            color: status.color,
+            background: status.background,
+          }}
+        >
+          {status.label}
+        </span>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <span className="app-pill text-xs">{bet.type_pari}</span>
+        <span className="app-pill text-xs">Cote {bet.cote}</span>
+        <span className="app-pill text-xs">Mise {formatEuros(bet.mise)}</span>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-[1rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_90%,transparent)] px-4 py-3 text-sm text-[var(--pmu-text-soft)]">
+          {bet.date_str} a {bet.heure_depart}
+        </div>
+        <div
+          className="rounded-[1rem] border px-4 py-3 text-sm font-black"
+          style={{
+            borderColor:
+              bet.gain !== null
+                ? bet.gain >= 0
+                  ? "color-mix(in srgb, var(--pmu-primary) 24%, transparent)"
+                  : "color-mix(in srgb, var(--pmu-red) 24%, transparent)"
+                : "var(--pmu-border)",
+            color:
+              bet.gain !== null
+                ? bet.gain >= 0
+                  ? "var(--pmu-primary)"
+                  : "var(--pmu-red)"
+                : "var(--pmu-text-soft)",
+            background:
+              bet.gain !== null
+                ? bet.gain >= 0
+                  ? "color-mix(in srgb, var(--pmu-primary) 8%, transparent)"
+                  : "color-mix(in srgb, var(--pmu-red) 8%, transparent)"
+                : "color-mix(in srgb, var(--pmu-surface-2) 90%, transparent)",
+          }}
+        >
+          {gainLabel}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function MesParisFallback() {
+  return <div className="min-h-[60vh] w-full rounded-[2rem] bg-transparent" />;
 }
 
 function MesParisContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabaseConfigured = hasSupabaseConfig();
+
   const [bets, setBets] = useState<Bet[]>([]);
   const [solde, setSolde] = useState(1000);
   const [loading, setLoading] = useState(true);
@@ -83,15 +234,13 @@ function MesParisContent() {
   const [isStripeSubscribed, setIsStripeSubscribed] = useState(false);
   const [accessSource, setAccessSource] = useState<"FREE" | "PAID" | "BONUS">("FREE");
   const [subscriptionStatus, setSubscriptionStatus] = useState("FREE");
-  const [premiumAccessExpiresAt, setPremiumAccessExpiresAt] = useState<string | null>(null);
-  const [billingNotice, setBillingNotice] = useState<{
-    tone: "success" | "warning" | "loading";
-    title: string;
-    message: string;
-  } | null>(null);
+  const [premiumAccessExpiresAt, setPremiumAccessExpiresAt] = useState<string | null>(
+    null
+  );
+  const [billingNotice, setBillingNotice] = useState<BillingNotice | null>(null);
   const [fetchRevision, setFetchRevision] = useState(0);
   const [autoCheckoutStarted, setAutoCheckoutStarted] = useState(false);
-  const [showBottomNav, setShowBottomNav] = useState(false);
+
   const autoCheckoutRequested = searchParams.get("billing") === "checkout";
 
   const fetchBets = useCallback(
@@ -116,14 +265,16 @@ function MesParisContent() {
         }
 
         if (!session) {
-          const redirectTarget = autoCheckoutRequested ? "/mes-paris?billing=checkout" : "/mes-paris";
+          const redirectTarget = autoCheckoutRequested
+            ? "/mes-paris?billing=checkout"
+            : "/mes-paris";
           router.push(`/login?redirect=${encodeURIComponent(redirectTarget)}`);
           return;
         }
 
         setUser({ email: session.user?.email ?? undefined });
 
-        const res = await fetch("/api/bets", {
+        const response = await fetch("/api/bets", {
           headers: { Authorization: `Bearer ${session.access_token}` },
           signal,
         });
@@ -137,23 +288,29 @@ function MesParisContent() {
           subscriptionStatus?: string;
           premiumAccessExpiresAt?: string | null;
           error?: string;
-        } = await res.json();
+        } = await response.json();
 
         if (signal?.aborted) {
           return;
         }
 
-        if (!res.ok || !payload.success) {
-          throw new Error(payload.error ?? "Réponse paris invalide.");
+        if (!response.ok || !payload.success) {
+          throw new Error(payload.error ?? "Reponse paris invalide.");
         }
 
         setBets(asArray<Bet>(payload.bets));
-        setSolde(typeof payload.solde === "number" && Number.isFinite(payload.solde) ? payload.solde : 1000);
+        setSolde(
+          typeof payload.solde === "number" && Number.isFinite(payload.solde)
+            ? payload.solde
+            : 1000
+        );
         setIsStripeSubscribed(Boolean(payload.isStripeSubscribed));
         setAccessSource(payload.accessSource ?? "FREE");
         setSubscriptionStatus(payload.subscriptionStatus ?? "FREE");
         setPremiumAccessExpiresAt(
-          typeof payload.premiumAccessExpiresAt === "string" ? payload.premiumAccessExpiresAt : null
+          typeof payload.premiumAccessExpiresAt === "string"
+            ? payload.premiumAccessExpiresAt
+            : null
         );
       } catch (loadError) {
         if (signal?.aborted) {
@@ -162,7 +319,11 @@ function MesParisContent() {
         if (loadError instanceof Error && loadError.name === "AbortError") {
           return;
         }
-        setError(loadError instanceof Error ? loadError.message : "Impossible de charger l'espace paris.");
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Impossible de charger l'espace paris."
+        );
         setBets([]);
       } finally {
         if (!signal?.aborted) {
@@ -174,24 +335,12 @@ function MesParisContent() {
   );
 
   useEffect(() => {
-    const ac = new AbortController();
-    void fetchBets(ac.signal);
+    const abortController = new AbortController();
+    void fetchBets(abortController.signal);
     return () => {
-      ac.abort();
+      abortController.abort();
     };
   }, [fetchBets, fetchRevision]);
-
-  useEffect(() => {
-    function syncBottomNavVisibility() {
-      setShowBottomNav(window.innerWidth < 1024);
-    }
-
-    syncBottomNavVisibility();
-    window.addEventListener("resize", syncBottomNavVisibility);
-    return () => {
-      window.removeEventListener("resize", syncBottomNavVisibility);
-    };
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -203,8 +352,9 @@ function MesParisContent() {
       if (subscriptionFlag === "cancel") {
         setBillingNotice({
           tone: "warning",
-          title: "Paiement annulé",
-          message: "Le paiement a été interrompu. Ton compte reste sur l’offre gratuite tant que l’abonnement n’est pas confirmé.",
+          title: "Paiement annule",
+          message:
+            "Le paiement a ete interrompu. Ton compte reste sur l'offre gratuite tant que l'abonnement n'est pas confirme.",
         });
         router.replace("/mes-paris");
         return;
@@ -216,16 +366,18 @@ function MesParisContent() {
 
       setBillingNotice({
         tone: "loading",
-        title: "Vérification du paiement",
-        message: "Nous confirmons ton abonnement premium avec Stripe avant d’ouvrir l’accès complet.",
+        title: "Verification du paiement",
+        message:
+          "Nous confirmons ton abonnement premium avec Stripe avant d'ouvrir l'acces complet.",
       });
 
       if (!sessionId || !supabaseConfigured) {
         if (!cancelled) {
           setBillingNotice({
             tone: "warning",
-            title: "Retour paiement détecté",
-            message: "Le paiement est revenu de Stripe, mais la confirmation automatique est incomplète. Recharge la page dans quelques secondes.",
+            title: "Retour paiement detecte",
+            message:
+              "Le paiement est revenu de Stripe, mais la confirmation automatique est incomplete. Recharge la page dans quelques secondes.",
           });
         }
         router.replace("/mes-paris");
@@ -243,15 +395,19 @@ function MesParisContent() {
             setBillingNotice({
               tone: "warning",
               title: "Connexion requise",
-              message: "Reconnecte-toi pour finaliser l'activation de l'abonnement.",
+              message:
+                "Reconnecte-toi pour finaliser l'activation de l'abonnement.",
             });
           }
           return;
         }
 
-        const response = await fetch(`/api/stripe/checkout-status?session_id=${encodeURIComponent(sessionId)}`, {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
+        const response = await fetch(
+          `/api/stripe/checkout-status?session_id=${encodeURIComponent(sessionId)}`,
+          {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }
+        );
         const payload = await response.json();
 
         if (!response.ok) {
@@ -267,12 +423,14 @@ function MesParisContent() {
               ? {
                   tone: "success",
                   title: "Abonnement actif",
-                  message: "Paiement confirmé. Ton abonnement premium est maintenant actif et tes accès ont bien été ouverts.",
+                  message:
+                    "Paiement confirme. Ton abonnement premium est maintenant actif et tes acces ont bien ete ouverts.",
                 }
               : {
                   tone: "loading",
-                  title: "Paiement reçu",
-                  message: "Le paiement est revenu, mais l'activation finale est encore en cours. Recharge la page dans quelques secondes.",
+                  title: "Paiement recu",
+                  message:
+                    "Le paiement est revenu, mais l'activation finale est encore en cours. Recharge la page dans quelques secondes.",
                 }
           );
         }
@@ -285,7 +443,7 @@ function MesParisContent() {
             message:
               confirmationError instanceof Error
                 ? confirmationError.message
-                : "Le paiement est revenu de Stripe, mais la confirmation automatique a échoué.",
+                : "Le paiement est revenu de Stripe, mais la confirmation automatique a echoue.",
           });
         }
       }
@@ -323,7 +481,7 @@ function MesParisContent() {
       });
       await fetchBets();
     } catch {
-      setError("La vérification des résultats a échoué.");
+      setError("La verification des resultats a echoue.");
     } finally {
       setSettling(false);
     }
@@ -354,7 +512,8 @@ function MesParisContent() {
       } = await supabase.auth.getSession();
 
       if (!session) {
-        const redirectTarget = action === "checkout" ? "/mes-paris?billing=checkout" : "/mes-paris";
+        const redirectTarget =
+          action === "checkout" ? "/mes-paris?billing=checkout" : "/mes-paris";
         router.push(`/login?redirect=${encodeURIComponent(redirectTarget)}`);
         setBillingLoading(false);
         return;
@@ -369,12 +528,16 @@ function MesParisContent() {
           }
         );
         const payload = await response.json();
+
         if (!response.ok || !payload.url) {
           throw new Error(payload.error || "Billing indisponible");
         }
+
         window.location.href = payload.url;
       } catch (billingError) {
-        setError(billingError instanceof Error ? billingError.message : "Billing indisponible");
+        setError(
+          billingError instanceof Error ? billingError.message : "Billing indisponible"
+        );
       } finally {
         setBillingLoading(false);
       }
@@ -383,7 +546,13 @@ function MesParisContent() {
   );
 
   useEffect(() => {
-      if (!autoCheckoutRequested || autoCheckoutStarted || loading || billingLoading || !user) {
+    if (
+      !autoCheckoutRequested ||
+      autoCheckoutStarted ||
+      loading ||
+      billingLoading ||
+      !user
+    ) {
       return;
     }
 
@@ -412,578 +581,281 @@ function MesParisContent() {
 
   const hasBonusAccess = accessSource === "BONUS";
   const bonusExpiryLabel = formatBonusExpiry(premiumAccessExpiresAt);
-
-  const pendingCount = bets.filter((b) => b.statut === "EN_ATTENTE").length;
-  const wonCount = bets.filter((b) => b.statut === "GAGNE").length;
-  const placedCount = bets.filter((b) => b.statut === "PLACE").length;
-  const totalGain = bets.filter((b) => b.gain !== null).reduce((sum, b) => sum + (b.gain || 0), 0);
-
-  const statusConfig: Record<string, { bg: string; color: string; label: string }> = {
-    EN_ATTENTE: {
-      bg: "color-mix(in srgb, var(--pmu-orange) 15%, transparent)",
-      color: "var(--pmu-orange)",
-      label: "En attente",
-    },
-    GAGNE: { bg: "color-mix(in srgb, var(--pmu-primary) 15%, transparent)", color: GREEN, label: "Gagné" },
-    PLACE: {
-      bg: "color-mix(in srgb, var(--pmu-accent-blue) 20%, transparent)",
-      color: "var(--pmu-accent-blue)",
-      label: "Place",
-    },
-    PERDU: { bg: "color-mix(in srgb, var(--pmu-red) 15%, transparent)", color: "var(--pmu-red)", label: "Perdu" },
-  };
+  const pendingCount = useMemo(
+    () => bets.filter((bet) => bet.statut === "EN_ATTENTE").length,
+    [bets]
+  );
+  const wonCount = useMemo(
+    () => bets.filter((bet) => bet.statut === "GAGNE").length,
+    [bets]
+  );
+  const placedCount = useMemo(
+    () => bets.filter((bet) => bet.statut === "PLACE").length,
+    [bets]
+  );
+  const totalGain = useMemo(
+    () =>
+      bets
+        .filter((bet) => bet.gain !== null)
+        .reduce((sum, bet) => sum + (bet.gain || 0), 0),
+    [bets]
+  );
+  const accessBadge = isStripeSubscribed
+    ? `Abonnement ${subscriptionStatus}`
+    : hasBonusAccess
+      ? "Acces bonus actif"
+      : "Compte gratuit";
 
   return (
-    <div
-      style={{
-        width: "min(1180px, calc(100% - 20px))",
-        margin: "0 auto",
-        minHeight: "100vh",
-        background: `radial-gradient(circle at top left, var(--pmu-primary-fade), transparent 30%), linear-gradient(180deg, var(--pmu-bg) 0%, var(--pmu-bg-mid) 100%)`,
-        paddingBottom: showBottomNav ? 88 : 24,
-      }}
-    >
-      <div
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 50,
-          background: "color-mix(in srgb, var(--pmu-bg) 92%, transparent)",
-          backdropFilter: "blur(18px)",
-          borderBottom: `1px solid ${BORDER}`,
-          height: 60,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <div
-          onClick={() => router.push("/")}
-          style={{
-            position: "absolute",
-            left: 14,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 32,
-            height: 32,
-            borderRadius: "50%",
-            background: "color-mix(in srgb, var(--pmu-text) 12%, transparent)",
-          }}
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="var(--pmu-text)"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-        </div>
-        <div style={{ color: GREEN, fontWeight: 800, fontSize: 18, letterSpacing: "-0.3px" }}>
-          Mes Paris
-        </div>
-        <div
-          onClick={handleLogout}
-          style={{
-            position: "absolute",
-            right: 14,
-            color: "color-mix(in srgb, var(--pmu-text) 68%, transparent)",
-            fontSize: 11,
-            cursor: "pointer",
-            fontWeight: 700,
-          }}
-        >
-          Déconnexion
-        </div>
-      </div>
-
-      {loading ? (
-        <div
-          role="status"
-          aria-busy="true"
-          aria-label="Chargement de vos paris"
-          style={{ textAlign: "center", padding: 48, color: "var(--pmu-text-muted)" }}
-        >
-          Chargement...
-        </div>
-      ) : error ? (
-        <div
-          role="alert"
-          aria-live="assertive"
-          style={{
-            margin: "14px 0",
-            background: "color-mix(in srgb, var(--pmu-orange) 12%, transparent)",
-            color: "var(--pmu-orange)",
-            border: "1px solid color-mix(in srgb, var(--pmu-orange) 35%, transparent)",
-            padding: 14,
-            borderRadius: 14,
-            fontSize: 13,
-            fontWeight: 500,
-          }}
-        >
-          <p style={{ margin: 0, marginBottom: 12 }}>{error}</p>
-          <button
-            type="button"
-            onClick={() => setFetchRevision((revision) => revision + 1)}
-            style={{
-              border: "none",
-              borderRadius: 999,
-              padding: "9px 16px",
-              background: GREEN,
-              color: "var(--pmu-on-primary)",
-              fontWeight: 800,
-              cursor: "pointer",
-            }}
-          >
-            Réessayer
-          </button>
-        </div>
-      ) : (
-        <>
-          {billingNotice ? (
-            <div
-              style={{
-                margin: "14px 0 0",
-                padding: 16,
-                borderRadius: 16,
-                border: `1px solid ${
-                  billingNotice.tone === "success"
-                    ? "color-mix(in srgb, var(--pmu-primary) 35%, transparent)"
-                    : billingNotice.tone === "loading"
-                      ? "color-mix(in srgb, var(--pmu-accent-blue) 35%, transparent)"
-                      : "color-mix(in srgb, var(--pmu-orange) 35%, transparent)"
-                }`,
-                background:
-                  billingNotice.tone === "success"
-                    ? "var(--pmu-primary-fade)"
-                    : billingNotice.tone === "loading"
-                      ? "color-mix(in srgb, var(--pmu-accent-blue) 10%, transparent)"
-                      : "color-mix(in srgb, var(--pmu-orange) 8%, transparent)",
-                boxShadow: "0 10px 24px rgba(0, 0, 0, 0.22)",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 800,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.12em",
-                  color:
-                    billingNotice.tone === "success"
-                      ? GREEN
-                      : billingNotice.tone === "loading"
-                        ? "var(--pmu-accent-blue)"
-                        : "var(--pmu-orange)",
-                  marginBottom: 6,
-                }}
-              >
-                {"Confirmation d'abonnement"}
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: DARK, marginBottom: 5 }}>
-                {billingNotice.title}
-              </div>
-              <div style={{ fontSize: 13, lineHeight: "19px", color: "var(--pmu-text-muted)" }}>
-                {billingNotice.message}
-              </div>
+    <div className="mx-auto flex w-full max-w-[96rem] flex-col gap-6 lg:gap-8">
+      <section className="app-page-hero p-6 md:p-8">
+        <div className="relative z-[1] grid gap-6 xl:grid-cols-[1.1fr,0.9fr] xl:items-end">
+          <div className="space-y-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-[color-mix(in_srgb,var(--pmu-primary)_26%,transparent)] bg-[var(--pmu-primary-soft)] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-[var(--pmu-primary)]">
+                Mes Paris
+              </span>
+              <span className="app-pill text-xs">{accessBadge}</span>
+              <span className="app-pill text-xs">{bets.length} tickets</span>
             </div>
-          ) : null}
 
-          <div style={{ marginBottom: 14 }}>
-            <UserStreakCard />
+            <div>
+              <p className="app-kicker">Cockpit perso</p>
+              <h1 className="max-w-4xl text-4xl font-black leading-[0.93] text-[var(--pmu-text)] md:text-6xl">
+                Un seul espace pour la bankroll, les tickets et l&apos;acces premium.
+              </h1>
+              <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
+                Tu retrouves ici le solde, l&apos;etat de l&apos;abonnement, les tickets
+                en attente, l&apos;historique et les bonus de parrainage sans changer
+                d&apos;ecran.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              {pendingCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={handleSettle}
+                  disabled={settling}
+                  className="app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {settling
+                    ? "Verification..."
+                    : `Verifier les resultats (${pendingCount})`}
+                </button>
+              ) : (
+                <Link href="/" className="app-button-primary">
+                  Revenir aux courses
+                </Link>
+              )}
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="app-button-secondary"
+              >
+                Deconnexion
+              </button>
+            </div>
           </div>
 
-          <section
-            style={{
-              background: `radial-gradient(circle at top right, var(--pmu-primary-soft), transparent 35%), linear-gradient(135deg, color-mix(in srgb, var(--pmu-primary) 12%, var(--pmu-bg-mid)), var(--pmu-bg))`,
-              borderRadius: 24,
-              margin: "14px 0 12px",
-              padding: 22,
-              color: "var(--pmu-text)",
-              boxShadow: "0 12px 28px rgba(0, 0, 0, 0.26)",
-              border: "1px solid var(--pmu-border)",
-              display: "grid",
-              gap: 14,
-              gridTemplateColumns: "minmax(0,1.4fr) minmax(240px,0.9fr)",
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 11, opacity: 0.84, marginBottom: 4 }}>{user?.email}</div>
-              <div style={{ fontSize: 38, fontWeight: 900, marginBottom: 6, letterSpacing: "-1px" }}>
-                {formatEuros(solde)}
+          <aside className="app-card p-5 md:p-6">
+            <p className="app-kicker">Solde actuel</p>
+            <div className="mt-4 text-[3.35rem] font-black leading-none tracking-[-0.06em] text-[var(--pmu-text)]">
+              {formatEuros(solde)}
+            </div>
+            <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">
+              {user?.email ?? "Compte utilisateur"}
+            </p>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <div className="app-card-muted px-4 py-4">
+                <p className="app-label">Tickets gagnes</p>
+                <p className="mt-2 text-2xl font-black text-[var(--pmu-primary)]">
+                  {wonCount}
+                </p>
               </div>
-              <div style={{ fontSize: 13, opacity: 0.92, fontWeight: 600 }}>
-                {bets.length} paris · {wonCount} gagnés · {placedCount} placés
+              <div className="app-card-muted px-4 py-4">
+                <p className="app-label">Tickets places</p>
+                <p className="mt-2 text-2xl font-black text-[var(--pmu-orange)]">
+                  {placedCount}
+                </p>
               </div>
             </div>
-            <div
-              style={{
-                borderRadius: 18,
-                background: "color-mix(in srgb, var(--pmu-surface-2) 84%, transparent)",
-                border: "1px solid var(--pmu-border)",
-                padding: 14,
-                display: "grid",
-                gap: 10,
-                alignContent: "start",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 800,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                  opacity: 0.72,
-                }}
-              >
-                Abonnement
+
+            <div className="mt-5 rounded-[1.2rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_90%,transparent)] p-4">
+              <div className="inline-flex rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_88%,transparent)] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-[var(--pmu-text-soft)]">
+                {accessBadge}
               </div>
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  width: "fit-content",
-                  padding: "8px 12px",
-                  borderRadius: 999,
-                  background: "color-mix(in srgb, var(--pmu-text) 14%, transparent)",
-                  fontSize: 11,
-                  fontWeight: 800,
-                }}
-              >
+              <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">
                 {isStripeSubscribed
-                  ? `Abonnement ${subscriptionStatus}`
+                  ? "Ton espace premium est actif: pronostics complets, mises, tickets detailles et gestion Stripe."
                   : hasBonusAccess
-                    ? "Accès bonus actif"
-                    : "Compte gratuit"}
-              </div>
-              <div style={{ fontSize: 12, lineHeight: "18px", color: "color-mix(in srgb, var(--pmu-text) 78%, transparent)" }}>
-                {isStripeSubscribed
-                  ? "Ton espace premium est actif : pronostics complets, mises et tickets détaillés."
-                  : hasBonusAccess
-                    ? `Ton accès premium bonus est actif${bonusExpiryLabel ? ` jusqu'au ${bonusExpiryLabel}` : ""}. Tu peux déjà voir les pronostics complets, ou passer au mensuel quand tu veux.`
-                  : "Passe en premium pour débloquer les opportunités value filtrées, les mises Kelly et les tickets optimisés."}
-              </div>
-              <button
-                onClick={() => handleBilling(isStripeSubscribed ? "portal" : "checkout")}
-                disabled={billingLoading}
-                style={{
-                  border: "none",
-                  borderRadius: 999,
-                  padding: "10px 14px",
-                  background: GREEN,
-                  color: "var(--pmu-on-primary)",
-                  fontWeight: 800,
-                  cursor: "pointer",
-                }}
-              >
-                {billingLoading
-                  ? "Ouverture..."
-                  : isStripeSubscribed
-                    ? "Gérer l’abonnement"
-                    : hasBonusAccess
-                      ? "Passer au premium mensuel"
-                      : "Débloquer les pronostics premium"}
-              </button>
-              {!isStripeSubscribed ? (
+                    ? `Ton acces bonus est actif${
+                        bonusExpiryLabel ? ` jusqu'au ${bonusExpiryLabel}` : ""
+                      }. Tu peux deja voir les pronostics complets ou passer au mensuel quand tu veux.`
+                    : "Passe en premium pour debloquer les opportunites value filtrees, les mises Kelly et la lecture complete des tickets."}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-3">
                 <button
-                  onClick={() => router.push("/premium")}
-                  style={{
-                    border: "1px solid color-mix(in srgb, var(--pmu-text) 22%, transparent)",
-                    borderRadius: 999,
-                    padding: "10px 14px",
-                    background: "transparent",
-                    color: "var(--pmu-text)",
-                    fontWeight: 800,
-                    cursor: "pointer",
-                  }}
+                  type="button"
+                  onClick={() => handleBilling(isStripeSubscribed ? "portal" : "checkout")}
+                  disabled={billingLoading}
+                  className="app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {"Voir le détail de l’offre"}
+                  {billingLoading
+                    ? "Ouverture..."
+                    : isStripeSubscribed
+                      ? "Gerer l'abonnement"
+                      : hasBonusAccess
+                        ? "Passer au premium mensuel"
+                        : "Debloquer le premium"}
                 </button>
-              ) : null}
-              {!isStripeSubscribed ? (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {[
-                    "Top 5 complet",
-                    "Opportunité value confirmée",
-                    "Mise bankroll",
-                    "Bilan réel du moteur",
-                  ].map((item) => (
-                    <div
-                      key={item}
-                      style={{
-                        padding: "7px 9px",
-                        borderRadius: 999,
-                        background: "color-mix(in srgb, var(--pmu-text) 12%, transparent)",
-                        fontSize: 10,
-                        fontWeight: 800,
-                      }}
-                    >
-                      {item}
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          </section>
-
-          <section
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-              gap: 10,
-              marginBottom: 14,
-            }}
-          >
-            {[
-              { label: "En attente", value: pendingCount, color: "var(--pmu-orange)" },
-              { label: "Gagnés", value: wonCount, color: GREEN },
-              { label: "Places", value: placedCount, color: "var(--pmu-accent-blue)" },
-              {
-                label: "P/L",
-                value: totalGain >= 0 ? `+${formatEuros(totalGain)}` : formatEuros(totalGain),
-                color: totalGain >= 0 ? GREEN : "var(--pmu-red)",
-              },
-            ].map((item) => (
-              <div
-                key={item.label}
-                style={{
-                  background: CARD,
-                  borderRadius: 18,
-                  padding: "14px 10px",
-                  textAlign: "center",
-                  boxShadow: "0 10px 24px rgba(0, 0, 0, 0.18)",
-                  border: `1px solid ${BORDER}`,
-                }}
-              >
-                <div style={{ fontSize: 20, fontWeight: 800, color: item.color, letterSpacing: "-0.4px" }}>
-                  {item.value}
-                </div>
-                <div style={{ fontSize: 10, color: "var(--pmu-text-muted)", marginTop: 2 }}>{item.label}</div>
+                {!isStripeSubscribed ? (
+                  <Link href="/premium" className="app-button-secondary">
+                    Voir l&apos;offre
+                  </Link>
+                ) : null}
               </div>
-            ))}
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      {loading ? (
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 8 }, (_, index) => (
+            <div
+              key={index}
+              className="app-card h-36 animate-pulse bg-[linear-gradient(180deg,var(--pmu-surface-highlight)_0%,var(--pmu-surface)_100%)]"
+            />
+          ))}
+        </section>
+      ) : error ? (
+        <section className="app-card p-6 md:p-7">
+          <p className="app-kicker">Mes Paris</p>
+          <h2 className="mt-2 text-3xl font-black text-[var(--pmu-text)]">
+            Impossible de charger l&apos;espace perso
+          </h2>
+          <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">
+            {error}
+          </p>
+          <button
+            type="button"
+            className="app-button-primary mt-5"
+            onClick={() => setFetchRevision((revision) => revision + 1)}
+          >
+            Reessayer
+          </button>
+        </section>
+      ) : (
+        <>
+          {billingNotice ? <NoticeCard notice={billingNotice} /> : null}
+
+          <section className="grid gap-4 xl:grid-cols-[1.05fr,0.95fr]">
+            <UserStreakCard />
+
+            <section className="grid gap-4 sm:grid-cols-2">
+              <SummaryCard label="En attente" value={pendingCount} tone="warn" />
+              <SummaryCard label="Gagnes" value={wonCount} tone="good" />
+              <SummaryCard label="Places" value={placedCount} tone="warn" />
+              <SummaryCard
+                label="P/L"
+                value={
+                  totalGain >= 0
+                    ? `+${formatEuros(totalGain)}`
+                    : formatEuros(totalGain)
+                }
+                tone={totalGain >= 0 ? "good" : "bad"}
+              />
+            </section>
           </section>
 
-          {pendingCount > 0 ? (
-            <div style={{ marginBottom: 14 }}>
-              <button
-                onClick={handleSettle}
-                disabled={settling}
-                style={{
-                  width: "100%",
-                  padding: 14,
-                  borderRadius: 14,
-                  border: "none",
-                  background: settling ? "var(--pmu-border-strong)" : "var(--pmu-orange)",
-                  color: settling ? "var(--pmu-text-muted)" : "var(--pmu-on-primary)",
-                  fontSize: 13,
-                  fontWeight: 800,
-                  cursor: settling ? "not-allowed" : "pointer",
-                  boxShadow: "0 12px 22px color-mix(in srgb, var(--pmu-orange) 20%, transparent)",
-                }}
-              >
-                {settling ? "Vérification..." : `Vérifier les résultats (${pendingCount} en attente)`}
-              </button>
-            </div>
-          ) : null}
+          <section className="grid gap-5 xl:grid-cols-[1.05fr,0.95fr]">
+            <section className="app-card p-5 md:p-6">
+              <div className="app-section-heading">
+                <div>
+                  <p className="app-kicker">Lecture compte</p>
+                  <h2 className="app-section-title">Etat de l&apos;espace personnel</h2>
+                </div>
+              </div>
 
-          <section style={{ padding: 0 }}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: DARK, marginBottom: 12 }}>
-              Historique
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="app-card-muted px-4 py-4">
+                  <p className="app-label">Source d&apos;acces</p>
+                  <p className="mt-2 text-xl font-black text-[var(--pmu-text)]">
+                    {accessSource}
+                  </p>
+                </div>
+                <div className="app-card-muted px-4 py-4">
+                  <p className="app-label">Statut abonnement</p>
+                  <p className="mt-2 text-xl font-black text-[var(--pmu-text)]">
+                    {subscriptionStatus}
+                  </p>
+                </div>
+                <div className="app-card-muted px-4 py-4">
+                  <p className="app-label">Tickets joues</p>
+                  <p className="mt-2 text-xl font-black text-[var(--pmu-text)]">
+                    {bets.length}
+                  </p>
+                </div>
+                <div className="app-card-muted px-4 py-4">
+                  <p className="app-label">Bonus actif</p>
+                  <p className="mt-2 text-xl font-black text-[var(--pmu-text)]">
+                    {hasBonusAccess
+                      ? bonusExpiryLabel
+                        ? `Jusqu'au ${bonusExpiryLabel}`
+                        : "Oui"
+                      : "Non"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-[1.2rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_92%,transparent)] p-5">
+                <p className="app-kicker">Cadre</p>
+                <h3 className="mt-2 text-2xl font-black leading-[1.02] text-[var(--pmu-text)]">
+                  Le compte sert a executer proprement, pas a empiler des tickets.
+                </h3>
+                <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">
+                  Tu suis le solde, tu regles les tickets en attente, tu geres
+                  l&apos;abonnement et tu gardes l&apos;historique au meme endroit.
+                </p>
+              </div>
+            </section>
+
+            <ReferralCard />
+          </section>
+
+          <section className="space-y-4">
+            <div className="app-section-heading">
+              <div>
+                <p className="app-kicker">Historique</p>
+                <h2 className="app-section-title">Tous les tickets gardes au propre</h2>
+              </div>
             </div>
 
             {bets.length === 0 ? (
-              <div
-                style={{
-                  textAlign: "center",
-                  padding: "40px 18px",
-                  color: "var(--pmu-text-muted)",
-                  borderRadius: 18,
-                  background: CARD,
-                  border: `1px solid ${BORDER}`,
-                }}
-              >
-                <div style={{ fontSize: 40, marginBottom: 10 }}>&#127922;</div>
-                <div style={{ fontWeight: 700 }}>Aucun pari</div>
-                <div style={{ fontSize: 12, marginTop: 6 }}>
-                  Ouvre une course pour poser ton premier ticket.
-                </div>
-              </div>
+              <section className="app-card p-8 text-center">
+                <p className="text-xl font-black text-[var(--pmu-text)]">
+                  Aucun pari pour l&apos;instant
+                </p>
+                <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">
+                  Ouvre une course pour poser ton premier ticket et commencer ton suivi.
+                </p>
+                <Link href="/" className="app-button-primary mt-5 inline-flex">
+                  Voir les courses
+                </Link>
+              </section>
             ) : (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-                  gap: 10,
-                }}
-              >
-                {bets.map((bet) => {
-                  const cfg = statusConfig[bet.statut] || statusConfig.EN_ATTENTE;
-                  return (
-                    <div
-                      key={bet.id}
-                      style={{
-                        background: CARD,
-                        borderRadius: 18,
-                        padding: 14,
-                        boxShadow: "0 10px 24px rgba(0, 0, 0, 0.18)",
-                        border: `1px solid ${BORDER}`,
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          gap: 10,
-                          marginBottom: 8,
-                        }}
-                      >
-                        <div style={{ fontSize: 13, color: "var(--pmu-text-muted)" }}>
-                          R{bet.reunion}C{bet.course} · {bet.hippodrome}
-                        </div>
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 700,
-                            background: cfg.bg,
-                            color: cfg.color,
-                            padding: "4px 9px",
-                            borderRadius: 16,
-                          }}
-                        >
-                          {cfg.label}
-                        </span>
-                      </div>
-
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                        <div
-                          style={{
-                            width: 38,
-                            height: 38,
-                            borderRadius: 12,
-                            background: GREEN,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: "var(--pmu-on-primary)",
-                            fontWeight: 800,
-                            fontSize: 14,
-                            flexShrink: 0,
-                          }}
-                        >
-                          {bet.cheval_num}
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 800, fontSize: 15, color: DARK }}>{bet.cheval_nom}</div>
-                          <div style={{ fontSize: 12, color: "var(--pmu-text-muted)", marginTop: 2 }}>
-                            {bet.type_pari} · Cote {bet.cote} · Mise {formatEuros(bet.mise)}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          gap: 10,
-                          fontSize: 12,
-                          color: "var(--pmu-text-muted)",
-                        }}
-                      >
-                        <span>{bet.heure_depart} · {bet.date_str}</span>
-                        {bet.gain !== null ? (
-                          <strong style={{ color: bet.gain >= 0 ? GREEN : "var(--pmu-red)", fontSize: 14 }}>
-                            {bet.gain >= 0 ? "+" : ""}
-                            {formatEuros(bet.gain)}
-                          </strong>
-                        ) : (
-                          <span>Résultat en attente</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="grid gap-4 xl:grid-cols-2">
+                {bets.map((bet) => (
+                  <BetHistoryCard key={bet.id} bet={bet} />
+                ))}
               </div>
             )}
           </section>
-
-          <div style={{ marginTop: 16 }}>
-            <ReferralCard />
-          </div>
         </>
       )}
-
-      {showBottomNav ? (
-        <div
-          style={{
-            position: "fixed",
-            bottom: 0,
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "100%",
-            maxWidth: 1180,
-            zIndex: 50,
-            background: "color-mix(in srgb, var(--pmu-bg) 95%, transparent)",
-            backdropFilter: "blur(18px)",
-            borderTop: `1px solid ${BORDER}`,
-            boxShadow: "0 -10px 22px color-mix(in srgb, var(--pmu-text) 10%, transparent)",
-            height: 62,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-around",
-          }}
-        >
-          <div
-            onClick={() => router.push("/")}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 2,
-              cursor: "pointer",
-               paddingTop: 6,
-            }}
-          >
-            <span style={{ fontSize: 22 }}>&#127943;</span>
-            <span style={{ fontSize: 11, fontWeight: 600, color: "var(--pmu-text-muted)" }}>Courses</span>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 2,
-              cursor: "pointer",
-               paddingTop: 6,
-              position: "relative",
-            }}
-          >
-            <div style={{ width: 4, height: 4, borderRadius: "50%", background: GREEN, position: "absolute", top: 0 }} />
-            <span style={{ fontSize: 22 }}>&#128176;</span>
-            <span style={{ fontSize: 11, fontWeight: 600, color: GREEN }}>Mes Paris</span>
-          </div>
-          <div
-            onClick={() => router.push("/bilan")}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 2,
-              cursor: "pointer",
-               paddingTop: 6,
-            }}
-          >
-            <span style={{ fontSize: 22 }}>&#128202;</span>
-            <span style={{ fontSize: 11, fontWeight: 600, color: "var(--pmu-text-muted)" }}>Bilan</span>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

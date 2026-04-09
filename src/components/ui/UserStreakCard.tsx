@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 import { getBadgeProgress, type UserStreakSnapshot } from "@/lib/user-streak";
+import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 
 type LoadState =
   | { status: "loading" }
@@ -25,7 +25,7 @@ function StreakSkeleton() {
 }
 
 function getBadgeTone(label: string) {
-  if (label === "LÉGENDE") {
+  if (label === "LEGENDE") {
     return {
       background: "color-mix(in srgb, #ffd54a 18%, transparent)",
       color: "#ffd54a",
@@ -41,7 +41,7 @@ function getBadgeTone(label: string) {
     };
   }
 
-  if (label === "CONFIRMÉ") {
+  if (label === "CONFIRME") {
     return {
       background: "color-mix(in srgb, var(--pmu-primary) 16%, transparent)",
       color: "var(--pmu-primary)",
@@ -49,7 +49,7 @@ function getBadgeTone(label: string) {
     };
   }
 
-  if (label === "RÉGULIER") {
+  if (label === "REGULIER") {
     return {
       background: "color-mix(in srgb, var(--pmu-orange) 14%, transparent)",
       color: "var(--pmu-orange)",
@@ -115,7 +115,7 @@ export function UserStreakCard() {
         };
 
         if (!response.ok || !payload.success) {
-          throw new Error(payload.error ?? "Impossible de charger votre série.");
+          throw new Error(payload.error ?? "Impossible de charger votre serie.");
         }
 
         setState({
@@ -126,8 +126,8 @@ export function UserStreakCard() {
             total_followed: payload.total_followed ?? 0,
             total_won: payload.total_won ?? 0,
             win_rate: payload.win_rate ?? 0,
-            badge: payload.badge ?? "DÉBUTANT",
-            badge_emoji: payload.badge_emoji ?? "🌱",
+            badge: payload.badge ?? "DEBUTANT",
+            badge_emoji: payload.badge_emoji ?? "▲",
             next_badge: payload.next_badge ?? null,
             next_badge_threshold: payload.next_badge_threshold ?? null,
           },
@@ -137,7 +137,7 @@ export function UserStreakCard() {
           setState({
             status: "error",
             message:
-              error instanceof Error ? error.message : "Impossible de charger votre série.",
+              error instanceof Error ? error.message : "Impossible de charger votre serie.",
           });
         }
       }
@@ -159,10 +159,11 @@ export function UserStreakCard() {
       <section className="app-card p-5 md:p-6">
         <p className="app-kicker">Progression perso</p>
         <h2 className="mt-2 text-2xl font-black tracking-tight text-[var(--pmu-text)]">
-          Connectez-vous pour suivre vos résultats
+          Connecte-toi pour suivre ta progression
         </h2>
         <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--pmu-text-soft)]">
-          Votre espace personnel peut suivre votre série, vos signaux suivis et votre progression de joueur.
+          Ton espace personnel peut suivre ta serie, les signaux suivis et ta
+          progression de joueur.
         </p>
         <Link href="/login" className="app-button-primary mt-5 inline-flex">
           Se connecter
@@ -176,9 +177,11 @@ export function UserStreakCard() {
       <section className="app-card p-5 md:p-6">
         <p className="app-kicker">Progression perso</p>
         <h2 className="mt-2 text-xl font-black tracking-tight text-[var(--pmu-text)]">
-          Série indisponible
+          Serie indisponible
         </h2>
-        <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">{state.message}</p>
+        <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">
+          {state.message}
+        </p>
       </section>
     );
   }
@@ -189,19 +192,21 @@ export function UserStreakCard() {
   const winsRemaining = data.next_badge_threshold
     ? Math.max(data.next_badge_threshold - data.total_won, 0)
     : 0;
-  const serieLabel =
+  const streakLabel =
     data.current_streak > 0
-      ? `${data.current_streak}${data.current_streak >= 3 ? " 🔥" : ""}`
+      ? `${data.current_streak}${data.current_streak >= 3 ? " hot" : ""}`
       : "0";
   const footerMessage =
     data.next_badge && data.next_badge_threshold
       ? `Encore ${winsRemaining} gagnants pour devenir ${data.next_badge} !`
-      : "Vous avez atteint le plus haut badge disponible.";
+      : "Tu as atteint le plus haut badge disponible.";
 
   const infoLine =
     data.total_followed <= 0
-      ? "Données en cours de collecte"
-      : `${data.total_followed} signaux suivis • ${data.total_won} gagnants (${Math.round(data.win_rate)}%)`;
+      ? "Donnees en cours de collecte"
+      : `${data.total_followed} signaux suivis - ${data.total_won} gagnants (${Math.round(
+          data.win_rate
+        )}%)`;
 
   return (
     <section className="app-card p-5 md:p-6">
@@ -209,7 +214,7 @@ export function UserStreakCard() {
         <div>
           <p className="app-kicker">Progression perso</p>
           <h2 className="mt-2 text-2xl font-black tracking-tight text-[var(--pmu-text)]">
-            Votre série : {serieLabel}
+            Ta serie : {streakLabel}
           </h2>
           <p className="mt-2 text-sm leading-7 text-[var(--pmu-text-soft)]">{infoLine}</p>
         </div>
@@ -237,7 +242,7 @@ export function UserStreakCard() {
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm">
         <p className="font-semibold text-[var(--pmu-text-soft)]">{footerMessage}</p>
         <p className="font-mono font-black text-[var(--pmu-primary)]">
-          Meilleure série : {data.best_streak}
+          Meilleure serie : {data.best_streak}
         </p>
       </div>
     </section>

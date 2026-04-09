@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 import { type ReferralSnapshot } from "@/lib/referral";
+import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 
 type ReferralCardState =
   | { status: "loading" }
@@ -119,12 +119,14 @@ export function ReferralCard() {
     }
 
     const shareText = encodeURIComponent(
-      `PMU Gagnant offre 7 jours Premium gratuits avec mon code ${state.data.referral_code}. ${state.data.share_url}`
+      `PMU Gagnant offre 7 jours premium gratuits avec mon code ${state.data.referral_code}. ${state.data.share_url}`
     );
 
     return {
       whatsapp: `https://wa.me/?text=${shareText}`,
-      telegram: `https://t.me/share/url?url=${encodeURIComponent(state.data.share_url)}&text=${encodeURIComponent(
+      telegram: `https://t.me/share/url?url=${encodeURIComponent(
+        state.data.share_url
+      )}&text=${encodeURIComponent(
         `Rejoins PMU Gagnant avec mon code ${state.data.referral_code}`
       )}`,
     };
@@ -147,10 +149,11 @@ export function ReferralCard() {
       <section className="app-card p-5 md:p-6">
         <p className="app-kicker">Parrainage</p>
         <h2 className="mt-2 text-2xl font-black tracking-tight text-[var(--pmu-text)]">
-          🎁 Invitez un ami, gagnez 7 jours Premium
+          Invite un ami et gagne 7 jours premium
         </h2>
         <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--pmu-text-soft)]">
-          Votre ami reçoit aussi 7 jours gratuits. Connectez-vous pour obtenir votre code de partage.
+          Ton ami recoit aussi 7 jours gratuits. Connecte-toi pour obtenir ton code
+          de partage.
         </p>
         <Link href="/login" className="app-button-primary mt-5 inline-flex">
           Se connecter
@@ -166,7 +169,9 @@ export function ReferralCard() {
         <h2 className="mt-2 text-xl font-black tracking-tight text-[var(--pmu-text)]">
           Parrainage indisponible
         </h2>
-        <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">{state.message}</p>
+        <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">
+          {state.message}
+        </p>
       </section>
     );
   }
@@ -179,22 +184,23 @@ export function ReferralCard() {
         <div>
           <p className="app-kicker">Parrainage</p>
           <h2 className="mt-2 text-2xl font-black tracking-tight text-[var(--pmu-text)]">
-            🎁 Invitez un ami, gagnez 7 jours Premium
+            Invite un ami et gagne 7 jours premium
           </h2>
           <p className="mt-2 text-sm leading-7 text-[var(--pmu-text-soft)]">
-            Votre ami reçoit aussi 7 jours gratuits.
+            Ton ami recoit aussi 7 jours gratuits.
           </p>
         </div>
 
         <div className="rounded-full border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-4 py-2 text-sm font-semibold text-[var(--pmu-text-soft)]">
-          {data.referral_count} amis parrainés • {data.referral_premium_days} jours Premium gagnés
+          {data.referral_count} amis parraines - {data.referral_premium_days} jours premium
+          gagnes
         </div>
       </div>
 
       <div className="mt-5 grid gap-4 xl:grid-cols-[auto,1fr]">
         <div className="rounded-[24px] border border-[color-mix(in_srgb,var(--pmu-primary)_26%,transparent)] bg-[var(--pmu-primary-fade)] px-5 py-4">
           <div className="text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--pmu-primary)]">
-            Votre code
+            Ton code
           </div>
           <div className="mt-3 font-mono text-3xl font-black tracking-[0.18em] text-[var(--pmu-text)]">
             {data.referral_code}
@@ -206,7 +212,7 @@ export function ReferralCard() {
               void copyText(data.referral_code).then(() => setCopied("code"));
             }}
           >
-            {copied === "code" ? "Copié !" : "Copier"}
+            {copied === "code" ? "Copie !" : "Copier"}
           </button>
         </div>
 
@@ -242,7 +248,7 @@ export function ReferralCard() {
                 void copyText(data.share_url).then(() => setCopied("link"));
               }}
             >
-              {copied === "link" ? "Lien copié !" : "Copier le lien"}
+              {copied === "link" ? "Lien copie !" : "Copier le lien"}
             </button>
           </div>
         </div>
