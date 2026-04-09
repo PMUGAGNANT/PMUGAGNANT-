@@ -7,6 +7,7 @@ export type EngineCandidateStatus =
   | "SHADOW"
   | "PROMOTED"
   | "REJECTED";
+export type LearningDatasetRole = "TRAIN" | "TEST" | "VALIDATION";
 export type EngineCandidateType =
   | "CALIBRATION"
   | "THRESHOLD"
@@ -564,6 +565,7 @@ export interface EngineCandidateRow {
 export interface EngineCandidateMetricRow {
   id?: string;
   candidate_id: string;
+  dataset_role: LearningDatasetRole;
   window_start: string;
   window_end: string;
   sample_size: number;

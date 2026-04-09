@@ -716,7 +716,7 @@ export async function upsertEngineCandidateMetrics(rows: EngineCandidateMetricRo
 
   const admin = getAdmin();
   const { error } = await admin.from("engine_candidate_metrics").upsert(rows, {
-    onConflict: "candidate_id,window_start,window_end",
+    onConflict: "candidate_id,dataset_role,window_start,window_end",
   });
 
   if (error) {

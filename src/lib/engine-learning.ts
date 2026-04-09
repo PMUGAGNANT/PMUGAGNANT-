@@ -1,4 +1,5 @@
 import { ENGINE_V6_VERSION } from "@/lib/engine-v6";
+import { buildLearningWindows, type LearningWindow } from "@/lib/learning-windows";
 import {
   listRaceEngineRunsBetween,
   listRunnerOutcomesBetween,
@@ -21,19 +22,28 @@ const MIN_SEGMENT_SAMPLE_FOR_CHALLENGER = 150;
 const MIN_SEGMENT_RACES_FOR_CHALLENGER = 12;
 const CALIBRATION_BIN_EDGES = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 1];
 
-type LearningSegment = {
+type LearningSegmentSummary = {
   segmentKey: SegmentKey;
   sampleSize: number;
-  roi30d: number | null;
+  roi: number | null;
   hitRate: number | null;
   calibrationError: number;
-  racesAnalyzed?: number;
+  falsePositiveRate: number | null;
+  drawdown: number;
+  racesAnalyzed: number;
   bins: Array<{
     min: number;
     max: number;
     multiplier: number;
     sampleSize: number;
   }>;
+};
+
+type WindowSummary = LearningWindow & {
+  runsAnalyzed: number;
+  scoreSnapshots: number;
+  outcomes: number;
+  segments: LearningSegmentSummary[];
 };
 
 type CalibrationBucket = {
@@ -200,7 +210,9 @@ function buildSegmentSummaries(
   outcomes: RunnerOutcomeRow[]
 ) {
   const runById = new Map(
-    runs.filter((run): run is RaceEngineRunRow & { id: string } => Boolean(run.id)).map((run) => [run.id, run] as const)
+    runs
+      .filter((run): run is RaceEngineRunRow & { id: string } => Boolean(run.id))
+      .map((run) => [run.id, run] as const)
   );
   const outcomeByKey = new Map(
     outcomes.map((outcome) => [
@@ -250,113 +262,121 @@ function buildSegmentSummaries(
     }
   }
 
-  return [...accumulators.values()].map((accumulator) => {
-    const bins = buildCalibrationBins(accumulator.buckets);
-    const sampleSize = accumulator.buckets.reduce(
-      (sum, bucket) => sum + bucket.sampleSize,
-      0
-    );
-    const roi30d =
-      accumulator.totalStake > 0
-        ? round2(((accumulator.totalGain - accumulator.totalStake) / accumulator.totalStake) * 100)
-        : null;
-    const hitRate =
-      accumulator.betCount > 0
-        ? round2((accumulator.winsCount / accumulator.betCount) * 100)
-        : null;
-
-    return {
-      segmentKey: accumulator.segmentKey,
-      sampleSize,
-      roi30d,
-      hitRate,
-      calibrationError: computeCalibrationError(bins),
-      falsePositiveRate:
+  return [...accumulators.values()]
+    .map((accumulator) => {
+      const bins = buildCalibrationBins(accumulator.buckets);
+      const sampleSize = accumulator.buckets.reduce(
+        (sum, bucket) => sum + bucket.sampleSize,
+        0
+      );
+      const roi =
+        accumulator.totalStake > 0
+          ? round2(
+              ((accumulator.totalGain - accumulator.totalStake) / accumulator.totalStake) * 100
+            )
+          : null;
+      const hitRate =
         accumulator.betCount > 0
-          ? round2(((accumulator.betCount - accumulator.winsCount) / accumulator.betCount) * 100)
-          : null,
-      drawdown: computeDrawdown(accumulator.profitSteps),
-      racesAnalyzed: accumulator.raceKeys.size,
-      bins: bins.map(({ min, max, multiplier, sampleSize: binSampleSize }) => ({
-        min,
-        max,
-        multiplier,
-        sampleSize: binSampleSize,
-      })),
-    };
-  });
+          ? round2((accumulator.winsCount / accumulator.betCount) * 100)
+          : null;
+
+      return {
+        segmentKey: accumulator.segmentKey,
+        sampleSize,
+        roi,
+        hitRate,
+        calibrationError: computeCalibrationError(bins),
+        falsePositiveRate:
+          accumulator.betCount > 0
+            ? round2(
+                ((accumulator.betCount - accumulator.winsCount) / accumulator.betCount) * 100
+              )
+            : null,
+        drawdown: computeDrawdown(accumulator.profitSteps),
+        racesAnalyzed: accumulator.raceKeys.size,
+        bins: bins.map(({ min, max, multiplier, sampleSize: binSampleSize }) => ({
+          min,
+          max,
+          multiplier,
+          sampleSize: binSampleSize,
+        })),
+      } satisfies LearningSegmentSummary;
+    })
+    .sort((left, right) => right.sampleSize - left.sampleSize);
+}
+
+async function buildWindowSummary(window: LearningWindow): Promise<WindowSummary> {
+  const runs = await listRaceEngineRunsBetween(window.startIso, window.endIso, "MATIN");
+  const runIds = runs
+    .map((run) => run.id)
+    .filter((runId): runId is string => Boolean(runId));
+  const [scores, outcomes] = await Promise.all([
+    listRunnerScoreSnapshotsByRunIds(runIds),
+    listRunnerOutcomesBetween(window.startIso, window.endIso),
+  ]);
+
+  return {
+    ...window,
+    runsAnalyzed: runs.length,
+    scoreSnapshots: scores.length,
+    outcomes: outcomes.length,
+    segments: buildSegmentSummaries(runs, scores, outcomes),
+  };
 }
 
 export function buildLearningCandidateVersion(referenceDate: Date) {
   return `${ENGINE_V6_VERSION}-shadow-${formatVersionDate(referenceDate)}`;
 }
 
-export function shouldCreateSegmentChallenger(segment: LearningSegment) {
+export function shouldCreateSegmentChallenger(segment: LearningSegmentSummary) {
   return (
     segment.sampleSize >= MIN_SEGMENT_SAMPLE_FOR_CHALLENGER &&
-    (segment.racesAnalyzed ?? 0) >= MIN_SEGMENT_RACES_FOR_CHALLENGER
+    segment.racesAnalyzed >= MIN_SEGMENT_RACES_FOR_CHALLENGER
   );
 }
 
-export async function runEngineLearning(days = 90, referenceDate = new Date()) {
-  const endIso = referenceDate.toISOString().slice(0, 10);
-  const start = new Date(referenceDate.getTime());
-  start.setUTCDate(start.getUTCDate() - days);
-  const startIso = start.toISOString().slice(0, 10);
-
-  const runs = await listRaceEngineRunsBetween(startIso, endIso, "MATIN");
-  const runIds = runs
-    .map((run) => run.id)
-    .filter((runId): runId is string => Boolean(runId));
-  const [scores, outcomes] = await Promise.all([
-    listRunnerScoreSnapshotsByRunIds(runIds),
-    listRunnerOutcomesBetween(startIso, endIso),
-  ]);
-
-  const segmentSummaries = buildSegmentSummaries(runs, scores, outcomes).sort(
-    (left, right) => right.sampleSize - left.sampleSize
+export async function runEngineLearning(referenceDate = new Date()) {
+  const windows = buildLearningWindows(referenceDate);
+  const [trainWindow, testWindow, validationWindow] = await Promise.all(
+    windows.map((window) => buildWindowSummary(window))
   );
+
+  const testBySegment = new Map(
+    testWindow.segments.map((segment) => [segment.segmentKey, segment] as const)
+  );
+  const validationBySegment = new Map(
+    validationWindow.segments.map((segment) => [segment.segmentKey, segment] as const)
+  );
+
   const candidateVersion = buildLearningCandidateVersion(referenceDate);
-  const eligibleSegments = segmentSummaries.filter(shouldCreateSegmentChallenger);
-  const skippedSegments = segmentSummaries
+  const eligibleSegments = trainWindow.segments.filter(shouldCreateSegmentChallenger);
+  const skippedSegments = trainWindow.segments
     .filter((segment) => !shouldCreateSegmentChallenger(segment))
     .map((segment) => ({
       segmentKey: segment.segmentKey,
       sampleSize: segment.sampleSize,
-      racesAnalyzed: segment.racesAnalyzed ?? 0,
+      racesAnalyzed: segment.racesAnalyzed,
       reason:
         segment.sampleSize < MIN_SEGMENT_SAMPLE_FOR_CHALLENGER
-          ? "sample-insufficient"
-          : "race-window-insufficient",
+          ? "train-sample-insufficient"
+          : "train-race-window-insufficient",
     }));
 
   const createdCandidates: Array<{
     segmentKey: SegmentKey;
     candidateId: string;
     candidateVersion: string;
-    sampleSize: number;
-    roi30d: number | null;
-    hitRate: number | null;
-    calibrationError: number;
-    falsePositiveRate: number | null;
-    drawdown: number;
+    trainSampleSize: number;
+    testSampleSize: number;
+    validationSampleSize: number;
   }> = [];
 
-  for (const segment of eligibleSegments) {
-    const summary = {
-      sampleSize: segment.sampleSize,
-      roi30d: segment.roi30d,
-      hitRate: segment.hitRate,
-      calibrationError: segment.calibrationError,
-      falsePositiveRate: segment.falsePositiveRate,
-      drawdown: segment.drawdown,
-      racesAnalyzed: segment.racesAnalyzed ?? 0,
-      minSampleForPromotion: MIN_SEGMENT_SAMPLE_FOR_CHALLENGER,
-      learningSource: "stored-v6-snapshots",
-    };
+  for (const trainSegment of eligibleSegments) {
+    const testSegment = testBySegment.get(trainSegment.segmentKey) ?? null;
+    const validationSegment = validationBySegment.get(trainSegment.segmentKey) ?? null;
 
     const candidate = await upsertEngineCandidate({
-      segment_key: segment.segmentKey,
+      segment_key: trainSegment.segmentKey,
       stage: "MATIN",
       engine_version: candidateVersion,
       parent_version: ENGINE_V6_VERSION,
@@ -365,31 +385,100 @@ export async function runEngineLearning(days = 90, referenceDate = new Date()) {
       config_patch: {
         probabilityCalibration: {
           segments: {
-            [segment.segmentKey]: {
-              bins: segment.bins,
+            [trainSegment.segmentKey]: {
+              bins: trainSegment.bins,
             },
           },
         },
       },
-      summary,
+      summary: {
+        learningSource: "stored-v6-snapshots",
+        windows: {
+          train: {
+            start: trainWindow.startIso,
+            end: trainWindow.endIso,
+            sampleSize: trainSegment.sampleSize,
+            racesAnalyzed: trainSegment.racesAnalyzed,
+            roi: trainSegment.roi,
+            hitRate: trainSegment.hitRate,
+            calibrationError: trainSegment.calibrationError,
+          },
+          test: testSegment
+            ? {
+                start: testWindow.startIso,
+                end: testWindow.endIso,
+                sampleSize: testSegment.sampleSize,
+                racesAnalyzed: testSegment.racesAnalyzed,
+                roi: testSegment.roi,
+                hitRate: testSegment.hitRate,
+                calibrationError: testSegment.calibrationError,
+              }
+            : null,
+          validation: validationSegment
+            ? {
+                start: validationWindow.startIso,
+                end: validationWindow.endIso,
+                sampleSize: validationSegment.sampleSize,
+                racesAnalyzed: validationSegment.racesAnalyzed,
+                roi: validationSegment.roi,
+                hitRate: validationSegment.hitRate,
+                calibrationError: validationSegment.calibrationError,
+              }
+            : null,
+        },
+        minSampleForPromotion: MIN_SEGMENT_SAMPLE_FOR_CHALLENGER,
+      },
     } satisfies EngineCandidateRow);
 
-    const metricRow: EngineCandidateMetricRow = {
-      candidate_id: candidate.id!,
-      window_start: startIso,
-      window_end: endIso,
-      sample_size: segment.sampleSize,
-      roi: segment.roi30d,
-      hit_rate: segment.hitRate,
-      false_positive_rate: segment.falsePositiveRate,
-      calibration_error: segment.calibrationError,
-      drawdown: segment.drawdown,
-    };
+    const metricRows: EngineCandidateMetricRow[] = [
+      {
+        candidate_id: candidate.id!,
+        dataset_role: "TRAIN",
+        window_start: trainWindow.startIso,
+        window_end: trainWindow.endIso,
+        sample_size: trainSegment.sampleSize,
+        roi: trainSegment.roi,
+        hit_rate: trainSegment.hitRate,
+        false_positive_rate: trainSegment.falsePositiveRate,
+        calibration_error: trainSegment.calibrationError,
+        drawdown: trainSegment.drawdown,
+      },
+    ];
 
-    await upsertEngineCandidateMetrics([metricRow]);
+    if (testSegment) {
+      metricRows.push({
+        candidate_id: candidate.id!,
+        dataset_role: "TEST",
+        window_start: testWindow.startIso,
+        window_end: testWindow.endIso,
+        sample_size: testSegment.sampleSize,
+        roi: testSegment.roi,
+        hit_rate: testSegment.hitRate,
+        false_positive_rate: testSegment.falsePositiveRate,
+        calibration_error: testSegment.calibrationError,
+        drawdown: testSegment.drawdown,
+      });
+    }
+
+    if (validationSegment) {
+      metricRows.push({
+        candidate_id: candidate.id!,
+        dataset_role: "VALIDATION",
+        window_start: validationWindow.startIso,
+        window_end: validationWindow.endIso,
+        sample_size: validationSegment.sampleSize,
+        roi: validationSegment.roi,
+        hit_rate: validationSegment.hitRate,
+        false_positive_rate: validationSegment.falsePositiveRate,
+        calibration_error: validationSegment.calibrationError,
+        drawdown: validationSegment.drawdown,
+      });
+    }
+
+    await upsertEngineCandidateMetrics(metricRows);
 
     const learningState: SegmentLearningStateRow = {
-      segment_key: segment.segmentKey,
+      segment_key: trainSegment.segmentKey,
       stage: "MATIN",
       stable_version: ENGINE_V6_VERSION,
       challenger_version: candidateVersion,
@@ -400,29 +489,41 @@ export async function runEngineLearning(days = 90, referenceDate = new Date()) {
     await upsertSegmentLearningState(learningState);
 
     createdCandidates.push({
-      segmentKey: segment.segmentKey,
+      segmentKey: trainSegment.segmentKey,
       candidateId: candidate.id!,
       candidateVersion,
-      sampleSize: segment.sampleSize,
-      roi30d: segment.roi30d,
-      hitRate: segment.hitRate,
-      calibrationError: segment.calibrationError,
-      falsePositiveRate: segment.falsePositiveRate,
-      drawdown: segment.drawdown,
+      trainSampleSize: trainSegment.sampleSize,
+      testSampleSize: testSegment?.sampleSize ?? 0,
+      validationSampleSize: validationSegment?.sampleSize ?? 0,
     });
   }
 
   return {
     success: true,
-    days,
     stableVersion: ENGINE_V6_VERSION,
     candidateVersion,
-    sourceWindow: {
-      startDate: startIso,
-      endDate: endIso,
-      runsAnalyzed: runs.length,
-      scoreSnapshots: scores.length,
-      outcomes: outcomes.length,
+    windows: {
+      train: {
+        startDate: trainWindow.startIso,
+        endDate: trainWindow.endIso,
+        runsAnalyzed: trainWindow.runsAnalyzed,
+        scoreSnapshots: trainWindow.scoreSnapshots,
+        outcomes: trainWindow.outcomes,
+      },
+      test: {
+        startDate: testWindow.startIso,
+        endDate: testWindow.endIso,
+        runsAnalyzed: testWindow.runsAnalyzed,
+        scoreSnapshots: testWindow.scoreSnapshots,
+        outcomes: testWindow.outcomes,
+      },
+      validation: {
+        startDate: validationWindow.startIso,
+        endDate: validationWindow.endIso,
+        runsAnalyzed: validationWindow.runsAnalyzed,
+        scoreSnapshots: validationWindow.scoreSnapshots,
+        outcomes: validationWindow.outcomes,
+      },
     },
     createdCandidates,
     skippedSegments,

@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
   // --- Weekly report: Sunday 19:00–19:04 window ---
   if (hour === 4 && minute < 5) {
     try {
-      results.learning = await runEngineLearning(90, now);
+      results.learning = await runEngineLearning(now);
     } catch (e) {
       logger.error("cron.dispatch.learning_failed", e, { date });
       results.learning = { error: e instanceof Error ? e.message : "learning failed" };
