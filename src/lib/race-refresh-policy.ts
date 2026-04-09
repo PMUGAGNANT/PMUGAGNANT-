@@ -1,6 +1,12 @@
 import { getRaceTimestamp } from "@/lib/date-utils";
 import type { RaceSummary } from "@/lib/types";
 
+export type RefreshPriorityHints = {
+  hasPlayableSignal?: boolean;
+  hasWatchSignal?: boolean;
+  hasStrongOddsVariation?: boolean;
+};
+
 export type RefreshDecision = {
   due: boolean;
   intervalMinutes: number | null;
@@ -50,13 +56,33 @@ function buildDecision(
   };
 }
 
+function getPriorityProfile(race: RaceSummary, hints?: RefreshPriorityHints) {
+  const hasPlayableSignal = Boolean(hints?.hasPlayableSignal);
+  const hasStrongOddsVariation = Boolean(hints?.hasStrongOddsVariation);
+  const isPriorityRace =
+    race.estQuinte || hasPlayableSignal || hasStrongOddsVariation;
+
+  return {
+    isPriorityRace,
+    reasonTag: race.estQuinte
+      ? "quinte"
+      : hasPlayableSignal
+        ? "signal-valide"
+        : hasStrongOddsVariation
+          ? "variation-forte"
+          : "standard",
+  };
+}
+
 export function getPreRaceRefreshDecision(
   race: RaceSummary,
-  now = new Date()
+  now = new Date(),
+  hints?: RefreshPriorityHints
 ): RefreshDecision {
   const minutesUntilStart =
     (getRaceTimestamp(race.dateStr, race.heureDepart).getTime() - now.getTime()) /
     60000;
+  const priority = getPriorityProfile(race, hints);
 
   if (minutesUntilStart < -15) {
     return {
@@ -79,25 +105,39 @@ export function getPreRaceRefreshDecision(
   }
 
   if (minutesUntilStart <= 20) {
-    return buildDecision(race, now, 5, "urgent", "fenetre-20m");
-  }
-
-  if (minutesUntilStart <= 60) {
     return buildDecision(
       race,
       now,
-      race.estQuinte ? 5 : 10,
-      "active",
-      race.estQuinte ? "quinte-60m" : "fenetre-60m"
+      5,
+      "urgent",
+      priority.isPriorityRace ? `${priority.reasonTag}-20m` : "fenetre-20m"
     );
+  }
+
+  if (minutesUntilStart <= 60) {
+    if (priority.isPriorityRace) {
+      return buildDecision(race, now, 5, "active", `${priority.reasonTag}-60m`);
+    }
+
+    return buildDecision(
+      race,
+      now,
+      10,
+      "active",
+      "fenetre-60m"
+    );
+  }
+
+  if (priority.isPriorityRace) {
+    return buildDecision(race, now, 30, "monitor", `${priority.reasonTag}-180m`);
   }
 
   return buildDecision(
     race,
     now,
-    race.estQuinte ? 30 : 60,
+    60,
     "monitor",
-    race.estQuinte ? "quinte-180m" : "fenetre-180m"
+    "fenetre-180m"
   );
 }
 

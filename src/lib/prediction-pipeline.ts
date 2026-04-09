@@ -5,6 +5,7 @@ import { getAllRaces, getFinalReports, getParticipants } from "@/lib/pmu-api";
 import {
   getPreRaceRefreshDecision,
   getResultRefreshDecision,
+  type RefreshPriorityHints,
 } from "@/lib/race-refresh-policy";
 import {
   buildCourseRecord,
@@ -18,6 +19,7 @@ import {
   createRaceEngineRun,
   failRaceEngineRun,
   getRacePredictions,
+  listPredictionsByDate,
   upsertRunnerFeatureSnapshots,
   upsertRunnerMarketSnapshots,
   upsertRunnerOutcomes,
@@ -135,6 +137,46 @@ function keepRace(race: RaceSummary, options: RangeOptions) {
   }
 
   return true;
+}
+
+function getRaceKey(reunion: number, course: number) {
+  return `${reunion}-${course}`;
+}
+
+function hasStrongOddsVariation(row: PredictionRow) {
+  if (
+    row.signal_variation === "FORTE_BAISSE" ||
+    row.signal_variation === "FORTE_HAUSSE"
+  ) {
+    return true;
+  }
+
+  return row.variation_cote !== null && Math.abs(row.variation_cote) >= 20;
+}
+
+function buildRefreshHintsByRace(rows: PredictionRow[]) {
+  const hintsByRace = new Map<string, RefreshPriorityHints>();
+
+  for (const row of rows) {
+    const key = getRaceKey(row.reunion, row.course);
+    const current = hintsByRace.get(key) ?? {};
+
+    if (row.decision === "VALIDE") {
+      current.hasPlayableSignal = true;
+    }
+
+    if (row.decision === "SURVEILLANCE") {
+      current.hasWatchSignal = true;
+    }
+
+    if (hasStrongOddsVariation(row)) {
+      current.hasStrongOddsVariation = true;
+    }
+
+    hintsByRace.set(key, current);
+  }
+
+  return hintsByRace;
 }
 
 async function processRace(
@@ -466,9 +508,16 @@ export async function runPreRaceSecondPass(
     keepRace(race, options)
   );
   const now = new Date();
+  const refreshHintsByRace = explicitTarget
+    ? new Map<string, RefreshPriorityHints>()
+    : buildRefreshHintsByRace(await listPredictionsByDate(dateStr));
   const scheduledRaces = candidateRaces.map((race) => ({
     race,
-    refresh: getPreRaceRefreshDecision(race, now),
+    refresh: getPreRaceRefreshDecision(
+      race,
+      now,
+      refreshHintsByRace.get(getRaceKey(race.reunion, race.course))
+    ),
   }));
   const races = explicitTarget
     ? candidateRaces

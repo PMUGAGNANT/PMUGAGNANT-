@@ -53,6 +53,19 @@ test("pre-race accelere une quinte dans la fenetre 180-60 minutes", () => {
   assert.equal(decision.lane, "monitor");
 });
 
+test("pre-race accelere une course avec signal valide avant T-60", () => {
+  const race = createRace({ heureDepart: "12:00" });
+  const decision = getPreRaceRefreshDecision(
+    race,
+    new Date("2026-04-09T08:30:00.000Z"),
+    { hasPlayableSignal: true }
+  );
+
+  assert.equal(decision.intervalMinutes, 30);
+  assert.equal(decision.due, true);
+  assert.equal(decision.reason, "signal-valide-180m");
+});
+
 test("pre-race garde une course standard sur une cadence plus lente avant T-60", () => {
   const race = createRace({ heureDepart: "12:00" });
   const decision = getPreRaceRefreshDecision(
@@ -75,6 +88,32 @@ test("pre-race passe en cadence active dans la derniere heure", () => {
   assert.equal(decision.intervalMinutes, 10);
   assert.equal(decision.due, true);
   assert.equal(decision.lane, "active");
+});
+
+test("pre-race accelere une course jouable dans la derniere heure", () => {
+  const race = createRace({ heureDepart: "11:20" });
+  const decision = getPreRaceRefreshDecision(
+    race,
+    new Date("2026-04-09T08:40:00.000Z"),
+    { hasPlayableSignal: true }
+  );
+
+  assert.equal(decision.intervalMinutes, 5);
+  assert.equal(decision.due, true);
+  assert.equal(decision.reason, "signal-valide-60m");
+});
+
+test("pre-race accelere une course avec variation de cote forte", () => {
+  const race = createRace({ heureDepart: "11:20" });
+  const decision = getPreRaceRefreshDecision(
+    race,
+    new Date("2026-04-09T08:40:00.000Z"),
+    { hasStrongOddsVariation: true }
+  );
+
+  assert.equal(decision.intervalMinutes, 5);
+  assert.equal(decision.due, true);
+  assert.equal(decision.reason, "variation-forte-60m");
 });
 
 test("result sync verifie vite juste apres le depart puis ralentit", () => {
