@@ -1,6 +1,6 @@
 import type { AlgoParameters, RaceSummary, SegmentKey } from "@/lib/types";
 
-export const ENGINE_V6_VERSION = "v6-phase0";
+export const ENGINE_V6_VERSION = "v6-phase1";
 
 function simpleHash(input: string) {
   let hash = 0;

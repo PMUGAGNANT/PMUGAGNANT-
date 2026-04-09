@@ -418,6 +418,9 @@ export async function runProbabilityCalibration(days = 90, referenceDate = new D
     segments: segmentSummaries.map((summary) => ({
       segmentKey: summary.segmentKey,
       sampleSize: summary.sampleSize,
+      racesAnalyzed: summary.racesAnalyzed,
+      favoriteBets: summary.favoriteBets,
+      favoriteWins: summary.favoriteWins,
       roi30d: summary.roi30d,
       hitRate: summary.hitRate,
       calibrationError: summary.calibrationError,

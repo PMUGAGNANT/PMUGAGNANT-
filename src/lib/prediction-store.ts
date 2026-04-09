@@ -614,6 +614,67 @@ export async function listActiveSegmentCalibrations(stage: ScoreStage = "MATIN")
   return (data ?? []) as SegmentCalibrationRow[];
 }
 
+export async function listRaceEngineRunsBetween(
+  startIso: string,
+  endIso: string,
+  stage: ScoreStage = "MATIN"
+) {
+  const admin = getAdmin();
+  const { data, error } = await admin
+    .from("race_engine_runs")
+    .select("*")
+    .eq("stage", stage)
+    .eq("status", "COMPLETED")
+    .gte("date", startIso)
+    .lte("date", endIso)
+    .order("date", { ascending: true })
+    .order("reunion", { ascending: true })
+    .order("course", { ascending: true });
+
+  if (error) {
+    throw new Error(`Race engine runs range fetch failed: ${error.message}`);
+  }
+
+  return (data ?? []) as RaceEngineRunRow[];
+}
+
+export async function listRunnerScoreSnapshotsByRunIds(runIds: string[]) {
+  if (runIds.length === 0) {
+    return [] as RunnerScoreSnapshotRow[];
+  }
+
+  const admin = getAdmin();
+  const { data, error } = await admin
+    .from("runner_score_snapshots")
+    .select("*")
+    .in("run_id", runIds)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(`Runner score snapshots by run ids fetch failed: ${error.message}`);
+  }
+
+  return (data ?? []) as RunnerScoreSnapshotRow[];
+}
+
+export async function listRunnerOutcomesBetween(startIso: string, endIso: string) {
+  const admin = getAdmin();
+  const { data, error } = await admin
+    .from("runner_outcomes")
+    .select("*")
+    .gte("date", startIso)
+    .lte("date", endIso)
+    .order("date", { ascending: true })
+    .order("reunion", { ascending: true })
+    .order("course", { ascending: true });
+
+  if (error) {
+    throw new Error(`Runner outcomes range fetch failed: ${error.message}`);
+  }
+
+  return (data ?? []) as RunnerOutcomeRow[];
+}
+
 export async function upsertSegmentLearningState(row: SegmentLearningStateRow) {
   const admin = getAdmin();
   const payload = {
