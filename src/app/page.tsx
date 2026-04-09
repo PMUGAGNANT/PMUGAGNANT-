@@ -1156,19 +1156,17 @@ function PageContent() {
         </section>
       )}
 
-      {topParisItems.length > 0 ? <TopParisStrip items={topParisItems} /> : null}
-
-      <section className="app-card p-6 md:p-7">
-        <div className="grid gap-6 xl:grid-cols-[1.05fr,0.95fr] xl:items-end">
+      <section className="app-card p-5 md:p-6">
+        <div className="grid gap-5 xl:grid-cols-[1.1fr,0.9fr] xl:items-start">
           <div className="space-y-4">
             <div>
-              <p className="app-kicker">Pilotage du jour</p>
-              <h2 className="mt-2 text-3xl font-black capitalize tracking-tight text-[var(--pmu-text)]">
+              <p className="app-kicker">Barre de commande</p>
+              <h2 className="mt-2 text-2xl font-black capitalize tracking-tight text-[var(--pmu-text)] md:text-3xl">
                 {formatDisplayDate(selectedDate)}
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--pmu-text-soft)]">
-                Change de journee, trie le programme et garde en haut de page
-                uniquement les spots qui meritent vraiment d&apos;etre ouverts.
+                Une seule chose a faire ici : choisir la journee, regler le tri
+                et laisser le focus du dessus pousser la bonne course.
               </p>
             </div>
 
@@ -1195,6 +1193,30 @@ function PageContent() {
                 Jour suivant
               </button>
             </div>
+
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,14rem),1fr] lg:items-center">
+              <label className="block">
+                <span className="sr-only">Choisir une date</span>
+                <input
+                  type="date"
+                  className="app-input"
+                  value={toIsoDate(selectedDate)}
+                  onChange={(event) =>
+                    setSelectedDate(
+                      normalizeDateParam(event.target.value.replaceAll("-", ""))
+                    )
+                  }
+                />
+              </label>
+
+              <div className="border-t border-[var(--pmu-border)] pt-4 lg:border-t-0 lg:pt-0">
+                <FilterPills
+                  options={SORT_OPTIONS}
+                  value={sortMode}
+                  onChange={setSortMode}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -1205,9 +1227,9 @@ function PageContent() {
               </p>
             </div>
             <div className="app-card-muted px-4 py-4">
-              <p className="app-label">Hot list</p>
+              <p className="app-label">Jouables</p>
               <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
-                {summaryStats.hot}
+                {summaryStats.playable}
               </p>
             </div>
             <div className="app-card-muted px-4 py-4">
@@ -1220,95 +1242,13 @@ function PageContent() {
             <div className="app-card-muted px-4 py-4">
               <p className="app-label">Focus</p>
               <p className="mt-2 text-sm font-black text-[var(--pmu-text)]">
-                {topParisItems.length > 0
-                  ? "Top 3 jouables"
+                {focusRace
+                  ? `R${focusRace.race.reunion}C${focusRace.race.course}`
                   : "Programme complet"}
               </p>
             </div>
           </div>
         </div>
-
-        <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,14rem),1fr] lg:items-center">
-          <label className="block">
-            <span className="sr-only">Choisir une date</span>
-            <input
-              type="date"
-              className="app-input"
-              value={toIsoDate(selectedDate)}
-              onChange={(event) =>
-                setSelectedDate(
-                  normalizeDateParam(event.target.value.replaceAll("-", ""))
-                )
-              }
-            />
-          </label>
-
-          <div className="border-t border-[var(--pmu-border)] pt-4 lg:border-t-0 lg:pt-0">
-            <FilterPills
-              options={SORT_OPTIONS}
-              value={sortMode}
-              onChange={setSortMode}
-            />
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-3">
-        {priorityCards.map((card) => {
-          const toneColor =
-            card.tone === "primary"
-              ? "var(--pmu-primary)"
-              : card.tone === "warning"
-                ? "var(--pmu-orange)"
-                : "var(--pmu-text)";
-
-          return (
-            <button
-              key={card.key}
-              type="button"
-              onClick={() => (card.race ? navigateToRace(card.race.race) : undefined)}
-              disabled={!card.race}
-              className="app-card flex h-full flex-col items-start gap-4 p-5 text-left disabled:cursor-default disabled:opacity-100"
-            >
-              <div className="flex w-full items-start justify-between gap-3">
-                <div>
-                  <p className="app-kicker">{card.title}</p>
-                  <h3 className="mt-2 text-xl font-black text-[var(--pmu-text)]">
-                    {card.value}
-                  </h3>
-                </div>
-                <span
-                  className="rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em]"
-                  style={{
-                    color: toneColor,
-                    borderColor: `color-mix(in srgb, ${toneColor} 24%, transparent)`,
-                    background: `color-mix(in srgb, ${toneColor} 10%, var(--pmu-surface))`,
-                  }}
-                >
-                  {card.subtitle}
-                </span>
-              </div>
-
-              <p className="text-sm leading-6 text-[var(--pmu-text-soft)]">
-                {card.description}
-              </p>
-
-              {card.race ? (
-                <div className="mt-auto flex flex-wrap gap-2">
-                  <span className="app-pill text-xs">
-                    {card.race.race.hippodrome}
-                  </span>
-                  <span className="app-pill text-xs">
-                    {card.race.race.heureDepart}
-                  </span>
-                  <span className="app-pill text-xs">
-                    {card.race.scoreValue.toFixed(1)}/10
-                  </span>
-                </div>
-              ) : null}
-            </button>
-          );
-        })}
       </section>
 
       {error ? (
@@ -1427,6 +1367,66 @@ function PageContent() {
           </p>
         </section>
       ) : null}
+
+      {topParisItems.length > 0 ? <TopParisStrip items={topParisItems} /> : null}
+
+      <section className="grid gap-4 xl:grid-cols-3">
+        {priorityCards.map((card) => {
+          const toneColor =
+            card.tone === "primary"
+              ? "var(--pmu-primary)"
+              : card.tone === "warning"
+                ? "var(--pmu-orange)"
+                : "var(--pmu-text)";
+
+          return (
+            <button
+              key={card.key}
+              type="button"
+              onClick={() => (card.race ? navigateToRace(card.race.race) : undefined)}
+              disabled={!card.race}
+              className="app-card flex h-full flex-col items-start gap-4 p-5 text-left disabled:cursor-default disabled:opacity-100"
+            >
+              <div className="flex w-full items-start justify-between gap-3">
+                <div>
+                  <p className="app-kicker">{card.title}</p>
+                  <h3 className="mt-2 text-xl font-black text-[var(--pmu-text)]">
+                    {card.value}
+                  </h3>
+                </div>
+                <span
+                  className="rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em]"
+                  style={{
+                    color: toneColor,
+                    borderColor: `color-mix(in srgb, ${toneColor} 24%, transparent)`,
+                    background: `color-mix(in srgb, ${toneColor} 10%, var(--pmu-surface))`,
+                  }}
+                >
+                  {card.subtitle}
+                </span>
+              </div>
+
+              <p className="text-sm leading-6 text-[var(--pmu-text-soft)]">
+                {card.description}
+              </p>
+
+              {card.race ? (
+                <div className="mt-auto flex flex-wrap gap-2">
+                  <span className="app-pill text-xs">
+                    {card.race.race.hippodrome}
+                  </span>
+                  <span className="app-pill text-xs">
+                    {card.race.race.heureDepart}
+                  </span>
+                  <span className="app-pill text-xs">
+                    {card.race.scoreValue.toFixed(1)}/10
+                  </span>
+                </div>
+              ) : null}
+            </button>
+          );
+        })}
+      </section>
 
       <section className="space-y-4">
         <div className="app-section-heading">
