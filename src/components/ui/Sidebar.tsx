@@ -301,7 +301,7 @@ export function Sidebar() {
   const thumbOffset = scrollState.progress * thumbTravel;
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-[20.75rem] p-4 lg:flex">
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-[24.5rem] p-4 lg:flex">
       <div className="relative flex h-full w-full flex-col overflow-hidden rounded-[2rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-bg)_90%,transparent)] shadow-[var(--pmu-shadow)] backdrop-blur-2xl">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,color-mix(in_srgb,var(--pmu-primary)_14%,transparent),transparent_34%),radial-gradient(circle_at_bottom_left,color-mix(in_srgb,var(--pmu-accent-blue)_8%,transparent),transparent_28%)]" />
 
@@ -359,7 +359,7 @@ export function Sidebar() {
           <div className="relative mt-4 min-h-0 flex-1">
             <div
               ref={scrollViewportRef}
-              className="pmu-scrollbar-hidden h-full overflow-y-auto pr-10"
+              className="pmu-scrollbar-hidden h-full overflow-y-auto pr-8"
             >
               <div ref={scrollContentRef} className="space-y-4 pb-2">
                 <section className="rounded-[1.45rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] p-3.5">

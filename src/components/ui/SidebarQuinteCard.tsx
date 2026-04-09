@@ -678,7 +678,7 @@ export function SidebarQuinteCard() {
                 <h4 className="text-[0.98rem] font-black leading-tight text-[var(--pmu-text)]">
                   {selectionTitle}
                 </h4>
-                <p className="mt-2 text-xs leading-5 text-[var(--pmu-text-soft)]">
+                <p className="mt-2 line-clamp-3 text-xs leading-5 text-[var(--pmu-text-soft)]">
                   {selectionCopy}
                 </p>
               </div>

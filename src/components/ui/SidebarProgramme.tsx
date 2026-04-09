@@ -252,7 +252,7 @@ export function SidebarProgramme() {
   }
 
   return (
-    <section className="ml-3 mt-3 overflow-hidden rounded-[1.35rem] border border-[var(--pmu-border)] bg-[linear-gradient(180deg,var(--pmu-surface)_0%,color-mix(in_srgb,var(--pmu-surface)_84%,var(--pmu-bg)_16%)_100%)] shadow-[0_4px_18px_rgba(0,0,0,0.18)]">
+    <section className="mt-2 overflow-hidden rounded-[1.35rem] border border-[var(--pmu-border)] bg-[linear-gradient(180deg,var(--pmu-surface)_0%,color-mix(in_srgb,var(--pmu-surface)_84%,var(--pmu-bg)_16%)_100%)] shadow-[0_4px_18px_rgba(0,0,0,0.18)]">
       <button
         type="button"
         className="flex w-full items-center gap-3 px-3 py-3 text-left transition hover:bg-[color-mix(in_srgb,var(--pmu-surface-2)_80%,transparent)]"

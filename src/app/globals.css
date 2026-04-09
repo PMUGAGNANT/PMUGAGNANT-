@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 :root {
+  --pmu-sidebar-width: 24.5rem;
+  --pmu-sidebar-offset: 25.75rem;
   --pmu-bg: #050b14;
   --pmu-bg-mid: #0b1324;
   --pmu-surface: rgba(9, 17, 30, 0.88);
@@ -869,7 +871,7 @@ h3,
 
 @media (min-width: 1100px) {
   .app-shell__main {
-    margin-left: 22rem;
+    margin-left: var(--pmu-sidebar-offset);
   }
 
   .app-shell__content {
