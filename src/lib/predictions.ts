@@ -31,6 +31,7 @@ import {
   VALUE_CONFIRMATION_MULTIPLIER,
 } from "@/lib/engine/shared";
 import { buildPredictedOdds, buildValue, determineHorseDecision } from "@/lib/engine/value";
+import { getRaceSegmentKey } from "@/lib/engine-v6";
 import type {
   AlgoParameters,
   PredictedOdds,
@@ -50,6 +51,7 @@ export function analyzeRaceWithParameters(
   participants: Participant[],
   parameters: AlgoParameters = DEFAULT_ALGO_PARAMETERS
 ): RaceAnalysis {
+  const segmentKey = getRaceSegmentKey(course);
   const preRanked = participants
     .filter((participant) => !participant.nonPartant)
     .map((participant) => {
@@ -106,7 +108,10 @@ export function analyzeRaceWithParameters(
   );
   const calibratedWeights = rawStrengths.map((strength) => {
     const rawProbability = strength / totalIntrinsicScore;
-    return rawProbability * getProbabilityCalibrationMultiplier(rawProbability, parameters);
+    return (
+      rawProbability *
+      getProbabilityCalibrationMultiplier(rawProbability, parameters, segmentKey)
+    );
   });
   const totalCalibratedWeight = Math.max(
     calibratedWeights.reduce((sum, weight) => sum + weight, 0),

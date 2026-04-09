@@ -4,6 +4,9 @@ import { getSupabaseAdminClient, getSupabaseAdminConfigError } from "@/lib/supab
 import type {
   AlgoParameters,
   CourseRecordRow,
+  EngineCandidateMetricRow,
+  EngineCandidateRow,
+  EnginePromotionRow,
   Participant,
   PredictionRow,
   RaceAnalysis,
@@ -13,6 +16,8 @@ import type {
   RunnerMarketSnapshotRow,
   RunnerOutcomeRow,
   RunnerScoreSnapshotRow,
+  SegmentCalibrationRow,
+  SegmentLearningStateRow,
   ScoreStage,
 } from "@/lib/types";
 
@@ -554,6 +559,142 @@ export async function listCourseRecordsBetween(startIso: string, endIso: string)
   }
 
   return (data ?? []) as CourseRecordRow[];
+}
+
+export async function replaceActiveSegmentCalibration(row: SegmentCalibrationRow) {
+  const admin = getAdmin();
+
+  const { error: deactivateError } = await admin
+    .from("segment_calibrations")
+    .update({ is_active: false })
+    .eq("segment_key", row.segment_key)
+    .eq("stage", row.stage)
+    .eq("is_active", true);
+
+  if (deactivateError) {
+    throw new Error(
+      `Segment calibration deactivate failed: ${deactivateError.message}`
+    );
+  }
+
+  const insertRow = {
+    ...row,
+    is_active: true,
+    created_at: row.created_at ?? nowIso(),
+  };
+
+  const { data, error } = await admin
+    .from("segment_calibrations")
+    .insert(insertRow)
+    .select("*")
+    .single();
+
+  if (error || !data) {
+    throw new Error(
+      `Segment calibration insert failed: ${error?.message ?? "unknown error"}`
+    );
+  }
+
+  return data as SegmentCalibrationRow;
+}
+
+export async function listActiveSegmentCalibrations(stage: ScoreStage = "MATIN") {
+  const admin = getAdmin();
+  const { data, error } = await admin
+    .from("segment_calibrations")
+    .select("*")
+    .eq("stage", stage)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(`Active segment calibration fetch failed: ${error.message}`);
+  }
+
+  return (data ?? []) as SegmentCalibrationRow[];
+}
+
+export async function upsertSegmentLearningState(row: SegmentLearningStateRow) {
+  const admin = getAdmin();
+  const payload = {
+    ...row,
+    updated_at: row.updated_at ?? nowIso(),
+  };
+
+  const { error } = await admin.from("segment_learning_state").upsert(payload, {
+    onConflict: "segment_key,stage",
+  });
+
+  if (error) {
+    throw new Error(`Segment learning state upsert failed: ${error.message}`);
+  }
+}
+
+export async function upsertEngineCandidate(row: EngineCandidateRow) {
+  const admin = getAdmin();
+  const payload = {
+    ...row,
+    summary: row.summary ?? {},
+  };
+
+  const { data, error } = await admin
+    .from("engine_candidates")
+    .upsert(payload, { onConflict: "segment_key,stage,engine_version" })
+    .select("*")
+    .single();
+
+  if (error || !data) {
+    throw new Error(`Engine candidate upsert failed: ${error?.message ?? "unknown error"}`);
+  }
+
+  return data as EngineCandidateRow;
+}
+
+export async function upsertEngineCandidateMetrics(rows: EngineCandidateMetricRow[]) {
+  if (rows.length === 0) return;
+
+  const admin = getAdmin();
+  const { error } = await admin.from("engine_candidate_metrics").upsert(rows, {
+    onConflict: "candidate_id,window_start,window_end",
+  });
+
+  if (error) {
+    throw new Error(`Engine candidate metrics upsert failed: ${error.message}`);
+  }
+}
+
+export async function insertEnginePromotion(row: EnginePromotionRow) {
+  const admin = getAdmin();
+  const payload = {
+    ...row,
+    decided_at: row.decided_at ?? nowIso(),
+  };
+
+  const { error } = await admin.from("engine_promotions").insert(payload);
+  if (error) {
+    throw new Error(`Engine promotion insert failed: ${error.message}`);
+  }
+}
+
+export async function getLatestActiveSegmentCalibration(
+  segmentKey: SegmentCalibrationRow["segment_key"],
+  stage: ScoreStage = "MATIN"
+) {
+  const admin = getAdmin();
+  const { data, error } = await admin
+    .from("segment_calibrations")
+    .select("*")
+    .eq("segment_key", segmentKey)
+    .eq("stage", stage)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false })
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Latest active segment calibration fetch failed: ${error.message}`);
+  }
+
+  return (data ?? null) as SegmentCalibrationRow | null;
 }
 
 /** Fenêtre glissante pour le dashboard historique du bilan (évite listPredictionsBetween sur des décennies). */

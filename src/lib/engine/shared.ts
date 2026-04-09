@@ -1,4 +1,4 @@
-import type { AlgoParameters, Participant } from "@/lib/types";
+import type { AlgoParameters, Participant, SegmentKey } from "@/lib/types";
 
 export const BANKROLL_BASE_EUROS = 100;
 export const MAX_KELLY_BANKROLL_PCT = 0.05;
@@ -88,9 +88,14 @@ export function kellyFraction(
 
 export function getProbabilityCalibrationMultiplier(
   probability: number,
-  parameters: AlgoParameters
+  parameters: AlgoParameters,
+  segmentKey?: SegmentKey | null
 ) {
-  const bins = parameters.probabilityCalibration?.bins ?? [];
+  const segmentBins =
+    (segmentKey
+      ? parameters.probabilityCalibration?.segments?.[segmentKey]?.bins
+      : null) ?? null;
+  const bins = segmentBins ?? parameters.probabilityCalibration?.bins ?? [];
   const match = bins.find(
     (bin) => probability >= bin.min && (probability < bin.max || bin.max >= 1)
   );

@@ -2,6 +2,17 @@ export type Lisibilite = "LISIBLE" | "COMPLEXE" | "LOTERIE";
 export type PredictionDecision = "VALIDE" | "SURVEILLANCE" | "REJET";
 export type ScoreStage = "MATIN" | "T10" | "RESULTAT";
 export type EngineRunStatus = "RUNNING" | "COMPLETED" | "FAILED";
+export type EngineCandidateStatus =
+  | "DRAFT"
+  | "SHADOW"
+  | "PROMOTED"
+  | "REJECTED";
+export type EngineCandidateType =
+  | "CALIBRATION"
+  | "THRESHOLD"
+  | "WEIGHT"
+  | "BLEND";
+export type EnginePromotionDecision = "PROMOTED" | "REJECTED";
 export type SegmentKey =
   | "TROT_ATTELE"
   | "TROT_MONTE"
@@ -306,6 +317,21 @@ export interface AlgoParameters {
       multiplier: number;
       sampleSize?: number;
     }>;
+    segments?: Partial<
+      Record<
+        SegmentKey,
+        {
+          bins: Array<{
+            min: number;
+            max: number;
+            multiplier: number;
+            sampleSize?: number;
+          }>;
+          sampleSize?: number;
+          roi?: number | null;
+        }
+      >
+    >;
   };
 }
 
@@ -488,6 +514,85 @@ export interface RunnerOutcomeRow {
   rapport_place?: number | null;
   non_partant: boolean;
   created_at?: string;
+}
+
+export interface SegmentCalibrationRow {
+  id?: string;
+  segment_key: SegmentKey;
+  stage: ScoreStage;
+  engine_version: string;
+  bin_definition: Record<string, unknown>;
+  calibration_payload: Record<string, unknown>;
+  sample_size: number;
+  brier_score?: number | null;
+  log_loss?: number | null;
+  roi_30d?: number | null;
+  created_at?: string;
+  is_active: boolean;
+}
+
+export interface SegmentPerformanceDailyRow {
+  id?: string;
+  date: string;
+  segment_key: SegmentKey;
+  stage: ScoreStage;
+  bet_type: string;
+  predictions_count: number;
+  bets_count: number;
+  wins_count: number;
+  places_count: number;
+  roi: number;
+  avg_confidence?: number | null;
+  avg_edge?: number | null;
+  created_at?: string;
+}
+
+export interface EngineCandidateRow {
+  id?: string;
+  segment_key: SegmentKey;
+  stage: ScoreStage;
+  engine_version: string;
+  parent_version: string;
+  candidate_type: EngineCandidateType;
+  status: EngineCandidateStatus;
+  config_patch: Record<string, unknown>;
+  summary?: Record<string, unknown>;
+  created_at?: string;
+  promoted_at?: string | null;
+}
+
+export interface EngineCandidateMetricRow {
+  id?: string;
+  candidate_id: string;
+  window_start: string;
+  window_end: string;
+  sample_size: number;
+  roi?: number | null;
+  hit_rate?: number | null;
+  false_positive_rate?: number | null;
+  calibration_error?: number | null;
+  drawdown?: number | null;
+  created_at?: string;
+}
+
+export interface EnginePromotionRow {
+  id?: string;
+  candidate_id: string;
+  decision: EnginePromotionDecision;
+  reason: string;
+  decided_at?: string;
+  created_at?: string;
+}
+
+export interface SegmentLearningStateRow {
+  segment_key: SegmentKey;
+  stage: ScoreStage;
+  stable_version: string;
+  challenger_version?: string | null;
+  active_calibration_version?: string | null;
+  last_learning_run_at?: string | null;
+  last_promotion_at?: string | null;
+  updated_at?: string;
 }
 
 export type RaceStatus = "upcoming" | "prono_available" | "live" | "finished";
