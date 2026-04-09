@@ -4,14 +4,12 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { AccordionPanel } from "@/components/ui/AccordionPanel";
-import { ComparatifIA } from "@/components/ui/ComparatifIA";
 import { CourseCard } from "@/components/ui/CourseCard";
 import { FilterPills } from "@/components/ui/FilterPills";
 import { HowItWorks } from "@/components/ui/HowItWorks";
 import { PerformanceProof } from "@/components/ui/PerformanceProof";
 import { PromoVideoSection } from "@/components/ui/PromoVideoSection";
 import { RecentResults } from "@/components/ui/RecentResults";
-import { SagesseFoules } from "@/components/ui/SagesseFoules";
 import { TopParisStrip, type TopParisItem } from "@/components/ui/TopParisStrip";
 import { asArray } from "@/lib/array-utils";
 import { translateFactors } from "@/lib/beginner-labels";
@@ -40,8 +38,9 @@ type HomeSecondaryPanel =
   | "performance"
   | "results"
   | "demo"
-  | "method"
-  | "quinte";
+  | "method";
+type BoardFilter = "all" | "jouable" | "surveillance" | "passer";
+type BoardSectionKey = Exclude<BoardFilter, "all"> | "resultat";
 
 type RaceScore = {
   dateStr: string;
@@ -156,6 +155,13 @@ const SORT_OPTIONS: Array<{ value: SortMode; label: string }> = [
   { value: "score", label: "Meilleure note" },
   { value: "urgent", label: "A suivre vite" },
   { value: "allocation", label: "Gros enjeux" },
+];
+
+const BOARD_FILTER_OPTIONS: Array<{ value: BoardFilter; label: string }> = [
+  { value: "all", label: "Toutes" },
+  { value: "jouable", label: "Vertes" },
+  { value: "surveillance", label: "Jaunes" },
+  { value: "passer", label: "Rouges" },
 ];
 
 function normalizeScoresPayload(
@@ -515,6 +521,44 @@ function getPriorityCards(items: FeaturedRace[]): PriorityCard[] {
   ];
 }
 
+function getBoardSectionMeta(section: BoardSectionKey) {
+  switch (section) {
+    case "jouable":
+      return {
+        label: "Vertes",
+        title: "Jouables maintenant",
+        description:
+          "Les meilleurs spots a ouvrir en premier. C'est la zone prioritaire du board.",
+        color: "var(--pmu-primary)",
+      };
+    case "surveillance":
+      return {
+        label: "Jaunes",
+        title: "Sous surveillance",
+        description:
+          "Courses encore observables, mais le ticket ou la lisibilite demandent de la prudence.",
+        color: "var(--pmu-orange)",
+      };
+    case "passer":
+      return {
+        label: "Rouges",
+        title: "A filtrer",
+        description:
+          "Courses faibles, bruyantes ou peu propres. Elles restent plus bas pour ne pas polluer l'ouverture.",
+        color: "var(--pmu-red)",
+      };
+    case "resultat":
+    default:
+      return {
+        label: "Reglees",
+        title: "Courses terminees",
+        description:
+          "Les courses deja reglees restent separees du board d'action.",
+        color: "var(--pmu-text-muted)",
+      };
+  }
+}
+
 function PageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -522,6 +566,7 @@ function PageContent() {
 
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [sortMode, setSortMode] = useState<SortMode>("hour");
+  const [boardFilter, setBoardFilter] = useState<BoardFilter>("all");
   const [secondaryPanel, setSecondaryPanel] =
     useState<HomeSecondaryPanel | null>("performance");
   const [races, setRaces] = useState<RaceSummary[]>([]);
@@ -698,26 +743,14 @@ function PageContent() {
     [featuredRaces, navigateToRace]
   );
 
-  const quinteDuJour = useMemo(
-    () => featuredRaces.find((item) => item.race.estQuinte) ?? null,
-    [featuredRaces]
-  );
-
-  const focusRace = quinteDuJour ?? radarRace ?? null;
+  const focusRace = radarRace ?? null;
 
   const summaryStats = useMemo(() => {
     const meetings = new Set(races.map((race) => race.reunion)).size;
     const playable = featuredRaces.filter(
       (item) => item.status === "jouable"
     ).length;
-    const hot = featuredRaces.filter(
-      (item) => item.confidence >= SEUIL_JOUABLE
-    ).length;
-    const closingSoon = featuredRaces.filter(
-      (item) => item.status !== "resultat" && item.minutesUntilStart <= 60
-    ).length;
-
-    return { meetings, playable, hot, closingSoon };
+    return { meetings, playable };
   }, [featuredRaces, races]);
 
   const priorityCards = useMemo(
@@ -726,25 +759,13 @@ function PageContent() {
   );
 
   const secondaryPanels = useMemo(() => {
-    const base: Array<{ key: HomeSecondaryPanel; label: string }> = [
+    return [
       { key: "performance", label: "Performance" },
       { key: "results", label: "Resultats" },
       { key: "demo", label: "Demo produit" },
       { key: "method", label: "Methode" },
-    ];
-
-    if (quinteDuJour) {
-      base.push({ key: "quinte", label: "Quinte du jour" });
-    }
-
-    return base;
-  }, [quinteDuJour]);
-
-  useEffect(() => {
-    if (secondaryPanel === "quinte" && !quinteDuJour) {
-      setSecondaryPanel("performance");
-    }
-  }, [quinteDuJour, secondaryPanel]);
+    ] satisfies Array<{ key: HomeSecondaryPanel; label: string }>;
+  }, []);
 
   useEffect(() => {
     if (!focusRace) {
@@ -865,6 +886,75 @@ function PageContent() {
   const focusMinutesLabel = formatMinutesLabel(
     focusDetail?.minutesUntilStart ?? focusRace?.minutesUntilStart ?? null
   );
+  const boardSections = useMemo(() => {
+    const grouped: Record<BoardSectionKey, FeaturedRace[]> = {
+      jouable: featuredRaces.filter((item) => item.status === "jouable"),
+      surveillance: featuredRaces.filter(
+        (item) => item.status === "surveillance"
+      ),
+      passer: featuredRaces.filter((item) => item.status === "passer"),
+      resultat: featuredRaces.filter((item) => item.status === "resultat"),
+    };
+
+    const keys: BoardSectionKey[] =
+      boardFilter === "all"
+        ? ["jouable", "surveillance", "passer", "resultat"]
+        : [boardFilter];
+
+    return keys
+      .map((key) => ({
+        key,
+        items: grouped[key],
+        ...getBoardSectionMeta(key),
+      }))
+      .filter((section) =>
+        boardFilter === "all" ? section.items.length > 0 : true
+      );
+  }, [boardFilter, featuredRaces]);
+
+  function renderBoardCard(item: FeaturedRace) {
+    const profile = getRaceProfile({
+      race: item.race,
+      displayScore: item.scoreValue,
+      pick: item.score?.pick
+        ? {
+            numPmu: item.score.pick.numPmu,
+            cote: null,
+            confidence: item.score.pick.confidence,
+          }
+        : null,
+    });
+    const eloProfile = estimateEloProfileForProgrammeCard(
+      item.score?.pick?.confidence
+    );
+    const indiceListe = estimateIndiceOuvertureListe({
+      displayScore: item.scoreValue,
+      partants: item.race.nombrePartants,
+      sigmaPct: eloProfile.sigma,
+    });
+
+    return (
+      <CourseCard
+        key={`${item.race.reunion}-${item.race.course}`}
+        raceTitle={`R${item.race.reunion}C${item.race.course} - ${item.race.nomCourse}`}
+        subtitleLine={[item.race.hippodrome, formatCourseMeta(item.race)].join(
+          " - "
+        )}
+        timeLabel={item.race.heureDepart}
+        minutesUntilStart={item.minutesUntilStart}
+        displayScore={item.scoreValue}
+        profile={profile}
+        eloProfile={eloProfile}
+        indiceOuverture={indiceListe}
+        pickNum={item.score?.pick?.numPmu}
+        pickNom={item.score?.pick?.nom}
+        pickConfidence={item.score?.pick?.confidence}
+        pickBetType={item.score?.pick?.betType}
+        topFacteurs={item.score?.pick?.topFacteurs}
+        onClick={() => navigateToRace(item.race)}
+      />
+    );
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-[96rem] flex-col gap-6 lg:gap-8">
@@ -1284,11 +1374,11 @@ function PageContent() {
       <section className="app-section-heading rounded-[1.8rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_78%,transparent)] px-5 py-5 md:px-6">
         <div>
           <p className="app-kicker">Board courses</p>
-          <h2 className="app-section-title">Le programme trie pour agir vite</h2>
+          <h2 className="app-section-title">Le programme trie par niveau d&apos;action</h2>
         </div>
         <p className="max-w-xl text-sm leading-6 text-[var(--pmu-text-soft)]">
-          Chaque carte condense le score, le ticket et la lecture. Le but est
-          simple : ouvrir la bonne course sans perdre le fil du programme.
+          Vertes pour agir, jaunes pour garder sous radar, rouges pour filtrer.
+          Le board ne melange plus les bons spots avec le bruit.
         </p>
       </section>
 
@@ -1308,51 +1398,68 @@ function PageContent() {
       ) : null}
 
       {!isLoading && !error && featuredRaces.length > 0 ? (
-        <section className="grid auto-rows-fr items-stretch gap-5 2xl:grid-cols-2">
-          {featuredRaces.map((item) => {
-            const profile = getRaceProfile({
-              race: item.race,
-              displayScore: item.scoreValue,
-              pick: item.score?.pick
-                ? {
-                    numPmu: item.score.pick.numPmu,
-                    cote: null,
-                    confidence: item.score.pick.confidence,
-                  }
-                : null,
-            });
-            const eloProfile = estimateEloProfileForProgrammeCard(
-              item.score?.pick?.confidence
-            );
-            const indiceListe = estimateIndiceOuvertureListe({
-              displayScore: item.scoreValue,
-              partants: item.race.nombrePartants,
-              sigmaPct: eloProfile.sigma,
-            });
+        <section className="space-y-6">
+          <div className="app-card p-4 md:p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="app-kicker">Tri V6</p>
+                <h3 className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+                  Regrouper le board par couleur aide a ouvrir plus vite
+                </h3>
+              </div>
+              <div className="w-full max-w-2xl">
+                <FilterPills
+                  options={BOARD_FILTER_OPTIONS}
+                  value={boardFilter}
+                  onChange={setBoardFilter}
+                />
+              </div>
+            </div>
+          </div>
 
-            return (
-              <CourseCard
-                key={`${item.race.reunion}-${item.race.course}`}
-                raceTitle={`R${item.race.reunion}C${item.race.course} - ${item.race.nomCourse}`}
-                subtitleLine={[
-                  item.race.hippodrome,
-                  formatCourseMeta(item.race),
-                ].join(" - ")}
-                timeLabel={item.race.heureDepart}
-                minutesUntilStart={item.minutesUntilStart}
-                displayScore={item.scoreValue}
-                profile={profile}
-                eloProfile={eloProfile}
-                indiceOuverture={indiceListe}
-                pickNum={item.score?.pick?.numPmu}
-                pickNom={item.score?.pick?.nom}
-                pickConfidence={item.score?.pick?.confidence}
-                pickBetType={item.score?.pick?.betType}
-                topFacteurs={item.score?.pick?.topFacteurs}
-                onClick={() => navigateToRace(item.race)}
-              />
-            );
-          })}
+          {boardSections.map((section) => (
+            <section key={section.key} className="space-y-4">
+              <div className="flex flex-col gap-3 rounded-[1.5rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_80%,transparent)] px-5 py-5 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className="rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em]"
+                      style={{
+                        color: section.color,
+                        borderColor: `color-mix(in srgb, ${section.color} 24%, transparent)`,
+                        background: `color-mix(in srgb, ${section.color} 10%, var(--pmu-surface))`,
+                      }}
+                    >
+                      {section.label}
+                    </span>
+                    <span className="text-sm font-semibold text-[var(--pmu-text-muted)]">
+                      {section.items.length} course{section.items.length > 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <h3 className="mt-3 text-2xl font-black text-[var(--pmu-text)]">
+                    {section.title}
+                  </h3>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--pmu-text-soft)]">
+                    {section.description}
+                  </p>
+                </div>
+              </div>
+
+              {section.items.length > 0 ? (
+                <div className="grid auto-rows-fr items-stretch gap-5 2xl:grid-cols-2">
+                  {section.items.map((item) => renderBoardCard(item))}
+                </div>
+              ) : (
+                <div className="app-card p-5 text-sm leading-6 text-[var(--pmu-text-soft)]">
+                  {section.key === "jouable"
+                    ? "Aucune course verte pour le moment. Le board garde seulement les sections jaune et rouge."
+                    : section.key === "surveillance"
+                      ? "Aucune course jaune n'a besoin d'etre gardee sous surveillance sur cette journee."
+                      : "Aucune course rouge ne remonte pour cette vue."}
+                </div>
+              )}
+            </section>
+          ))}
         </section>
       ) : null}
 
@@ -1438,7 +1545,7 @@ function PageContent() {
           </div>
           <p className="max-w-xl text-sm leading-6 text-[var(--pmu-text-soft)]">
             La decision vit plus haut. Ici, on ouvre seulement les preuves, la
-            demo ou le bloc Quinte quand on en a besoin.
+            demo et la methode quand on en a besoin.
           </p>
         </div>
 
@@ -1452,9 +1559,7 @@ function PageContent() {
                   ? "Suivi recent"
                   : panel.key === "demo"
                     ? "Video produit"
-                    : panel.key === "method"
-                      ? "Processus"
-                      : "Consensus";
+                    : "Processus";
 
             return (
               <AccordionPanel
@@ -1473,26 +1578,6 @@ function PageContent() {
                   <div className="grid gap-4 xl:grid-cols-[0.9fr,1.1fr]">
                     <HowItWorks />
                     <PerformanceProof />
-                  </div>
-                ) : null}
-                {panel.key === "quinte" && quinteDuJour ? (
-                  <div className="grid gap-4 xl:grid-cols-[0.95fr,1.05fr]">
-                    <section className="grid gap-4">
-                      <SagesseFoules
-                        raceId={`${selectedDate}-R${quinteDuJour.race.reunion}C${quinteDuJour.race.course}`}
-                        raceLabel={`${quinteDuJour.race.nomCourse} (R${quinteDuJour.race.reunion}C${quinteDuJour.race.course})`}
-                      />
-                      <RecentResults />
-                    </section>
-                    <section className="grid gap-4">
-                      <ComparatifIA
-                        dateStr={selectedDate}
-                        reunion={quinteDuJour.race.reunion}
-                        course={quinteDuJour.race.course}
-                        nomCourse={quinteDuJour.race.nomCourse}
-                      />
-                      <PromoVideoSection />
-                    </section>
                   </div>
                 ) : null}
               </AccordionPanel>
