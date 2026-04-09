@@ -43,7 +43,7 @@ type HomeSecondaryPanel =
   | "results"
   | "demo"
   | "method";
-type BoardFilter = "all" | "jouable" | "surveillance" | "passer";
+type BoardFilter = "all" | "prioritaire" | "jouable" | "surveillance" | "passer";
 type BoardSectionKey = Exclude<BoardFilter, "all"> | "resultat";
 
 type RaceScore = {
@@ -96,12 +96,14 @@ type FeaturedRace = {
   confidence: number;
   status: "jouable" | "surveillance" | "passer" | "resultat";
   hint: string;
+  priorityBadge: BoardPriorityBadge | null;
 };
 
 type BoardPriorityBadge = {
   label: string;
   detail: string;
   tone: "primary" | "warning" | "neutral";
+  weight: number;
 };
 
 type PriorityCard = {
@@ -397,7 +399,7 @@ function buildFeaturedRaces(
       minutesUntilStart
     );
 
-    return {
+    const baseItem: FeaturedRace = {
       race,
       score,
       scoreValue: client.displayScore,
@@ -405,22 +407,43 @@ function buildFeaturedRaces(
       confidence: client.displayScore,
       status: client.playTier,
       hint: getRaceHint(race, score),
+      priorityBadge: null,
+    };
+
+    return {
+      ...baseItem,
+      priorityBadge: getBoardPriorityBadge(baseItem),
     } satisfies FeaturedRace;
   });
 }
 
 function sortFeaturedRaces(items: FeaturedRace[], sortMode: SortMode) {
   return [...items].sort((a, b) => {
+    const priorityWeightDelta =
+      (b.priorityBadge?.weight ?? 0) - (a.priorityBadge?.weight ?? 0);
+
+    if (priorityWeightDelta !== 0) {
+      return priorityWeightDelta;
+    }
+
     switch (sortMode) {
       case "score":
         return b.scoreValue - a.scoreValue;
       case "urgent":
-        return a.minutesUntilStart - b.minutesUntilStart;
+        return (
+          a.minutesUntilStart - b.minutesUntilStart || b.scoreValue - a.scoreValue
+        );
       case "allocation":
-        return (b.race.allocation ?? 0) - (a.race.allocation ?? 0);
+        return (
+          (b.race.allocation ?? 0) - (a.race.allocation ?? 0) ||
+          b.scoreValue - a.scoreValue
+        );
       case "hour":
       default:
-        return (a.race.heureDepart || "").localeCompare(b.race.heureDepart || "");
+        return (
+          (a.race.heureDepart || "").localeCompare(b.race.heureDepart || "") ||
+          b.scoreValue - a.scoreValue
+        );
     }
   });
 }
@@ -434,8 +457,17 @@ function getRadarRace(items: FeaturedRace[]) {
     return asArray<FeaturedRace>(items)[0] ?? null;
   }
 
+  const priority = list.filter((item) => (item.priorityBadge?.weight ?? 0) > 0);
+  const priorityPlayable = priority.filter((item) => item.status === "jouable");
   const jouables = list.filter((item) => item.status === "jouable");
-  const pool = jouables.length > 0 ? jouables : list;
+  const pool =
+    priorityPlayable.length > 0
+      ? priorityPlayable
+      : priority.length > 0
+        ? priority
+        : jouables.length > 0
+          ? jouables
+          : list;
   return pool.reduce(
     (best, cur) => (cur.scoreValue > best.scoreValue ? cur : best),
     pool[0]!
@@ -462,7 +494,7 @@ function getTopParisItems(
       ),
       betType: getBetTypeLabel(item.score),
       confidence: item.confidence,
-      sourceLabel: "Jouable",
+      sourceLabel: item.priorityBadge?.label ?? "Jouable",
       onClick: () => navigate(item.race),
     }));
 }
@@ -526,6 +558,14 @@ function getPriorityCards(items: FeaturedRace[]): PriorityCard[] {
 
 function getBoardSectionMeta(section: BoardSectionKey) {
   switch (section) {
+    case "prioritaire":
+      return {
+        label: "Suivi renforce",
+        title: "Courses sous cadence active",
+        description:
+          "Le moteur repasse plus souvent ici. C'est la file chaude du board V6.",
+        color: "var(--pmu-primary)",
+      };
     case "jouable":
       return {
         label: "Vertes",
@@ -626,6 +666,7 @@ function getBoardPriorityBadge(item: FeaturedRace): BoardPriorityBadge | null {
       label: "Suivi renforce",
       detail: getRefreshDetailLabel(refresh.intervalMinutes),
       tone: "primary",
+      weight: 4,
     };
   }
 
@@ -634,6 +675,7 @@ function getBoardPriorityBadge(item: FeaturedRace): BoardPriorityBadge | null {
       label: "Quinte prioritaire",
       detail: getRefreshDetailLabel(refresh.intervalMinutes),
       tone: "warning",
+      weight: 3,
     };
   }
 
@@ -642,6 +684,7 @@ function getBoardPriorityBadge(item: FeaturedRace): BoardPriorityBadge | null {
       label: "Signal moteur",
       detail: getRefreshDetailLabel(refresh.intervalMinutes),
       tone: "primary",
+      weight: 3,
     };
   }
 
@@ -650,6 +693,7 @@ function getBoardPriorityBadge(item: FeaturedRace): BoardPriorityBadge | null {
       label: "Marche actif",
       detail: getRefreshDetailLabel(refresh.intervalMinutes),
       tone: "warning",
+      weight: 2,
     };
   }
 
@@ -854,6 +898,25 @@ function PageContent() {
     () => getPriorityCards(featuredRaces),
     [featuredRaces]
   );
+  const activePriorityRaces = useMemo(
+    () =>
+      featuredRaces
+        .filter(
+          (item) =>
+            item.status !== "resultat" && (item.priorityBadge?.weight ?? 0) > 0
+        )
+        .sort((a, b) => {
+          const weightDelta =
+            (b.priorityBadge?.weight ?? 0) - (a.priorityBadge?.weight ?? 0);
+          if (weightDelta !== 0) {
+            return weightDelta;
+          }
+
+          return a.minutesUntilStart - b.minutesUntilStart || b.scoreValue - a.scoreValue;
+        })
+        .slice(0, 4),
+    [featuredRaces]
+  );
 
   const secondaryPanels = useMemo(() => {
     return [
@@ -987,17 +1050,22 @@ function PageContent() {
   const boardCounts = useMemo(
     () => ({
       all: featuredRaces.length,
+      prioritaire: activePriorityRaces.length,
       jouable: featuredRaces.filter((item) => item.status === "jouable").length,
       surveillance: featuredRaces.filter((item) => item.status === "surveillance")
         .length,
       passer: featuredRaces.filter((item) => item.status === "passer").length,
       resultat: featuredRaces.filter((item) => item.status === "resultat").length,
     }),
-    [featuredRaces]
+    [activePriorityRaces.length, featuredRaces]
   );
   const boardFilterOptions = useMemo(
     () => [
       { value: "all" as const, label: `Toutes (${boardCounts.all})` },
+      {
+        value: "prioritaire" as const,
+        label: `Suivi renforce (${boardCounts.prioritaire})`,
+      },
       { value: "jouable" as const, label: `Vertes (${boardCounts.jouable})` },
       {
         value: "surveillance" as const,
@@ -1009,6 +1077,7 @@ function PageContent() {
   );
   const boardSections = useMemo(() => {
     const grouped: Record<BoardSectionKey, FeaturedRace[]> = {
+      prioritaire: activePriorityRaces,
       jouable: featuredRaces.filter((item) => item.status === "jouable"),
       surveillance: featuredRaces.filter(
         (item) => item.status === "surveillance"
@@ -1031,7 +1100,7 @@ function PageContent() {
       .filter((section) =>
         boardFilter === "all" ? section.items.length > 0 : true
       );
-  }, [boardFilter, featuredRaces]);
+  }, [activePriorityRaces, boardFilter, featuredRaces]);
 
   function renderBoardCard(item: FeaturedRace) {
     const profile = getRaceProfile({
@@ -1053,8 +1122,6 @@ function PageContent() {
       partants: item.race.nombrePartants,
       sigmaPct: eloProfile.sigma,
     });
-    const priorityBadge = getBoardPriorityBadge(item);
-
     return (
       <CourseCard
         key={`${item.race.reunion}-${item.race.course}`}
@@ -1073,7 +1140,7 @@ function PageContent() {
         pickConfidence={item.score?.pick?.confidence}
         pickBetType={item.score?.pick?.betType}
         topFacteurs={item.score?.pick?.topFacteurs}
-        priorityBadge={priorityBadge}
+        priorityBadge={item.priorityBadge}
         onClick={() => navigateToRace(item.race)}
       />
     );
@@ -1538,6 +1605,76 @@ function PageContent() {
 
       {!isLoading && !error && featuredRaces.length > 0 ? (
         <section className="space-y-6">
+          {activePriorityRaces.length > 0 ? (
+            <section className="app-card p-4 md:p-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="app-kicker">File active</p>
+                  <h3 className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+                    Les courses que le moteur repasse le plus souvent
+                  </h3>
+                </div>
+                <span className="app-pill text-xs">
+                  {activePriorityRaces.length} course{activePriorityRaces.length > 1 ? "s" : ""} chaude{activePriorityRaces.length > 1 ? "s" : ""}
+                </span>
+              </div>
+
+              <div className="mt-4 grid gap-3 xl:grid-cols-4">
+                {activePriorityRaces.map((item) => {
+                  const badge = item.priorityBadge;
+                  if (!badge) {
+                    return null;
+                  }
+
+                  const toneColor = getPriorityToneColor(badge.tone);
+
+                  return (
+                    <button
+                      key={`priority-${item.race.reunion}-${item.race.course}`}
+                      type="button"
+                      onClick={() => navigateToRace(item.race)}
+                      className="rounded-[1.25rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] px-4 py-4 text-left transition-transform duration-200 hover:-translate-y-0.5"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <span
+                          className="rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em]"
+                          style={{
+                            color: toneColor,
+                            borderColor: `color-mix(in srgb, ${toneColor} 24%, transparent)`,
+                            background: `color-mix(in srgb, ${toneColor} 10%, var(--pmu-surface))`,
+                          }}
+                        >
+                          {badge.label}
+                        </span>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-muted)]">
+                          R{item.race.reunion}C{item.race.course}
+                        </span>
+                      </div>
+                      <h4 className="mt-3 text-lg font-black leading-tight text-[var(--pmu-text)]">
+                        {item.race.nomCourse}
+                      </h4>
+                      <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">
+                        {item.race.hippodrome} · {item.race.heureDepart} · {badge.detail}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <span className="app-pill text-[11px]">
+                          {item.scoreValue.toFixed(1)}/10
+                        </span>
+                        <span className="app-pill text-[11px]">
+                          {item.status === "jouable"
+                            ? "verte"
+                            : item.status === "surveillance"
+                              ? "jaune"
+                              : "rouge"}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
+
           <div className="app-card p-4 md:p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
@@ -1591,7 +1728,9 @@ function PageContent() {
               ) : (
                 <div className="app-card p-5">
                   <p className="text-base font-black text-[var(--pmu-text)]">
-                    {section.key === "jouable"
+                    {section.key === "prioritaire"
+                      ? `0 course chaude. Il reste ${boardCounts.jouable} verte${boardCounts.jouable > 1 ? "s" : ""}, ${boardCounts.surveillance} jaune${boardCounts.surveillance > 1 ? "s" : ""} et ${boardCounts.passer} rouge${boardCounts.passer > 1 ? "s" : ""}.`
+                      : section.key === "jouable"
                       ? `0 course verte. Il reste ${boardCounts.surveillance} jaune${boardCounts.surveillance > 1 ? "s" : ""} et ${boardCounts.passer} rouge${boardCounts.passer > 1 ? "s" : ""}.`
                       : section.key === "surveillance"
                         ? `0 course jaune. Il reste ${boardCounts.jouable} verte${boardCounts.jouable > 1 ? "s" : ""} et ${boardCounts.passer} rouge${boardCounts.passer > 1 ? "s" : ""}.`
@@ -1600,7 +1739,9 @@ function PageContent() {
                           : "Aucune course dans cette vue."}
                   </p>
                   <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">
-                    {section.key === "jouable"
+                    {section.key === "prioritaire"
+                      ? "Le filtre Suivi renforce ne montre que les courses sous cadence active du moteur."
+                      : section.key === "jouable"
                       ? "Le filtre Vertes isole uniquement les validations fortes. Les autres courses existent toujours dans les vues jaune et rouge."
                       : section.key === "surveillance"
                         ? "Le filtre Jaunes ne montre que les courses a garder sous radar, pas tout le programme."
@@ -1616,6 +1757,15 @@ function PageContent() {
                     >
                       Voir tout
                     </button>
+                    {section.key !== "prioritaire" && boardCounts.prioritaire > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => setBoardFilter("prioritaire")}
+                        className="app-button-secondary text-xs"
+                      >
+                        Voir la file active
+                      </button>
+                    ) : null}
                     {section.key !== "jouable" && boardCounts.jouable > 0 ? (
                       <button
                         type="button"
