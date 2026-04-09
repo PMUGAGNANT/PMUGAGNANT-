@@ -4,6 +4,15 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { asArray } from "@/lib/array-utils";
+import { BetHistoryCard } from "@/features/account/components/BetHistoryCard";
+import { BillingNoticeCard } from "@/features/account/components/BillingNoticeCard";
+import { AccountSummaryCard } from "@/features/account/components/AccountSummaryCard";
+import {
+  formatBonusExpiry,
+  formatEuros,
+  type Bet,
+  type BillingNotice,
+} from "@/features/account/lib/bets-model";
 import {
   getSupabaseBrowserClient,
   getSupabaseConfigError,
@@ -11,209 +20,6 @@ import {
 } from "@/lib/supabase";
 import { ReferralCard } from "@/components/ui/ReferralCard";
 import { UserStreakCard } from "@/components/ui/UserStreakCard";
-
-interface Bet {
-  id: string;
-  date_str: string;
-  reunion: number;
-  course: number;
-  hippodrome: string;
-  heure_depart: string;
-  cheval_num: number;
-  cheval_nom: string;
-  type_pari: string;
-  mise: number;
-  cote: number;
-  statut: string;
-  gain: number | null;
-  created_at: string;
-}
-
-type BillingNotice = {
-  tone: "success" | "warning" | "loading";
-  title: string;
-  message: string;
-};
-
-const STATUS_CONFIG: Record<string, { label: string; color: string; background: string }> = {
-  EN_ATTENTE: {
-    label: "En attente",
-    color: "var(--pmu-orange)",
-    background: "color-mix(in srgb, var(--pmu-orange) 14%, transparent)",
-  },
-  GAGNE: {
-    label: "Gagne",
-    color: "var(--pmu-primary)",
-    background: "color-mix(in srgb, var(--pmu-primary) 14%, transparent)",
-  },
-  PLACE: {
-    label: "Place",
-    color: "var(--pmu-accent-blue)",
-    background: "color-mix(in srgb, var(--pmu-accent-blue) 18%, transparent)",
-  },
-  PERDU: {
-    label: "Perdu",
-    color: "var(--pmu-red)",
-    background: "color-mix(in srgb, var(--pmu-red) 14%, transparent)",
-  },
-};
-
-function formatEuros(value: number) {
-  return `${new Intl.NumberFormat("fr-FR", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(value)} EUR`;
-}
-
-function formatBonusExpiry(value: string | null) {
-  if (!value) {
-    return null;
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return null;
-  }
-
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "numeric",
-    month: "long",
-  }).format(parsed);
-}
-
-function NoticeCard({ notice }: { notice: BillingNotice }) {
-  const color =
-    notice.tone === "success"
-      ? "var(--pmu-primary)"
-      : notice.tone === "loading"
-        ? "var(--pmu-accent-blue)"
-        : "var(--pmu-orange)";
-
-  const background =
-    notice.tone === "success"
-      ? "var(--pmu-primary-fade)"
-      : notice.tone === "loading"
-        ? "color-mix(in srgb, var(--pmu-accent-blue) 10%, transparent)"
-        : "color-mix(in srgb, var(--pmu-orange) 8%, transparent)";
-
-  return (
-    <section
-      className="app-card p-5 md:p-6"
-      style={{
-        borderColor: `color-mix(in srgb, ${color} 26%, transparent)`,
-        background,
-      }}
-    >
-      <p className="app-kicker" style={{ color }}>
-        Confirmation abonnement
-      </p>
-      <h2 className="mt-2 text-2xl font-black leading-tight text-[var(--pmu-text)]">
-        {notice.title}
-      </h2>
-      <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">
-        {notice.message}
-      </p>
-    </section>
-  );
-}
-
-function SummaryCard({
-  label,
-  value,
-  tone = "default",
-}: {
-  label: string;
-  value: string | number;
-  tone?: "default" | "good" | "warn" | "bad";
-}) {
-  const color =
-    tone === "good"
-      ? "var(--pmu-primary)"
-      : tone === "warn"
-        ? "var(--pmu-orange)"
-        : tone === "bad"
-          ? "var(--pmu-red)"
-          : "var(--pmu-text)";
-
-  return (
-    <article className="app-stat-card px-5 py-4">
-      <p className="app-label">{label}</p>
-      <p className="mt-2 text-2xl font-black" style={{ color }}>
-        {value}
-      </p>
-    </article>
-  );
-}
-
-function BetHistoryCard({ bet }: { bet: Bet }) {
-  const status = STATUS_CONFIG[bet.statut] ?? STATUS_CONFIG.EN_ATTENTE;
-  const gainLabel =
-    bet.gain !== null
-      ? `${bet.gain >= 0 ? "+" : ""}${formatEuros(bet.gain)}`
-      : "Resultat en attente";
-
-  return (
-    <article className="app-card p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-[var(--pmu-text-soft)]">
-            R{bet.reunion}C{bet.course} - {bet.hippodrome}
-          </p>
-          <h3 className="mt-2 text-xl font-black leading-tight text-[var(--pmu-text)]">
-            N{bet.cheval_num} {bet.cheval_nom}
-          </h3>
-        </div>
-
-        <span
-          className="rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em]"
-          style={{
-            color: status.color,
-            background: status.background,
-          }}
-        >
-          {status.label}
-        </span>
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        <span className="app-pill text-xs">{bet.type_pari}</span>
-        <span className="app-pill text-xs">Cote {bet.cote}</span>
-        <span className="app-pill text-xs">Mise {formatEuros(bet.mise)}</span>
-      </div>
-
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <div className="rounded-[1rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_90%,transparent)] px-4 py-3 text-sm text-[var(--pmu-text-soft)]">
-          {bet.date_str} a {bet.heure_depart}
-        </div>
-        <div
-          className="rounded-[1rem] border px-4 py-3 text-sm font-black"
-          style={{
-            borderColor:
-              bet.gain !== null
-                ? bet.gain >= 0
-                  ? "color-mix(in srgb, var(--pmu-primary) 24%, transparent)"
-                  : "color-mix(in srgb, var(--pmu-red) 24%, transparent)"
-                : "var(--pmu-border)",
-            color:
-              bet.gain !== null
-                ? bet.gain >= 0
-                  ? "var(--pmu-primary)"
-                  : "var(--pmu-red)"
-                : "var(--pmu-text-soft)",
-            background:
-              bet.gain !== null
-                ? bet.gain >= 0
-                  ? "color-mix(in srgb, var(--pmu-primary) 8%, transparent)"
-                  : "color-mix(in srgb, var(--pmu-red) 8%, transparent)"
-                : "color-mix(in srgb, var(--pmu-surface-2) 90%, transparent)",
-          }}
-        >
-          {gainLabel}
-        </div>
-      </div>
-    </article>
-  );
-}
 
 function MesParisFallback() {
   return <div className="min-h-[60vh] w-full rounded-[2rem] bg-transparent" />;
@@ -750,16 +556,16 @@ function MesParisContent() {
         </section>
       ) : (
         <>
-          {billingNotice ? <NoticeCard notice={billingNotice} /> : null}
+          {billingNotice ? <BillingNoticeCard notice={billingNotice} /> : null}
 
           <section className="grid gap-4 xl:grid-cols-[1.05fr,0.95fr]">
             <UserStreakCard />
 
             <section className="grid gap-4 sm:grid-cols-2">
-              <SummaryCard label="En attente" value={pendingCount} tone="warn" />
-              <SummaryCard label="Gagnes" value={wonCount} tone="good" />
-              <SummaryCard label="Places" value={placedCount} tone="warn" />
-              <SummaryCard
+              <AccountSummaryCard label="En attente" value={pendingCount} tone="warn" />
+              <AccountSummaryCard label="Gagnes" value={wonCount} tone="good" />
+              <AccountSummaryCard label="Places" value={placedCount} tone="warn" />
+              <AccountSummaryCard
                 label="P/L"
                 value={
                   totalGain >= 0
