@@ -30,9 +30,10 @@ import {
 import { estimateEloProfileForProgrammeCard } from "@/lib/elo-scoring";
 import { estimateIndiceOuvertureListe } from "@/lib/ouverture";
 import {
-  getPreRaceRefreshDecision,
-  type RefreshPriorityHints,
-} from "@/lib/race-refresh-policy";
+  getPriorityToneColor,
+  getRacePriorityBadge,
+  type RacePriorityBadge,
+} from "@/lib/race-priority";
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 import type { Lisibilite, PredictionDecision, RaceSummary } from "@/lib/types";
 
@@ -96,14 +97,7 @@ type FeaturedRace = {
   confidence: number;
   status: "jouable" | "surveillance" | "passer" | "resultat";
   hint: string;
-  priorityBadge: BoardPriorityBadge | null;
-};
-
-type BoardPriorityBadge = {
-  label: string;
-  detail: string;
-  tone: "primary" | "warning" | "neutral";
-  weight: number;
+  priorityBadge: RacePriorityBadge | null;
 };
 
 type PriorityCard = {
@@ -602,102 +596,12 @@ function getBoardSectionMeta(section: BoardSectionKey) {
   }
 }
 
-function getPriorityToneColor(tone: BoardPriorityBadge["tone"]) {
-  switch (tone) {
-    case "primary":
-      return "var(--pmu-primary)";
-    case "warning":
-      return "var(--pmu-orange)";
-    default:
-      return "var(--pmu-text-muted)";
-  }
-}
-
-function getRefreshHintsForBoardItem(item: FeaturedRace): RefreshPriorityHints {
-  return {
-    hasBoardGreenSignal: item.status === "jouable",
-    hasPlayableSignal: item.score?.decision === "VALIDE",
-    hasWatchSignal:
-      item.status === "surveillance" || item.score?.decision === "SURVEILLANCE",
-  };
-}
-
-function getRefreshDetailLabel(intervalMinutes: number | null) {
-  if (intervalMinutes === null) {
-    return "pas de cadence";
-  }
-
-  if (intervalMinutes <= 5) {
-    return "controle 5 min";
-  }
-
-  if (intervalMinutes === 10) {
-    return "suivi 10 min";
-  }
-
-  if (intervalMinutes === 30) {
-    return "suivi 30 min";
-  }
-
-  if (intervalMinutes === 60) {
-    return "suivi 1 h";
-  }
-
-  return `suivi ${intervalMinutes} min`;
-}
-
-function getBoardPriorityBadge(item: FeaturedRace): BoardPriorityBadge | null {
-  if (item.status === "resultat") {
-    return null;
-  }
-
-  const refresh = getPreRaceRefreshDecision(
-    item.race,
-    new Date(),
-    getRefreshHintsForBoardItem(item)
-  );
-
-  if (refresh.intervalMinutes === null) {
-    return null;
-  }
-
-  if (refresh.reason.startsWith("board-verte")) {
-    return {
-      label: "Suivi renforce",
-      detail: getRefreshDetailLabel(refresh.intervalMinutes),
-      tone: "primary",
-      weight: 4,
-    };
-  }
-
-  if (refresh.reason.startsWith("quinte")) {
-    return {
-      label: "Quinte prioritaire",
-      detail: getRefreshDetailLabel(refresh.intervalMinutes),
-      tone: "warning",
-      weight: 3,
-    };
-  }
-
-  if (refresh.reason.startsWith("signal-valide")) {
-    return {
-      label: "Signal moteur",
-      detail: getRefreshDetailLabel(refresh.intervalMinutes),
-      tone: "primary",
-      weight: 3,
-    };
-  }
-
-  if (refresh.reason.startsWith("variation-forte")) {
-    return {
-      label: "Marche actif",
-      detail: getRefreshDetailLabel(refresh.intervalMinutes),
-      tone: "warning",
-      weight: 2,
-    };
-  }
-
-  return null;
+function getBoardPriorityBadge(item: FeaturedRace): RacePriorityBadge | null {
+  return getRacePriorityBadge({
+    race: item.race,
+    status: item.status,
+    decision: item.score?.decision,
+  });
 }
 
 function PageContent() {

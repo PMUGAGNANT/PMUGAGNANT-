@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { getAllRaces, getParticipants, getTodayDateStr } from "@/lib/pmu-api";
 import { analyzeRaceWithParameters, getMinutesUntilStart } from "@/lib/analysis";
+import {
+  computeClientRaceScore,
+  type ApiRaceScoreLite,
+} from "@/lib/client-race-scoring";
 import { attachFaultRates } from "@/lib/horse-faults";
 import { loadAlgoParameters } from "@/lib/config";
 import { badRequest, serverError } from "@/lib/api-response";
+import { getRacePriorityBadge } from "@/lib/race-priority";
 import { normalizeRequestedDate, parsePositiveInteger } from "@/lib/request-utils";
 import { getRequestSubscriptionState } from "@/lib/subscription";
 import type { Participant, RaceSummary } from "@/lib/types";
@@ -27,6 +32,55 @@ function buildOfficialArrival(participants: Participant[]) {
       jockey: participant.jockey || participant.driver || null,
       entraineur: participant.entraineur || null,
     }));
+}
+
+function getRacePriorityPayload(input: {
+  race: RaceSummary;
+  minutesUntil: number;
+  isFinished: boolean;
+  score: number | null;
+  scoreLocked: boolean;
+  lisibilite: ApiRaceScoreLite["lisibilite"];
+  decision: ApiRaceScoreLite["decision"];
+  playable: boolean;
+  pick:
+    | {
+        numPmu: number;
+        nom: string;
+        decision: string;
+        betType: string;
+        confidence: number;
+        topFacteurs: string[];
+      }
+    | null;
+}) {
+  const stage: ApiRaceScoreLite["stage"] = input.isFinished
+    ? "finished"
+    : input.minutesUntil <= 30
+      ? "final_30m"
+      : input.minutesUntil <= 60
+        ? "preview_1h"
+        : "preview_2h";
+
+  const playTier = computeClientRaceScore(
+    input.race,
+    {
+      score: input.score,
+      scoreDetailsLocked: input.scoreLocked,
+      stage,
+      lisibilite: input.lisibilite,
+      decision: input.decision,
+      playable: input.playable,
+      pick: input.pick,
+    },
+    Math.max(0, Math.round(input.minutesUntil))
+  ).playTier;
+
+  return getRacePriorityBadge({
+    race: input.race,
+    status: playTier,
+    decision: input.decision,
+  });
 }
 
 export async function GET(
@@ -81,6 +135,42 @@ export async function GET(
         isFinished || subscriptionState.isSubscribed
           ? computedAnalysis
           : null;
+      const allowFullScore = subscriptionState.isSubscribed || isFinished;
+      const decision = allowFullScore
+        ? computedAnalysis.prediction.decisionCourse
+        : "REJET";
+      const score = allowFullScore
+        ? computedAnalysis.scoreConfiance?.score ?? null
+        : null;
+      const scoreLocked = !allowFullScore;
+      const playable =
+        allowFullScore &&
+        !isFinished &&
+        computedAnalysis.prediction.lisibilite !== "LOTERIE" &&
+        computedAnalysis.prediction.decisionCourse !== "REJET" &&
+        Boolean(computedAnalysis.recommandation?.vautLeCoup);
+      const pick =
+        allowFullScore && computedAnalysis.favori
+          ? {
+              numPmu: computedAnalysis.favori.numPmu,
+              nom: computedAnalysis.favori.nom,
+              decision: computedAnalysis.favori.prediction.decision,
+              betType: computedAnalysis.favori.prediction.typePariConseille,
+              confidence: computedAnalysis.favori.prediction.confiance,
+              topFacteurs: computedAnalysis.favori.prediction.topFacteurs,
+            }
+          : null;
+      const refreshPriority = getRacePriorityPayload({
+        race: courseInfo as RaceSummary,
+        minutesUntil,
+        isFinished,
+        score,
+        scoreLocked,
+        lisibilite: computedAnalysis.prediction.lisibilite,
+        decision,
+        playable,
+        pick,
+      });
 
       return NextResponse.json({
         success: true,
@@ -91,6 +181,7 @@ export async function GET(
         pronoAvailable,
         isFinished,
         analysis,
+        refreshPriority,
         paywall:
           !isFinished && !subscriptionState.isSubscribed
             ? {
@@ -119,6 +210,7 @@ export async function GET(
       pronoAvailable,
       isFinished,
       analysis,
+      refreshPriority: null,
       paywall: null,
     });
   } catch (error) {

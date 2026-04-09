@@ -10,6 +10,10 @@ import {
   type ArrivalRow,
   type CourseParticipantRow,
 } from "@/components/ui/ParticipantsTable";
+import {
+  getPriorityToneColor,
+  type RacePriorityBadge,
+} from "@/lib/race-priority";
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 
 type RaceApiParticipant = {
@@ -83,6 +87,7 @@ type RaceApiResponse = {
       } | null;
     } | null;
   } | null;
+  refreshPriority?: RacePriorityBadge | null;
 };
 
 type PronosticCardData = {
@@ -296,12 +301,14 @@ function CourseHero({
   minutesUntilStart,
   paywallRequired,
   isFinished,
+  refreshPriority,
 }: {
   courseInfo: NonNullable<RaceApiResponse["courseInfo"]>;
   selectedDate: string | null;
   minutesUntilStart?: number | null;
   paywallRequired: boolean;
   isFinished: boolean;
+  refreshPriority?: RacePriorityBadge | null;
 }) {
   const titlePrefix = `R${courseInfo.reunion ?? ""}C${courseInfo.course ?? ""}`;
   const dateLabel = formatDateLabel(selectedDate ?? courseInfo.dateStr ?? null);
@@ -331,6 +338,22 @@ function CourseHero({
           <div className="flex flex-wrap items-center gap-2">
             <StatusPill label={statusLabel} tone={statusTone} />
             {dateLabel ? <span className="app-pill text-xs">{dateLabel}</span> : null}
+            {refreshPriority ? (
+              <span
+                className="rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em]"
+                style={{
+                  color: getPriorityToneColor(refreshPriority.tone),
+                  borderColor: `color-mix(in srgb, ${getPriorityToneColor(
+                    refreshPriority.tone
+                  )} 24%, transparent)`,
+                  background: `color-mix(in srgb, ${getPriorityToneColor(
+                    refreshPriority.tone
+                  )} 10%, var(--pmu-surface))`,
+                }}
+              >
+                {refreshPriority.label} · {refreshPriority.detail}
+              </span>
+            ) : null}
           </div>
 
           <div>
@@ -552,6 +575,7 @@ function CourseDeskCard({
   paywallRequired,
   paywallPreview,
   isFinished,
+  refreshPriority,
 }: {
   courseInfo: NonNullable<RaceApiResponse["courseInfo"]>;
   minutesUntilStart?: number | null;
@@ -561,6 +585,7 @@ function CourseDeskCard({
     NonNullable<RaceApiResponse["paywall"]>["preview"]
   > | null;
   isFinished: boolean;
+  refreshPriority?: RacePriorityBadge | null;
 }) {
   const mainHorse = pronostic?.favoris?.[0] ?? paywallPreview?.favori?.numPmu ?? null;
 
@@ -602,6 +627,20 @@ function CourseDeskCard({
             {pronostic?.betType || paywallPreview?.recommendation || "En attente"}
           </p>
         </div>
+        {refreshPriority ? (
+          <div className="app-card-muted px-4 py-4 sm:col-span-2">
+            <p className="app-label">Cadence moteur</p>
+            <p
+              className="mt-2 text-lg font-black"
+              style={{ color: getPriorityToneColor(refreshPriority.tone) }}
+            >
+              {refreshPriority.label}
+            </p>
+            <p className="mt-1 text-sm leading-6 text-[var(--pmu-text-soft)]">
+              {refreshPriority.detail}
+            </p>
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-4 rounded-[1.2rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] p-4">
@@ -781,6 +820,7 @@ export default function CourseDetailPage() {
             minutesUntilStart={data.minutesUntilStart}
             paywallRequired={paywallRequired}
             isFinished={isFinished}
+            refreshPriority={data.refreshPriority ?? null}
           />
 
           <section className="grid gap-5 xl:grid-cols-[1.12fr,0.88fr]">
@@ -808,6 +848,7 @@ export default function CourseDetailPage() {
                 paywallRequired={paywallRequired}
                 paywallPreview={data.paywall?.preview ?? null}
                 isFinished={isFinished}
+                refreshPriority={data.refreshPriority ?? null}
               />
 
               {top5.length > 0 ? (
