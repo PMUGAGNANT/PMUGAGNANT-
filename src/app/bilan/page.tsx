@@ -15,12 +15,6 @@ import {
   BILAN_DASHBOARD_HISTORY_DAYS_MAX,
   BILAN_DASHBOARD_HISTORY_DAYS_MIN,
 } from "@/lib/prediction-store";
-import { CONFIDENCE_BUCKET_HIGH, CONFIDENCE_BUCKET_MEDIUM } from "@/lib/scoring-policy";
-import { parsePositiveInteger } from "@/lib/request-utils";
-
-function isAbortError(value: unknown): boolean {
-  return value instanceof Error && value.name === "AbortError";
-}
 
 interface CourseInfo {
   dateStr: string;
@@ -37,7 +31,6 @@ interface PickInfo {
   nom: string;
   cotePmu: number | null;
   coteEstimee: number | null;
-  jockey?: string | null;
 }
 
 interface BilanResult {
@@ -97,73 +90,27 @@ interface BilanData {
   results: BilanResult[];
 }
 
-type BilanTimelinePoint = BilanData["dashboard"]["timeline"][number];
-type BilanDashboardStatRow = BilanData["dashboard"]["bestTracks"][number];
+const HISTORY_PRESETS = [30, 90, 180, 365, 730] as const;
 
-interface BacktestResponse {
-  success: boolean;
-  cached?: boolean;
-  backtest?: {
-    startDate: string;
-    endDate: string;
-    days: number;
-    racesAnalyzed: number;
-    racesSkipped: number;
-    totalBets: number;
-    totalStake: number;
-    totalGain: number;
-    totalProfit: number;
-    roi: number;
-    summarySentence: string;
-    byBetType: Array<{
-      betType: string;
-      betsPlaced: number;
-      winningBets: number;
-      totalStake: number;
-      totalGain: number;
-      profit: number;
-      roi: number;
-      hitRate: number;
-    }>;
-  };
+function clampHistoryDays(value: number) {
+  return Math.min(
+    BILAN_DASHBOARD_HISTORY_DAYS_MAX,
+    Math.max(BILAN_DASHBOARD_HISTORY_DAYS_MIN, value)
+  );
 }
 
-type BacktestByBetTypeRow = NonNullable<BacktestResponse["backtest"]>["byBetType"][number];
-
-const GREEN = "var(--pmu-primary)";
-const GREEN_DARK = "var(--pmu-primary-bright)";
-const GOLD = "var(--pmu-orange)";
-const RED = "var(--pmu-red)";
-const DARK = "var(--pmu-text)";
-const CARD_BG = "var(--pmu-surface)";
-const BORDER = "var(--pmu-border)";
-
-const BILAN_DASHBOARD_DAY_PRESETS = [30, 90, 180, 365, 548, 730, 1095] as const;
-
-function clampBilanDashboardDays(value: number) {
-  return Math.min(BILAN_DASHBOARD_HISTORY_DAYS_MAX, Math.max(BILAN_DASHBOARD_HISTORY_DAYS_MIN, value));
-}
-
-function historyWindowDaysFromSearchParams(searchParams: { get: (key: string) => string | null }) {
-  const n = parsePositiveInteger(searchParams.get("dashboard_days"));
-  if (n == null) {
+function parseHistoryDays(raw: string | null) {
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
     return BILAN_DASHBOARD_HISTORY_DAYS_DEFAULT;
   }
-  return clampBilanDashboardDays(n);
+  return clampHistoryDays(parsed);
 }
 
-function formatIsoDateShortFr(iso: string) {
-  const parts = iso.split("-").map((p) => Number(p));
-  if (parts.length !== 3 || parts.some((x) => !Number.isFinite(x))) {
-    return iso;
-  }
-  const [y, m, d] = parts;
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+function shiftDate(dateStr: string, delta: number) {
+  const date = parsePmuDate(dateStr);
+  date.setDate(date.getDate() + delta);
+  return formatDateToPmu(date);
 }
 
 function formatDisplayDate(dateStr: string) {
@@ -175,112 +122,26 @@ function formatDisplayDate(dateStr: string) {
 }
 
 function formatRelativeDay(dateStr: string) {
-  const today = parsePmuDate(getTodayDateStr());
-  const target = parsePmuDate(dateStr);
-  const diff = Math.round((target.getTime() - today.getTime()) / 86400000);
-
-  if (diff === 0) return "Aujourd’hui";
-  if (diff === -1) return "Hier";
-  if (diff === 1) return "Demain";
-  return "Sélection";
+  const today = getTodayDateStr();
+  if (dateStr === today) return "Aujourd'hui";
+  if (dateStr === shiftDate(today, -1)) return "Hier";
+  if (dateStr === shiftDate(today, 1)) return "Demain";
+  return "Selection";
 }
 
-function shiftDate(dateStr: string, delta: number) {
-  const date = parsePmuDate(dateStr);
-  date.setDate(date.getDate() + delta);
-  return formatDateToPmu(date);
+function formatShortIsoDate(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
 }
 
-function disciplineLabel(discipline: string): string {
-  if (discipline.includes("TROT_ATTELE")) return "Trot attelé";
-  if (discipline.includes("TROT_MONTE")) return "Trot monté";
-  if (discipline === "PLAT") return "Plat";
-  if (discipline.includes("OBSTACLE") || discipline.includes("HAIES") || discipline.includes("STEEPLE")) {
-    return "Obstacle";
-  }
-  return discipline || "Autre";
-}
-
-function resultLabel(resultat: BilanResult["resultat"]): string {
-  if (resultat === "GAGNANT") return "Ticket gagnant";
-  if (resultat === "PLACE") return "Ticket placé";
-  if (resultat === "PERDU") return "Perdu";
-  return "En attente";
-}
-
-function getResultStyle(resultat: BilanResult["resultat"]) {
-  if (resultat === "GAGNANT") {
-    return {
-      border: GREEN,
-      soft: "var(--pmu-primary-soft)",
-      strong: GREEN,
-      badge: "color-mix(in srgb, var(--pmu-primary) 15%, transparent)",
-      badgeText: GREEN,
-    };
-  }
-
-  if (resultat === "PLACE") {
-    return {
-      border: GOLD,
-      soft: "color-mix(in srgb, var(--pmu-orange) 10%, transparent)",
-      strong: GOLD,
-      badge: "color-mix(in srgb, var(--pmu-orange) 15%, transparent)",
-      badgeText: GOLD,
-    };
-  }
-
-  return {
-    border: RED,
-    soft: "color-mix(in srgb, var(--pmu-red) 10%, transparent)",
-    strong: RED,
-    badge: "color-mix(in srgb, var(--pmu-red) 15%, transparent)",
-    badgeText: RED,
-  };
-}
-
-function getHealthTone(successRate: number) {
-  if (successRate >= 45) {
-    return {
-      background: `linear-gradient(135deg, ${GREEN}, ${GREEN_DARK})`,
-      text: "var(--pmu-on-primary)",
-      soft: "var(--pmu-primary-soft)",
-    };
-  }
-
-  if (successRate >= 30) {
-    return {
-      background: "linear-gradient(135deg, var(--pmu-orange), color-mix(in srgb, var(--pmu-orange) 72%, black))",
-      text: "var(--pmu-on-primary)",
-      soft: "color-mix(in srgb, var(--pmu-orange) 12%, transparent)",
-    };
-  }
-
-  return {
-    background: "linear-gradient(135deg, var(--pmu-red), color-mix(in srgb, var(--pmu-red) 65%, black))",
-    text: "var(--pmu-on-danger)",
-    soft: "color-mix(in srgb, var(--pmu-red) 12%, transparent)",
-  };
-}
-
-function getConfianceStyle(score: number) {
-  if (score >= CONFIDENCE_BUCKET_HIGH) {
-    return { background: "color-mix(in srgb, var(--pmu-primary) 15%, transparent)", color: GREEN };
-  }
-  if (score >= CONFIDENCE_BUCKET_MEDIUM) {
-    return { background: "color-mix(in srgb, var(--pmu-orange) 15%, transparent)", color: GOLD };
-  }
-  return { background: "color-mix(in srgb, var(--pmu-red) 15%, transparent)", color: RED };
-}
-
-function formatTime(heureDepart: string): string {
-  return heureDepart;
-}
-
-function formatOdds(value: number | null): string {
-  if (value === null || value === undefined) return "-";
-  const normalized = Number(value);
-  if (!Number.isFinite(normalized)) return "-";
-  return normalized.toFixed(1);
+function formatOdds(value: number | null) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "--";
+  return value.toFixed(1);
 }
 
 function formatSignedPercent(value: number) {
@@ -288,111 +149,38 @@ function formatSignedPercent(value: number) {
 }
 
 function formatSignedCurrency(value: number) {
-  const formatted = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(value);
+  const formatted = new Intl.NumberFormat("fr-FR", {
+    maximumFractionDigits: 2,
+  }).format(value);
   return `${value > 0 ? "+" : ""}${formatted} EUR`;
 }
 
-function DateNavigator({
-  dateStr,
-  onChange,
-}: {
-  dateStr: string;
-  onChange: (nextDate: string) => void;
-}) {
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "44px 1fr 44px",
-        gap: 10,
-        alignItems: "center",
-        margin: "16px 16px 0",
-      }}
-    >
-      <button
-        onClick={() => onChange(shiftDate(dateStr, -1))}
-        style={{
-          height: 44,
-          borderRadius: 16,
-          border: `1px solid ${BORDER}`,
-          background: CARD_BG,
-          color: DARK,
-          fontSize: 18,
-          fontWeight: 800,
-          cursor: "pointer",
-        }}
-      >
-        {"<"}
-      </button>
+function disciplineLabel(discipline: string) {
+  if (discipline.includes("TROT_ATTELE")) return "Trot attele";
+  if (discipline.includes("TROT_MONTE")) return "Trot monte";
+  if (discipline === "PLAT") return "Plat";
+  if (
+    discipline.includes("OBSTACLE") ||
+    discipline.includes("HAIES") ||
+    discipline.includes("STEEPLE")
+  ) {
+    return "Obstacle";
+  }
+  return discipline || "Autre";
+}
 
-      <div
-        style={{
-          background: CARD_BG,
-          borderRadius: 20,
-          border: `1px solid ${BORDER}`,
-          boxShadow: "var(--pmu-shadow)",
-          padding: 12,
-          display: "grid",
-          gap: 8,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 800, color: "var(--pmu-text-muted)", textTransform: "uppercase", letterSpacing: 0.4 }}>
-              {formatRelativeDay(dateStr)}
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: DARK }}>{formatDisplayDate(dateStr)}</div>
-          </div>
-          <button
-            onClick={() => onChange(getTodayDateStr())}
-            style={{
-              border: "none",
-              borderRadius: 999,
-              background: "color-mix(in srgb, var(--pmu-primary) 15%, transparent)",
-              color: GREEN,
-              padding: "8px 12px",
-              fontSize: 12,
-              fontWeight: 800,
-              cursor: "pointer",
-            }}
-          >
-            {"Aujourd’hui"}
-          </button>
-        </div>
-        <input
-          type="date"
-          value={toIsoDate(dateStr)}
-          onChange={(event) => onChange(fromIsoDate(event.target.value))}
-          style={{
-            width: "100%",
-            borderRadius: 14,
-            border: `1px solid ${BORDER}`,
-            background: "var(--pmu-surface-2)",
-            padding: "10px 12px",
-            fontSize: 14,
-            fontWeight: 700,
-            color: DARK,
-          }}
-        />
-      </div>
+function resultTone(result: BilanResult["resultat"]) {
+  if (result === "GAGNANT") return "var(--pmu-primary)";
+  if (result === "PLACE") return "var(--pmu-orange)";
+  if (result === "PERDU") return "var(--pmu-red)";
+  return "var(--pmu-text-soft)";
+}
 
-      <button
-        onClick={() => onChange(shiftDate(dateStr, 1))}
-        style={{
-          height: 44,
-          borderRadius: 16,
-          border: `1px solid ${BORDER}`,
-          background: CARD_BG,
-          color: DARK,
-          fontSize: 18,
-          fontWeight: 800,
-          cursor: "pointer",
-        }}
-      >
-        {">"}
-      </button>
-    </div>
-  );
+function resultLabel(result: BilanResult["resultat"]) {
+  if (result === "GAGNANT") return "Ticket gagnant";
+  if (result === "PLACE") return "Ticket place";
+  if (result === "PERDU") return "Perdu";
+  return "En attente";
 }
 
 function SummaryCard({
@@ -404,82 +192,90 @@ function SummaryCard({
   value: string | number;
   tone?: "default" | "good" | "warn" | "bad";
 }) {
-  const colors =
+  const color =
     tone === "good"
-      ? { background: CARD_BG, value: GREEN }
+      ? "var(--pmu-primary)"
       : tone === "warn"
-        ? { background: CARD_BG, value: GOLD }
+        ? "var(--pmu-orange)"
         : tone === "bad"
-          ? { background: CARD_BG, value: RED }
-          : { background: CARD_BG, value: DARK };
+          ? "var(--pmu-red)"
+          : "var(--pmu-text)";
 
   return (
-    <div
-      style={{
-        background: colors.background,
-        borderRadius: 22,
-        padding: 18,
-        border: `1px solid ${BORDER}`,
-        boxShadow: "var(--pmu-shadow)",
-      }}
-    >
-      <div style={{ fontSize: 12, color: "var(--pmu-text-muted)", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700 }}>{label}</div>
-      <div style={{ fontSize: 34, fontWeight: 800, lineHeight: "36px", color: colors.value, letterSpacing: "-0.8px" }}>{value}</div>
-    </div>
+    <article className="app-stat-card px-5 py-4">
+      <p className="app-label">{label}</p>
+      <p className="mt-2 text-3xl font-black" style={{ color }}>
+        {value}
+      </p>
+    </article>
   );
 }
 
-function SkeletonCards() {
+function WindowSelector({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (next: number) => void;
+}) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, padding: "16px" }}>
-      {Array.from({ length: 6 }).map((_, index) => (
-        <div
-          key={index}
-          style={{
-            height: 112,
-            borderRadius: 20,
-            background:
-              "linear-gradient(90deg, var(--pmu-surface-highlight) 25%, var(--pmu-surface-2) 50%, var(--pmu-surface-highlight) 75%)",
-            backgroundSize: "200% 100%",
-            animation: "shimmer 1.6s linear infinite",
-          }}
-        />
+    <div className="flex flex-wrap gap-2">
+      {HISTORY_PRESETS.map((days) => (
+        <button
+          key={days}
+          type="button"
+          onClick={() => onChange(days)}
+          className={`app-pill text-xs ${value === days ? "app-pill--active" : ""}`}
+        >
+          {days} jours
+        </button>
       ))}
     </div>
   );
 }
 
-function MiniBarChart({
-  timeline,
+function MiniTimeline({
+  points,
 }: {
-  timeline: BilanData["dashboard"]["timeline"];
+  points: BilanData["dashboard"]["timeline"];
 }) {
-  const points = asArray<BilanTimelinePoint>(timeline);
-  if (points.length === 0) return null;
+  const list = asArray<BilanData["dashboard"]["timeline"][number]>(points);
+  if (list.length === 0) {
+    return (
+      <div className="app-card-muted px-4 py-5 text-sm text-[var(--pmu-text-soft)]">
+        Pas assez d&apos;historique pour tracer la courbe.
+      </div>
+    );
+  }
 
-  const maxAbs = Math.max(...points.map((point) => Math.abs(point.cumulativeProfit)), 1);
+  const maxAbs = Math.max(
+    ...list.map((point) => Math.abs(point.cumulativeProfit)),
+    1
+  );
 
   return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 160 }}>
-      {points.map((point) => {
-        const height = `${Math.max((Math.abs(point.cumulativeProfit) / maxAbs) * 100, 8)}%`;
+    <div className="flex h-44 items-end gap-2">
+      {list.map((point) => {
         const positive = point.cumulativeProfit >= 0;
+        const height = `${Math.max(
+          (Math.abs(point.cumulativeProfit) / maxAbs) * 100,
+          8
+        )}%`;
+
         return (
-          <div key={point.date} style={{ flex: 1, display: "grid", gap: 8, justifyItems: "center" }}>
+          <div key={point.date} className="grid flex-1 justify-items-center gap-2">
             <div
+              className="w-full rounded-full"
               style={{
-                width: "100%",
-                minWidth: 16,
                 height,
-                borderRadius: 12,
                 background: positive
-                  ? `linear-gradient(180deg, ${GREEN}, ${GREEN_DARK})`
-                  : "linear-gradient(180deg, color-mix(in srgb, var(--pmu-red) 85%, white), var(--pmu-red))",
+                  ? "linear-gradient(180deg, var(--pmu-primary), var(--pmu-primary-bright))"
+                  : "linear-gradient(180deg, color-mix(in srgb, var(--pmu-red) 82%, white), var(--pmu-red))",
               }}
             />
-            <div style={{ fontSize: 11, color: "var(--pmu-text-muted)", textAlign: "center" }}>
+            <span className="text-[11px] font-semibold text-[var(--pmu-text-muted)]">
               {point.date.slice(5)}
-            </div>
+            </span>
           </div>
         );
       })}
@@ -487,21 +283,97 @@ function MiniBarChart({
   );
 }
 
+function InsightList({ items }: { items: string[] }) {
+  const list = asArray<string>(items);
+  if (list.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="grid gap-3">
+      {list.map((item, index) => (
+        <div
+          key={`${item}-${index}`}
+          className="rounded-[1rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_92%,transparent)] px-4 py-3 text-sm leading-6 text-[var(--pmu-text-soft)]"
+        >
+          {item}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ResultCard({
+  result,
+  onOpen,
+}: {
+  result: BilanResult;
+  onOpen: (result: BilanResult) => void;
+}) {
+  const tone = resultTone(result.resultat);
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(result)}
+      className="app-card flex w-full flex-col items-start gap-3 p-5 text-left"
+      style={{ borderLeft: `4px solid ${tone}` }}
+    >
+      <div className="flex w-full items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-[var(--pmu-text-soft)]">
+            R{result.courseInfo.reunion}C{result.courseInfo.course} - {result.courseInfo.hippodrome}
+          </p>
+          <h3 className="mt-1 text-xl font-black text-[var(--pmu-text)]">
+            {result.courseInfo.nomCourse}
+          </h3>
+        </div>
+        <span
+          className="rounded-full px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em]"
+          style={{
+            color: tone,
+            background: `color-mix(in srgb, ${tone} 12%, var(--pmu-surface))`,
+          }}
+        >
+          {resultLabel(result.resultat)}
+        </span>
+      </div>
+
+      <div>
+        <p className="text-2xl font-black text-[var(--pmu-text)]">
+          N{result.favori.numPmu} {result.favori.nom}
+        </p>
+        <p className="mt-1 text-sm leading-6 text-[var(--pmu-text-soft)]">
+          {result.recommandation}
+        </p>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <span className="app-pill text-xs">Confiance {result.confiance}/10</span>
+        <span className="app-pill text-xs">PMU {formatOdds(result.favori.cotePmu)}</span>
+        <span className="app-pill text-xs">IA {formatOdds(result.favori.coteEstimee)}</span>
+        {result.ordreArrivee ? (
+          <span className="app-pill text-xs">Arrivee {result.ordreArrivee}e</span>
+        ) : null}
+      </div>
+    </button>
+  );
+}
+
 function BilanPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlDate = searchParams.get("date") || getTodayDateStr();
-  const historyWindowDays = useMemo(
-    () => historyWindowDaysFromSearchParams(searchParams),
+  const historyDays = useMemo(
+    () => parseHistoryDays(searchParams.get("dashboard_days")),
     [searchParams]
   );
+
   const [selectedDate, setSelectedDate] = useState(urlDate);
   const [data, setData] = useState<BilanData | null>(null);
-  const [backtest, setBacktest] = useState<BacktestResponse["backtest"] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fetchRevision, setFetchRevision] = useState(0);
-  const [showBottomNav, setShowBottomNav] = useState(false);
 
   useEffect(() => {
     setSelectedDate(urlDate);
@@ -518,32 +390,31 @@ function BilanPageContent() {
       try {
         const qs = new URLSearchParams({
           date: selectedDate,
-          dashboard_days: String(historyWindowDays),
+          dashboard_days: String(historyDays),
         });
         const res = await fetch(`/api/bilan?${qs.toString()}`, {
           cache: "no-store",
           signal: ac.signal,
         });
         const json = (await res.json()) as BilanData;
+
         if (cancelled) return;
-        if (!res.ok) {
-          setData(null);
-          setError("Le serveur n'a pas pu renvoyer le bilan.");
-          return;
+        if (!res.ok || !json.success) {
+          throw new Error("Le serveur n'a pas pu renvoyer le bilan.");
         }
-        if (json.success) {
-          setData(json);
-        } else {
-          setData(null);
-          setError("Réponse bilan invalide.");
-        }
+
+        setData(json);
       } catch (loadError) {
         if (cancelled) return;
-        if (isAbortError(loadError)) return;
+        if (loadError instanceof Error && loadError.name === "AbortError") return;
         setData(null);
-        setError(loadError instanceof Error ? loadError.message : "Impossible de charger le bilan.");
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Impossible de charger le bilan."
+        );
       } finally {
-        if (!cancelled && !ac.signal.aborted) {
+        if (!cancelled) {
           setLoading(false);
         }
       }
@@ -554,97 +425,34 @@ function BilanPageContent() {
       cancelled = true;
       ac.abort();
     };
-  }, [selectedDate, historyWindowDays, fetchRevision]);
+  }, [selectedDate, historyDays, fetchRevision]);
 
-  useEffect(() => {
-    const ac = new AbortController();
-    let cancelled = false;
-
-    async function loadBacktest() {
-      try {
-        const res = await fetch("/api/backtest?days=90", {
-          cache: "no-store",
-          signal: ac.signal,
-        });
-        const json = (await res.json()) as BacktestResponse;
-        if (cancelled) return;
-        if (json.success && json.backtest) {
-          setBacktest(json.backtest);
-        }
-      } catch (loadError) {
-        if (cancelled) return;
-        if (isAbortError(loadError)) return;
-        setBacktest(null);
-      }
-    }
-
-    void loadBacktest();
-    return () => {
-      cancelled = true;
-      ac.abort();
-    };
-  }, []);
-
-  useEffect(() => {
-    function syncBottomNavVisibility() {
-      setShowBottomNav(window.innerWidth < 1024);
-    }
-
-    syncBottomNavVisibility();
-    window.addEventListener("resize", syncBottomNavVisibility);
-    return () => {
-      window.removeEventListener("resize", syncBottomNavVisibility);
-    };
-  }, []);
-
-  const resultsList = useMemo(() => asArray<BilanResult>(data?.results), [data]);
-
+  const results = useMemo(() => asArray<BilanResult>(data?.results), [data]);
   const winners = useMemo(
-    () => resultsList.filter((result) => result.resultat === "GAGNANT"),
-    [resultsList]
+    () => results.filter((item) => item.resultat === "GAGNANT"),
+    [results]
   );
-  const placed = useMemo(
-    () => resultsList.filter((result) => result.resultat === "PLACE"),
-    [resultsList]
+  const places = useMemo(
+    () => results.filter((item) => item.resultat === "PLACE"),
+    [results]
   );
-  const misses = useMemo(
-    () => resultsList.filter((result) => result.resultat === "PERDU"),
-    [resultsList]
+  const losses = useMemo(
+    () => results.filter((item) => item.resultat === "PERDU"),
+    [results]
   );
-
-  const bestTracksRows = useMemo(
-    () => asArray<BilanDashboardStatRow>(data?.dashboard?.bestTracks),
-    [data]
-  );
-  const bestBetTypesRows = useMemo(
-    () => asArray<BilanDashboardStatRow>(data?.dashboard?.bestBetTypes),
-    [data]
-  );
-  const bestJockeysRows = useMemo(
-    () => asArray<BilanDashboardStatRow>(data?.dashboard?.bestJockeys),
-    [data]
-  );
-  const expertInsights = useMemo(() => asArray<string>(data?.expert?.insights), [data]);
-  const backtestByBetTypeRows = useMemo(
-    () => asArray<BacktestByBetTypeRow>(backtest?.byBetType),
-    [backtest]
-  );
-
-  const successRate = data?.summary.successRate ?? 0;
-  const healthTone = getHealthTone(successRate);
 
   function updateDate(nextDate: string) {
     const qs = new URLSearchParams({
       date: nextDate,
-      dashboard_days: String(historyWindowDays),
+      dashboard_days: String(historyDays),
     });
     router.replace(`/bilan?${qs.toString()}`, { scroll: false });
   }
 
-  function updateHistoryWindowDays(next: number) {
+  function updateHistory(nextDays: number) {
     const qs = new URLSearchParams({
       date: selectedDate,
-      dashboard_days: String(clampBilanDashboardDays(next)),
+      dashboard_days: String(clampHistoryDays(nextDays)),
     });
     router.replace(`/bilan?${qs.toString()}`, { scroll: false });
   }
@@ -656,913 +464,302 @@ function BilanPageContent() {
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: `radial-gradient(circle at top left, var(--pmu-primary-fade), transparent 30%), radial-gradient(circle at top right, var(--pmu-primary-soft), transparent 22%), var(--pmu-bg)`,
-        width: "min(1180px, calc(100% - 24px))",
-        margin: "0 auto",
-        position: "relative",
-      }}
-    >
-      <style>{`
-        @keyframes shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-      `}</style>
+    <div className="mx-auto flex w-full max-w-[96rem] flex-col gap-6 lg:gap-8">
+      <section className="app-page-hero p-6 md:p-8">
+        <div className="relative z-[1] grid gap-6 xl:grid-cols-[1.12fr,0.88fr] xl:items-end">
+          <div className="space-y-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-[color-mix(in_srgb,var(--pmu-primary)_26%,transparent)] bg-[var(--pmu-primary-soft)] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-[var(--pmu-primary)]">
+                Bilan moteur
+              </span>
+              <span className="app-pill text-xs">{formatRelativeDay(selectedDate)}</span>
+              <span className="app-pill text-xs">{historyDays} jours dashboard</span>
+            </div>
 
-      <div
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 100,
-          background: "color-mix(in srgb, var(--pmu-bg) 92%, transparent)",
-          backdropFilter: "blur(18px)",
-          borderBottom: `1px solid ${BORDER}`,
-          minHeight: 72,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "var(--pmu-text)",
-          fontWeight: 800,
-          fontSize: 19,
-          letterSpacing: "-0.4px",
-          gap: 2,
-          padding: "10px 0 8px",
-        }}
-      >
-        <div>Bilan</div>
-        <div style={{ fontSize: 12, fontWeight: 700, color: "color-mix(in srgb, var(--pmu-text) 72%, transparent)", letterSpacing: 0 }}>
-          {formatRelativeDay(selectedDate)} - {formatDisplayDate(selectedDate)}
+            <div>
+              <p className="app-kicker">Lecture de performance</p>
+              <h1 className="max-w-4xl text-4xl font-black leading-[0.93] text-[var(--pmu-text)] md:text-6xl">
+                Une page pour verifier le moteur, pas pour enjoliver les resultats.
+              </h1>
+              <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
+                On garde les tickets, les pertes, les zones fortes et la lecture
+                longue periode dans une seule page plus propre.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => updateDate(shiftDate(selectedDate, -1))}
+                className="app-button-secondary"
+              >
+                Jour precedent
+              </button>
+              <button
+                type="button"
+                onClick={() => updateDate(getTodayDateStr())}
+                className="app-button-secondary"
+              >
+                Aujourd&apos;hui
+              </button>
+              <button
+                type="button"
+                onClick={() => updateDate(shiftDate(selectedDate, 1))}
+                className="app-button-secondary"
+              >
+                Jour suivant
+              </button>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="app-stat-card px-5 py-4">
+              <p className="app-label">Date active</p>
+              <p className="mt-2 text-xl font-black capitalize text-[var(--pmu-text)]">
+                {formatDisplayDate(selectedDate)}
+              </p>
+            </div>
+            <div className="app-stat-card px-5 py-4">
+              <p className="app-label">Etat moteur</p>
+              <p className="mt-2 text-xl font-black text-[var(--pmu-text)]">
+                {data?.expert.healthLabel ?? "En attente"}
+              </p>
+            </div>
+            <div className="app-stat-card px-5 py-4">
+              <p className="app-label">Courses finies</p>
+              <p className="mt-2 text-3xl font-black text-[var(--pmu-text)]">
+                {results.length}
+              </p>
+            </div>
+            <div className="app-stat-card px-5 py-4">
+              <p className="app-label">Reussite</p>
+              <p className="mt-2 text-3xl font-black text-[var(--pmu-primary)]">
+                {data ? `${data.summary.successRate.toFixed(0)}%` : "--"}
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div style={{ paddingBottom: showBottomNav ? 92 : 28 }}>
-        <DateNavigator dateStr={selectedDate} onChange={updateDate} />
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,16rem),1fr] lg:items-center">
+        <label className="block">
+          <span className="sr-only">Choisir une date</span>
+          <input
+            type="date"
+            value={toIsoDate(selectedDate)}
+            onChange={(event) => updateDate(fromIsoDate(event.target.value))}
+            className="app-input"
+          />
+        </label>
+        <WindowSelector value={historyDays} onChange={updateHistory} />
+      </section>
 
-        {loading ? (
-          <div role="status" aria-busy="true" aria-label="Chargement du bilan">
-            <SkeletonCards />
-          </div>
-        ) : error || !data ? (
-          <div
-            role="alert"
-            aria-live="assertive"
-            style={{
-              margin: "16px",
-              textAlign: "center",
-              padding: 32,
-              borderRadius: 22,
-              background: CARD_BG,
-              border: `1px solid color-mix(in srgb, var(--pmu-red) 35%, transparent)`,
-              color: DARK,
-            }}
+      {loading ? (
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 8 }, (_, index) => (
+            <div
+              key={index}
+              className="app-card h-36 animate-pulse bg-[linear-gradient(180deg,var(--pmu-surface-highlight)_0%,var(--pmu-surface)_100%)]"
+            />
+          ))}
+        </section>
+      ) : error ? (
+        <section className="app-card p-6">
+          <p className="app-kicker">Bilan</p>
+          <h2 className="mt-2 text-3xl font-black text-[var(--pmu-text)]">
+            Impossible de charger le bilan
+          </h2>
+          <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">
+            {error}
+          </p>
+          <button
+            type="button"
+            className="app-button-primary mt-5"
+            onClick={() => setFetchRevision((revision) => revision + 1)}
           >
-            <p style={{ fontWeight: 800, color: RED, marginBottom: 8 }}>Impossible de charger le bilan</p>
-            {error ? (
-              <p style={{ fontSize: 14, color: "var(--pmu-text-soft)", marginBottom: 16 }}>{error}</p>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => setFetchRevision((revision) => revision + 1)}
-              style={{
-                border: "none",
-                borderRadius: 999,
-                padding: "12px 20px",
-                background: GREEN,
-                color: "var(--pmu-on-primary)",
-                fontWeight: 800,
-                cursor: "pointer",
-              }}
-            >
-              Réessayer
-            </button>
-          </div>
-        ) : (
-          <>
-            <div
-              style={{
-                margin: "16px 16px 0",
-                borderRadius: 28,
-                padding: 22,
-                background: healthTone.background,
-                color: healthTone.text,
-                boxShadow: "var(--pmu-shadow)",
-                border: "1px solid color-mix(in srgb, var(--pmu-on-primary) 22%, transparent)",
-              }}
-            >
-              <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 8 }}>Lecture de la séance</div>
-              <div style={{ fontSize: 28, lineHeight: "30px", fontWeight: 800, marginBottom: 10 }}>
-                {data.expert.healthLabel}
-              </div>
-              <div style={{ fontSize: 14, lineHeight: "20px", opacity: 0.92, marginBottom: 14 }}>
-                {successRate}% de réussite sur {data.summary.totalPlayed} prédictions analysées pour cette date.
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {data.expert.bestDiscipline && (
-                  <span
-                    style={{
-                      padding: "6px 10px",
-                      borderRadius: 999,
-                      background: "color-mix(in srgb, var(--pmu-on-primary) 18%, transparent)",
-                      fontSize: 12,
-                      fontWeight: 700,
-                    }}
-                  >
-                    Point fort: {disciplineLabel(data.expert.bestDiscipline.discipline)}
-                  </span>
-                )}
-                {data.expert.bestConfidenceBucket && (
-                  <span
-                    style={{
-                      padding: "6px 10px",
-                      borderRadius: 999,
-                      background: "color-mix(in srgb, var(--pmu-on-primary) 18%, transparent)",
-                      fontSize: 12,
-                      fontWeight: 700,
-                    }}
-                  >
-                    Zone fiable: {data.expert.bestConfidenceBucket.label}
-                  </span>
-                )}
-              </div>
-            </div>
+            Reessayer
+          </button>
+        </section>
+      ) : data ? (
+        <>
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+            <SummaryCard label="Courses analysees" value={data.summary.totalRaces} />
+            <SummaryCard label="Tickets joues" value={data.summary.totalPlayed} />
+            <SummaryCard label="Gagnants" value={data.summary.wins} tone="good" />
+            <SummaryCard label="Places" value={data.summary.places} tone="warn" />
+            <SummaryCard label="Perdus" value={data.summary.losses} tone="bad" />
+            <SummaryCard
+              label="Taux de reussite"
+              value={`${data.summary.successRate.toFixed(1)}%`}
+              tone={data.summary.successRate >= 40 ? "good" : data.summary.successRate >= 28 ? "warn" : "bad"}
+            />
+          </section>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 12,
-                padding: "16px",
-              }}
-            >
-              <SummaryCard label="Tickets lus" value={data.summary.totalPlayed} />
-              <SummaryCard label="Taux global" value={`${successRate}%`} tone={successRate >= 40 ? "good" : successRate >= 25 ? "warn" : "bad"} />
-              <SummaryCard label="Tickets gagnants" value={data.summary.wins} tone="good" />
-              <SummaryCard label="Tickets placés" value={data.summary.places} tone="warn" />
-              <SummaryCard label="Tickets perdus" value={data.summary.losses} tone={data.summary.losses > data.summary.wins + data.summary.places ? "bad" : "default"} />
-              <SummaryCard label="Courses finies" value={resultsList.length} />
-            </div>
+          <section className="grid gap-5 xl:grid-cols-[1.05fr,0.95fr]">
+            <section className="app-card p-5 md:p-6">
+              <div className="app-section-heading">
+                <div>
+                  <p className="app-kicker">Dashboard long terme</p>
+                  <h2 className="app-section-title">ROI, edge et volume</h2>
+                </div>
+              </div>
 
-            {data.dashboard.available ? (
-              <div style={{ margin: "0 16px 18px", display: "grid", gap: 14 }}>
-                <div
-                  style={{
-                    background: CARD_BG,
-                    borderRadius: 24,
-                    padding: 18,
-                    border: `1px solid ${BORDER}`,
-                    boxShadow: "var(--pmu-shadow)",
-                  }}
-                >
-                  <div style={{ fontSize: 22, fontWeight: 800, color: GREEN_DARK, marginBottom: 8 }}>
-                    Dashboard performance
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="app-card-muted px-4 py-4">
+                  <p className="app-label">ROI global</p>
+                  <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+                    {formatSignedPercent(data.dashboard.globalRoi)}
+                  </p>
+                </div>
+                <div className="app-card-muted px-4 py-4">
+                  <p className="app-label">Algo vs hasard</p>
+                  <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+                    {(data.dashboard.algoSuccessRate - data.dashboard.randomSuccessRate) > 0 ? "+" : ""}
+                    {(data.dashboard.algoSuccessRate - data.dashboard.randomSuccessRate).toFixed(1)} pts
+                  </p>
+                </div>
+                <div className="app-card-muted px-4 py-4">
+                  <p className="app-label">Capital engage</p>
+                  <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+                    {formatSignedCurrency(data.dashboard.totalStake).replace("+", "")}
+                  </p>
+                </div>
+                <div className="app-card-muted px-4 py-4">
+                  <p className="app-label">Gain total</p>
+                  <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+                    {formatSignedCurrency(data.dashboard.totalGain).replace("+", "")}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5">
+                <MiniTimeline points={data.dashboard.timeline} />
+              </div>
+
+              {data.dashboardHistory ? (
+                <p className="mt-4 text-sm leading-6 text-[var(--pmu-text-soft)]">
+                  Fenetre analysee: du {formatShortIsoDate(data.dashboardHistory.startIso)} au{" "}
+                  {formatShortIsoDate(data.dashboardHistory.endIso)}.
+                </p>
+              ) : null}
+            </section>
+
+            <section className="grid gap-5">
+              <section className="app-card p-5 md:p-6">
+                <div className="app-section-heading">
+                  <div>
+                    <p className="app-kicker">Lecture expert</p>
+                    <h2 className="app-section-title">Points forts et zones fragiles</h2>
                   </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      alignItems: "center",
-                      gap: 12,
-                      marginBottom: 14,
-                    }}
-                  >
-                    <label
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 8,
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: "var(--pmu-text-soft)",
-                      }}
-                    >
-                      Fenêtre historique
-                      <select
-                        value={historyWindowDays}
-                        onChange={(e) => updateHistoryWindowDays(Number(e.target.value))}
-                        style={{
-                          padding: "8px 12px",
-                          borderRadius: 12,
-                          border: `1px solid ${BORDER}`,
-                          background: "var(--pmu-surface-2)",
-                          color: DARK,
-                          fontWeight: 700,
-                          fontSize: 13,
-                          cursor: "pointer",
-                        }}
-                      >
-                        {Array.from(new Set([...BILAN_DASHBOARD_DAY_PRESETS, historyWindowDays]))
-                          .sort((a, b) => a - b)
-                          .map((d) => (
-                            <option key={d} value={d}>
-                              {d} jours
-                            </option>
-                          ))}
-                      </select>
-                    </label>
-                    {data.dashboardHistory ? (
-                      <span style={{ fontSize: 12, color: "var(--pmu-text-muted)", fontWeight: 600 }}>
-                        Du {formatIsoDateShortFr(data.dashboardHistory.startIso)} au{" "}
-                        {formatIsoDateShortFr(data.dashboardHistory.endIso)} ({data.dashboardHistory.days}{" "}
-                        j. utilisés)
-                      </span>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="app-card-muted px-4 py-4">
+                    <p className="app-label">Discipline forte</p>
+                    <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
+                      {data.expert.bestDiscipline
+                        ? disciplineLabel(data.expert.bestDiscipline.discipline)
+                        : "Aucune"}
+                    </p>
+                    {data.expert.bestDiscipline ? (
+                      <p className="mt-2 text-sm text-[var(--pmu-primary)]">
+                        {data.expert.bestDiscipline.rate}% de reussite
+                      </p>
                     ) : null}
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                    <SummaryCard
-                      label="ROI global"
-                      value={formatSignedPercent(data.dashboard.globalRoi)}
-                      tone={data.dashboard.globalRoi >= 0 ? "good" : "bad"}
-                    />
-                    <SummaryCard
-                      label="Hasard estimé"
-                      value={`${data.dashboard.randomSuccessRate.toFixed(1)}%`}
-                      tone="default"
-                    />
-                    <SummaryCard
-                      label="Réussite algo"
-                      value={`${data.dashboard.algoSuccessRate.toFixed(1)}%`}
-                      tone={data.dashboard.algoSuccessRate >= data.dashboard.randomSuccessRate ? "good" : "warn"}
-                    />
-                    <SummaryCard label="Bets historiques" value={data.dashboard.totalBets} />
-                    <SummaryCard label="Mises" value={formatSignedCurrency(data.dashboard.totalStake)} />
-                    <SummaryCard
-                      label="Gains"
-                      value={formatSignedCurrency(data.dashboard.totalGain)}
-                      tone={data.dashboard.totalGain >= data.dashboard.totalStake ? "good" : "warn"}
-                    />
+                  <div className="app-card-muted px-4 py-4">
+                    <p className="app-label">Discipline fragile</p>
+                    <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
+                      {data.expert.worstDiscipline
+                        ? disciplineLabel(data.expert.worstDiscipline.discipline)
+                        : "Aucune"}
+                    </p>
+                    {data.expert.worstDiscipline ? (
+                      <p className="mt-2 text-sm text-[var(--pmu-red)]">
+                        {data.expert.worstDiscipline.rate}% de reussite
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="app-card-muted px-4 py-4">
+                    <p className="app-label">Zone fiable</p>
+                    <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
+                      {data.expert.bestConfidenceBucket?.label ?? "Aucune"}
+                    </p>
+                  </div>
+                  <div className="app-card-muted px-4 py-4">
+                    <p className="app-label">Zone a risque</p>
+                    <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
+                      {data.expert.worstConfidenceBucket?.label ?? "Aucune"}
+                    </p>
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    background: CARD_BG,
-                    borderRadius: 24,
-                    padding: 18,
-                    border: `1px solid ${BORDER}`,
-                    boxShadow: "var(--pmu-shadow)",
-                  }}
-                >
-                  <div style={{ fontSize: 18, fontWeight: 800, color: DARK, marginBottom: 12 }}>
-                    Gains / pertes dans le temps
+                <div className="mt-5">
+                  <InsightList items={data.expert.insights} />
+                </div>
+              </section>
+
+              <section className="app-card p-5 md:p-6">
+                <div className="app-section-heading">
+                  <div>
+                    <p className="app-kicker">Lecture rapide</p>
+                    <h2 className="app-section-title">Repartition des tickets</h2>
                   </div>
-                  <MiniBarChart timeline={asArray<BilanTimelinePoint>(data.dashboard?.timeline)} />
                 </div>
 
-                <div
-                  style={{
-                    background: CARD_BG,
-                    borderRadius: 24,
-                    padding: 18,
-                    border: `1px solid ${BORDER}`,
-                    boxShadow: "var(--pmu-shadow)",
-                    display: "grid",
-                    gap: 14,
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: DARK, marginBottom: 10 }}>
-                      Meilleurs hippodromes
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {bestTracksRows.map((track) => (
-                        <div key={track.label} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 14 }}>
-                          <span style={{ color: DARK, fontWeight: 700 }}>{track.label}</span>
-                          <span style={{ color: track.roi >= 0 ? GREEN : RED, fontWeight: 800 }}>
-                            {formatSignedPercent(track.roi)} ({track.sample})
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="app-card-muted px-4 py-4">
+                    <p className="app-label">Gagnants</p>
+                    <p className="mt-2 text-2xl font-black text-[var(--pmu-primary)]">
+                      {winners.length}
+                    </p>
                   </div>
+                  <div className="app-card-muted px-4 py-4">
+                    <p className="app-label">Places</p>
+                    <p className="mt-2 text-2xl font-black text-[var(--pmu-orange)]">
+                      {places.length}
+                    </p>
+                  </div>
+                  <div className="app-card-muted px-4 py-4">
+                    <p className="app-label">Perdus</p>
+                    <p className="mt-2 text-2xl font-black text-[var(--pmu-red)]">
+                      {losses.length}
+                    </p>
+                  </div>
+                </div>
+              </section>
+            </section>
+          </section>
 
-                  <div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: DARK, marginBottom: 10 }}>
-                      Taux par type de pari
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {bestBetTypesRows.map((betType) => (
-                        <div key={betType.label} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 14 }}>
-                          <span style={{ color: DARK, fontWeight: 700 }}>{betType.label}</span>
-                          <span style={{ color: betType.roi >= 0 ? GREEN : RED, fontWeight: 800 }}>
-                            {formatSignedPercent(betType.roi)} ({betType.sample})
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: DARK, marginBottom: 10 }}>
-                      Jockeys détectés
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {bestJockeysRows.length > 0 ? bestJockeysRows.map((jockey) => (
-                        <div key={jockey.label} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 14 }}>
-                          <span style={{ color: DARK, fontWeight: 700 }}>{jockey.label}</span>
-                          <span style={{ color: jockey.roi >= 0 ? GREEN : RED, fontWeight: 800 }}>
-                            {formatSignedPercent(jockey.roi)} ({jockey.sample})
-                          </span>
-                        </div>
-                      )) : (
-                        <div style={{ color: "var(--pmu-text-muted)", fontSize: 14 }}>Pas assez de signal jockey exploitable pour cette date.</div>
-                      )}
-                    </div>
-                  </div>
+          {results.length === 0 ? (
+            <section className="app-card p-8 text-center">
+              <p className="text-xl font-black text-[var(--pmu-text)]">
+                Pas encore de resultats termines pour cette date
+              </p>
+              <p className="mt-3 text-sm leading-6 text-[var(--pmu-text-soft)]">
+                Essaie une autre journee ou reviens plus tard pour voir le bilan.
+              </p>
+            </section>
+          ) : (
+            <section className="space-y-4">
+              <div className="app-section-heading">
+                <div>
+                  <p className="app-kicker">Tickets du jour</p>
+                  <h2 className="app-section-title">Lecture complete des resultats</h2>
                 </div>
               </div>
-            ) : null}
-
-            {backtest ? (
-              <div
-                style={{
-                  margin: "0 16px 18px",
-                  background: CARD_BG,
-                  borderRadius: 24,
-                  padding: 18,
-                  border: `1px solid ${BORDER}`,
-                  boxShadow: "var(--pmu-shadow)",
-                  display: "grid",
-                  gap: 14,
-                }}
-              >
-                <div style={{ fontSize: 22, fontWeight: 800, color: GREEN_DARK }}>
-                  Backtest 90 jours
-                </div>
-                <div
-                  style={{
-                    borderRadius: 18,
-                    padding: 16,
-                    background:
-                      backtest.totalProfit >= 0
-                        ? "var(--pmu-primary-fade)"
-                        : "color-mix(in srgb, var(--pmu-red) 8%, transparent)",
-                    border: `1px solid ${
-                      backtest.totalProfit >= 0
-                        ? "color-mix(in srgb, var(--pmu-primary) 25%, transparent)"
-                        : "color-mix(in srgb, var(--pmu-red) 25%, transparent)"
-                    }`,
-                    color: backtest.totalProfit >= 0 ? GREEN : RED,
-                    fontSize: 16,
-                    lineHeight: "22px",
-                    fontWeight: 700,
-                  }}
-                >
-                  {backtest.summarySentence}
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <SummaryCard
-                    label="ROI 90j"
-                    value={formatSignedPercent(backtest.roi)}
-                    tone={backtest.roi >= 0 ? "good" : "bad"}
+              <div className="grid gap-4 xl:grid-cols-2">
+                {results.map((result, index) => (
+                  <ResultCard
+                    key={`${result.courseInfo.reunion}-${result.courseInfo.course}-${index}`}
+                    result={result}
+                    onOpen={openCourse}
                   />
-                  <SummaryCard label="Courses" value={backtest.racesAnalyzed} />
-                  <SummaryCard label="Mise totale" value={formatSignedCurrency(backtest.totalStake)} />
-                  <SummaryCard
-                    label="Profit"
-                    value={formatSignedCurrency(backtest.totalProfit)}
-                    tone={backtest.totalProfit >= 0 ? "good" : "bad"}
-                  />
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {backtestByBetTypeRows.map((betType) => (
-                    <div
-                      key={betType.betType}
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1.2fr 0.8fr 0.8fr",
-                        gap: 10,
-                        alignItems: "center",
-                        borderRadius: 16,
-                        padding: "12px 14px",
-                        background: "var(--pmu-surface-2)",
-                        border: `1px solid ${BORDER}`,
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: DARK }}>{betType.betType}</div>
-                        <div style={{ fontSize: 12, color: "var(--pmu-text-muted)" }}>
-                          {betType.betsPlaced} ticket{betType.betsPlaced > 1 ? "s" : ""} · hit {betType.hitRate}%
-                        </div>
-                      </div>
-                      <div style={{ fontSize: 13, color: DARK, fontWeight: 700 }}>
-                        Stake {betType.totalStake.toFixed(2)} EUR
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 800,
-                          color: betType.roi >= 0 ? GREEN : RED,
-                          textAlign: "right",
-                        }}
-                      >
-                        {formatSignedPercent(betType.roi)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            <div style={{ margin: "0 16px 18px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: GREEN_DARK }}>Coups gagnants</div>
-                <span
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: winners.length > 0 ? GREEN : "var(--pmu-text-muted)",
-                    background: winners.length > 0 ? "var(--pmu-primary-soft)" : "var(--pmu-surface-2)",
-                    padding: "6px 10px",
-                    borderRadius: 999,
-                  }}
-                >
-                  {winners.length} gagnant{winners.length > 1 ? "s" : ""}
-                </span>
-              </div>
-
-              {winners.length === 0 ? (
-                <div
-                  style={{
-                    background: CARD_BG,
-                    borderRadius: 20,
-                    padding: 18,
-                    color: "var(--pmu-text-muted)",
-                    border: `1px solid ${BORDER}`,
-                  }}
-                >
-                  Aucun ticket gagnant propre pour le moment. Les tickets places utiles restent visibles plus bas.
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {winners.slice(0, 3).map((result, index) => (
-                    <button
-                      key={`${result.courseInfo.reunion}-${result.courseInfo.course}-${index}`}
-                      onClick={() => openCourse(result)}
-                      style={{
-                        width: "100%",
-                        textAlign: "left",
-                        border: `1px solid ${BORDER}`,
-                        background: CARD_BG,
-                        borderRadius: 22,
-                        padding: 18,
-                        borderLeft: `5px solid ${GREEN}`,
-                        boxShadow: "var(--pmu-shadow)",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                        <div>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: GREEN, marginBottom: 8 }}>
-                            SIMPLE GAGNANT
-                          </div>
-                          <div style={{ fontSize: 20, fontWeight: 800, color: DARK, lineHeight: "24px", marginBottom: 4 }}>
-                            N{result.favori.numPmu} {result.favori.nom}
-                          </div>
-                          <div style={{ fontSize: 13, color: "var(--pmu-text-soft)", lineHeight: "18px" }}>
-                            R{result.courseInfo.reunion}C{result.courseInfo.course} - {result.courseInfo.hippodrome}
-                          </div>
-                        </div>
-                        <span
-                          style={{
-                            background: "color-mix(in srgb, var(--pmu-primary) 15%, transparent)",
-                            color: GREEN,
-                            padding: "6px 10px",
-                            borderRadius: 999,
-                            fontSize: 12,
-                            fontWeight: 800,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          1er
-                        </span>
-                      </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
-                        <span style={{ background: "var(--pmu-surface-2)", color: "var(--pmu-text-soft)", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
-                          PMU {formatOdds(result.favori.cotePmu)}
-                        </span>
-                        <span
-                          style={{
-                            background: "color-mix(in srgb, var(--pmu-accent-blue) 15%, transparent)",
-                            color: "var(--pmu-accent-blue)",
-                            padding: "6px 10px",
-                            borderRadius: 999,
-                            fontSize: 12,
-                            fontWeight: 700,
-                          }}
-                        >
-                          Cote IA {formatOdds(result.favori.coteEstimee)}
-                        </span>
-                        <span style={{ background: "var(--pmu-surface-2)", color: "var(--pmu-text-muted)", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
-                          Confiance {result.confiance}/10
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {placed.length > 0 ? (
-              <div style={{ margin: "0 16px 18px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: GOLD }}>Places utiles</div>
-                  <span
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 700,
-                      color: GOLD,
-                      background: "color-mix(in srgb, var(--pmu-orange) 12%, transparent)",
-                      padding: "6px 10px",
-                      borderRadius: 999,
-                    }}
-                  >
-                    {placed.length} place{placed.length > 1 ? "s" : ""}
-                  </span>
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {placed.slice(0, 3).map((result, index) => (
-                    <button
-                      key={`${result.courseInfo.reunion}-${result.courseInfo.course}-place-${index}`}
-                      onClick={() => openCourse(result)}
-                      style={{
-                        width: "100%",
-                        textAlign: "left",
-                        border: `1px solid ${BORDER}`,
-                        background: CARD_BG,
-                        borderRadius: 22,
-                        padding: 18,
-                        borderLeft: `5px solid ${GOLD}`,
-                        boxShadow: "var(--pmu-shadow)",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                        <div>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: GOLD, marginBottom: 8 }}>
-                            TICKET PLACE
-                          </div>
-                          <div style={{ fontSize: 20, fontWeight: 800, color: DARK, lineHeight: "24px", marginBottom: 4 }}>
-                            N{result.favori.numPmu} {result.favori.nom}
-                          </div>
-                          <div style={{ fontSize: 13, color: "var(--pmu-text-soft)", lineHeight: "18px" }}>
-                            R{result.courseInfo.reunion}C{result.courseInfo.course} - {result.courseInfo.hippodrome}
-                          </div>
-                        </div>
-                        <span
-                          style={{
-                            background: "color-mix(in srgb, var(--pmu-orange) 15%, transparent)",
-                            color: GOLD,
-                            padding: "6px 10px",
-                            borderRadius: 999,
-                            fontSize: 12,
-                            fontWeight: 800,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          Place
-                        </span>
-                      </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
-                        <span style={{ background: "var(--pmu-surface-2)", color: "var(--pmu-text-soft)", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
-                          PMU {formatOdds(result.favori.cotePmu)}
-                        </span>
-                        <span
-                          style={{
-                            background: "color-mix(in srgb, var(--pmu-accent-blue) 15%, transparent)",
-                            color: "var(--pmu-accent-blue)",
-                            padding: "6px 10px",
-                            borderRadius: 999,
-                            fontSize: 12,
-                            fontWeight: 700,
-                          }}
-                        >
-                          Cote IA {formatOdds(result.favori.coteEstimee)}
-                        </span>
-                        <span style={{ background: "var(--pmu-surface-2)", color: "var(--pmu-text-muted)", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
-                          Confiance {result.confiance}/10
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            <div
-              style={{
-                margin: "0 16px 18px",
-                background: CARD_BG,
-                borderRadius: 20,
-                padding: 18,
-                boxShadow: "var(--pmu-shadow)",
-              }}
-            >
-              <div style={{ fontSize: 18, fontWeight: 800, color: DARK, marginBottom: 12 }}>Bilan expert</div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-                <div
-                  style={{
-                    borderRadius: 16,
-                    background: "var(--pmu-primary-fade)",
-                    border: "1px solid color-mix(in srgb, var(--pmu-primary) 20%, transparent)",
-                    padding: 14,
-                  }}
-                >
-                  <div style={{ fontSize: 11, color: "var(--pmu-text-muted)", textTransform: "uppercase", marginBottom: 6 }}>Discipline forte</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: DARK }}>
-                    {data.expert.bestDiscipline ? disciplineLabel(data.expert.bestDiscipline.discipline) : "Aucune"}
-                  </div>
-                  {data.expert.bestDiscipline && (
-                    <div style={{ fontSize: 12, color: GREEN, marginTop: 4 }}>
-                      {data.expert.bestDiscipline.rate}% de réussite
-                    </div>
-                  )}
-                </div>
-
-                <div
-                  style={{
-                    borderRadius: 16,
-                    background: "color-mix(in srgb, var(--pmu-red) 6%, transparent)",
-                    border: "1px solid color-mix(in srgb, var(--pmu-red) 20%, transparent)",
-                    padding: 14,
-                  }}
-                >
-                  <div style={{ fontSize: 11, color: "var(--pmu-text-muted)", textTransform: "uppercase", marginBottom: 6 }}>Discipline fragile</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: DARK }}>
-                    {data.expert.worstDiscipline ? disciplineLabel(data.expert.worstDiscipline.discipline) : "Aucune"}
-                  </div>
-                  {data.expert.worstDiscipline && (
-                    <div style={{ fontSize: 12, color: RED, marginTop: 4 }}>
-                      {data.expert.worstDiscipline.rate}% de réussite
-                    </div>
-                  )}
-                </div>
-
-                <div
-                  style={{
-                    borderRadius: 16,
-                    background: "var(--pmu-primary-fade)",
-                    border: "1px solid color-mix(in srgb, var(--pmu-primary) 20%, transparent)",
-                    padding: 14,
-                  }}
-                >
-                  <div style={{ fontSize: 11, color: "var(--pmu-text-muted)", textTransform: "uppercase", marginBottom: 6 }}>Zone fiable</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: DARK }}>
-                    {data.expert.bestConfidenceBucket?.label ?? "Aucune"}
-                  </div>
-                  {data.expert.bestConfidenceBucket && (
-                    <div style={{ fontSize: 12, color: GREEN, marginTop: 4 }}>
-                      {data.expert.bestConfidenceBucket.rate}% de réussite
-                    </div>
-                  )}
-                </div>
-
-                <div
-                  style={{
-                    borderRadius: 16,
-                    background: "color-mix(in srgb, var(--pmu-red) 6%, transparent)",
-                    border: "1px solid color-mix(in srgb, var(--pmu-red) 20%, transparent)",
-                    padding: 14,
-                  }}
-                >
-                  <div style={{ fontSize: 11, color: "var(--pmu-text-muted)", textTransform: "uppercase", marginBottom: 6 }}>Zone à risque</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: DARK }}>
-                    {data.expert.worstConfidenceBucket?.label ?? "Aucune"}
-                  </div>
-                  {data.expert.worstConfidenceBucket && (
-                    <div style={{ fontSize: 12, color: RED, marginTop: 4 }}>
-                      {data.expert.worstConfidenceBucket.rate}% de réussite
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {expertInsights.map((insight, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      borderRadius: 14,
-                      background: "var(--pmu-surface-2)",
-                      border: `1px solid ${BORDER}`,
-                      padding: "12px 14px",
-                      fontSize: 13,
-                      lineHeight: "18px",
-                      color: "var(--pmu-text-muted)",
-                    }}
-                  >
-                    {insight}
-                  </div>
                 ))}
               </div>
-            </div>
-
-            <div style={{ padding: "0 16px", marginBottom: 8 }}>
-              <div style={{ fontSize: 22, fontWeight: 800, color: DARK, marginBottom: 10 }}>
-                Lecture complète des tickets
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                <span
-                  style={{
-                    background: "color-mix(in srgb, var(--pmu-primary) 15%, transparent)",
-                    color: GREEN,
-                    padding: "6px 10px",
-                    borderRadius: 999,
-                    fontSize: 12,
-                    fontWeight: 700,
-                  }}
-                >
-                  Gagnants: {winners.length}
-                </span>
-                <span
-                  style={{
-                    background: "color-mix(in srgb, var(--pmu-orange) 15%, transparent)",
-                    color: GOLD,
-                    padding: "6px 10px",
-                    borderRadius: 999,
-                    fontSize: 12,
-                    fontWeight: 700,
-                  }}
-                >
-                  Places: {placed.length}
-                </span>
-                <span
-                  style={{
-                    background: "color-mix(in srgb, var(--pmu-red) 15%, transparent)",
-                    color: RED,
-                    padding: "6px 10px",
-                    borderRadius: 999,
-                    fontSize: 12,
-                    fontWeight: 700,
-                  }}
-                >
-                  Perdus: {misses.length}
-                </span>
-                <span style={{ background: "var(--pmu-surface-2)", color: "var(--pmu-text-muted)", padding: "6px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700 }}>
-                  Courses finies: {resultsList.length}
-                </span>
-              </div>
-            </div>
-
-            {resultsList.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px 24px", color: "var(--pmu-text-soft)" }}>
-                Pas encore de résultats terminés pour cette date.
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: "0 16px" }}>
-                {resultsList.map((result, index) => {
-                  const tone = getResultStyle(result.resultat);
-                  const confianceTone = getConfianceStyle(result.confiance);
-
-                  return (
-                    <button
-                      key={`${result.courseInfo.reunion}-${result.courseInfo.course}-${index}`}
-                      onClick={() => openCourse(result)}
-                      style={{
-                        width: "100%",
-                        textAlign: "left",
-                        border: `1px solid ${BORDER}`,
-                        background: CARD_BG,
-                        borderRadius: 22,
-                        padding: 18,
-                        borderLeft: `5px solid ${tone.border}`,
-                        boxShadow: "var(--pmu-shadow)",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start", marginBottom: 10 }}>
-                        <div>
-                          <div style={{ fontSize: 13, color: "var(--pmu-text-soft)", marginBottom: 4 }}>
-                            R{result.courseInfo.reunion}C{result.courseInfo.course} - {result.courseInfo.hippodrome}
-                          </div>
-                          <div style={{ fontSize: 18, fontWeight: 800, color: DARK, lineHeight: "22px" }}>
-                            {result.courseInfo.nomCourse}
-                          </div>
-                        </div>
-                        <span style={{ fontSize: 13, color: "var(--pmu-text-muted)", whiteSpace: "nowrap" }}>{formatTime(result.courseInfo.heureDepart)}</span>
-                      </div>
-
-                      <div style={{ fontSize: 24, fontWeight: 800, color: DARK, marginBottom: 6 }}>
-                        N{result.favori.numPmu} {result.favori.nom}
-                      </div>
-
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
-                        <span
-                          style={{
-                            background: tone.badge,
-                            color: tone.badgeText,
-                            padding: "6px 10px",
-                            borderRadius: 999,
-                            fontSize: 12,
-                            fontWeight: 800,
-                          }}
-                        >
-                          {resultLabel(result.resultat)}
-                        </span>
-                        <span
-                          style={{
-                            background: confianceTone.background,
-                            color: confianceTone.color,
-                            padding: "6px 10px",
-                            borderRadius: 999,
-                            fontSize: 12,
-                            fontWeight: 800,
-                          }}
-                        >
-                          Confiance {result.confiance}/10
-                        </span>
-                        {result.ordreArrivee && (
-                          <span
-                            style={{
-                              background: "var(--pmu-surface-2)",
-                              color: "var(--pmu-text-soft)",
-                              padding: "6px 10px",
-                              borderRadius: 999,
-                              fontSize: 12,
-                              fontWeight: 800,
-                            }}
-                          >
-                            Arrivee {result.ordreArrivee}e
-                          </span>
-                        )}
-                      </div>
-
-                      <div style={{ fontSize: 13, color: "var(--pmu-text-soft)", lineHeight: "18px", marginBottom: 12 }}>
-                        {result.recommandation}
-                      </div>
-
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                        <div style={{ background: tone.soft, borderRadius: 14, padding: 12 }}>
-                          <div style={{ fontSize: 11, color: "var(--pmu-text-muted)", marginBottom: 4 }}>Cote PMU</div>
-                          <div style={{ fontSize: 18, fontWeight: 800, color: DARK }}>{formatOdds(result.favori.cotePmu)}</div>
-                        </div>
-                        <div
-                          style={{
-                            background: "color-mix(in srgb, var(--pmu-accent-blue) 12%, transparent)",
-                            borderRadius: 14,
-                            padding: 12,
-                          }}
-                        >
-                          <div style={{ fontSize: 11, color: "var(--pmu-text-muted)", marginBottom: 4 }}>Cote IA</div>
-                          <div style={{ fontSize: 18, fontWeight: 800, color: "var(--pmu-accent-blue)" }}>
-                            {formatOdds(result.favori.coteEstimee)}
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {showBottomNav ? (
-        <div
-          style={{
-            position: "fixed",
-            bottom: 0,
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "100%",
-            maxWidth: 1180,
-            background: "color-mix(in srgb, var(--pmu-bg) 95%, transparent)",
-            backdropFilter: "blur(18px)",
-            borderTop: `1px solid ${BORDER}`,
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr",
-            zIndex: 200,
-          }}
-        >
-          {[
-            { label: "Courses", active: false, href: `/?date=${selectedDate}` },
-            { label: "Mes Paris", active: false, href: "/mes-paris" },
-            { label: "Bilan", active: true, href: `/bilan?date=${selectedDate}` },
-          ].map((item) => (
-            <button
-              key={item.label}
-              onClick={() => !item.active && router.push(item.href)}
-              style={{
-                border: "none",
-                background: "transparent",
-                padding: "14px 10px 16px",
-                fontWeight: item.active ? 900 : 700,
-                color: item.active ? GREEN : "var(--pmu-text-muted)",
-                cursor: item.active ? "default" : "pointer",
-              }}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
+            </section>
+          )}
+        </>
       ) : null}
     </div>
   );
@@ -1570,7 +767,9 @@ function BilanPageContent() {
 
 export default function BilanPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: "var(--pmu-bg)" }} />}>
+    <Suspense
+      fallback={<div className="min-h-[60vh] w-full rounded-[2rem] bg-transparent" />}
+    >
       <BilanPageContent />
     </Suspense>
   );
