@@ -318,6 +318,46 @@ function getWindowLabel(stage: ScoreStage | undefined, minutesUntilStart: number
   return "Programme du jour";
 }
 
+function buildSelectionCopy({
+  score,
+  scoreSummary,
+  isCurrentCourse,
+  minutesUntilStart,
+}: {
+  score: RaceScore;
+  scoreSummary: ReturnType<typeof computeClientRaceScore> | null;
+  isCurrentCourse: boolean;
+  minutesUntilStart: number | null;
+}) {
+  if (isCurrentCourse) {
+    return "Le detail complet est deja ouvert dans cette page.";
+  }
+
+  const topFacteurs = score?.pick?.topFacteurs?.filter(Boolean).slice(0, 2) ?? [];
+  if (topFacteurs.length > 0) {
+    return topFacteurs.join(" - ");
+  }
+
+  const factors = scoreSummary?.factors?.filter(Boolean).slice(0, 2) ?? [];
+  if (factors.length > 0) {
+    return factors.join(" - ");
+  }
+
+  if (score?.recommendation) {
+    return score.recommendation;
+  }
+
+  if (score?.scoreLocked) {
+    return "Le ticket detaille reste reserve a l'acces premium.";
+  }
+
+  if ((minutesUntilStart ?? 999) > 120) {
+    return "Le bloc se renforce a l'approche du depart.";
+  }
+
+  return "Analyse en consolidation.";
+}
+
 function QuinteSkeleton() {
   return (
     <section className="overflow-hidden rounded-[1.65rem] border border-[var(--pmu-border)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--pmu-surface-highlight)_34%,var(--pmu-surface))_0%,color-mix(in_srgb,var(--pmu-surface)_92%,transparent)_100%)] p-4">
@@ -532,13 +572,12 @@ export function SidebarQuinteCard() {
         : (minutesUntilStart ?? 999) > 120
           ? "Pronostic detaille a l'approche de la course"
           : "Analyse en consolidation";
-  const selectionCopy =
-    score?.pick?.topFacteurs?.slice(0, 2).join(" - ") ||
-    scoreSummary?.radarSentence ||
-    score?.recommendation ||
-    (score?.scoreLocked
-      ? "Le bloc Quinte du jour est repere, mais le ticket detaille reste reserve aux comptes premium."
-      : "Le bloc se complete quand la course entre dans la fenetre d'analyse.");
+  const selectionCopy = buildSelectionCopy({
+    score,
+    scoreSummary,
+    isCurrentCourse,
+    minutesUntilStart,
+  });
   const ticketLine =
     raceProfile?.ticketNums && raceProfile.ticketNums.length > 1
       ? raceProfile.ticketNums.join(" - ")
@@ -662,23 +701,13 @@ export function SidebarQuinteCard() {
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <div className="rounded-[1.05rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] px-3 py-2.5">
-              <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-[var(--pmu-text-muted)]">
-                Lecture
-              </p>
-              <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">
-                {windowLabel}
-              </p>
-            </div>
-            <div className="rounded-[1.05rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] px-3 py-2.5">
-              <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-[var(--pmu-text-muted)]">
-                Route
-              </p>
-              <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">
-                {isCurrentCourse ? "Ouverte" : "A ouvrir"}
-              </p>
-            </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
+              {windowLabel}
+            </span>
+            <span className="rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--pmu-text-soft)]">
+              {isCurrentCourse ? "Course ouverte" : "Acces rapide"}
+            </span>
           </div>
 
           <div className="mt-4 flex gap-2">

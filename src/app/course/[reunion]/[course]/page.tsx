@@ -124,12 +124,14 @@ function formatMinutesLabel(value?: number | null) {
     return "Horaire PMU";
   }
 
-  if (value <= -10) return "Course reglee";
-  if (value <= 0) return "Depart imminent";
-  if (value < 60) return `${value} min`;
+  const roundedMinutes = Math.round(value);
 
-  const hours = Math.floor(value / 60);
-  const minutes = value % 60;
+  if (roundedMinutes <= -10) return "Course reglee";
+  if (roundedMinutes <= 0) return "Depart imminent";
+  if (roundedMinutes < 60) return `${roundedMinutes} min`;
+
+  const hours = Math.floor(roundedMinutes / 60);
+  const minutes = roundedMinutes % 60;
   return minutes === 0 ? `${hours} h` : `${hours} h ${minutes}`;
 }
 
