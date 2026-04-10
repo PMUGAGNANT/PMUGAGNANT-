@@ -395,17 +395,17 @@ function PageContent() {
         </section>
       )}
 
-      <section className="app-card p-5 md:p-6">
-        <div className="grid gap-5 xl:grid-cols-[1.1fr,0.9fr] xl:items-start">
-          <div className="space-y-4">
+      <section className="app-card p-4 md:p-5">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+          <div className="space-y-3">
             <div>
-              <p className="app-kicker">Barre de commande</p>
+              <p className="app-kicker">Pilotage du jour</p>
               <h2 className="mt-2 text-2xl font-black capitalize tracking-tight text-[var(--pmu-text)] md:text-3xl">
                 {formatDisplayDate(selectedDate)}
               </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--pmu-text-soft)]">
-                Une seule chose a faire ici : choisir la journee, regler le tri et
-                laisser le focus du dessus pousser la bonne course.
+              <p className="mt-2 max-w-2xl text-sm leading-7 text-[var(--pmu-text-soft)]">
+                Choisir la journee, regler le tri puis laisser le board remonter
+                les courses utiles sans multiplier les blocs.
               </p>
             </div>
 
@@ -432,60 +432,58 @@ function PageContent() {
                 Jour suivant
               </button>
             </div>
-
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,14rem),1fr] lg:items-center">
-              <label className="block">
-                <span className="sr-only">Choisir une date</span>
-                <input
-                  type="date"
-                  className="app-input"
-                  value={toIsoDate(selectedDate)}
-                  onChange={(event) =>
-                    setSelectedDate(
-                      normalizeDateParam(event.target.value.replaceAll("-", ""))
-                    )
-                  }
-                />
-              </label>
-
-              <div className="border-t border-[var(--pmu-border)] pt-4 lg:border-t-0 lg:pt-0">
-                <FilterPills
-                  options={SORT_OPTIONS}
-                  value={sortMode}
-                  onChange={setSortMode}
-                />
-              </div>
-            </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="app-card-muted px-4 py-4">
-              <p className="app-label">Programme</p>
-              <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
-                {races.length}
-              </p>
-            </div>
-            <div className="app-card-muted px-4 py-4">
-              <p className="app-label">Jouables</p>
-              <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
-                {summaryStats.playable}
-              </p>
-            </div>
-            <div className="app-card-muted px-4 py-4">
-              <p className="app-label">Tri actif</p>
-              <p className="mt-2 text-sm font-black text-[var(--pmu-text)]">
-                {SORT_OPTIONS.find((option) => option.value === sortMode)?.label ??
-                  "Par heure"}
-              </p>
-            </div>
-            <div className="app-card-muted px-4 py-4">
-              <p className="app-label">Focus</p>
-              <p className="mt-2 text-sm font-black text-[var(--pmu-text)]">
-                {focusRace
-                  ? `R${focusRace.race.reunion}C${focusRace.race.course}`
-                  : "Programme complet"}
-              </p>
-            </div>
+          <div className="flex w-full max-w-[44rem] flex-col gap-3">
+            <label className="block">
+              <span className="sr-only">Choisir une date</span>
+              <input
+                type="date"
+                className="app-input"
+                value={toIsoDate(selectedDate)}
+                onChange={(event) =>
+                  setSelectedDate(
+                    normalizeDateParam(event.target.value.replaceAll("-", ""))
+                  )
+                }
+              />
+            </label>
+
+            <FilterPills
+              options={SORT_OPTIONS}
+              value={sortMode}
+              onChange={setSortMode}
+            />
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="app-card-muted px-4 py-4">
+            <p className="app-label">Programme</p>
+            <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+              {races.length}
+            </p>
+          </div>
+          <div className="app-card-muted px-4 py-4">
+            <p className="app-label">Jouables</p>
+            <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+              {summaryStats.playable}
+            </p>
+          </div>
+          <div className="app-card-muted px-4 py-4">
+            <p className="app-label">Tri actif</p>
+            <p className="mt-2 text-sm font-black text-[var(--pmu-text)]">
+              {SORT_OPTIONS.find((option) => option.value === sortMode)?.label ??
+                "Par heure"}
+            </p>
+          </div>
+          <div className="app-card-muted px-4 py-4">
+            <p className="app-label">Focus</p>
+            <p className="mt-2 text-sm font-black text-[var(--pmu-text)]">
+              {focusRace
+                ? `R${focusRace.race.reunion}C${focusRace.race.course}`
+                : "Programme complet"}
+            </p>
           </div>
         </div>
       </section>
