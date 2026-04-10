@@ -56,21 +56,21 @@ export function LiveStatsBanner() {
         : "neutral";
 
   return (
-    <div className="sticky top-0 z-[100] px-3 pt-3 lg:pl-[22.25rem] lg:pr-5">
+    <div className="sticky top-2 z-[100] px-3 pt-2 lg:pl-[22.25rem] lg:pr-5">
       <div
         className="overflow-x-auto overflow-y-hidden rounded-[1.35rem] border border-[var(--pmu-border)]"
         style={{
           background:
-            "linear-gradient(180deg,color-mix(in_srgb,var(--pmu-surface)_88%,transparent)_0%,color-mix(in_srgb,var(--pmu-bg)_92%,transparent)_100%)",
-          backdropFilter: "blur(18px)",
-          boxShadow: "var(--pmu-shadow-sm)",
+            "linear-gradient(180deg,color-mix(in_srgb,var(--pmu-surface)_92%,transparent)_0%,color-mix(in_srgb,var(--pmu-bg)_95%,transparent)_100%)",
+          backdropFilter: "blur(12px)",
+          boxShadow: "0 12px 26px rgba(15, 23, 42, 0.07)",
         }}
       >
         <div
-          className="mx-auto flex h-12 min-w-max max-w-6xl items-center gap-2.5 px-4 text-[12px]"
+          className="mx-auto flex h-10 min-w-max max-w-6xl items-center gap-2 px-3.5 text-[11px]"
           aria-live="polite"
         >
-          <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-[color-mix(in_srgb,var(--pmu-red)_28%,transparent)] bg-[color-mix(in_srgb,var(--pmu-red)_10%,transparent)] px-2.5 py-1 font-black uppercase tracking-[0.16em] text-[10px] text-[var(--pmu-text)]">
+          <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-[color-mix(in_srgb,var(--pmu-red)_28%,transparent)] bg-[color-mix(in_srgb,var(--pmu-red)_10%,transparent)] px-2.5 py-1 font-black uppercase tracking-[0.16em] text-[9px] text-[var(--pmu-text)]">
             <span className="relative flex h-2 w-2">
               <span className="absolute inset-0 rounded-full bg-[var(--pmu-red)] opacity-70 motion-safe:animate-ping" />
               <span className="relative h-2 w-2 rounded-full bg-[var(--pmu-red)]" />

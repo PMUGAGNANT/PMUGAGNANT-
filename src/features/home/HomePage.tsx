@@ -77,33 +77,32 @@ function HomeControlBar({
 }) {
   return (
     <section className="app-card p-4 md:p-5">
-      <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-        <div className="space-y-3">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div className="space-y-2">
           <div>
             <p className="app-kicker">Poste de decision</p>
-            <h1 className="mt-2 text-3xl font-black capitalize tracking-tight text-[var(--pmu-text)] md:text-4xl">
+            <h1 className="mt-1 text-[2rem] font-black capitalize tracking-tight text-[var(--pmu-text)] md:text-[2.5rem]">
               {formatDisplayDate(selectedDate)}
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-7 text-[var(--pmu-text-soft)]">
-              Une seule mission ici : choisir la journee, laisser le moteur
-              designer une course focus, puis ouvrir le meilleur spot sans bruit.
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--pmu-text-soft)]">
+              Le desk pousse une course a ouvrir, puis garde le reste range par niveau d&apos;action.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={onPrevDay} className="app-button-secondary">
+            <button type="button" onClick={onPrevDay} className="app-button-secondary !px-4 !py-3">
               Jour precedent
             </button>
-            <button type="button" onClick={onToday} className="app-button-secondary">
+            <button type="button" onClick={onToday} className="app-button-secondary !px-4 !py-3">
               Aujourd&apos;hui
             </button>
-            <button type="button" onClick={onNextDay} className="app-button-secondary">
+            <button type="button" onClick={onNextDay} className="app-button-secondary !px-4 !py-3">
               Jour suivant
             </button>
           </div>
         </div>
 
-        <div className="flex w-full max-w-[44rem] flex-col gap-3">
+        <div className="flex w-full max-w-[40rem] flex-col gap-3">
           <label className="block">
             <span className="sr-only">Choisir une date</span>
             <input
@@ -121,27 +120,27 @@ function HomeControlBar({
       </div>
 
       <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <div className="app-card-muted px-4 py-4">
+        <div className="app-card-muted px-4 py-3.5">
           <p className="app-label">Programme</p>
-          <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+          <p className="mt-1 text-2xl font-black text-[var(--pmu-text)]">
             {stats.total}
           </p>
         </div>
-        <div className="app-card-muted px-4 py-4">
+        <div className="app-card-muted px-4 py-3.5">
           <p className="app-label">Jouables</p>
-          <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+          <p className="mt-1 text-2xl font-black text-[var(--pmu-text)]">
             {stats.playable}
           </p>
         </div>
-        <div className="app-card-muted px-4 py-4">
+        <div className="app-card-muted px-4 py-3.5">
           <p className="app-label">Reunions</p>
-          <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+          <p className="mt-1 text-2xl font-black text-[var(--pmu-text)]">
             {stats.meetings}
           </p>
         </div>
-        <div className="app-card-muted px-4 py-4">
+        <div className="app-card-muted px-4 py-3.5">
           <p className="app-label">Focus</p>
-          <p className="mt-2 text-sm font-black text-[var(--pmu-text)]">
+          <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">
             {focusRace
               ? `R${focusRace.race.reunion}C${focusRace.race.course}`
               : "Aucune course"}
@@ -226,247 +225,225 @@ function HomeFocusPanel({
     null;
 
   return (
-    <section className="grid gap-5 xl:grid-cols-[0.37fr,0.63fr] xl:items-start">
-      <aside className="app-card p-5 md:p-6 xl:sticky xl:top-6">
-        <div className="flex items-start justify-between gap-3">
-          <div>
+    <section className="app-card p-5 md:p-6">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
             <p className="app-kicker">Course a ouvrir</p>
-            <p className="mt-2 text-3xl font-black text-[var(--pmu-text)]">
-              R{focusRace.race.reunion}C{focusRace.race.course}
-            </p>
+            <span className="app-pill text-[11px]">{focusLisibilite.toLowerCase()}</span>
+            {focusPriority ? (
+              <span
+                className="rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em]"
+                style={{
+                  color: getPriorityToneColor(focusPriority.tone),
+                  borderColor: `color-mix(in srgb, ${getPriorityToneColor(
+                    focusPriority.tone
+                  )} 24%, transparent)`,
+                  background: `color-mix(in srgb, ${getPriorityToneColor(
+                    focusPriority.tone
+                  )} 10%, var(--pmu-surface))`,
+                }}
+              >
+                {focusPriority.label}
+              </span>
+            ) : null}
           </div>
-          <span className="app-pill text-[11px]">{focusLisibilite.toLowerCase()}</span>
+          <p className="mt-2 text-[1.9rem] font-black text-[var(--pmu-text)] md:text-[2.35rem]">
+            R{focusRace.race.reunion}C{focusRace.race.course}
+          </p>
+          <h2 className="mt-2 max-w-4xl text-[2.4rem] font-black leading-[0.94] text-[var(--pmu-text)] md:text-[3.1rem]">
+            {focusRace.race.nomCourse}
+          </h2>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--pmu-text-soft)]">
+            {focusRace.hint}
+          </p>
         </div>
 
-        <h2 className="mt-5 text-[2rem] font-black leading-[0.94] text-[var(--pmu-text)]">
-          {focusRace.race.nomCourse}
-        </h2>
-        <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">
-          {focusRace.hint}
-        </p>
-
-        <div className="mt-5 rounded-[1.45rem] border border-[color-mix(in_srgb,var(--pmu-primary)_20%,transparent)] bg-[linear-gradient(180deg,var(--pmu-primary-fade)_0%,color-mix(in_srgb,var(--pmu-surface)_94%,transparent)_100%)] px-4 py-4">
-          <p className="app-label">Radar</p>
-          <div className="mt-2 flex items-end justify-between gap-3">
-            <p className="text-4xl font-black text-[var(--pmu-primary)]">
-              {focusRace.scoreValue.toFixed(1)}/10
-            </p>
-            <p className="text-right text-xs uppercase tracking-[0.14em] text-[var(--pmu-text-muted)]">
-              {focusConfidence != null && Number.isFinite(focusConfidence)
-                ? `Confiance ${focusConfidence.toFixed(1)}/10`
-                : "Lecture active"}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-          <div className="app-card-muted px-4 py-4">
-            <p className="app-label">Fenetre</p>
-            <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
-              {focusMinutes}
-            </p>
-          </div>
-          <div className="app-card-muted px-4 py-4">
-            <p className="app-label">Ticket</p>
-            <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
-              {focusPickTitle}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-5 flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2">
+          <span className="app-pill text-xs">{formatRelativeDay(focusRace.race.dateStr)}</span>
+          <span className="app-pill text-xs">
+            {SORT_OPTIONS.find((option) => option.value === sortMode)?.label ?? "Par heure"}
+          </span>
           <span className="app-pill text-xs">{focusRace.race.hippodrome}</span>
           <span className="app-pill text-xs">{focusRace.race.heureDepart}</span>
-          <span className="app-pill text-xs">{formatCourseMeta(focusRace.race)}</span>
           <span className="app-pill text-xs">{focusBetType}</span>
-          {focusPriority ? (
-            <span
-              className="rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em]"
-              style={{
-                color: getPriorityToneColor(focusPriority.tone),
-                borderColor: `color-mix(in srgb, ${getPriorityToneColor(
-                  focusPriority.tone
-                )} 24%, transparent)`,
-                background: `color-mix(in srgb, ${getPriorityToneColor(
-                  focusPriority.tone
-                )} 10%, var(--pmu-surface))`,
-              }}
-            >
-              {focusPriority.label} - {focusPriority.detail}
-            </span>
-          ) : null}
         </div>
+      </div>
 
-        <div className="mt-5 flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => onOpenRace(focusRace.race)}
-            className="app-button-primary w-full"
-          >
-            Ouvrir la course
-          </button>
-          {focusDetail?.paywall?.required ? (
-            <button
-              type="button"
-              onClick={onOpenPremium}
-              className="app-button-secondary w-full"
-            >
-              Debloquer le ticket
-            </button>
-          ) : null}
-        </div>
-      </aside>
-
-      <section className="app-card p-6 md:p-7">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div>
-            <p className="app-kicker">Pourquoi maintenant</p>
-            <h3 className="mt-2 text-[2.2rem] font-black leading-[0.95] text-[var(--pmu-text)] md:text-[3rem]">
-              Le ticket et les partants utiles dans le meme cadre
-            </h3>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <span className="app-pill text-xs">
-              {formatRelativeDay(focusRace.race.dateStr)}
-            </span>
-            <span className="app-pill text-xs">
-              {SORT_OPTIONS.find((option) => option.value === sortMode)?.label ?? "Par heure"}
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-6 grid gap-5 xl:grid-cols-[0.94fr,1.06fr]">
-          <section className="rounded-[1.45rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="app-label">Ticket principal</p>
-                <h4 className="mt-2 text-3xl font-black leading-[0.96] text-[var(--pmu-text)]">
-                  {focusPickTitle}
-                </h4>
-              </div>
-              <span className="rounded-full border border-[color-mix(in_srgb,var(--pmu-primary)_26%,transparent)] bg-[var(--pmu-primary-fade)] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-[var(--pmu-primary)]">
-                {focusBetType}
-              </span>
-            </div>
-
-            <p className="mt-4 text-sm leading-7 text-[var(--pmu-text-soft)]">
-              Le moteur pousse une seule course ici pour eviter les doublons et
-              garder la meilleure lecture ouverte.
-            </p>
-
-            <div className="mt-5 grid gap-3 sm:grid-cols-3">
-              <div className="app-card-muted px-4 py-4">
-                <p className="app-label">Score</p>
-                <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+      <div className="mt-6 grid gap-4 xl:grid-cols-[1.1fr,0.9fr]">
+        <section className="rounded-[1.35rem] border border-[color-mix(in_srgb,var(--pmu-primary)_16%,transparent)] bg-[linear-gradient(180deg,var(--pmu-primary-fade)_0%,color-mix(in_srgb,var(--pmu-surface)_96%,transparent)_100%)] p-5">
+          <div className="grid gap-3 md:grid-cols-4">
+            <div className="app-card-muted px-4 py-3.5 md:col-span-1">
+              <p className="app-label">Radar</p>
+              <div className="mt-1 flex items-end justify-between gap-3">
+                <p className="text-3xl font-black text-[var(--pmu-primary)] md:text-4xl">
                   {focusRace.scoreValue.toFixed(1)}/10
                 </p>
               </div>
-              <div className="app-card-muted px-4 py-4">
-                <p className="app-label">Cote repere</p>
-                <p className="mt-2 text-sm font-black text-[var(--pmu-text)]">
-                  {selectedParticipant
-                    ? `Cote ${formatOddsLabel(selectedParticipant.cote)}`
-                    : "Lecture PMU"}
-                </p>
-              </div>
-              <div className="app-card-muted px-4 py-4">
-                <p className="app-label">Actives</p>
-                <p className="mt-2 text-sm font-black text-[var(--pmu-text)]">
-                  {stats.active} courses
-                </p>
-              </div>
             </div>
-
-            <div className="mt-5 flex flex-wrap gap-2">
-              {(focusFactors.length > 0
-                ? focusFactors
-                : [
-                    focusRace.race.estQuinte ? "Course Quinte" : "Course cible",
-                    `${focusRace.race.nombrePartants} partants`,
-                    focusMinutes,
-                  ]
-              ).map((factor) => (
-                <span key={factor} className="app-pill text-xs">
-                  {factor}
-                </span>
-              ))}
+            <div className="app-card-muted px-4 py-3.5">
+              <p className="app-label">Fenetre</p>
+              <p className="mt-1 text-base font-black text-[var(--pmu-text)]">{focusMinutes}</p>
             </div>
-          </section>
+            <div className="app-card-muted px-4 py-3.5">
+              <p className="app-label">Ticket</p>
+              <p className="mt-1 text-base font-black text-[var(--pmu-text)]">{focusPickTitle}</p>
+            </div>
+            <div className="app-card-muted px-4 py-3.5">
+              <p className="app-label">Confiance</p>
+              <p className="mt-1 text-base font-black text-[var(--pmu-text)]">
+                {focusConfidence != null && Number.isFinite(focusConfidence)
+                  ? `${focusConfidence.toFixed(1)}/10`
+                  : "Lecture active"}
+              </p>
+            </div>
+          </div>
 
-          <section className="rounded-[1.45rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="app-label">Partants utiles</p>
-                <h4 className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
-                  Les chevaux a garder a l ecran
-                </h4>
-              </div>
-              <span className="app-pill text-xs">
-                {focusParticipants.length > 0
-                  ? `${focusParticipants.length} lignes`
-                  : isFocusLoading
-                    ? "Chargement"
-                    : "Liste PMU"}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="app-pill text-xs">{formatCourseMeta(focusRace.race)}</span>
+            {(focusFactors.length > 0
+              ? focusFactors
+              : [
+                  focusRace.race.estQuinte ? "Course Quinte" : "Course cible",
+                  `${focusRace.race.nombrePartants} partants`,
+                  "Lecture moteur",
+                ]
+            ).map((factor) => (
+              <span key={factor} className="app-pill text-xs">
+                {factor}
               </span>
+            ))}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => onOpenRace(focusRace.race)}
+              className="app-button-primary min-w-[14rem]"
+            >
+              Ouvrir la course
+            </button>
+            {focusDetail?.paywall?.required ? (
+              <button
+                type="button"
+                onClick={onOpenPremium}
+                className="app-button-secondary min-w-[14rem]"
+              >
+                Debloquer le ticket
+              </button>
+            ) : null}
+          </div>
+        </section>
+
+        <section className="rounded-[1.35rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="app-label">Ticket principal</p>
+              <h3 className="mt-1 text-[1.9rem] font-black leading-[0.98] text-[var(--pmu-text)]">
+                {focusPickTitle}
+              </h3>
             </div>
+            <span className="rounded-full border border-[color-mix(in_srgb,var(--pmu-primary)_26%,transparent)] bg-[var(--pmu-primary-fade)] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-[var(--pmu-primary)]">
+              {focusBetType}
+            </span>
+          </div>
 
-            <div className="mt-5 space-y-2">
-              {isFocusLoading ? (
-                Array.from({ length: 4 }, (_, index) => (
-                  <div
-                    key={index}
-                    className="h-20 animate-pulse rounded-[1.1rem] border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)]"
-                  />
-                ))
-              ) : focusParticipants.length > 0 ? (
-                focusParticipants.map((participant) => {
-                  const num = getParticipantNum(participant);
-                  const confidence = participant.prediction?.confiance;
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="app-card-muted px-4 py-3.5">
+              <p className="app-label">Cote repere</p>
+              <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">
+                {selectedParticipant
+                  ? `Cote ${formatOddsLabel(selectedParticipant.cote)}`
+                  : "Lecture PMU"}
+              </p>
+            </div>
+            <div className="app-card-muted px-4 py-3.5">
+              <p className="app-label">Actives</p>
+              <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">{stats.active} courses</p>
+            </div>
+            <div className="app-card-muted px-4 py-3.5">
+              <p className="app-label">Rythme</p>
+              <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">
+                {focusPriority?.detail ?? "Suivi courant"}
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
 
-                  return (
-                    <div
-                      key={`${num}-${participant.nom ?? "cheval"}`}
-                      className="grid gap-3 rounded-[1.15rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_84%,transparent)] px-4 py-4 md:grid-cols-[auto,1fr,auto]"
-                    >
-                      <div className="flex h-12 w-12 items-center justify-center rounded-[1rem] border border-[color-mix(in_srgb,var(--pmu-primary)_24%,transparent)] bg-[var(--pmu-primary-fade)] text-lg font-black text-[var(--pmu-text)]">
-                        {Number.isFinite(num) ? num : "--"}
-                      </div>
+      <section className="mt-5 rounded-[1.35rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="app-label">Partants utiles</p>
+            <h3 className="mt-1 text-[1.65rem] font-black text-[var(--pmu-text)]">
+              Lecture dense sur les 5 chevaux a garder
+            </h3>
+          </div>
+          <span className="app-pill text-xs">
+            {focusParticipants.length > 0
+              ? `${focusParticipants.length} lignes`
+              : isFocusLoading
+                ? "Chargement"
+                : "Liste PMU"}
+          </span>
+        </div>
 
-                      <div>
-                        <p className="text-base font-black text-[var(--pmu-text)]">
-                          {participant.nom ?? "Cheval"}
-                        </p>
-                        <p className="mt-1 text-sm leading-6 text-[var(--pmu-text-soft)]">
-                          {participant.jockey ??
-                            participant.driver ??
-                            "Jockey non renseigne"}
-                          {participant.entraineur
-                            ? ` - ${participant.entraineur}`
-                            : ""}
-                        </p>
-                      </div>
+        <div className="mt-4 space-y-2">
+          {isFocusLoading ? (
+            Array.from({ length: 4 }, (_, index) => (
+              <div
+                key={index}
+                className="h-16 animate-pulse rounded-[1rem] border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)]"
+              />
+            ))
+          ) : focusParticipants.length > 0 ? (
+            focusParticipants.map((participant) => {
+              const num = getParticipantNum(participant);
+              const confidence = participant.prediction?.confiance;
 
-                      <div className="text-left md:text-right">
-                        <p className="text-sm font-black text-[var(--pmu-text)]">
-                          Cote {formatOddsLabel(participant.cote)}
-                        </p>
-                        <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--pmu-text-muted)]">
-                          {confidence != null && Number.isFinite(confidence)
-                            ? `Confiance ${confidence.toFixed(1)}/10`
-                            : "Lecture PMU"}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="rounded-[1.15rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_84%,transparent)] px-4 py-5 text-sm leading-6 text-[var(--pmu-text-soft)]">
-                  Le detail course remontera ici des que l API PMU donnera un
-                  bloc complet.
+              return (
+                <div
+                  key={`${num}-${participant.nom ?? "cheval"}`}
+                  className="grid items-center gap-3 rounded-[1rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_84%,transparent)] px-4 py-3 md:grid-cols-[auto,1.2fr,0.7fr,auto]"
+                >
+                  <div className="flex h-11 w-11 items-center justify-center rounded-[0.9rem] border border-[color-mix(in_srgb,var(--pmu-primary)_24%,transparent)] bg-[var(--pmu-primary-fade)] text-base font-black text-[var(--pmu-text)]">
+                    {Number.isFinite(num) ? num : "--"}
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="truncate text-base font-black text-[var(--pmu-text)]">
+                      {participant.nom ?? "Cheval"}
+                    </p>
+                    <p className="truncate text-sm text-[var(--pmu-text-soft)]">
+                      {participant.jockey ?? participant.driver ?? "Jockey non renseigne"}
+                      {participant.entraineur ? ` - ${participant.entraineur}` : ""}
+                    </p>
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-xs uppercase tracking-[0.12em] text-[var(--pmu-text-muted)]">
+                      Lecture
+                    </p>
+                    <p className="truncate text-sm font-bold text-[var(--pmu-text)]">
+                      {confidence != null && Number.isFinite(confidence)
+                        ? `Confiance ${confidence.toFixed(1)}/10`
+                        : "Lecture PMU"}
+                    </p>
+                  </div>
+
+                  <div className="text-left md:text-right">
+                    <p className="text-sm font-black text-[var(--pmu-text)]">
+                      Cote {formatOddsLabel(participant.cote)}
+                    </p>
+                  </div>
                 </div>
-              )}
+              );
+            })
+          ) : (
+            <div className="rounded-[1rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_84%,transparent)] px-4 py-4 text-sm leading-6 text-[var(--pmu-text-soft)]">
+              Le detail course remontera ici des que l API PMU donnera un bloc complet.
             </div>
-          </section>
+          )}
         </div>
       </section>
     </section>
@@ -488,14 +465,14 @@ function CompactRaceCard({
     <button
       type="button"
       onClick={() => onOpenRace(item.race)}
-      className="app-card flex h-full flex-col items-start gap-4 p-5 text-left transition-transform duration-200 hover:-translate-y-0.5"
+      className="app-card flex flex-col items-start gap-3 p-4 text-left transition-transform duration-200 hover:-translate-y-0.5"
     >
       <div className="flex w-full flex-wrap items-start justify-between gap-3">
         <div>
           <p className="app-kicker">
             R{item.race.reunion}C{item.race.course}
           </p>
-          <h3 className="mt-2 text-[1.55rem] font-black leading-[1] text-[var(--pmu-text)]">
+          <h3 className="mt-1 text-[1.3rem] font-black leading-[1.02] text-[var(--pmu-text)]">
             {item.race.nomCourse}
           </h3>
         </div>
@@ -511,26 +488,26 @@ function CompactRaceCard({
         </div>
       </div>
 
-      <p className="text-sm leading-6 text-[var(--pmu-text-soft)]">
+      <p className="text-sm leading-5 text-[var(--pmu-text-soft)]">
         {item.race.hippodrome} - {formatCourseMeta(item.race)}
       </p>
 
       <div className="grid w-full gap-3 sm:grid-cols-3">
-        <div className="app-card-muted px-4 py-4">
+        <div className="app-card-muted px-3 py-3">
           <p className="app-label">Score</p>
-          <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+          <p className="mt-1 text-2xl font-black text-[var(--pmu-text)]">
             {item.scoreValue.toFixed(1)}/10
           </p>
         </div>
-        <div className="app-card-muted px-4 py-4">
+        <div className="app-card-muted px-3 py-3">
           <p className="app-label">Ticket</p>
-          <p className="mt-2 text-sm font-black text-[var(--pmu-text)]">
+          <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">
             {getPickLabel(item.score)}
           </p>
         </div>
-        <div className="app-card-muted px-4 py-4">
+        <div className="app-card-muted px-3 py-3">
           <p className="app-label">Depart</p>
-          <p className="mt-2 text-sm font-black text-[var(--pmu-text)]">
+          <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">
             {item.race.heureDepart} - {formatMinutesLabel(item.minutesUntilStart)}
           </p>
         </div>
@@ -550,7 +527,7 @@ function HomeLaneSection({
 
   return (
     <section className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-[1.5rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] px-5 py-5 md:flex-row md:items-start md:justify-between">
+      <div className="flex flex-col gap-2 rounded-[1.35rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] px-5 py-4 md:flex-row md:items-start md:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <span
@@ -570,13 +547,13 @@ function HomeLaneSection({
           <h3 className="mt-3 text-2xl font-black text-[var(--pmu-text)]">
             {meta.title}
           </h3>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--pmu-text-soft)]">
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--pmu-text-soft)]">
             {meta.description}
           </p>
         </div>
       </div>
 
-      <div className="grid auto-rows-fr gap-5 2xl:grid-cols-2">
+      <div className="grid gap-4 2xl:grid-cols-2">
         {lane.items.map((item) => (
           <CompactRaceCard
             key={`${lane.key}-${item.race.reunion}-${item.race.course}`}
