@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { getTodayDateStr } from "@/lib/date-utils";
 
-type SearchRunnerType = "jockey" | "driver" | "entraineur" | "cheval";
+type SearchRunnerType = "numero" | "jockey" | "driver" | "entraineur" | "cheval";
 
 type SearchRunnerEntry = {
   reunion: number;
@@ -42,6 +42,7 @@ type EntryOption = {
 };
 
 const TYPE_LABELS: Record<SearchRunnerType, string> = {
+  numero: "Numero PMU",
   jockey: "Jockey",
   driver: "Driver",
   entraineur: "Entraîneur",
@@ -49,6 +50,7 @@ const TYPE_LABELS: Record<SearchRunnerType, string> = {
 };
 
 const TYPE_ICONS: Record<SearchRunnerType, string> = {
+  numero: "No",
   jockey: "🏇",
   driver: "🏇",
   entraineur: "🎯",
@@ -65,7 +67,15 @@ function formatOdds(value: number | null) {
   });
 }
 
-export function SidebarSearch() {
+type SidebarSearchProps = {
+  className?: string;
+  placeholder?: string;
+};
+
+export function SidebarSearch({
+  className = "",
+  placeholder = "No, cheval, jockey, driver, entraineur",
+}: SidebarSearchProps) {
   const router = useRouter();
   const inputId = useId();
   const listboxId = useId();
@@ -117,8 +127,11 @@ export function SidebarSearch() {
   useEffect(() => {
     abortRef.current?.abort();
 
+    const isNumericQuery = /^\d+$/.test(debouncedQuery);
     const requestKey =
-      debouncedQuery.length >= 2 ? `${getTodayDateStr()}:${debouncedQuery}` : "";
+      debouncedQuery.length >= 2 || isNumericQuery
+        ? `${getTodayDateStr()}:${debouncedQuery}`
+        : "";
 
     if (!requestKey) {
       return;
@@ -165,7 +178,7 @@ export function SidebarSearch() {
   }, [debouncedQuery]);
 
   const loading =
-    debouncedQuery.length >= 2 &&
+    (debouncedQuery.length >= 2 || /^\d+$/.test(debouncedQuery)) &&
     resolvedRequestKey !== `${getTodayDateStr()}:${debouncedQuery}`;
 
   const options = useMemo<EntryOption[]>(
@@ -233,10 +246,11 @@ export function SidebarSearch() {
     }
   }
 
-  const showDropdown = open && query.trim().length >= 2;
+  const showDropdown =
+    open && (query.trim().length >= 2 || /^\d+$/.test(query.trim()));
 
   return (
-    <div ref={rootRef} className="relative mb-3">
+    <div ref={rootRef} className={`relative mb-3 ${className}`}>
       <label htmlFor={inputId} className="sr-only">
         Rechercher un jockey, un entraîneur ou un cheval
       </label>
@@ -252,7 +266,7 @@ export function SidebarSearch() {
           value={query}
           autoComplete="off"
           spellCheck={false}
-          placeholder="Jockey, entraîneur"
+          placeholder={placeholder}
           className="h-12 w-full rounded-2xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] pl-10 pr-10 text-[13px] text-[var(--pmu-text)] outline-none transition placeholder:text-[var(--pmu-text-muted)] focus:border-[var(--pmu-border-strong)]"
           aria-label="Recherche jockey, entraîneur ou cheval"
           role="combobox"
@@ -261,7 +275,7 @@ export function SidebarSearch() {
           aria-controls={showDropdown ? listboxId : undefined}
           aria-activedescendant={activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined}
           onFocus={() => {
-            if (query.trim().length >= 2) {
+            if (query.trim().length >= 2 || /^\d+$/.test(query.trim())) {
               setOpen(true);
             }
           }}
@@ -269,7 +283,7 @@ export function SidebarSearch() {
             const nextValue = event.target.value;
             setQuery(nextValue);
             setError(null);
-            if (nextValue.trim().length >= 2) {
+            if (nextValue.trim().length >= 2 || /^\d+$/.test(nextValue.trim())) {
               setOpen(true);
             } else {
               setResults([]);

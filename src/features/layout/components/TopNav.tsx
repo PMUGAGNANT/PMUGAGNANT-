@@ -7,6 +7,7 @@ import {
   appNavigationItems,
   isNavigationItemActive,
 } from "@/features/layout/config/navigation";
+import { SidebarSearch } from "./SidebarSearch";
 
 function HorseMark() {
   return (
@@ -71,6 +72,18 @@ export function TopNav() {
           <Link href="/premium" className="turf-premium-link">
             Premium
           </Link>
+        </div>
+      </div>
+      <div className="turf-search-strip">
+        <div className="turf-search-strip__inner">
+          <div className="turf-search-strip__label">
+            <span>Recherche directe</span>
+            <small>No, cheval, jockey, driver, entraineur</small>
+          </div>
+          <SidebarSearch
+            className="turf-search-strip__field"
+            placeholder="Tape un no, cheval, jockey, driver ou entraineur"
+          />
         </div>
       </div>
     </header>
