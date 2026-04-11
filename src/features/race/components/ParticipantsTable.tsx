@@ -1,5 +1,7 @@
 "use client";
 
+import type { RoleCheval, TypeRoleCheval } from "@/lib/horse-roles";
+
 export interface ArrivalRow {
   position: number | null;
   numPmu: number;
@@ -23,6 +25,7 @@ export interface CourseParticipantRow {
   scoreIa?: number | null;
   nonPartant?: boolean | null;
   topFacteurs?: string[] | null;
+  roleCheval?: RoleCheval | null;
 }
 
 interface ParticipantsTableProps {
@@ -92,53 +95,95 @@ function getScoreTone(score?: number | null) {
   return { label: `${rounded}/100`, accent: "○", color: "var(--pmu-text-soft)" };
 }
 
-function RunnerTags({
-  isFavori,
-  isPepite,
-}: {
-  isFavori: boolean;
-  isPepite: boolean;
-}) {
-  if (!isFavori && !isPepite) return null;
+function getFallbackRole(
+  participant: CourseParticipantRow,
+  favoriNum?: number | string | null,
+  pepiteNum?: number | string | null
+): RoleCheval | null {
+  const participantNumber = String(participant.numero ?? "");
+  const base = {
+    cheval_num: Number(participant.numero ?? 0),
+    cheval_nom: participant.nom ?? "",
+    cote: participant.cote ?? 0,
+    score_cheval: participant.scoreIa ?? 0,
+    confiance: 0,
+    variation_cote: null,
+  };
+
+  if (favoriNum !== null && favoriNum !== undefined && participantNumber === String(favoriNum)) {
+    return {
+      ...base,
+      role: "FAVORI",
+      emoji: "⭐",
+      label: "Favori",
+    };
+  }
+
+  if (pepiteNum !== null && pepiteNum !== undefined && participantNumber === String(pepiteNum)) {
+    return {
+      ...base,
+      role: "PEPITE",
+      emoji: "💎",
+      label: "Pépite",
+    };
+  }
+
+  return null;
+}
+
+function getRoleColor(role?: TypeRoleCheval | null) {
+  switch (role) {
+    case "FAVORI":
+      return "var(--pmu-primary)";
+    case "PEPITE":
+      return "var(--pmu-orange)";
+    case "OUTSIDER":
+      return "var(--pmu-red)";
+    case "OUBLIE":
+      return "var(--pmu-blue)";
+    default:
+      return null;
+  }
+}
+
+function RunnerTags({ role }: { role: RoleCheval | null }) {
+  if (!role) return null;
+
+  const color = getRoleColor(role.role) ?? "var(--pmu-primary)";
 
   return (
     <div className="mt-1.5 flex flex-wrap gap-1.5">
-      {isFavori ? (
-        <span className="rounded-full bg-[var(--pmu-primary-soft)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pmu-primary)]">
-          Favori IA
-        </span>
-      ) : null}
-      {isPepite ? (
-        <span className="rounded-full bg-[color-mix(in_srgb,var(--pmu-orange)_12%,transparent)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--pmu-orange)]">
-          Pepite
-        </span>
-      ) : null}
+      <span
+        className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em]"
+        style={{
+          color,
+          background: `color-mix(in srgb, ${color} 12%, transparent)`,
+          border: `1px solid color-mix(in srgb, ${color} 24%, transparent)`,
+        }}
+      >
+        {role.emoji} {role.label}
+      </span>
     </div>
   );
 }
 
-function getRowBackground(index: number, isFavori: boolean, isPepite: boolean) {
-  if (isFavori) return "color-mix(in srgb, var(--pmu-primary) 8%, var(--pmu-surface))";
-  if (isPepite) return "color-mix(in srgb, var(--pmu-orange) 8%, var(--pmu-surface))";
+function getRowBackground(index: number, role: RoleCheval | null) {
+  const color = getRoleColor(role?.role);
+  if (color) return `color-mix(in srgb, ${color} 8%, var(--pmu-surface))`;
+
   return index % 2 === 0
     ? "color-mix(in srgb, var(--pmu-surface) 88%, transparent)"
     : "color-mix(in srgb, var(--pmu-surface-2) 88%, transparent)";
 }
 
-function getNumberChipStyle(isFavori: boolean, isPepite: boolean) {
-  if (isFavori) {
-    return {
-      background: "var(--pmu-primary-soft)",
-      color: "var(--pmu-primary)",
-      border: "1px solid color-mix(in srgb, var(--pmu-primary) 24%, transparent)",
-    };
-  }
+function getNumberChipStyle(role: RoleCheval | null) {
+  const color = getRoleColor(role?.role);
 
-  if (isPepite) {
+  if (color) {
     return {
-      background: "color-mix(in srgb, var(--pmu-orange) 12%, transparent)",
-      color: "var(--pmu-orange)",
-      border: "1px solid color-mix(in srgb, var(--pmu-orange) 24%, transparent)",
+      background: `color-mix(in srgb, ${color} 12%, transparent)`,
+      color,
+      border: `1px solid color-mix(in srgb, ${color} 24%, transparent)`,
     };
   }
 
@@ -221,10 +266,11 @@ export function ParticipantsTable({
           <tbody>
             {sortedParticipants.map((participant, index) => {
               const numPmu = Number(participant.numero ?? 0);
-              const isFavori = String(participant.numero) === String(favoriNum);
-              const isPepite = String(participant.numero) === String(pepiteNum);
+              const role =
+                participant.roleCheval ??
+                getFallbackRole(participant, favoriNum, pepiteNum);
               const score = getScoreTone(participant.scoreIa);
-              const numberStyle = getNumberChipStyle(isFavori, isPepite);
+              const numberStyle = getNumberChipStyle(role);
               const struck = participant.nonPartant ? "line-through opacity-60" : "";
 
               return (
@@ -232,7 +278,7 @@ export function ParticipantsTable({
                   key={`${participant.numero}-${index}`}
                   className="transition hover:bg-[color-mix(in_srgb,var(--pmu-surface-highlight)_42%,var(--pmu-surface))]"
                   style={{
-                    background: getRowBackground(index, isFavori, isPepite),
+                    background: getRowBackground(index, role),
                   }}
                 >
                   <td>
@@ -248,7 +294,7 @@ export function ParticipantsTable({
                       <p className={`font-bold text-[var(--pmu-text)] ${struck}`}>
                         {participant.nom || "--"}
                       </p>
-                      <RunnerTags isFavori={isFavori} isPepite={isPepite} />
+                      <RunnerTags role={role} />
                     </div>
                   </td>
                   <td className="text-[var(--pmu-text)]">
@@ -295,10 +341,11 @@ export function ParticipantsTable({
       <div className="grid gap-3 p-4 xl:hidden">
         {sortedParticipants.map((participant, index) => {
           const numPmu = Number(participant.numero ?? 0);
-          const isFavori = String(participant.numero) === String(favoriNum);
-          const isPepite = String(participant.numero) === String(pepiteNum);
+          const role =
+            participant.roleCheval ??
+            getFallbackRole(participant, favoriNum, pepiteNum);
           const score = getScoreTone(participant.scoreIa);
-          const numberStyle = getNumberChipStyle(isFavori, isPepite);
+          const numberStyle = getNumberChipStyle(role);
           const struck = participant.nonPartant ? "line-through opacity-60" : "";
 
           return (
@@ -307,7 +354,7 @@ export function ParticipantsTable({
               className="rounded-[1.25rem] border p-4"
               style={{
                 borderColor: "var(--pmu-border)",
-                background: getRowBackground(index, isFavori, isPepite),
+                background: getRowBackground(index, role),
               }}
             >
               <div className="flex items-start gap-3">
@@ -324,7 +371,7 @@ export function ParticipantsTable({
                   <p className="mt-0.5 truncate text-sm text-[var(--pmu-text-soft)]">
                     {getHumanLead(participant, estPlat)}
                   </p>
-                  <RunnerTags isFavori={isFavori} isPepite={isPepite} />
+                  <RunnerTags role={role} />
                 </div>
               </div>
 

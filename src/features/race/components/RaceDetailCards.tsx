@@ -16,6 +16,7 @@ import {
   getPriorityToneColor,
   type RacePriorityBadge,
 } from "@/lib/race-priority";
+import type { RoleCheval, TypeRoleCheval } from "@/lib/horse-roles";
 
 export function LockedTicketCard({
   previewLabel,
@@ -135,6 +136,124 @@ export function TopFiveCard({
                     ? `Cote ${participant.cote.toFixed(1)}`
                     : "Cote --"}
                 </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function getRoleTone(role: TypeRoleCheval) {
+  switch (role) {
+    case "FAVORI":
+      return "var(--pmu-primary)";
+    case "PEPITE":
+      return "var(--pmu-orange)";
+    case "OUTSIDER":
+      return "var(--pmu-red)";
+    case "OUBLIE":
+      return "var(--pmu-blue)";
+  }
+}
+
+function getRoleHint(role: TypeRoleCheval) {
+  switch (role) {
+    case "FAVORI":
+      return "Plus basse cote du matin.";
+    case "PEPITE":
+      return "Score fort au-dessus de 6.0.";
+    case "OUTSIDER":
+      return "Baisse nette depuis le matin.";
+    case "OUBLIE":
+      return "Score solide sans signal marche.";
+  }
+}
+
+function formatVariation(value: number | null) {
+  if (value === null || !Number.isFinite(value)) {
+    return "--";
+  }
+
+  const rounded = Math.round(value);
+  return rounded > 0 ? `+${rounded}%` : `${rounded}%`;
+}
+
+export function HorseRolesCard({ roles }: { roles: RoleCheval[] }) {
+  if (roles.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="app-card p-5 md:p-6">
+      <div className="app-section-heading">
+        <div>
+          <p className="app-kicker">Lecture moteur</p>
+          <h2 className="app-section-title">Roles chevaux</h2>
+        </div>
+        <span className="app-pill text-xs">{roles.length} signaux</span>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        {roles.map((role) => {
+          const tone = getRoleTone(role.role);
+
+          return (
+            <div
+              key={role.role}
+              className="rounded-[1.15rem] border px-4 py-4"
+              style={{
+                borderColor: `color-mix(in srgb, ${tone} 28%, transparent)`,
+                background: `color-mix(in srgb, ${tone} 9%, var(--pmu-surface))`,
+              }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p
+                    className="text-[11px] font-black uppercase tracking-[0.14em]"
+                    style={{ color: tone }}
+                  >
+                    {role.emoji} {role.label}
+                  </p>
+                  <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
+                    No {role.cheval_num} {role.cheval_nom}
+                  </p>
+                </div>
+                <span
+                  className="inline-flex h-10 min-w-10 items-center justify-center rounded-xl px-2 text-sm font-black"
+                  style={{
+                    color: tone,
+                    background: `color-mix(in srgb, ${tone} 14%, transparent)`,
+                  }}
+                >
+                  {role.cheval_num}
+                </span>
+              </div>
+
+              <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">
+                {getRoleHint(role.role)}
+              </p>
+
+              <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
+                <div>
+                  <p className="app-label">Cote</p>
+                  <p className="mt-1 font-mono font-black text-[var(--pmu-text)]">
+                    {role.cote.toFixed(1)}
+                  </p>
+                </div>
+                <div>
+                  <p className="app-label">Score</p>
+                  <p className="mt-1 font-mono font-black text-[var(--pmu-text)]">
+                    {Math.round(role.score_cheval)}
+                  </p>
+                </div>
+                <div>
+                  <p className="app-label">Marche</p>
+                  <p className="mt-1 font-mono font-black text-[var(--pmu-text)]">
+                    {formatVariation(role.variation_cote)}
+                  </p>
+                </div>
               </div>
             </div>
           );

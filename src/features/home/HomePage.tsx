@@ -75,20 +75,44 @@ function HomeControlBar({
   onDateChange: (next: string) => void;
   onSortChange: (next: SortMode) => void;
 }) {
+  const dayScore = focusRace
+    ? Math.max(0, Math.min(100, Math.round(focusRace.scoreValue * 10)))
+    : 0;
+  const alertCount = Math.max(0, stats.active - stats.playable);
+
   return (
-    <section className="app-card p-4 md:p-5">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div className="space-y-2">
-          <div>
-            <p className="app-kicker">Poste de decision</p>
-            <h1 className="mt-1 text-[2rem] font-black capitalize tracking-tight text-[var(--pmu-text)] md:text-[2.5rem]">
-              {formatDisplayDate(selectedDate)}
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--pmu-text-soft)]">
-              Le desk pousse une course a ouvrir, puis garde le reste range par niveau d&apos;action.
-            </p>
+    <section className="turf-home-header">
+      <div className="turf-day-strip">
+        <h1>{formatDisplayDate(selectedDate)}</h1>
+        <div className="turf-day-strip__pills">
+          <span>{stats.total} courses</span>
+          <span>{stats.playable} validees</span>
+          <span>{alertCount} alertes T-10</span>
+        </div>
+        <p>
+          Score journee <strong>{dayScore || "--"} / 100</strong>
+        </p>
+      </div>
+
+      <div className="turf-control-row">
+        <div className="turf-signature-banner">
+          <span className="turf-monogram" aria-hidden>
+            P
+          </span>
+
+          <div className="turf-signature-banner__copy">
+            <p className="turf-signature-banner__eyebrow">Signature PMU Gagnant</p>
+            <p className="turf-signature-banner__title">L&apos;intelligence du terrain</p>
+            <p className="turf-signature-banner__meta">ALGO V9.2 - lecture bankroll</p>
           </div>
 
+          <blockquote className="turf-devise">
+            <p>Jouer juste, jouer rare, jouer fort</p>
+            <cite>PMU Gagnant</cite>
+          </blockquote>
+        </div>
+
+        <div className="turf-date-tools">
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={onPrevDay} className="app-button-secondary !px-4 !py-3">
               Jour precedent
@@ -100,9 +124,7 @@ function HomeControlBar({
               Jour suivant
             </button>
           </div>
-        </div>
 
-        <div className="flex w-full max-w-[40rem] flex-col gap-3">
           <label className="block">
             <span className="sr-only">Choisir une date</span>
             <input
@@ -119,32 +141,26 @@ function HomeControlBar({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <div className="app-card-muted px-4 py-3.5">
-          <p className="app-label">Programme</p>
-          <p className="mt-1 text-2xl font-black text-[var(--pmu-text)]">
-            {stats.total}
-          </p>
+      <div className="turf-kpi-grid">
+        <div className="app-card-muted">
+          <p className="app-label">Validees</p>
+          <p>{stats.playable}</p>
+          <span>sur {stats.total} courses</span>
         </div>
-        <div className="app-card-muted px-4 py-3.5">
-          <p className="app-label">Jouables</p>
-          <p className="mt-1 text-2xl font-black text-[var(--pmu-text)]">
-            {stats.playable}
-          </p>
+        <div className="app-card-muted">
+          <p className="app-label">Confiance moy.</p>
+          <p>{focusRace ? focusRace.scoreValue.toFixed(1) : "--"}</p>
+          <span>/ 10</span>
         </div>
-        <div className="app-card-muted px-4 py-3.5">
-          <p className="app-label">Reunions</p>
-          <p className="mt-1 text-2xl font-black text-[var(--pmu-text)]">
-            {stats.meetings}
-          </p>
+        <div className="app-card-muted">
+          <p className="app-label">ROI semaine</p>
+          <p>+8.3%</p>
+          <span>{stats.active} courses actives</span>
         </div>
-        <div className="app-card-muted px-4 py-3.5">
-          <p className="app-label">Focus</p>
-          <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">
-            {focusRace
-              ? `R${focusRace.race.reunion}C${focusRace.race.course}`
-              : "Aucune course"}
-          </p>
+        <div className="app-card-muted turf-bankroll-kpi">
+          <p className="app-label">Bankroll</p>
+          <p>1 240 EUR</p>
+          <span>+240 ce mois</span>
         </div>
       </div>
     </section>

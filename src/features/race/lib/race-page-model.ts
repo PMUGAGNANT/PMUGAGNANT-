@@ -2,6 +2,7 @@ import type {
   ArrivalRow,
   CourseParticipantRow,
 } from "@/features/race/components/ParticipantsTable";
+import type { RoleCheval } from "@/lib/horse-roles";
 import type { RacePriorityBadge } from "@/lib/race-priority";
 
 export type RaceApiParticipant = {
@@ -48,6 +49,7 @@ export type RaceApiResponse = {
   } | null;
   participants?: RaceApiParticipant[] | number | null;
   officialArrival?: ArrivalRow[] | null;
+  roles?: RoleCheval[] | null;
   minutesUntilStart?: number | null;
   pronoAvailable?: boolean;
   isFinished?: boolean;
@@ -216,11 +218,29 @@ export function toParticipantRow(
 }
 
 export function normalizeParticipants(payload: RaceApiResponse | null) {
-  return mergeParticipantData(payload).map(toParticipantRow);
+  const rolesByNumber = new Map(
+    normalizeRoles(payload).map((role) => [String(role.cheval_num), role] as const)
+  );
+
+  return mergeParticipantData(payload).map((participant) => {
+    const row = toParticipantRow(participant);
+
+    return {
+      ...row,
+      roleCheval:
+        row.numero !== null && row.numero !== undefined
+          ? rolesByNumber.get(String(row.numero)) ?? null
+          : null,
+    };
+  });
 }
 
 export function normalizeOfficialArrival(payload: RaceApiResponse | null) {
   return Array.isArray(payload?.officialArrival) ? payload.officialArrival : [];
+}
+
+export function normalizeRoles(payload: RaceApiResponse | null) {
+  return Array.isArray(payload?.roles) ? payload.roles : [];
 }
 
 export function normalizePronostic(

@@ -1,9 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope, Outfit } from "next/font/google";
+import { Cormorant_Garamond, Inter } from "next/font/google";
 import Script from "next/script";
 import { AppShell } from "@/features/layout/components/AppShell";
 import { GlossaryPanel } from "@/components/ui/Glossary";
-import { LiveStatsBanner } from "@/components/ui/LiveStatsBanner";
 import { OnboardingModal } from "@/components/ui/OnboardingModal";
 import { PushNotificationPrompt } from "@/components/ui/PushNotificationPrompt";
 import { ServiceWorkerRegistration } from "@/components/ui/ServiceWorkerRegistration";
@@ -11,16 +10,17 @@ import { ThemeMetaColor } from "@/components/ui/ThemeMetaColor";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import "./globals.css";
 
-const uiFont = Manrope({
+const uiFont = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-ui",
 });
 
-const displayFont = Outfit({
+const displayFont = Cormorant_Garamond({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-display",
+  weight: ["500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -56,7 +56,6 @@ export default function RootLayout({
         <a href="#main-content" className="pmu-skip-link">
           Aller au contenu
         </a>
-        <LiveStatsBanner />
         <Script id="pmu-theme-init" strategy="beforeInteractive">
           {`(function(){try{var k='pmu-theme-v2';var v=localStorage.getItem(k);document.documentElement.setAttribute('data-theme',v==='dark'?'dark':'warm');}catch(e){document.documentElement.setAttribute('data-theme','warm');}})();`}
         </Script>

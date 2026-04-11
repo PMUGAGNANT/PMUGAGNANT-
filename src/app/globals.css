@@ -881,3 +881,588 @@ h3,
     padding: 1.75rem 2rem 4rem;
   }
 }
+
+/* TurfEdge visual system */
+
+:root,
+[data-theme="warm"] {
+  --pmu-bg: #f6f4ec;
+  --pmu-bg-mid: #ebe5d6;
+  --pmu-surface: #fbfaf6;
+  --pmu-surface-2: #f0eadc;
+  --pmu-surface-highlight: #ffffff;
+  --pmu-border: rgba(58, 74, 37, 0.14);
+  --pmu-border-strong: rgba(58, 74, 37, 0.28);
+  --pmu-primary: #284f14;
+  --pmu-primary-bright: #436f22;
+  --pmu-primary-soft: rgba(40, 79, 20, 0.1);
+  --pmu-primary-fade: rgba(40, 79, 20, 0.06);
+  --pmu-accent-blue: #8a7334;
+  --pmu-accent-violet: #765f2a;
+  --pmu-gold: #8C6D2F;
+  --pmu-text: #27251f;
+  --pmu-text-muted: #8b877b;
+  --pmu-text-soft: #625e53;
+  --pmu-red: #9b3b26;
+  --pmu-orange: #8a6826;
+  --pmu-blue: #536f5a;
+  --pmu-shadow: 0 18px 48px rgba(68, 58, 38, 0.11);
+  --pmu-shadow-sm: 0 10px 28px rgba(68, 58, 38, 0.08);
+  --pmu-glow: 0 0 0 1px rgba(40, 79, 20, 0.09), 0 16px 38px rgba(40, 79, 20, 0.1);
+  --pmu-glow-soft: 0 0 0 1px rgba(40, 79, 20, 0.07), 0 10px 24px rgba(40, 79, 20, 0.07);
+  --pmu-on-primary: #fffdf5;
+}
+
+[data-theme="dark"] {
+  --pmu-bg: #17220f;
+  --pmu-bg-mid: #213014;
+  --pmu-surface: #253616;
+  --pmu-surface-2: #1f2d13;
+  --pmu-surface-highlight: #30451c;
+  --pmu-border: rgba(236, 226, 198, 0.16);
+  --pmu-border-strong: rgba(236, 226, 198, 0.32);
+  --pmu-primary: #d5c58b;
+  --pmu-primary-bright: #f0df9d;
+  --pmu-primary-soft: rgba(213, 197, 139, 0.14);
+  --pmu-primary-fade: rgba(213, 197, 139, 0.08);
+  --pmu-accent-blue: #c1a55c;
+  --pmu-accent-violet: #9e8344;
+  --pmu-gold: #8C6D2F;
+  --pmu-text: #fffaf0;
+  --pmu-text-muted: #c7bea6;
+  --pmu-text-soft: #e1d8c2;
+  --pmu-red: #e08b72;
+  --pmu-orange: #d0aa5d;
+  --pmu-blue: #a8c09e;
+  --pmu-on-primary: #17220f;
+}
+
+html {
+  background: var(--pmu-bg);
+}
+
+body {
+  background-color: var(--pmu-bg);
+  background-image:
+    linear-gradient(180deg, #fffdf8 0%, var(--pmu-bg) 32%, #e9e2d0 100%);
+  color: var(--pmu-text);
+}
+
+[data-theme="dark"] body {
+  background-image:
+    linear-gradient(180deg, #1b2810 0%, var(--pmu-bg) 48%, #11190b 100%);
+}
+
+body::before {
+  background-image:
+    linear-gradient(rgba(40, 79, 20, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(40, 79, 20, 0.03) 1px, transparent 1px);
+  background-size: 54px 54px;
+  mask-image: none;
+  opacity: 0.4;
+}
+
+body::after {
+  display: none;
+}
+
+h1,
+h2,
+h3,
+.app-section-title,
+.app-display,
+.app-brand-wordmark,
+.turf-brand__name {
+  font-family: var(--font-display), Georgia, serif;
+  letter-spacing: 0;
+}
+
+*,
+.app-label,
+.app-kicker,
+[class*="tracking-"] {
+  letter-spacing: 0 !important;
+}
+
+.app-shell__main {
+  margin-left: 0;
+}
+
+.app-shell__content {
+  width: min(100%, 1080px);
+  max-width: none;
+  padding: 0 1rem 7rem;
+}
+
+@media (min-width: 1100px) {
+  .app-shell__main {
+    margin-left: 0;
+  }
+
+  .app-shell__content {
+    width: min(100%, 1080px);
+    padding: 0 0 4rem;
+  }
+}
+
+.turf-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 35;
+  padding: 1rem 1rem 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pmu-bg) 96%, transparent), transparent);
+}
+
+.turf-topbar__inner {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 2rem;
+  width: min(100%, 1080px);
+  margin: 0 auto;
+  border-bottom: 1px solid var(--pmu-border);
+  background: color-mix(in srgb, var(--pmu-surface) 92%, transparent);
+  padding: 1.15rem 3rem 1.25rem;
+}
+
+.turf-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.turf-logo-mark {
+  display: inline-flex;
+  width: 64px;
+  height: 64px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--pmu-primary);
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -10px 18px rgba(0, 0, 0, 0.12);
+}
+
+.turf-logo-mark svg {
+  width: 42px;
+  height: 42px;
+}
+
+.turf-logo-mark__shadow {
+  fill: rgba(0, 0, 0, 0.2);
+  transform: translate(1px, 1px);
+}
+
+.turf-logo-mark__horse {
+  fill: #ffffff;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.22));
+}
+
+.turf-brand__name {
+  display: block;
+  color: var(--pmu-text);
+  font-size: 2.05rem;
+  font-weight: 700;
+  line-height: 0.9;
+  white-space: nowrap;
+}
+
+.turf-brand__name span {
+  color: var(--pmu-primary);
+  font-style: italic;
+  font-weight: 600;
+}
+
+.turf-brand__tagline {
+  display: block;
+  margin-top: 0.4rem;
+  color: var(--pmu-text-muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.turf-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2.2rem;
+  color: var(--pmu-text-soft);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.turf-nav a {
+  border-bottom: 2px solid transparent;
+  padding: 0.9rem 0 1rem;
+}
+
+.turf-nav a.is-active {
+  border-color: var(--pmu-primary);
+  color: var(--pmu-primary);
+}
+
+.turf-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.turf-account-link,
+.turf-premium-link {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  padding: 0.75rem 1.15rem;
+  font-weight: 500;
+}
+
+.turf-account-link {
+  color: var(--pmu-text-soft);
+}
+
+.turf-premium-link {
+  border: 1px solid var(--pmu-border-strong);
+  background: var(--pmu-surface-highlight);
+  color: var(--pmu-text);
+  box-shadow: var(--pmu-shadow-sm);
+}
+
+.app-card,
+.app-card-muted,
+.app-surface,
+.premium-surface,
+.dark-surface,
+.app-input,
+.app-button-primary,
+.app-button-secondary,
+.app-pill,
+#main-content [class*="rounded-"] {
+  border-radius: 8px !important;
+}
+
+.app-card {
+  border: 1px solid var(--pmu-border);
+  background: color-mix(in srgb, var(--pmu-surface) 94%, transparent);
+  box-shadow: var(--pmu-shadow-sm);
+}
+
+.app-card::before {
+  display: none;
+}
+
+.app-card:hover {
+  transform: none;
+  border-color: var(--pmu-border-strong);
+  box-shadow: var(--pmu-shadow);
+}
+
+.app-card-muted {
+  background: color-mix(in srgb, var(--pmu-surface-highlight) 82%, var(--pmu-surface-2));
+  border: 1px solid var(--pmu-border);
+  box-shadow: none;
+}
+
+.app-label,
+.app-kicker {
+  color: var(--pmu-text-muted);
+  font-size: 0.76rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.app-kicker {
+  color: var(--pmu-primary);
+}
+
+.app-button-primary {
+  border: 1px solid var(--pmu-primary);
+  background: var(--pmu-primary);
+  color: var(--pmu-on-primary);
+  box-shadow: var(--pmu-shadow-sm);
+}
+
+.app-button-secondary,
+.app-input,
+.app-pill {
+  border: 1px solid var(--pmu-border);
+  background: var(--pmu-surface-highlight);
+  color: var(--pmu-text-soft);
+  box-shadow: none;
+}
+
+.app-section-title {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.turf-home-header {
+  overflow: hidden;
+  border: 1px solid var(--pmu-border);
+  background: var(--pmu-surface);
+  box-shadow: var(--pmu-shadow-sm);
+}
+
+.turf-day-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 1.5rem;
+  background: var(--pmu-primary);
+  color: var(--pmu-on-primary);
+  padding: 1rem 3rem;
+}
+
+.turf-day-strip h1 {
+  font-size: 2rem;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: capitalize;
+}
+
+.turf-day-strip__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.turf-day-strip__pills span {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 0.35rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.turf-day-strip p {
+  color: color-mix(in srgb, var(--pmu-on-primary) 78%, var(--pmu-primary-bright));
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.45rem;
+  font-style: italic;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.turf-day-strip strong {
+  color: var(--pmu-on-primary);
+  font-size: 2rem;
+}
+
+.turf-control-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 1.5rem;
+  padding: 2.6rem 3rem 1.5rem;
+}
+
+.turf-signature-banner {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(18rem, 0.76fr);
+  align-items: stretch;
+  gap: 1.5rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--pmu-gold) 32%, transparent);
+  background: #f6efd9;
+  padding: 1.45rem;
+}
+
+.turf-signature-banner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+}
+
+.turf-monogram {
+  display: inline-flex;
+  width: 76px;
+  height: 76px;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  border: 2px solid color-mix(in srgb, var(--pmu-gold) 76%, transparent);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.34), transparent 0 36%),
+    color-mix(in srgb, var(--pmu-gold) 14%, transparent);
+  color: var(--pmu-gold);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 2.8rem;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: inset 0 0 0 6px color-mix(in srgb, var(--pmu-surface) 82%, transparent);
+}
+
+.turf-signature-banner__copy {
+  align-self: center;
+}
+
+.turf-signature-banner__eyebrow,
+.turf-signature-banner__meta {
+  color: var(--pmu-gold);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.turf-signature-banner__title {
+  margin-top: 0.4rem;
+  color: var(--pmu-primary);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 2.2rem;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 0.95;
+}
+
+.turf-signature-banner__meta {
+  margin-top: 0.7rem;
+}
+
+.turf-devise {
+  position: relative;
+  align-self: end;
+  border: 1px solid color-mix(in srgb, var(--pmu-gold) 28%, transparent);
+  background: color-mix(in srgb, var(--pmu-surface-highlight) 64%, transparent);
+  padding: 1rem 1.15rem 1rem 3.2rem;
+  color: var(--pmu-text-soft);
+}
+
+.turf-devise::before {
+  content: "“";
+  position: absolute;
+  left: 0.75rem;
+  top: -0.3rem;
+  color: color-mix(in srgb, var(--pmu-gold) 48%, transparent);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 5rem;
+  line-height: 1;
+}
+
+.turf-devise p {
+  color: var(--pmu-gold);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.45rem;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+.turf-devise cite {
+  display: block;
+  margin-top: 0.45rem;
+  color: var(--pmu-text-muted);
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.turf-date-tools {
+  display: grid;
+  align-content: start;
+  gap: 0.9rem;
+}
+
+.turf-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 0 3rem 2.4rem;
+}
+
+.turf-kpi-grid .app-card-muted {
+  padding: 1.4rem 1.5rem;
+}
+
+.turf-kpi-grid .app-card-muted p:not(.app-label) {
+  color: var(--pmu-primary);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 2.2rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.turf-kpi-grid .turf-bankroll-kpi p:not(.app-label),
+.turf-kpi-grid .turf-bankroll-kpi .app-label {
+  color: var(--pmu-gold);
+}
+
+.turf-kpi-grid .turf-bankroll-kpi {
+  border-color: color-mix(in srgb, var(--pmu-gold) 30%, transparent);
+  background: color-mix(in srgb, var(--pmu-gold) 7%, var(--pmu-surface-highlight));
+}
+
+.turf-kpi-grid .app-card-muted span {
+  display: block;
+  margin-top: 0.45rem;
+  color: var(--pmu-text-muted);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 1099px) {
+  .turf-topbar__inner {
+    grid-template-columns: 1fr auto;
+    padding: 1rem;
+  }
+
+  .turf-nav {
+    display: none;
+  }
+
+  .turf-account-link {
+    display: none;
+  }
+}
+
+@media (max-width: 820px) {
+  .turf-topbar {
+    padding: 0.75rem 0.75rem 0;
+  }
+
+  .turf-logo-mark {
+    width: 50px;
+    height: 50px;
+  }
+
+  .turf-brand__name {
+    font-size: 1.6rem;
+  }
+
+  .turf-brand__tagline {
+    font-size: 0.64rem;
+  }
+
+  .turf-day-strip,
+  .turf-control-row,
+  .turf-kpi-grid {
+    grid-template-columns: 1fr;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .turf-day-strip {
+    gap: 0.9rem;
+  }
+
+  .turf-day-strip p {
+    white-space: normal;
+  }
+
+  .turf-signature-banner {
+    grid-template-columns: 1fr;
+    padding: 1.2rem;
+  }
+
+  .turf-devise {
+    padding-left: 3rem;
+  }
+}

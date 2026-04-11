@@ -9,6 +9,7 @@ import { CoursePronostic } from "@/features/race/components/CoursePronostic";
 import {
   AnalysisPendingCard,
   CourseDeskCard,
+  HorseRolesCard,
   LockedTicketCard,
   OfficialArrivalCard,
   TopFiveCard,
@@ -20,6 +21,7 @@ import {
   normalizeOfficialArrival,
   normalizeParticipants,
   normalizePronostic,
+  normalizeRoles,
   type RaceApiResponse,
 } from "@/features/race/lib/race-page-model";
 import { fetchRaceDetails } from "@/features/races/api/client";
@@ -70,6 +72,7 @@ function RaceDetailsContent({
   const participants = useMemo(() => normalizeParticipants(data), [data]);
   const officialArrival = useMemo(() => normalizeOfficialArrival(data), [data]);
   const pronostic = useMemo(() => normalizePronostic(data), [data]);
+  const roles = useMemo(() => normalizeRoles(data), [data]);
   const top5 = useMemo(() => getTopFiveNumbers(pronostic, data), [data, pronostic]);
 
   if (!courseInfo) {
@@ -119,6 +122,8 @@ function RaceDetailsContent({
           {top5.length > 0 ? (
             <TopFiveCard top5={top5} participants={participants} />
           ) : null}
+
+          <HorseRolesCard roles={roles} />
         </div>
       </section>
 

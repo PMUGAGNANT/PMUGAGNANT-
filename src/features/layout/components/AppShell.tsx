@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { BottomNav } from "./BottomNav";
-import { Sidebar } from "./Sidebar";
+import { TopNav } from "./TopNav";
 
 const shellDisabledRoutes = new Set(["/login"]);
 
@@ -25,7 +25,7 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="app-shell">
-      <Sidebar />
+      <TopNav />
       <div className="app-shell__main">
         <main
           id="main-content"

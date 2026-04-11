@@ -6,6 +6,7 @@ import {
   type ApiRaceScoreLite,
 } from "@/lib/client-race-scoring";
 import { attachFaultRates } from "@/lib/horse-faults";
+import { detecterRoles } from "@/lib/horse-roles";
 import { loadAlgoParameters } from "@/lib/config";
 import { badRequest, serverError } from "@/lib/api-response";
 import { getRacePriorityBadge } from "@/lib/race-priority";
@@ -131,6 +132,18 @@ export async function GET(
         participants,
         algoParameters
       );
+      const roles = detecterRoles(
+        computedAnalysis.ranking.map((runner) => ({
+          cheval_num: runner.numPmu,
+          cheval_nom: runner.nom,
+          cote_matin: runner.coteMatin ?? runner.cote ?? runner.coteDepart ?? Number.NaN,
+          cote_depart: runner.coteDepart ?? runner.cote ?? null,
+          score_cheval: runner.prediction.scoreCheval,
+          confiance: runner.prediction.confiance,
+          non_partant: Boolean(runner.nonPartant),
+        })),
+        computedAnalysis.prediction.lisibilite
+      );
       analysis =
         isFinished || subscriptionState.isSubscribed
           ? computedAnalysis
@@ -181,6 +194,7 @@ export async function GET(
         pronoAvailable,
         isFinished,
         analysis,
+        roles: allowFullScore ? roles : null,
         refreshPriority,
         paywall:
           !isFinished && !subscriptionState.isSubscribed
