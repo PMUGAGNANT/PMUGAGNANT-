@@ -3,8 +3,8 @@ self.addEventListener("push", function (event) {
   const title = data.title || "PMU Gagnant";
   const options = {
     body: data.body || "Nouveau signal disponible",
-    icon: "/favicon.ico",
-    badge: "/favicon.ico",
+    icon: data.icon || "/favicon.ico",
+    badge: data.badge || "/favicon.ico",
     tag: data.tag || "pmu-signal",
     data: { url: data.url || "/" },
   };
