@@ -558,17 +558,36 @@ function CompactRaceCard({
   item: FeaturedRace;
   onOpenRace: (race: RaceSummary) => void;
 }) {
+  const { addSelection, isSelected, selections } = useCombo();
   const toneColor = item.priorityBadge
     ? getPriorityToneColor(item.priorityBadge.tone)
     : "var(--pmu-text-muted)";
   const raceCode = formatRaceCode(item.race);
+  const comboCandidate = item.score?.comboCandidate ?? null;
+  const comboId = comboCandidate
+    ? `${item.race.dateStr}-${item.race.reunion}-${item.race.course}-${comboCandidate.cheval_num}-${comboCandidate.role}`
+    : "";
+  const selectedInCombo = comboCandidate ? isSelected(comboId) : false;
+  const comboFull = selections.length >= 4 && !selectedInCombo;
+  const comboButtonLabel = selectedInCombo
+    ? "Dans le combo"
+    : comboFull
+      ? "Combo complet"
+      : `Ajouter #${comboCandidate?.cheval_num ?? "--"} ${comboCandidate?.cheval_nom ?? "cheval"} au combo`;
 
   return (
-    <button
-      type="button"
+    <article
+      role="button"
+      tabIndex={0}
       onClick={() => onOpenRace(item.race)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpenRace(item.race);
+        }
+      }}
       data-status={item.status}
-      className="app-card turf-course-card flex flex-col items-start gap-3 p-4 text-left transition-transform duration-200 hover:-translate-y-0.5"
+      className="app-card turf-course-card flex cursor-pointer flex-col items-start gap-3 p-4 text-left transition-transform duration-200 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pmu-primary)]"
     >
       <div className="flex w-full flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
@@ -626,7 +645,50 @@ function CompactRaceCard({
           </p>
         </div>
       </div>
-    </button>
+
+      {comboCandidate ? (
+        <button
+          type="button"
+          disabled={selectedInCombo || comboFull}
+          onKeyDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            if (selectedInCombo || comboFull) {
+              return;
+            }
+
+            addSelection({
+              id: comboId,
+              dateStr: item.race.dateStr,
+              reunion: item.race.reunion,
+              course: item.race.course,
+              courseLabel: `${raceCode} ${item.race.hippodrome}`,
+              cheval_num: comboCandidate.cheval_num,
+              cheval_nom: comboCandidate.cheval_nom,
+              cote: comboCandidate.cote,
+              role: comboCandidate.role,
+              confiance: comboCandidate.confiance,
+              probability: comboCandidate.confiance / 10,
+            });
+          }}
+          className={`mt-auto w-full rounded-lg border px-4 py-3 text-sm font-black transition-colors disabled:cursor-not-allowed ${
+            selectedInCombo || comboFull
+              ? "border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] text-[var(--pmu-text-muted)]"
+              : comboCandidate.role === "PEPITE"
+                ? "border-[color-mix(in_srgb,var(--pmu-gold)_35%,transparent)] bg-[var(--pmu-gold-light)] text-[var(--pmu-gold)] hover:bg-[color-mix(in_srgb,var(--pmu-gold-light)_82%,white)]"
+                : "border-[color-mix(in_srgb,var(--pmu-primary)_32%,transparent)] bg-[var(--pmu-primary-fade)] text-[var(--pmu-primary)] hover:bg-[color-mix(in_srgb,var(--pmu-primary)_14%,var(--pmu-surface))]"
+          }`}
+        >
+          {selectedInCombo ? "\u2713 " : ""}
+          {comboCandidate.role === "PEPITE" && !selectedInCombo && !comboFull
+            ? "Pepite - "
+            : comboCandidate.role === "OUTSIDER" && !selectedInCombo && !comboFull
+              ? "Outsider - "
+              : ""}
+          {comboButtonLabel}
+        </button>
+      ) : null}
+    </article>
   );
 }
 

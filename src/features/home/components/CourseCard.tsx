@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { AccordionPanel } from "@/components/ui/AccordionPanel";
+import { useCombo, type ComboRole } from "@/components/ComboBuilder";
 import { WhyThisHorse } from "@/components/ui/WhyThisHorse";
 import {
   eloForBeginner,
@@ -17,6 +18,15 @@ import {
   type RacePriorityBadge,
 } from "@/lib/race-priority";
 import { interpretScore } from "@/lib/scoring-policy";
+
+type CourseComboCandidate = {
+  cheval_num: number;
+  cheval_nom: string;
+  cote: number;
+  role: ComboRole;
+  confiance: number;
+  score_cheval: number;
+};
 
 export type CourseCardProps = {
   raceTitle: string;
@@ -34,6 +44,11 @@ export type CourseCardProps = {
   pickBetType?: string | null;
   topFacteurs?: string[];
   priorityBadge?: RacePriorityBadge | null;
+  comboCandidate?: CourseComboCandidate | null;
+  reunion?: number | string;
+  course?: number | string;
+  dateStr?: string | null;
+  courseLabel?: string;
 };
 
 function formatCountdown(minutes: number): string {
@@ -67,7 +82,13 @@ export function CourseCard({
   pickBetType,
   topFacteurs,
   priorityBadge = null,
+  comboCandidate = null,
+  reunion,
+  course,
+  dateStr = null,
+  courseLabel,
 }: CourseCardProps) {
+  const { addSelection, isSelected, selections } = useCombo();
   const [openPanel, setOpenPanel] = useState<"analysis" | "ticket" | "why" | null>(
     null
   );
@@ -93,6 +114,11 @@ export function CourseCard({
   const priorityToneColor = priorityBadge
     ? getPriorityToneColor(priorityBadge.tone)
     : "var(--pmu-text-muted)";
+  const comboId = comboCandidate
+    ? `${dateStr ?? "date"}-${reunion ?? "R"}-${course ?? "C"}-${comboCandidate.cheval_num}-${comboCandidate.role}`
+    : "";
+  const selectedInCombo = comboCandidate ? isSelected(comboId) : false;
+  const comboFull = selections.length >= 4 && !selectedInCombo;
 
   const lines: Array<{ label: string; value: string }> = [];
   if (profile.favoriFragileNum != null) {
@@ -300,10 +326,50 @@ export function CourseCard({
         </div>
       </div>
 
+      {comboCandidate ? (
+        <button
+          type="button"
+          disabled={selectedInCombo || comboFull}
+          onClick={(event) => {
+            event.stopPropagation();
+            if (selectedInCombo || comboFull) {
+              return;
+            }
+
+            addSelection({
+              id: comboId,
+              dateStr,
+              reunion: reunion ?? "",
+              course: course ?? "",
+              courseLabel: courseLabel ?? `R${reunion ?? ""}C${course ?? ""}`,
+              cheval_num: comboCandidate.cheval_num,
+              cheval_nom: comboCandidate.cheval_nom,
+              cote: comboCandidate.cote,
+              role: comboCandidate.role,
+              confiance: comboCandidate.confiance,
+              probability: comboCandidate.confiance / 10,
+            });
+          }}
+          className={`mt-auto w-full rounded-lg border px-4 py-3 text-sm font-black transition-colors disabled:cursor-not-allowed ${
+            selectedInCombo || comboFull
+              ? "border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] text-[var(--pmu-text-muted)]"
+              : comboCandidate.role === "PEPITE"
+                ? "border-[color-mix(in_srgb,var(--pmu-gold)_35%,transparent)] bg-[var(--pmu-gold-light)] text-[var(--pmu-gold)] hover:bg-[color-mix(in_srgb,var(--pmu-gold-light)_82%,white)]"
+                : "border-[color-mix(in_srgb,var(--pmu-primary)_32%,transparent)] bg-[var(--pmu-primary-fade)] text-[var(--pmu-primary)] hover:bg-[color-mix(in_srgb,var(--pmu-primary)_14%,var(--pmu-surface))]"
+          }`}
+        >
+          {selectedInCombo
+            ? "\u2713 Dans le combo"
+            : comboFull
+              ? "Combo complet"
+              : `${comboCandidate.role === "PEPITE" ? "Pepite" : "Outsider"} - Ajouter #${comboCandidate.cheval_num} ${comboCandidate.cheval_nom} au combo`}
+        </button>
+      ) : null}
+
       <button
         type="button"
         onClick={onClick}
-        className="app-button-primary mt-auto w-full"
+        className={`app-button-primary w-full ${comboCandidate ? "" : "mt-auto"}`}
       >
         {ctaLabel(displayScore)}
       </button>

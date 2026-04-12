@@ -54,6 +54,14 @@ export type RaceScore = {
     cote?: number | null;
     topFacteurs?: string[];
   } | null;
+  comboCandidate?: {
+    cheval_num: number;
+    cheval_nom: string;
+    cote: number;
+    role: "PEPITE" | "OUTSIDER";
+    confiance: number;
+    score_cheval: number;
+  } | null;
 };
 
 export type RacesResponse = {
