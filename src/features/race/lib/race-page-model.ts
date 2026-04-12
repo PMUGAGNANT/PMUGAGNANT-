@@ -12,6 +12,7 @@ export type RaceApiParticipant = {
   driver?: string | null;
   jockey?: string | null;
   entraineur?: string | null;
+  proprietaire?: string | null;
   age?: number | null;
   sexe?: string | null;
   placeCorde?: number | string | null;
@@ -203,6 +204,7 @@ export function toParticipantRow(
     driver: participant.driver ?? null,
     jockey: participant.jockey ?? null,
     entraineur: participant.entraineur ?? null,
+    proprietaire: participant.proprietaire ?? null,
     age: participant.age ?? null,
     sexe: participant.sexe ?? null,
     corde: participant.corde ?? participant.placeCorde ?? null,

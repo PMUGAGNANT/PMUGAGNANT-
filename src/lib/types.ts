@@ -55,6 +55,7 @@ export interface Participant {
   driver: string;
   entraineur: string;
   jockey: string;
+  proprietaire?: string;
   age: number;
   sexe: string;
   cote: number | null;

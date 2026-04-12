@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import type { RoleCheval, TypeRoleCheval } from "@/lib/horse-roles";
 
 export interface ArrivalRow {
@@ -16,6 +17,7 @@ export interface CourseParticipantRow {
   driver?: string | null;
   jockey?: string | null;
   entraineur?: string | null;
+  proprietaire?: string | null;
   age?: number | null;
   sexe?: string | null;
   corde?: number | string | null;
@@ -195,6 +197,19 @@ function getNumberChipStyle(role: RoleCheval | null) {
   };
 }
 
+function normalizeSearch(value?: string | null) {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function uniqueSorted(values: Array<string | null | undefined>) {
+  return [...new Set(values.map((value) => value?.trim()).filter(Boolean) as string[])]
+    .sort((left, right) => left.localeCompare(right, "fr", { sensitivity: "base" }));
+}
+
 export function ParticipantsTable({
   participants,
   favoriNum = null,
@@ -203,13 +218,47 @@ export function ParticipantsTable({
   courseFinished = false,
   officialArrival = [],
 }: ParticipantsTableProps) {
-  const safeParticipants = Array.isArray(participants) ? participants : [];
+  const [humanSearch, setHumanSearch] = useState("");
+  const [trainerFilter, setTrainerFilter] = useState("");
+  const [ownerFilter, setOwnerFilter] = useState("");
+  const safeParticipants = useMemo(
+    () => (Array.isArray(participants) ? participants : []),
+    [participants]
+  );
   const safeArrival = Array.isArray(officialArrival) ? officialArrival : [];
 
-  const sortedParticipants = [...safeParticipants].sort(
-    (left, right) => Number(left.numero ?? 999) - Number(right.numero ?? 999)
+  const sortedParticipants = useMemo(
+    () =>
+      [...safeParticipants].sort(
+        (left, right) => Number(left.numero ?? 999) - Number(right.numero ?? 999)
+      ),
+    [safeParticipants]
   );
+  const trainers = useMemo(
+    () => uniqueSorted(safeParticipants.map((participant) => participant.entraineur)),
+    [safeParticipants]
+  );
+  const owners = useMemo(
+    () => uniqueSorted(safeParticipants.map((participant) => participant.proprietaire)),
+    [safeParticipants]
+  );
+  const normalizedHumanSearch = normalizeSearch(humanSearch);
+  const activeFilters = Boolean(normalizedHumanSearch || trainerFilter || ownerFilter);
   const arrivalMap = new Map(safeArrival.map((row) => [row.numPmu, row.position]));
+
+  function participantMatchesFilters(participant: CourseParticipantRow) {
+    const humanText = normalizeSearch(
+      [participant.jockey, participant.driver, participant.nom].filter(Boolean).join(" ")
+    );
+    const humanMatches =
+      !normalizedHumanSearch || humanText.includes(normalizedHumanSearch);
+    const trainerMatches =
+      !trainerFilter || participant.entraineur === trainerFilter;
+    const ownerMatches =
+      !ownerFilter || participant.proprietaire === ownerFilter;
+
+    return humanMatches && trainerMatches && ownerMatches;
+  }
 
   if (safeParticipants.length === 0) {
     return (
@@ -247,6 +296,51 @@ export function ParticipantsTable({
             </span>
           </div>
         </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          <label className="block">
+            <span className="app-label">Recherche jockey / driver</span>
+            <input
+              type="search"
+              value={humanSearch}
+              onChange={(event) => setHumanSearch(event.target.value)}
+              placeholder="Rechercher un jockey..."
+              className="app-input mt-2 w-full"
+            />
+          </label>
+
+          <label className="block">
+            <span className="app-label">Entraineur</span>
+            <select
+              value={trainerFilter}
+              onChange={(event) => setTrainerFilter(event.target.value)}
+              className="app-input mt-2 w-full"
+            >
+              <option value="">Tous les entraineurs</option>
+              {trainers.map((trainer) => (
+                <option key={trainer} value={trainer}>
+                  {trainer}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="app-label">Proprietaire</span>
+            <select
+              value={ownerFilter}
+              onChange={(event) => setOwnerFilter(event.target.value)}
+              className="app-input mt-2 w-full"
+            >
+              <option value="">Tous les proprietaires</option>
+              {owners.map((owner) => (
+                <option key={owner} value={owner}>
+                  {owner}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
       <div className="hidden overflow-x-auto xl:block">
@@ -273,11 +367,14 @@ export function ParticipantsTable({
               const score = getScoreTone(participant.scoreIa);
               const numberStyle = getNumberChipStyle(role);
               const struck = participant.nonPartant ? "line-through opacity-60" : "";
+              const matchesFilters = participantMatchesFilters(participant);
 
               return (
                 <tr
                   key={`${participant.numero}-${index}`}
-                  className="transition hover:bg-[color-mix(in_srgb,var(--pmu-surface-highlight)_42%,var(--pmu-surface))]"
+                  className={`transition hover:bg-[color-mix(in_srgb,var(--pmu-surface-highlight)_42%,var(--pmu-surface))] ${
+                    activeFilters && !matchesFilters ? "opacity-40" : ""
+                  }`}
                   style={{
                     background: getRowBackground(index, role),
                   }}
@@ -348,11 +445,14 @@ export function ParticipantsTable({
           const score = getScoreTone(participant.scoreIa);
           const numberStyle = getNumberChipStyle(role);
           const struck = participant.nonPartant ? "line-through opacity-60" : "";
+          const matchesFilters = participantMatchesFilters(participant);
 
           return (
             <article
               key={`${participant.numero}-${index}`}
-              className="rounded-[1.25rem] border p-4"
+              className={`rounded-[1.25rem] border p-4 ${
+                activeFilters && !matchesFilters ? "opacity-40" : ""
+              }`}
               style={{
                 borderColor: "var(--pmu-border)",
                 background: getRowBackground(index, role),

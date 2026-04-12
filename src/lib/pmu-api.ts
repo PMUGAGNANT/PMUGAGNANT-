@@ -259,6 +259,7 @@ function mapParticipant(raw: Record<string, unknown>): Participant {
     driver: String(raw.driver ?? raw.driverPrincipal ?? ""),
     entraineur: String(raw.entraineur ?? raw.entraineurPrincipal ?? ""),
     jockey: String(raw.jockey ?? raw.jockeyPrincipal ?? raw.driver ?? ""),
+    proprietaire: String(raw.proprietaire ?? raw.proprietairePrincipal ?? raw.owner ?? ""),
     age: Number(raw.age ?? 0),
     sexe: String(raw.sexe ?? ""),
     cote,
