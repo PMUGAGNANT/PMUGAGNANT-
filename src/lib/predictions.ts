@@ -141,7 +141,7 @@ export function analyzeRaceWithParameters(
       1
     );
     const marketEdge = round2(probaEstimee - probabiliteImplicite);
-    const confiance = round1(
+    const confianceActuelle = round1( // v9.3
       clamp(
         scoreFinalPari / 10 +
           runner.signaux.marche / 10 -
@@ -157,6 +157,15 @@ export function analyzeRaceWithParameters(
         10
       )
     );
+    const signauxForts = [ // v9.3
+      runner.signaux.forme, // v9.3
+      runner.signaux.regularite, // v9.3
+      runner.signaux.victoire, // v9.3
+      runner.signaux.podium, // v9.3
+      runner.signaux.humain, // v9.3
+      runner.signaux.marche, // v9.3
+    ].filter((signal) => signal > 6).length; // v9.3
+    const confiance = signauxForts < 2 ? Math.min(confianceActuelle, 5.8) : confianceActuelle; // v9.3
     const outsider = Boolean((runner.cote ?? 0) > parameters.outsiders.coteMin);
     const objective = determineObjective(
       runner.prediction.scoreCheval,
@@ -279,8 +288,8 @@ export function analyzeRaceWithParameters(
       .filter(
         (runner) =>
           (runner.cote ?? 0) >= 5.0 &&
-          runner.prediction.scoreCheval >= 52 &&
-          runner.prediction.confiance >= 4.5 &&
+          runner.prediction.scoreCheval >= 58 && // v9.3
+          runner.prediction.confiance >= 6.0 && // v9.3
           runner.signaux.valueIntrinseque >= 2 &&
           runner.prediction.decision !== "REJET" &&
           runner.numPmu !== (favori?.numPmu ?? -1)

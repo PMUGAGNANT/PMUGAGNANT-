@@ -10,7 +10,6 @@ import {
   marketProbabilityFromOdds,
   round1,
   round2,
-  VALUE_CONFIRMATION_MULTIPLIER,
 } from "@/lib/engine/shared";
 
 export type HorseDecisionCandidate = Omit<
@@ -126,6 +125,10 @@ export function determineHorseDecision(
     }
   }
 
+  if (candidate.confiance < 5.5 && decision === "VALIDE") { // v9.3
+    decision = "SURVEILLANCE"; // v9.3
+  } // v9.3
+
   return { decision, typePariConseille, miseConseillee };
 }
 
@@ -136,8 +139,9 @@ export function buildValue(
 ): ValueAnalysis {
   const cotePMU = runner.cote ?? runner.coteDepart ?? runner.coteMatin ?? 0;
   const probabiliteImplicite = marketProbabilityFromOdds(cotePMU);
+  const valueConfirmationMultiplier = lisibilite === "LISIBLE" ? 1.1 : lisibilite === "COMPLEXE" ? 1.25 : 1; // v9.3
   const probabiliteValueSeuil = clamp(
-    probabiliteImplicite * VALUE_CONFIRMATION_MULTIPLIER,
+    probabiliteImplicite * valueConfirmationMultiplier, // v9.3
     0,
     1
   );

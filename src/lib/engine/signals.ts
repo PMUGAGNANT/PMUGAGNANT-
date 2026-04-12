@@ -458,7 +458,8 @@ export function computeBaseHorseScore(signaux: RunnerSignals) {
     signaux.valueIntrinseque;
 
   const negatives = signaux.risque + signaux.faute;
-  return clamp(32 + positives - negatives, 0, 100);
+  const riskMultiplier = signaux.risque > 12 ? 0.7 : signaux.risque > 8 ? 0.85 : 1.0; // v9.3
+  return clamp((32 + positives) * riskMultiplier - negatives, 0, 100); // v9.3
 }
 
 export function computeTop3Potential(
