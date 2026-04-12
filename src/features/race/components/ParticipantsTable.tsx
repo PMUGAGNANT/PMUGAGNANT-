@@ -107,6 +107,7 @@ function getFallbackRole(
     cote: participant.cote ?? 0,
     score_cheval: participant.scoreIa ?? 0,
     confiance: 0,
+    raison: "Repere principal du moteur.",
     variation_cote: null,
   };
 

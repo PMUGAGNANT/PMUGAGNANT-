@@ -4,12 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 
+import { CourseRoles } from "@/components/CourseRoles";
 import { CourseDetailSkeleton } from "@/features/race/components/CourseDetailSkeleton";
 import { CoursePronostic } from "@/features/race/components/CoursePronostic";
 import {
   AnalysisPendingCard,
   CourseDeskCard,
-  HorseRolesCard,
   LockedTicketCard,
   OfficialArrivalCard,
   TopFiveCard,
@@ -119,11 +119,11 @@ function RaceDetailsContent({
             refreshPriority={data.refreshPriority ?? null}
           />
 
+          <CourseRoles roles={roles} />
+
           {top5.length > 0 ? (
             <TopFiveCard top5={top5} participants={participants} />
           ) : null}
-
-          <HorseRolesCard roles={roles} />
         </div>
       </section>
 

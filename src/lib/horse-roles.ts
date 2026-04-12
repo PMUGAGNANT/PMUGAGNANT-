@@ -8,7 +8,8 @@ export interface ParticipantBase {
   non_partant?: boolean;
 }
 
-export type TypeRoleCheval = "FAVORI" | "PEPITE" | "OUTSIDER" | "OUBLIE";
+export type RoleId = "FAVORI" | "PEPITE" | "OUTSIDER" | "OUBLIE";
+export type TypeRoleCheval = RoleId;
 export type LisibiliteRoleCheval = "LISIBLE" | "COMPLEXE" | "LOTERIE";
 
 export interface RoleCheval {
@@ -20,6 +21,7 @@ export interface RoleCheval {
   cote: number;
   score_cheval: number;
   confiance: number;
+  raison: string;
   variation_cote: number | null;
 }
 
@@ -46,6 +48,23 @@ function variationCote(participant: ParticipantBase) {
   return ((participant.cote_depart - participant.cote_matin) / participant.cote_matin) * 100;
 }
 
+function getRoleReason(role: TypeRoleCheval, participant: ParticipantBase) {
+  const variation = variationCote(participant);
+
+  switch (role) {
+    case "FAVORI":
+      return "Cote du matin la plus basse.";
+    case "PEPITE":
+      return `Score ${Math.round(participant.score_cheval)}/100 avec cote > 6.`;
+    case "OUTSIDER":
+      return variation !== null
+        ? `Baisse de cote ${Math.round(variation)}% depuis le matin.`
+        : "Signal marche en baisse nette.";
+    case "OUBLIE":
+      return "Score solide sans signal marche fort.";
+  }
+}
+
 function toRole(role: TypeRoleCheval, participant: ParticipantBase): RoleCheval {
   return {
     role,
@@ -56,6 +75,7 @@ function toRole(role: TypeRoleCheval, participant: ParticipantBase): RoleCheval 
     cote: participant.cote_matin,
     score_cheval: participant.score_cheval,
     confiance: participant.confiance,
+    raison: getRoleReason(role, participant),
     variation_cote: variationCote(participant),
   };
 }
