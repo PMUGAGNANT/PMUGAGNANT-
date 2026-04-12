@@ -61,6 +61,11 @@ function HomeBoardCard({
       pickBetType={item.score?.pick?.betType}
       topFacteurs={item.score?.pick?.topFacteurs}
       priorityBadge={item.priorityBadge}
+      comboCandidate={item.score?.comboCandidate ?? null}
+      reunion={item.race.reunion}
+      course={item.race.course}
+      dateStr={item.race.dateStr}
+      courseLabel={`R${item.race.reunion}C${item.race.course} ${item.race.hippodrome}`}
       onClick={() => onOpenRace(item)}
     />
   );

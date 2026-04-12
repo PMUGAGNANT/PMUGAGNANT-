@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAllRaces, getParticipants, getTodayDateStr, isEligiblePmuFranceRace } from "@/lib/pmu-api";
 import { analyzeRaceWithParameters, getMinutesUntilStart } from "@/lib/analysis";
 import { attachFaultRates } from "@/lib/horse-faults";
+import { detecterRoles, type RoleCheval } from "@/lib/horse-roles";
 import { loadAlgoParameters } from "@/lib/config";
 import { badRequest, serverError } from "@/lib/api-response";
 import { normalizeRequestedDate } from "@/lib/request-utils";
@@ -10,6 +11,19 @@ import { getRequestSubscriptionState } from "@/lib/subscription";
 import type { Lisibilite, PredictionDecision, RaceSummary } from "@/lib/types";
 
 export const dynamic = 'force-dynamic';
+
+type ComboCandidatePayload = {
+  cheval_num: number;
+  cheval_nom: string;
+  cote: number;
+  role: "PEPITE" | "OUTSIDER";
+  confiance: number;
+  score_cheval: number;
+};
+
+function isComboRole(role: RoleCheval): role is RoleCheval & { role: ComboCandidatePayload["role"] } {
+  return role.role === "PEPITE" || role.role === "OUTSIDER";
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -53,6 +67,7 @@ export async function GET(request: Request) {
               topFacteurs: string[];
             }
           | null;
+        comboCandidate: ComboCandidatePayload | null;
       }
     > = {};
 
@@ -79,6 +94,29 @@ export async function GET(request: Request) {
             participants,
             algoParameters
           );
+          const roles = detecterRoles(
+            analysis.ranking.map((runner) => ({
+              cheval_num: runner.numPmu,
+              cheval_nom: runner.nom,
+              cote_matin: runner.coteMatin ?? runner.cote ?? runner.coteDepart ?? Number.NaN,
+              cote_depart: runner.coteDepart ?? runner.cote ?? null,
+              score_cheval: runner.prediction.scoreCheval,
+              confiance: runner.prediction.confiance,
+              non_partant: Boolean(runner.nonPartant),
+            })),
+            analysis.prediction.lisibilite
+          );
+          const comboRole = roles.find(isComboRole);
+          const comboCandidate: ComboCandidatePayload | null = comboRole
+            ? {
+                cheval_num: comboRole.cheval_num,
+                cheval_nom: comboRole.cheval_nom,
+                cote: comboRole.cote,
+                role: comboRole.role,
+                confiance: comboRole.confiance,
+                score_cheval: comboRole.score_cheval,
+              }
+            : null;
           const key = `${race.reunion}-${race.course}`;
           const minutesUntil = getMinutesUntilStart(race.heureDepart, race.dateStr);
           const stage: 'preview_2h' | 'preview_1h' | 'final_30m' | 'finished' =
@@ -130,6 +168,7 @@ export async function GET(request: Request) {
                     topFacteurs: analysis.pepiteDuJour.prediction.topFacteurs,
                   }
                 : null,
+            comboCandidate: allowFullScore ? comboCandidate : null,
           };
         })
       );
@@ -146,6 +185,7 @@ export async function GET(request: Request) {
             recommendation: v.recommendation,
             pick: v.pick,
             pepiteDuJour: v.pepiteDuJour,
+            comboCandidate: v.comboCandidate,
           };
         } else if (result.status === "rejected") {
           logger.warn("race_scores.batch_item_failed", {
