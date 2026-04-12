@@ -58,10 +58,10 @@ export function RaceHeroSection({
         : "☀️";
   const impactTone =
     meteo?.terrain_impact === "FAVORABLE"
-      ? "text-green-700 bg-green-100 border-green-300"
+      ? "text-[var(--pmu-primary)] bg-[var(--pmu-primary-soft)] border-[var(--pmu-primary)]"
       : meteo?.terrain_impact === "DEFAVORABLE"
-        ? "text-red-700 bg-red-100 border-red-300"
-        : "text-slate-700 bg-slate-100 border-slate-300";
+        ? "text-[var(--pmu-red)] bg-[var(--pmu-earth-light)] border-[var(--pmu-red)]"
+        : "text-[var(--pmu-text-soft)] bg-[var(--pmu-surface-2)] border-[var(--pmu-border)]";
 
   return (
     <section className="app-page-hero p-6 md:p-8">
@@ -124,7 +124,7 @@ export function RaceHeroSection({
                 </span>
               </div>
               {meteo.alerte ? (
-                <p className="mt-3 rounded-lg border border-orange-300 bg-orange-100 px-3 py-2 text-sm font-semibold text-orange-800">
+                <p className="mt-3 rounded-lg border border-[var(--pmu-orange)] bg-[var(--pmu-earth-light)] px-3 py-2 text-sm font-semibold text-[var(--pmu-orange)]">
                   ⚠️ Alerte terrain - {meteo.alerte}
                 </p>
               ) : null}
@@ -132,29 +132,29 @@ export function RaceHeroSection({
           ) : null}
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="app-stat-card px-5 py-4">
+        <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4 xl:mt-0">
+          <div className="app-card-muted px-4 py-3">
             <p className="app-label">Depart</p>
-            <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+            <p className="mt-1 font-[family-name:var(--font-display)] text-xl font-bold text-[var(--pmu-text)]">
               {courseInfo.heureDepart || "--"}
             </p>
           </div>
-          <div className="app-stat-card px-5 py-4">
+          <div className="app-card-muted px-4 py-3">
             <p className="app-label">Fenetre</p>
-            <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+            <p className="mt-1 font-[family-name:var(--font-display)] text-xl font-bold text-[var(--pmu-text)]">
               {formatMinutesLabel(minutesUntilStart)}
             </p>
           </div>
-          <div className="app-stat-card px-5 py-4">
-            <p className="app-label">Allocation</p>
-            <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
-              {formatEuros(courseInfo.allocation) || "--"}
+          <div className="app-card-muted px-4 py-3">
+            <p className="app-label">Distance</p>
+            <p className="mt-1 font-[family-name:var(--font-display)] text-xl font-bold text-[var(--pmu-text)]">
+              {courseInfo.distance ? `${courseInfo.distance} m` : "--"}
             </p>
           </div>
-          <div className="app-stat-card px-5 py-4">
-            <p className="app-label">Acces</p>
-            <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
-              {paywallRequired ? "Preview public" : "Lecture complete"}
+          <div className="app-card-muted px-4 py-3">
+            <p className="app-label">Dotation</p>
+            <p className="mt-1 font-[family-name:var(--font-display)] text-xl font-bold text-[var(--pmu-text)]">
+              {formatEuros(courseInfo.allocation) || "--"}
             </p>
           </div>
         </div>

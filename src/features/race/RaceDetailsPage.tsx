@@ -98,8 +98,8 @@ function RaceDetailsContent({
         meteo={data.meteo ?? null}
       />
 
-      <section className="grid gap-5 xl:grid-cols-[1.12fr,0.88fr]">
-        <div className="space-y-5">
+      <section className="grid gap-6 xl:grid-cols-[1.1fr,0.9fr]">
+        <div className="space-y-6">
           {paywallRequired ? (
             <LockedTicketCard
               previewLabel={data.paywall?.preview?.favori?.nom ?? null}
@@ -111,9 +111,30 @@ function RaceDetailsContent({
           ) : (
             <AnalysisPendingCard />
           )}
+
+          <AvisExpert
+            predictions={data.avisExpert ?? []}
+            isPremium={!paywallRequired || isFinished}
+          />
+
+          <ParticipantsTable
+            participants={participants}
+            favoriNum={pronostic?.favoris?.[0] ?? null}
+            pepiteNum={data.analysis?.pepiteDuJour?.numPmu ?? null}
+            estPlat={courseInfo.discipline?.toUpperCase() === "PLAT"}
+            courseFinished={isFinished}
+            officialArrival={officialArrival}
+          />
         </div>
 
-        <div className="grid gap-5">
+        <div className="grid gap-6">
+          {roles.length > 0 ? (
+            <section className="app-card p-5 md:p-6">
+              <p className="app-kicker mb-3">4 roles cles</p>
+              <CourseRoles roles={roles} lisibilite={roleLisibilite} course={courseInfo} />
+            </section>
+          ) : null}
+
           <CourseDeskCard
             courseInfo={courseInfo}
             minutesUntilStart={data.minutesUntilStart}
@@ -124,11 +145,6 @@ function RaceDetailsContent({
             refreshPriority={data.refreshPriority ?? null}
           />
 
-          <CourseRoles roles={roles} lisibilite={roleLisibilite} course={courseInfo} />
-          <AvisExpert
-            predictions={data.avisExpert ?? []}
-            isPremium={!paywallRequired || isFinished}
-          />
           <LiveCotesChart
             series={data.liveCotes ?? []}
             pepiteNum={pepiteRole?.cheval_num ?? null}
@@ -139,15 +155,6 @@ function RaceDetailsContent({
           ) : null}
         </div>
       </section>
-
-      <ParticipantsTable
-        participants={participants}
-        favoriNum={pronostic?.favoris?.[0] ?? null}
-        pepiteNum={data.analysis?.pepiteDuJour?.numPmu ?? null}
-        estPlat={courseInfo.discipline?.toUpperCase() === "PLAT"}
-        courseFinished={isFinished}
-        officialArrival={officialArrival}
-      />
 
       {officialArrival.length > 0 ? (
         <OfficialArrivalCard arrivee={officialArrival} />

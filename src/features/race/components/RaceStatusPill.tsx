@@ -16,6 +16,7 @@ export function RaceStatusPill({
 
   return (
     <span
+      data-tone={tone}
       className="rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em]"
       style={{
         color,
