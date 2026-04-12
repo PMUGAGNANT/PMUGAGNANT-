@@ -287,7 +287,7 @@ function HomeFocusPanel({
       </div>
 
       <div className="mt-6 grid gap-4 xl:grid-cols-[1.1fr,0.9fr]">
-        <section className="rounded-[1.35rem] border border-[color-mix(in_srgb,var(--pmu-primary)_16%,transparent)] bg-[linear-gradient(180deg,var(--pmu-primary-fade)_0%,color-mix(in_srgb,var(--pmu-surface)_96%,transparent)_100%)] p-5">
+        <section className="rounded-[1.35rem] border border-[color-mix(in_srgb,var(--pmu-primary)_16%,transparent)] bg-[var(--pmu-primary-fade)] p-5">
           <div className="grid gap-3 md:grid-cols-4">
             <div className="app-card-muted px-4 py-3.5 md:col-span-1">
               <p className="app-label">Radar</p>
@@ -481,7 +481,8 @@ function CompactRaceCard({
     <button
       type="button"
       onClick={() => onOpenRace(item.race)}
-      className="app-card flex flex-col items-start gap-3 p-4 text-left transition-transform duration-200 hover:-translate-y-0.5"
+      data-status={item.status}
+      className="app-card turf-course-card flex flex-col items-start gap-3 p-4 text-left transition-transform duration-200 hover:-translate-y-0.5"
     >
       <div className="flex w-full flex-wrap items-start justify-between gap-3">
         <div>
@@ -508,7 +509,7 @@ function CompactRaceCard({
         {item.race.hippodrome} - {formatCourseMeta(item.race)}
       </p>
 
-      <div className="grid w-full gap-3 sm:grid-cols-3">
+      <div className="grid w-full gap-3 sm:grid-cols-4">
         <div className="app-card-muted px-3 py-3">
           <p className="app-label">Score</p>
           <p className="mt-1 text-2xl font-black text-[var(--pmu-text)]">
@@ -527,8 +528,116 @@ function CompactRaceCard({
             {item.race.heureDepart} - {formatMinutesLabel(item.minutesUntilStart)}
           </p>
         </div>
+        <div className="app-card-muted px-3 py-3">
+          <p className="app-label">Signal</p>
+          <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">
+            {item.score?.decision ?? item.status}
+          </p>
+        </div>
       </div>
     </button>
+  );
+}
+
+const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V"];
+
+function HomeAside({
+  focusRace,
+  focusParticipants,
+  stats,
+}: {
+  focusRace: FeaturedRace | null;
+  focusParticipants: FocusParticipant[];
+  stats: HomeStats;
+}) {
+  const radarScore = focusRace
+    ? Math.max(0, Math.min(100, Math.round(focusRace.scoreValue * 10)))
+    : 0;
+  const ticketRows = focusParticipants.slice(0, 3);
+  const pick = focusRace?.score?.pick ?? null;
+
+  return (
+    <aside className="turf-home-aside" aria-label="Radar du jour">
+      <section className="turf-aside-card turf-radar-card">
+        <p className="app-kicker">Radar du jour</p>
+        <div className="turf-radar-card__score">
+          {radarScore || "--"}
+        </div>
+        <p className="app-label">Score journee - lisibilite</p>
+
+        <div className="turf-radar-lines">
+          <div>
+            <span>Lisibilite</span>
+            <i style={{ width: `${focusRace ? 82 : 36}%` }} />
+          </div>
+          <div>
+            <span>Value</span>
+            <i style={{ width: `${focusRace ? Math.max(34, radarScore - 10) : 28}%` }} />
+          </div>
+          <div>
+            <span>Fiabilite</span>
+            <i style={{ width: `${focusRace ? Math.max(38, radarScore - 4) : 30}%` }} />
+          </div>
+          <div>
+            <span>Bankroll</span>
+            <i className="is-gold" style={{ width: "64%" }} />
+          </div>
+        </div>
+      </section>
+
+      <section className="turf-aside-card turf-ticket-card">
+        <header>Ticket prioritaire</header>
+        <div className="turf-ticket-card__body">
+          {ticketRows.length > 0 ? (
+            ticketRows.map((participant, index) => {
+              const num = getParticipantNum(participant);
+
+              return (
+                <div
+                  key={`${num}-${participant.nom ?? "participant"}`}
+                  className="turf-ticket-row"
+                >
+                  <span className="turf-ticket-row__rank">
+                    {ROMAN_NUMERALS[index] ?? index + 1}
+                  </span>
+                  <div>
+                    <p className="turf-ticket-row__horse">
+                      {Number.isFinite(num) ? `${num} ` : ""}
+                      {participant.nom ?? "Cheval"}
+                    </p>
+                    <small>
+                      Cote {formatOddsLabel(participant.cote)} -{" "}
+                      {participant.jockey ?? participant.driver ?? "monte a confirmer"}
+                    </small>
+                  </div>
+                </div>
+              );
+            })
+          ) : pick ? (
+            <div className="turf-ticket-row">
+              <span className="turf-ticket-row__rank">I</span>
+              <div>
+                <p className="turf-ticket-row__horse">
+                  {pick.numPmu ? `${pick.numPmu} ` : ""}
+                  {pick.nom ?? "Cheval principal"}
+                </p>
+                <small>{getBetTypeLabel(focusRace?.score)}</small>
+              </div>
+            </div>
+          ) : (
+            <p className="turf-ticket-card__empty">Ticket principal en preparation</p>
+          )}
+        </div>
+      </section>
+
+      <section className="turf-aside-card turf-aside-quote">
+        <p>Jouer juste, jouer rare, jouer fort</p>
+        <span>TurfEdge &middot; Algo v9.2</span>
+        <small>
+          {stats.playable} validee{stats.playable > 1 ? "s" : ""} sur {stats.total} courses
+        </small>
+      </section>
+    </aside>
   );
 }
 
@@ -543,7 +652,7 @@ function HomeLaneSection({
 
   return (
     <section className="space-y-4">
-      <div className="flex flex-col gap-2 rounded-[1.35rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] px-5 py-4 md:flex-row md:items-start md:justify-between">
+      <div className="turf-lane-header flex flex-col gap-2 rounded-[1.35rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] px-5 py-4 md:flex-row md:items-start md:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <span
@@ -589,16 +698,16 @@ function HomeLoadingSkeleton() {
       aria-busy="true"
       aria-label="Chargement du programme"
     >
-      <div className="app-card h-44 animate-pulse bg-[linear-gradient(180deg,var(--pmu-surface-highlight)_0%,var(--pmu-surface)_100%)]" />
+      <div className="app-card h-44 animate-pulse bg-[var(--pmu-surface-highlight)]" />
       <div className="grid gap-5 xl:grid-cols-[0.37fr,0.63fr]">
-        <div className="app-card h-[30rem] animate-pulse bg-[linear-gradient(180deg,var(--pmu-surface-highlight)_0%,var(--pmu-surface)_100%)]" />
-        <div className="app-card h-[30rem] animate-pulse bg-[linear-gradient(180deg,var(--pmu-surface-highlight)_0%,var(--pmu-surface)_100%)]" />
+        <div className="app-card h-[30rem] animate-pulse bg-[var(--pmu-surface-highlight)]" />
+        <div className="app-card h-[30rem] animate-pulse bg-[var(--pmu-surface-highlight)]" />
       </div>
       <div className="grid gap-5 2xl:grid-cols-2">
         {Array.from({ length: 4 }, (_, index) => (
           <div
             key={index}
-            className="app-card h-72 animate-pulse bg-[linear-gradient(180deg,var(--pmu-surface-highlight)_0%,var(--pmu-surface)_100%)]"
+            className="app-card h-72 animate-pulse bg-[var(--pmu-surface-highlight)]"
           />
         ))}
       </div>
@@ -836,7 +945,7 @@ function PageContent() {
   }, [featuredRaces]);
 
   return (
-    <div className="mx-auto flex w-full max-w-[96rem] flex-col gap-6 lg:gap-8">
+    <div className="turf-home-page mx-auto flex w-full max-w-[96rem] flex-col gap-6 lg:gap-8">
       <HomeControlBar
         selectedDate={selectedDate}
         sortMode={sortMode}
@@ -849,69 +958,79 @@ function PageContent() {
         onSortChange={setSortMode}
       />
 
-      {isLoading ? (
-        <HomeLoadingSkeleton />
-      ) : error ? (
-        <section
-          className="app-card border border-[color-mix(in_srgb,var(--pmu-red)_35%,transparent)] p-6"
-          role="alert"
-          aria-live="assertive"
-        >
-          <p className="text-lg font-bold text-[var(--pmu-red)]">
-            Impossible de charger la page Courses
-          </p>
-          <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">
-            {error}
-          </p>
-          <button
-            type="button"
-            className="app-button-primary mt-4"
-            onClick={() => setFetchRevision((revision) => revision + 1)}
-          >
-            Reessayer
-          </button>
-        </section>
-      ) : featuredRaces.length === 0 ? (
-        <section className="app-card p-8 text-center">
-          <p className="text-xl font-black text-[var(--pmu-text)]">
-            Aucune course exploitable pour cette date
-          </p>
-          <p className="mt-3 text-sm leading-6 text-[var(--pmu-text-soft)]">
-            La home reste volontairement simple : un focus, puis les courses par
-            couleur. Recharge la journee ou change de date.
-          </p>
-        </section>
-      ) : (
-        <>
-          <HomeFocusPanel
-            focusRace={focusRace}
-            focusDetail={focusDetail}
-            focusParticipants={focusParticipants}
-            isFocusLoading={isFocusLoading}
-            stats={stats}
-            sortMode={sortMode}
-            onOpenRace={navigateToRace}
-            onOpenPremium={() => router.push("/premium")}
-          />
-
-          {stats.playable === 0 && lanes.some((lane) => lane.key === "surveillance") ? (
-            <section className="app-card p-5 text-sm leading-6 text-[var(--pmu-text-soft)]">
-              Aucune course verte pour l&apos;instant. La meilleure surveillance
-              reste visible juste en dessous pour garder une ouverture prioritaire.
+      <div className="turf-main-layout">
+        <div className="turf-main-column">
+          {isLoading ? (
+            <HomeLoadingSkeleton />
+          ) : error ? (
+            <section
+              className="app-card border border-[color-mix(in_srgb,var(--pmu-red)_35%,transparent)] p-6"
+              role="alert"
+              aria-live="assertive"
+            >
+              <p className="text-lg font-bold text-[var(--pmu-red)]">
+                Impossible de charger la page Courses
+              </p>
+              <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">
+                {error}
+              </p>
+              <button
+                type="button"
+                className="app-button-primary mt-4"
+                onClick={() => setFetchRevision((revision) => revision + 1)}
+              >
+                Reessayer
+              </button>
             </section>
-          ) : null}
-
-          <section className="space-y-6">
-            {lanes.map((lane) => (
-              <HomeLaneSection
-                key={lane.key}
-                lane={lane}
+          ) : featuredRaces.length === 0 ? (
+            <section className="app-card p-8 text-center">
+              <p className="text-xl font-black text-[var(--pmu-text)]">
+                Aucune course exploitable pour cette date
+              </p>
+              <p className="mt-3 text-sm leading-6 text-[var(--pmu-text-soft)]">
+                La home reste volontairement simple : un focus, puis les courses par
+                couleur. Recharge la journee ou change de date.
+              </p>
+            </section>
+          ) : (
+            <>
+              <HomeFocusPanel
+                focusRace={focusRace}
+                focusDetail={focusDetail}
+                focusParticipants={focusParticipants}
+                isFocusLoading={isFocusLoading}
+                stats={stats}
+                sortMode={sortMode}
                 onOpenRace={navigateToRace}
+                onOpenPremium={() => router.push("/premium")}
               />
-            ))}
-          </section>
-        </>
-      )}
+
+              {stats.playable === 0 && lanes.some((lane) => lane.key === "surveillance") ? (
+                <section className="app-card p-5 text-sm leading-6 text-[var(--pmu-text-soft)]">
+                  Aucune course verte pour l&apos;instant. La meilleure surveillance
+                  reste visible juste en dessous pour garder une ouverture prioritaire.
+                </section>
+              ) : null}
+
+              <section className="space-y-6">
+                {lanes.map((lane) => (
+                  <HomeLaneSection
+                    key={lane.key}
+                    lane={lane}
+                    onOpenRace={navigateToRace}
+                  />
+                ))}
+              </section>
+            </>
+          )}
+        </div>
+
+        <HomeAside
+          focusRace={focusRace}
+          focusParticipants={focusParticipants}
+          stats={stats}
+        />
+      </div>
     </div>
   );
 }

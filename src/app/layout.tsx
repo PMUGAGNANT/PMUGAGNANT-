@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Inter } from "next/font/google";
+import { Cormorant_Garamond, Jost, Roboto_Mono } from "next/font/google";
 import Script from "next/script";
 import { AppShell } from "@/features/layout/components/AppShell";
 import { GlossaryPanel } from "@/components/ui/Glossary";
@@ -10,10 +10,11 @@ import { ThemeMetaColor } from "@/components/ui/ThemeMetaColor";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import "./globals.css";
 
-const uiFont = Inter({
+const uiFont = Jost({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-ui",
+  weight: ["300", "400", "500"],
 });
 
 const displayFont = Cormorant_Garamond({
@@ -21,6 +22,13 @@ const displayFont = Cormorant_Garamond({
   display: "swap",
   variable: "--font-display",
   weight: ["500", "600", "700"],
+});
+
+const monoFont = Roboto_Mono({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-mono",
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -40,7 +48,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  themeColor: "#f3f6fb",
+  themeColor: "#F5F2EB",
 };
 
 export default function RootLayout({
@@ -51,7 +59,7 @@ export default function RootLayout({
   return (
     <html lang="fr" data-theme="warm">
       <body
-        className={`${uiFont.variable} ${displayFont.variable} min-h-screen text-[var(--pmu-text)] antialiased`}
+        className={`${uiFont.variable} ${displayFont.variable} ${monoFont.variable} min-h-screen text-[var(--pmu-text)] antialiased`}
       >
         <a href="#main-content" className="pmu-skip-link">
           Aller au contenu
