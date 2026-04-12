@@ -15,12 +15,13 @@ import { getLiveCotesSeries } from "@/lib/live-cotes";
 import { fetchMeteoHippodrome } from "@/lib/meteo";
 import { loadAlgoParameters } from "@/lib/config";
 import { badRequest, serverError } from "@/lib/api-response";
+import { listPredictionStageSnapshots } from "@/lib/prediction-store";
 import { getRacePriorityBadge } from "@/lib/race-priority";
 import { normalizeRequestedDate, parsePositiveInteger } from "@/lib/request-utils";
 import { getRequestSubscriptionState } from "@/lib/subscription";
 import type { Participant, RaceSummary } from "@/lib/types";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 function buildOfficialArrival(participants: Participant[]) {
   return participants
@@ -96,7 +97,7 @@ export async function GET(
 ) {
   const { reunion, course } = await params;
   const { searchParams } = new URL(request.url);
-  const date = normalizeRequestedDate(searchParams.get('date'), getTodayDateStr());
+  const date = normalizeRequestedDate(searchParams.get("date"), getTodayDateStr());
   const rNum = parsePositiveInteger(reunion);
   const cNum = parsePositiveInteger(course);
 
@@ -114,20 +115,17 @@ export async function GET(
       request.headers.get("authorization")
     );
 
-    // Get race info from programme
     const allRaces = await getAllRaces(date);
-    const courseInfo = allRaces.find(r => r.reunion === rNum && r.course === cNum);
+    const courseInfo = allRaces.find((race) => race.reunion === rNum && race.course === cNum);
 
     if (!courseInfo) {
-      return NextResponse.json({ success: false, error: 'Race not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: "Race not found" }, { status: 404 });
     }
-    const meteo = await fetchMeteoHippodrome(courseInfo.hippodrome, courseInfo.heureDepart);
 
-    // Get participants and enrich them with historical risk signals.
+    const meteo = await fetchMeteoHippodrome(courseInfo.hippodrome, courseInfo.heureDepart);
     const participants = await attachFaultRates(await getParticipants(date, rNum, cNum));
     const officialArrival = buildOfficialArrival(participants);
-
-    // Check if pronostic should be revealed (30 min before start)
+    const timelineSnapshots = await listPredictionStageSnapshots(date, rNum, cNum).catch(() => []);
     const minutesUntil = getMinutesUntilStart(courseInfo.heureDepart, courseInfo.dateStr);
     const isFinished = officialArrival.length > 0 || minutesUntil < -10;
     const pronoAvailable = isFinished || minutesUntil <= 30;
@@ -151,10 +149,7 @@ export async function GET(
         })),
         computedAnalysis.prediction.lisibilite
       );
-      analysis =
-        isFinished || subscriptionState.isSubscribed
-          ? computedAnalysis
-          : null;
+      analysis = isFinished || subscriptionState.isSubscribed ? computedAnalysis : null;
       const allowFullScore = subscriptionState.isSubscribed || isFinished;
       const storedAvis = await fetchAvisExpertTop5(date, rNum, cNum);
       const avisExpert = buildAvisExpertFromAnalysis(
@@ -171,12 +166,8 @@ export async function GET(
             computedAnalysis.top5.map((runner) => runner.numPmu)
           )
         : null;
-      const decision = allowFullScore
-        ? computedAnalysis.prediction.decisionCourse
-        : "REJET";
-      const score = allowFullScore
-        ? computedAnalysis.scoreConfiance?.score ?? null
-        : null;
+      const decision = allowFullScore ? computedAnalysis.prediction.decisionCourse : "REJET";
+      const score = allowFullScore ? computedAnalysis.scoreConfiance?.score ?? null : null;
       const scoreLocked = !allowFullScore;
       const playable =
         allowFullScore &&
@@ -221,6 +212,7 @@ export async function GET(
         avisExpert,
         liveCotes,
         refreshPriority,
+        timelineSnapshots,
         paywall:
           !isFinished && !subscriptionState.isSubscribed
             ? {
@@ -253,6 +245,7 @@ export async function GET(
       avisExpert: null,
       liveCotes: null,
       refreshPriority: null,
+      timelineSnapshots,
       paywall: null,
     });
   } catch (error) {

@@ -16,6 +16,7 @@ import {
 } from "@/lib/race-refresh-policy";
 import {
   buildCourseRecord,
+  buildPredictionStageSnapshot,
   buildPredictionRows,
   buildRaceEngineRunRow,
   buildRunnerFeatureSnapshots,
@@ -32,6 +33,7 @@ import {
   upsertRunnerOutcomes,
   upsertRunnerScoreSnapshots,
   upsertCourseRecord,
+  upsertPredictionStageSnapshot,
   upsertPredictions,
 } from "@/lib/prediction-store";
 import { analyzeRaceWithParameters } from "@/lib/predictions";
@@ -376,11 +378,22 @@ async function persistProcessedRace(
   rows: PredictionRow[],
   extra?: {
     outcomeRows?: ReturnType<typeof buildRunnerOutcomeRows>;
+    stageSnapshotNotes?: string[];
   }
 ) {
   try {
     await upsertCourseRecord(buildCourseRecord(dateStr, processed.race, processed.analysis));
     await upsertPredictions(rows);
+    await upsertPredictionStageSnapshot(
+      buildPredictionStageSnapshot(
+        dateStr,
+        processed.race,
+        processed.analysis,
+        rows,
+        rows[0]?.stage ?? "MATIN",
+        extra?.stageSnapshotNotes ?? []
+      )
+    );
     await upsertRunnerMarketSnapshots(processed.instrumentation.marketSnapshots);
     await upsertRunnerFeatureSnapshots(processed.instrumentation.featureSnapshots);
     await upsertRunnerScoreSnapshots(
@@ -658,7 +671,12 @@ export async function runPreRaceSecondPass(
       parameters
     );
 
-    await persistProcessedRace(dateStr, current, updatedRows);
+    await persistProcessedRace(dateStr, current, updatedRows, {
+      stageSnapshotNotes: alerts.slice(0, 3).map((alert) => {
+        const details = alert.extra.length > 0 ? ` (${alert.extra.join(", ")})` : "";
+        return `#${alert.chevalNum} ${alert.chevalNom} -> ${alert.decision}${details}`;
+      }),
+    });
     await snapshotLiveCotes(dateStr, race, current.participants);
     const meteo = await fetchMeteoHippodrome(race.hippodrome, race.heureDepart);
     if (meteo?.terrain_impact === "DEFAVORABLE") {
@@ -746,6 +764,15 @@ export async function runResultSync(dateStr: string, options: RangeOptions = {})
 
     await persistProcessedRace(dateStr, current, settledRows, {
       outcomeRows: buildRunnerOutcomeRows(dateStr, race, current.participants, reports),
+      stageSnapshotNotes: settledRows
+        .filter((row) => row.resultat_gagnant || row.resultat_place)
+        .slice(0, 3)
+        .map(
+          (row) =>
+            `#${row.cheval_num} ${row.cheval_nom} ${
+              row.resultat_gagnant ? "gagnant" : "place"
+            }`
+        ),
     });
 
     return {

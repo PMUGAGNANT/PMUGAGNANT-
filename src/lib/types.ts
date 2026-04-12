@@ -384,6 +384,33 @@ export interface PredictionRow {
   updated_at?: string;
 }
 
+export interface PredictionStageSnapshotRow {
+  id?: string;
+  date: string;
+  reunion: number;
+  course: number;
+  stage: ScoreStage;
+  hippodrome: string;
+  lisibilite: Lisibilite | null;
+  score_lisibilite: number | null;
+  coefficient_lisibilite: number | null;
+  decision_course: PredictionDecision | null;
+  selection_num: number | null;
+  selection_nom: string | null;
+  selection_decision: PredictionDecision | null;
+  selection_confiance: number | null;
+  selection_pari: "GAGNANT" | "PLACE" | null;
+  selection_cote: number | null;
+  favori_num: number | null;
+  favori_nom: string | null;
+  favori_cote: number | null;
+  market_favorite_num: number | null;
+  market_favorite_nom: string | null;
+  market_favorite_cote: number | null;
+  notes?: string[] | null;
+  updated_at?: string;
+}
+
 export interface WeeklyReportRow {
   id?: string;
   week_start: string;
