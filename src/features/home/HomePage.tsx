@@ -8,6 +8,7 @@ import { translateFactors } from "@/lib/beginner-labels";
 import { getPriorityToneColor } from "@/lib/race-priority";
 import type { RaceSummary } from "@/lib/types";
 import { FilterPills } from "@/features/home/components/FilterPills";
+import { TopParisStrip } from "@/features/home/components/TopParisStrip";
 import {
   SORT_OPTIONS,
   addDays,
@@ -17,12 +18,14 @@ import {
   formatDisplayDate,
   formatMinutesLabel,
   formatOddsLabel,
+  formatRaceCode,
   formatRelativeDay,
   getBetTypeLabel,
   getBoardSectionMeta,
   getParticipantNum,
   getPickLabel,
   getRadarRace,
+  getTopParisItems,
   normalizeDateParam,
   normalizeFocusParticipants,
   sortFeaturedRaces,
@@ -534,6 +537,7 @@ function CompactRaceCard({
   const toneColor = item.priorityBadge
     ? getPriorityToneColor(item.priorityBadge.tone)
     : "var(--pmu-text-muted)";
+  const raceCode = formatRaceCode(item.race);
 
   return (
     <button
@@ -543,10 +547,15 @@ function CompactRaceCard({
       className="app-card turf-course-card flex flex-col items-start gap-3 p-4 text-left transition-transform duration-200 hover:-translate-y-0.5"
     >
       <div className="flex w-full flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="app-kicker">
-            R{item.race.reunion}C{item.race.course}
-          </p>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-[color-mix(in_srgb,var(--pmu-primary)_35%,transparent)] bg-[var(--pmu-primary-fade)] px-3 py-1 text-[12px] font-black uppercase tracking-[0.12em] text-[var(--pmu-primary)]">
+              {raceCode}
+            </span>
+            <p className="app-kicker">
+              Reunion {item.race.reunion} - Course {item.race.course}
+            </p>
+          </div>
           <h3 className="mt-1 text-[1.3rem] font-black leading-[1.02] text-[var(--pmu-text)]">
             {item.race.nomCourse}
           </h3>
@@ -613,6 +622,13 @@ function HomeAside({
     : 0;
   const ticketRows = focusParticipants.slice(0, 3);
   const pick = focusRace?.score?.pick ?? null;
+  const focusRaceMeta = focusRace
+    ? {
+        code: formatRaceCode(focusRace.race),
+        hippodrome: focusRace.race.hippodrome,
+        heureDepart: focusRace.race.heureDepart,
+      }
+    : null;
 
   return (
     <aside className="turf-home-aside" aria-label="Radar du jour">
@@ -622,6 +638,20 @@ function HomeAside({
           {radarScore || "--"}
         </div>
         <p className="app-label">Score journee - lisibilite</p>
+
+        {focusRaceMeta ? (
+          <div className="mt-4 rounded-[0.7rem] border border-[color-mix(in_srgb,var(--pmu-primary)_28%,transparent)] bg-[var(--pmu-primary-fade)] px-3 py-2">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--pmu-text-muted)]">
+              Course focus
+            </p>
+            <p className="mt-1 text-xl font-black text-[var(--pmu-primary)]">
+              {focusRaceMeta.code}
+            </p>
+            <p className="mt-1 text-xs text-[var(--pmu-text-soft)]">
+              {focusRaceMeta.hippodrome} - {focusRaceMeta.heureDepart}
+            </p>
+          </div>
+        ) : null}
 
         <div className="turf-radar-lines">
           <div>
@@ -902,6 +932,10 @@ function PageContent() {
   }, [races, scores, selectedDate, sortMode]);
 
   const focusRace = useMemo(() => getRadarRace(featuredRaces), [featuredRaces]);
+  const topParisItems = useMemo(
+    () => getTopParisItems(featuredRaces, navigateToRace),
+    [featuredRaces, navigateToRace]
+  );
 
   useEffect(() => {
     if (!focusRace) {
@@ -1062,6 +1096,10 @@ function PageContent() {
                 onOpenRace={navigateToRace}
                 onOpenPremium={() => router.push("/premium")}
               />
+
+              {topParisItems.length > 0 ? (
+                <TopParisStrip items={topParisItems} />
+              ) : null}
 
               {stats.playable === 0 && lanes.some((lane) => lane.key === "surveillance") ? (
                 <section className="app-card p-5 text-sm leading-6 text-[var(--pmu-text-soft)]">

@@ -154,6 +154,12 @@ export type FocusDetailResponse = {
 
 export type HomeTopParisItem = {
   rank: number;
+  raceCode: string;
+  meetingLabel: string;
+  courseLabel: string;
+  trackLabel: string;
+  timeLabel: string;
+  metaLabel: string;
   title: string;
   subtitle: string;
   horse: string;
@@ -229,6 +235,10 @@ export function formatCourseMeta(race: RaceSummary) {
   return [formatDiscipline(race), `${race.nombrePartants} partants`, `${race.distance} m`]
     .filter(Boolean)
     .join(" - ");
+}
+
+export function formatRaceCode(race: RaceSummary) {
+  return `R${race.reunion}C${race.course}`;
 }
 
 export function formatMinutesLabel(value?: number | null) {
@@ -440,8 +450,14 @@ export function getTopParisItems(
     .slice(0, 3)
     .map((item, index) => ({
       rank: index + 1,
+      raceCode: formatRaceCode(item.race),
+      meetingLabel: `Reunion ${item.race.reunion}`,
+      courseLabel: `Course ${item.race.course}`,
+      trackLabel: item.race.hippodrome,
+      timeLabel: item.race.heureDepart,
+      metaLabel: formatCourseMeta(item.race),
       title: item.race.nomCourse,
-      subtitle: `${item.race.hippodrome} - ${item.race.heureDepart}`,
+      subtitle: `${item.race.hippodrome} - ${item.race.heureDepart} - ${formatCourseMeta(item.race)}`,
       horse: getPickLabel(item.score),
       stake: formatStake(
         item.score?.pick?.confidence
