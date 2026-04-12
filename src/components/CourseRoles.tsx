@@ -14,24 +14,24 @@ const ROLE_STYLES: Record<
   }
 > = {
   FAVORI: {
-    card: "border-blue-400 bg-blue-950/30",
-    text: "text-blue-300",
-    bar: "bg-blue-400",
+    card: "border-[var(--pmu-primary)] bg-[var(--pmu-primary-fade)]",
+    text: "text-[var(--pmu-primary)]",
+    bar: "bg-[var(--pmu-primary)]",
   },
   PEPITE: {
-    card: "border-yellow-400 bg-yellow-950/30",
-    text: "text-yellow-300",
-    bar: "bg-yellow-400",
+    card: "border-[var(--pmu-gold)] bg-[var(--pmu-gold-light)]",
+    text: "text-[var(--pmu-gold)]",
+    bar: "bg-[var(--pmu-gold)]",
   },
   OUTSIDER: {
-    card: "border-green-400 bg-green-950/30",
-    text: "text-green-300",
-    bar: "bg-green-400",
+    card: "border-[var(--pmu-primary)] bg-[var(--pmu-primary-soft)]",
+    text: "text-[var(--pmu-primary)]",
+    bar: "bg-[var(--pmu-primary)]",
   },
   OUBLIE: {
-    card: "border-slate-400 bg-slate-800/30",
-    text: "text-slate-300",
-    bar: "bg-slate-400",
+    card: "border-[var(--pmu-sand)] bg-[var(--pmu-surface-2)]",
+    text: "text-[var(--pmu-text-soft)]",
+    bar: "bg-[var(--pmu-sand)]",
   },
 };
 
@@ -44,9 +44,13 @@ function formatScore(value: number) {
 }
 
 function getRiskClass(level: "FAIBLE" | "MOYEN" | "ELEVE") {
-  if (level === "FAIBLE") return "border-green-300 bg-green-100 text-green-700";
-  if (level === "MOYEN") return "border-orange-300 bg-orange-100 text-orange-700";
-  return "border-red-300 bg-red-100 text-red-700";
+  if (level === "FAIBLE") {
+    return "border-[var(--pmu-primary)] bg-[var(--pmu-primary-soft)] text-[var(--pmu-primary)]";
+  }
+  if (level === "MOYEN") {
+    return "border-[var(--pmu-orange)] bg-[var(--pmu-earth-light)] text-[var(--pmu-orange)]";
+  }
+  return "border-[var(--pmu-red)] bg-[var(--pmu-earth-light)] text-[var(--pmu-red)]";
 }
 
 type CourseRolesCourse = {
@@ -154,7 +158,7 @@ export function CourseRoles({
             </div>
 
             <div className="mt-4">
-              <div className="h-2 overflow-hidden rounded-lg bg-black/20">
+              <div className="h-2 overflow-hidden rounded-lg bg-[var(--pmu-border)]">
                 <div
                   className={`h-full rounded-lg ${style.bar}`}
                   style={{ width: `${Math.max(0, Math.min(100, score))}%` }}

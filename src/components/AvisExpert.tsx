@@ -1,9 +1,9 @@
 import type { AvisExpertPrediction, AvisPariType, AvisVerdict } from "@/lib/avis-generator";
 
 const VERDICT_STYLES: Record<AvisVerdict, string> = {
-  MISER: "bg-green-100 text-green-800",
-  SURVEILLER: "bg-amber-100 text-amber-800",
-  EVITER: "bg-red-100 text-red-800",
+  MISER: "bg-[var(--pmu-primary-soft)] text-[var(--pmu-primary)]",
+  SURVEILLER: "bg-[var(--pmu-gold-light)] text-[var(--pmu-gold)]",
+  EVITER: "bg-[var(--pmu-earth-light)] text-[var(--pmu-red)]",
 };
 
 const PARI_LABEL: Record<AvisPariType, string> = {
@@ -12,11 +12,11 @@ const PARI_LABEL: Record<AvisPariType, string> = {
 };
 
 const BORDER_COLORS = [
-  "border-l-amber-400",
-  "border-l-slate-400",
-  "border-l-amber-600",
-  "border-l-slate-300",
-  "border-l-slate-300",
+  "border-l-[var(--pmu-gold)]",
+  "border-l-[var(--pmu-sand)]",
+  "border-l-[var(--pmu-gold)]",
+  "border-l-[var(--pmu-border-strong)]",
+  "border-l-[var(--pmu-border-strong)]",
 ];
 
 function EtoilesNote({ note }: { note: number }) {
@@ -28,7 +28,7 @@ function EtoilesNote({ note }: { note: number }) {
         <div
           key={index}
           className={`h-2.5 w-2.5 rounded-sm ${
-            index <= etoiles ? "bg-amber-400" : "bg-slate-200"
+            index <= etoiles ? "bg-[var(--pmu-gold)]" : "bg-[var(--pmu-surface-2)]"
           }`}
         />
       ))}
@@ -54,12 +54,12 @@ function PerfDots({ perfs }: { perfs?: string | null }) {
             key={`${token}-${index}`}
             className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-medium ${
               isYear
-                ? "bg-slate-100 text-slate-500"
+                ? "bg-[var(--pmu-surface-2)] text-[var(--pmu-text-soft)]"
                 : isWinner
-                  ? "bg-amber-100 text-amber-800"
+                  ? "bg-[var(--pmu-gold-light)] text-[var(--pmu-gold)]"
                   : isPlace
-                    ? "bg-green-100 text-green-800"
-                    : "bg-red-100 text-red-800"
+                    ? "bg-[var(--pmu-primary-soft)] text-[var(--pmu-primary)]"
+                    : "bg-[var(--pmu-earth-light)] text-[var(--pmu-red)]"
             }`}
           >
             {label}
@@ -122,12 +122,12 @@ export function AvisExpert({
                 <div
                   className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-sm font-medium ${
                     rang === 1
-                      ? "bg-amber-100 text-amber-800"
+                      ? "bg-[var(--pmu-gold-light)] text-[var(--pmu-gold)]"
                       : rang === 2
-                        ? "bg-slate-100 text-slate-600"
+                        ? "bg-[var(--pmu-surface-2)] text-[var(--pmu-text-soft)]"
                         : rang === 3
-                          ? "bg-amber-50 text-amber-700"
-                          : "bg-slate-50 text-slate-400"
+                          ? "bg-[var(--pmu-gold-light)] text-[var(--pmu-gold)]"
+                          : "bg-[var(--pmu-surface-2)] text-[var(--pmu-text-muted)]"
                   }`}
                 >
                   {rang}
@@ -154,10 +154,10 @@ export function AvisExpert({
                       <span
                         className={`text-xl font-medium ${
                           note >= 8
-                            ? "text-amber-500"
+                            ? "text-[var(--pmu-gold)]"
                             : note >= 6.5
-                              ? "text-slate-600"
-                              : "text-red-400"
+                              ? "text-[var(--pmu-text-soft)]"
+                              : "text-[var(--pmu-red)]"
                         }`}
                       >
                         {note.toFixed(1)}
@@ -170,20 +170,20 @@ export function AvisExpert({
 
                 {isPremiumLocked ? (
                   <div className="flex-shrink-0 text-right">
-                    <span className="text-xl font-medium text-slate-300">--</span>
-                    <div className="text-xs text-slate-300">/10</div>
+                    <span className="text-xl font-medium text-[var(--pmu-text-muted)]">--</span>
+                    <div className="text-xs text-[var(--pmu-text-muted)]">/10</div>
                   </div>
                 ) : null}
               </div>
 
               {isPremiumLocked ? (
-                <div className="mt-2 flex items-center gap-3 rounded-lg bg-slate-50 px-3 py-2.5">
-                  <span className="text-xs text-slate-500">
+                <div className="mt-2 flex items-center gap-3 rounded-lg bg-[var(--pmu-surface-2)] px-3 py-2.5">
+                  <span className="text-xs text-[var(--pmu-text-soft)]">
                     Avis expert et note reserves aux membres premium
                   </span>
                   <a
                     href="/premium"
-                    className="ml-auto rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700"
+                    className="ml-auto rounded-full border border-[var(--pmu-border)] bg-[var(--pmu-surface)] px-3 py-1 text-xs font-medium text-[var(--pmu-text-soft)]"
                   >
                     Debloquer
                   </a>
@@ -230,7 +230,7 @@ export function AvisExpert({
                       {pred.value && pred.value > 0 ? (
                         <span>
                           Value{" "}
-                          <strong className="text-green-700">
+                          <strong className="text-[var(--pmu-primary)]">
                             {pred.value.toFixed(1)}x
                           </strong>
                         </span>
@@ -238,8 +238,8 @@ export function AvisExpert({
                       <span
                         className={`ml-auto rounded-full px-2 py-0.5 text-xs ${
                           rang <= 3
-                            ? "bg-blue-50 text-blue-700"
-                            : "bg-amber-50 text-amber-700"
+                            ? "bg-[var(--pmu-primary-soft)] text-[var(--pmu-primary)]"
+                            : "bg-[var(--pmu-gold-light)] text-[var(--pmu-gold)]"
                         }`}
                       >
                         {rang <= 3 ? "Gratuit" : "Premium"}
