@@ -68,6 +68,9 @@ export type RaceApiResponse = {
     recommandation?: {
       decision?: string | null;
     } | null;
+    prediction?: {
+      lisibilite?: "LISIBLE" | "COMPLEXE" | "LOTERIE" | null;
+    } | null;
   } | null;
   paywall?: {
     required?: boolean;

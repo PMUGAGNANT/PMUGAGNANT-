@@ -81,6 +81,7 @@ function RaceDetailsContent({
 
   const isFinished = Boolean(data.isFinished || officialArrival.length > 0);
   const paywallRequired = data.paywall?.required === true;
+  const roleLisibilite = data.analysis?.prediction?.lisibilite ?? "COMPLEXE";
 
   return (
     <>
@@ -120,7 +121,7 @@ function RaceDetailsContent({
             refreshPriority={data.refreshPriority ?? null}
           />
 
-          <CourseRoles roles={roles} />
+          <CourseRoles roles={roles} lisibilite={roleLisibilite} />
 
           {top5.length > 0 ? (
             <TopFiveCard top5={top5} participants={participants} />
