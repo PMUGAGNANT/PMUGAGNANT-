@@ -58,6 +58,30 @@ type HomeLane = {
   items: FeaturedRace[];
 };
 
+type QuickFilter = "all" | "top3" | "jouable" | "urgent" | "quinte" | "allocation";
+
+type QuickFilterOption = {
+  value: QuickFilter;
+  label: string;
+  description: string;
+  count: number;
+};
+
+const QUICK_FILTER_STORAGE_KEY = "pmu-quick-filter";
+const URGENT_MINUTES_LIMIT = 45;
+const BIG_ALLOCATION_LIMIT = 50000;
+
+function isQuickFilter(value: string | null): value is QuickFilter {
+  return (
+    value === "all" ||
+    value === "top3" ||
+    value === "jouable" ||
+    value === "urgent" ||
+    value === "quinte" ||
+    value === "allocation"
+  );
+}
+
 function HomeControlBar({
   selectedDate,
   sortMode,
@@ -608,6 +632,77 @@ function CompactRaceCard({
 
 const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V"];
 
+function QuickFilterBar({
+  value,
+  options,
+  onChange,
+}: {
+  value: QuickFilter;
+  options: QuickFilterOption[];
+  onChange: (next: QuickFilter) => void;
+}) {
+  const activeOption = options.find((option) => option.value === value);
+
+  return (
+    <section className="app-card p-4 md:p-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="app-kicker">Filtre express</p>
+          <h2 className="mt-2 text-2xl font-black tracking-tight text-[var(--pmu-text)]">
+            Voir clair en un clic
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--pmu-text-soft)]">
+            Choisis un angle de lecture : le board cache le bruit, garde le focus
+            et remet les courses importantes devant tes yeux.
+          </p>
+        </div>
+        <div className="rounded-[0.8rem] border border-[color-mix(in_srgb,var(--pmu-primary)_24%,transparent)] bg-[var(--pmu-primary-fade)] px-4 py-3">
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--pmu-text-muted)]">
+            Vue active
+          </p>
+          <p className="mt-1 text-xl font-black text-[var(--pmu-primary)]">
+            {activeOption?.count ?? 0} course{(activeOption?.count ?? 0) > 1 ? "s" : ""}
+          </p>
+        </div>
+      </div>
+
+      <div
+        role="toolbar"
+        aria-label="Filtre rapide du programme"
+        className="mt-5 -mx-1 overflow-x-auto pb-1 [scrollbar-width:thin]"
+      >
+        <div className="flex min-w-max gap-2 px-1">
+          {options.map((option) => {
+            const active = option.value === value;
+            const disabled = option.value !== "all" && option.count === 0;
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={active}
+                disabled={disabled}
+                onClick={() => onChange(option.value)}
+                className={`app-pill flex min-w-[9.5rem] flex-col items-start gap-1 whitespace-nowrap text-left disabled:cursor-not-allowed disabled:opacity-45 ${
+                  active ? "app-pill--active" : ""
+                }`}
+              >
+                <span className="flex w-full items-center justify-between gap-3">
+                  <strong>{option.label}</strong>
+                  <span>{option.count}</span>
+                </span>
+                <small className="text-[11px] font-medium normal-case tracking-normal text-[var(--pmu-text-soft)]">
+                  {option.description}
+                </small>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function HomeAside({
   focusRace,
   focusParticipants,
@@ -810,6 +905,7 @@ function PageContent() {
 
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [sortMode, setSortMode] = useState<SortMode>("hour");
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
   const [races, setRaces] = useState<RaceSummary[]>([]);
   const [scores, setScores] = useState<RaceScore[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -843,11 +939,30 @@ function PageContent() {
 
   useEffect(() => {
     try {
+      const storedFilter = window.localStorage.getItem(QUICK_FILTER_STORAGE_KEY);
+      if (isQuickFilter(storedFilter)) {
+        setQuickFilter(storedFilter);
+      }
+    } catch (effectError) {
+      console.error(effectError);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
       window.localStorage.setItem("pmu-sort-mode", sortMode);
     } catch (effectError) {
       console.error(effectError);
     }
   }, [sortMode]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(QUICK_FILTER_STORAGE_KEY, quickFilter);
+    } catch (effectError) {
+      console.error(effectError);
+    }
+  }, [quickFilter]);
 
   useEffect(() => {
     try {
@@ -936,6 +1051,78 @@ function PageContent() {
     () => getTopParisItems(featuredRaces, navigateToRace),
     [featuredRaces, navigateToRace]
   );
+  const topParisCodes = useMemo(
+    () => new Set(topParisItems.map((item) => item.raceCode)),
+    [topParisItems]
+  );
+  const quickFilterOptions = useMemo<QuickFilterOption[]>(
+    () => [
+      {
+        value: "all",
+        label: "Tout",
+        description: "Programme complet",
+        count: featuredRaces.length,
+      },
+      {
+        value: "top3",
+        label: "Top 3",
+        description: "Priorites nettes",
+        count: featuredRaces.filter((item) => topParisCodes.has(formatRaceCode(item.race))).length,
+      },
+      {
+        value: "jouable",
+        label: "Jouables",
+        description: "Feu vert moteur",
+        count: featuredRaces.filter((item) => item.status === "jouable").length,
+      },
+      {
+        value: "urgent",
+        label: "Depart proche",
+        description: `Moins de ${URGENT_MINUTES_LIMIT} min`,
+        count: featuredRaces.filter(
+          (item) =>
+            item.status !== "resultat" && item.minutesUntilStart <= URGENT_MINUTES_LIMIT
+        ).length,
+      },
+      {
+        value: "quinte",
+        label: "Quintes",
+        description: "Courses premium",
+        count: featuredRaces.filter((item) => item.race.estQuinte).length,
+      },
+      {
+        value: "allocation",
+        label: "Gros enjeux",
+        description: `Allocation ${BIG_ALLOCATION_LIMIT / 1000}k+`,
+        count: featuredRaces.filter(
+          (item) => (item.race.allocation ?? 0) >= BIG_ALLOCATION_LIMIT
+        ).length,
+      },
+    ],
+    [featuredRaces, topParisCodes]
+  );
+  const filteredFeaturedRaces = useMemo(() => {
+    switch (quickFilter) {
+      case "top3":
+        return featuredRaces.filter((item) => topParisCodes.has(formatRaceCode(item.race)));
+      case "jouable":
+        return featuredRaces.filter((item) => item.status === "jouable");
+      case "urgent":
+        return featuredRaces.filter(
+          (item) =>
+            item.status !== "resultat" && item.minutesUntilStart <= URGENT_MINUTES_LIMIT
+        );
+      case "quinte":
+        return featuredRaces.filter((item) => item.race.estQuinte);
+      case "allocation":
+        return featuredRaces.filter(
+          (item) => (item.race.allocation ?? 0) >= BIG_ALLOCATION_LIMIT
+        );
+      case "all":
+      default:
+        return featuredRaces;
+    }
+  }, [featuredRaces, quickFilter, topParisCodes]);
 
   useEffect(() => {
     if (!focusRace) {
@@ -1016,15 +1203,15 @@ function PageContent() {
     const activeLanes: HomeLane[] = [
       {
         key: "jouable" as const,
-        items: featuredRaces.filter((item) => item.status === "jouable"),
+        items: filteredFeaturedRaces.filter((item) => item.status === "jouable"),
       },
       {
         key: "surveillance" as const,
-        items: featuredRaces.filter((item) => item.status === "surveillance"),
+        items: filteredFeaturedRaces.filter((item) => item.status === "surveillance"),
       },
       {
         key: "passer" as const,
-        items: featuredRaces.filter((item) => item.status === "passer"),
+        items: filteredFeaturedRaces.filter((item) => item.status === "passer"),
       },
     ].filter((lane) => lane.items.length > 0);
 
@@ -1032,9 +1219,9 @@ function PageContent() {
       return activeLanes;
     }
 
-    const results = featuredRaces.filter((item) => item.status === "resultat");
+    const results = filteredFeaturedRaces.filter((item) => item.status === "resultat");
     return results.length > 0 ? [{ key: "resultat", items: results }] : [];
-  }, [featuredRaces]);
+  }, [filteredFeaturedRaces]);
 
   return (
     <div className="turf-home-page mx-auto flex w-full max-w-[96rem] flex-col gap-6 lg:gap-8">
@@ -1101,6 +1288,12 @@ function PageContent() {
                 <TopParisStrip items={topParisItems} />
               ) : null}
 
+              <QuickFilterBar
+                value={quickFilter}
+                options={quickFilterOptions}
+                onChange={setQuickFilter}
+              />
+
               {stats.playable === 0 && lanes.some((lane) => lane.key === "surveillance") ? (
                 <section className="app-card p-5 text-sm leading-6 text-[var(--pmu-text-soft)]">
                   Aucune course verte pour l&apos;instant. La meilleure surveillance
@@ -1108,15 +1301,29 @@ function PageContent() {
                 </section>
               ) : null}
 
-              <section className="space-y-6">
-                {lanes.map((lane) => (
-                  <HomeLaneSection
-                    key={lane.key}
-                    lane={lane}
-                    onOpenRace={navigateToRace}
-                  />
-                ))}
-              </section>
+              {lanes.length > 0 ? (
+                <section className="space-y-6">
+                  {lanes.map((lane) => (
+                    <HomeLaneSection
+                      key={lane.key}
+                      lane={lane}
+                      onOpenRace={navigateToRace}
+                    />
+                  ))}
+                </section>
+              ) : (
+                <section className="app-card p-5 text-sm leading-6 text-[var(--pmu-text-soft)]">
+                  Ce filtre ne sort aucune course sur cette date. Repasse en vue
+                  complete pour revoir tout le programme.
+                  <button
+                    type="button"
+                    className="app-button-secondary mt-4"
+                    onClick={() => setQuickFilter("all")}
+                  >
+                    Revoir tout
+                  </button>
+                </section>
+              )}
             </>
           )}
         </div>
