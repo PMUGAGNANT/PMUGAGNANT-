@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { useCombo, type ComboRole } from "@/components/ComboBuilder";
 import { translateFactors } from "@/lib/beginner-labels";
 import { getPriorityToneColor } from "@/lib/race-priority";
 import type { RaceSummary } from "@/lib/types";
@@ -186,6 +187,8 @@ function HomeFocusPanel({
   onOpenRace: (race: RaceSummary) => void;
   onOpenPremium: () => void;
 }) {
+  const { addSelection, isSelected, selections } = useCombo();
+
   if (!focusRace) {
     return (
       <section className="app-card p-6 md:p-7">
@@ -239,6 +242,33 @@ function HomeFocusPanel({
     focusRace.score?.pick?.confidence ??
     selectedParticipant?.prediction?.confiance ??
     null;
+  const roleCandidate =
+    focusDetail?.roles?.find(
+      (role) => role.role === "PEPITE" || role.role === "OUTSIDER"
+    ) ?? null;
+  const scorePepite = focusRace.score?.pepiteDuJour ?? null;
+  const comboCandidate = roleCandidate
+    ? {
+        role: (roleCandidate.role === "PEPITE" ? "PEPITE" : "OUTSIDER") as ComboRole,
+        chevalNum: roleCandidate.cheval_num,
+        chevalNom: roleCandidate.cheval_nom,
+        cote: roleCandidate.cote,
+        confiance: roleCandidate.confiance,
+      }
+    : scorePepite?.numPmu || scorePepite?.nom
+      ? {
+          role: "PEPITE" as ComboRole,
+          chevalNum: scorePepite.numPmu ?? focusPickNum ?? 0,
+          chevalNom: scorePepite.nom ?? focusPickTitle,
+          cote: scorePepite.cote ?? selectedParticipant?.cote ?? 1,
+          confiance: scorePepite.confidence ?? focusConfidence ?? 0,
+        }
+      : null;
+  const comboId = comboCandidate
+    ? `${focusRace.race.dateStr}-${focusRace.race.reunion}-${focusRace.race.course}-${comboCandidate.chevalNum}-${comboCandidate.role}`
+    : "";
+  const selectedInCombo = comboCandidate ? isSelected(comboId) : false;
+  const comboFull = selections.length >= 4 && !selectedInCombo;
 
   return (
     <section className="app-card p-5 md:p-6">
@@ -346,6 +376,34 @@ function HomeFocusPanel({
                 className="app-button-secondary min-w-[14rem]"
               >
                 Debloquer le ticket
+              </button>
+            ) : null}
+            {comboCandidate ? (
+              <button
+                type="button"
+                disabled={selectedInCombo || comboFull}
+                onClick={() =>
+                  addSelection({
+                    id: comboId,
+                    dateStr: focusRace.race.dateStr,
+                    reunion: focusRace.race.reunion,
+                    course: focusRace.race.course,
+                    courseLabel: `R${focusRace.race.reunion}C${focusRace.race.course} ${focusRace.race.hippodrome}`,
+                    cheval_num: comboCandidate.chevalNum,
+                    cheval_nom: comboCandidate.chevalNom,
+                    cote: comboCandidate.cote,
+                    role: comboCandidate.role,
+                    confiance: comboCandidate.confiance,
+                    probability: comboCandidate.confiance / 10,
+                  })
+                }
+                className="app-button-secondary min-w-[14rem] disabled:cursor-not-allowed disabled:opacity-55"
+              >
+                {selectedInCombo
+                  ? "Dans le combo"
+                  : comboFull
+                    ? "Combo complet"
+                    : "+ Ajouter au combo"}
               </button>
             ) : null}
           </div>

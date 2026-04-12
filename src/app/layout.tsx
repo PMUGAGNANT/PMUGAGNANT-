@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Jost, Roboto_Mono } from "next/font/google";
 import Script from "next/script";
+import { ComboPanel, ComboProvider } from "@/components/ComboBuilder";
 import { AppShell } from "@/features/layout/components/AppShell";
 import { GlossaryPanel } from "@/components/ui/Glossary";
 import { OnboardingModal } from "@/components/ui/OnboardingModal";
@@ -68,12 +69,15 @@ export default function RootLayout({
           {`(function(){try{var k='pmu-theme-v2';var v=localStorage.getItem(k);document.documentElement.setAttribute('data-theme',v==='dark'?'dark':'warm');}catch(e){document.documentElement.setAttribute('data-theme','warm');}})();`}
         </Script>
         <ThemeProvider>
-          <ThemeMetaColor />
-          <ServiceWorkerRegistration />
-          <AppShell>{children}</AppShell>
-          <OnboardingModal />
-          <GlossaryPanel />
-          <PushNotificationPrompt />
+          <ComboProvider>
+            <ThemeMetaColor />
+            <ServiceWorkerRegistration />
+            <AppShell>{children}</AppShell>
+            <OnboardingModal />
+            <GlossaryPanel />
+            <PushNotificationPrompt />
+            <ComboPanel />
+          </ComboProvider>
         </ThemeProvider>
       </body>
     </html>

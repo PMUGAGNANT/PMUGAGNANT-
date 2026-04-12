@@ -123,7 +123,7 @@ function RaceDetailsContent({
             refreshPriority={data.refreshPriority ?? null}
           />
 
-          <CourseRoles roles={roles} lisibilite={roleLisibilite} />
+          <CourseRoles roles={roles} lisibilite={roleLisibilite} course={courseInfo} />
           <LiveCotesChart
             series={data.liveCotes ?? []}
             pepiteNum={pepiteRole?.cheval_num ?? null}

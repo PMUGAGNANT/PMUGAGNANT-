@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useCombo } from "@/components/ComboBuilder";
 import type { RoleCheval, RoleId, LisibiliteRoleCheval } from "@/lib/horse-roles";
 import { calculerKelly } from "@/lib/kelly";
 
@@ -48,13 +49,37 @@ function getRiskClass(level: "FAIBLE" | "MOYEN" | "ELEVE") {
   return "border-red-300 bg-red-100 text-red-700";
 }
 
+type CourseRolesCourse = {
+  dateStr?: string | null;
+  reunion?: number | string | null;
+  course?: number | string | null;
+  hippodrome?: string | null;
+  nomCourse?: string | null;
+};
+
+function getCourseLabel(course?: CourseRolesCourse | null) {
+  const raceLabel =
+    course?.reunion !== null &&
+    course?.reunion !== undefined &&
+    course?.course !== null &&
+    course?.course !== undefined
+      ? `R${course.reunion}C${course.course}`
+      : "Course PMU";
+  const place = course?.hippodrome ?? course?.nomCourse ?? "";
+
+  return place ? `${raceLabel} ${place}` : raceLabel;
+}
+
 export function CourseRoles({
   roles,
   lisibilite = "COMPLEXE",
+  course,
 }: {
   roles: RoleCheval[];
   lisibilite?: LisibiliteRoleCheval;
+  course?: CourseRolesCourse | null;
 }) {
+  const { addSelection, isSelected, selections } = useCombo();
   const [bankroll, setBankroll] = useState(1000);
 
   useEffect(() => {
@@ -90,6 +115,12 @@ export function CourseRoles({
         const style = ROLE_STYLES[role.role];
         const score = formatScore(role.score_cheval);
         const showKelly = role.role !== "FAVORI";
+        const canAddToCombo = role.role === "PEPITE" || role.role === "OUTSIDER";
+        const comboId = `${course?.dateStr ?? "date"}-${course?.reunion ?? "R"}-${
+          course?.course ?? "C"
+        }-${role.cheval_num}-${role.role}`;
+        const selectedInCombo = isSelected(comboId);
+        const comboFull = selections.length >= 4 && !selectedInCombo;
         const kelly = showKelly
           ? calculerKelly({
               bankroll: Math.max(bankroll, 1),
@@ -171,6 +202,35 @@ export function CourseRoles({
                   </span>
                 </div>
               </div>
+            ) : null}
+
+            {canAddToCombo ? (
+              <button
+                type="button"
+                disabled={selectedInCombo || comboFull}
+                onClick={() =>
+                  addSelection({
+                    id: comboId,
+                    dateStr: course?.dateStr ?? null,
+                    reunion: course?.reunion ?? "R",
+                    course: course?.course ?? "C",
+                    courseLabel: getCourseLabel(course),
+                    cheval_num: role.cheval_num,
+                    cheval_nom: role.cheval_nom,
+                    cote: role.cote,
+                    role: role.role === "PEPITE" ? "PEPITE" : "OUTSIDER",
+                    confiance: role.confiance,
+                    probability: role.confiance / 10,
+                  })
+                }
+                className="mt-4 w-full rounded-lg border border-[var(--pmu-primary)] bg-[var(--pmu-primary-fade)] px-3 py-2 text-sm font-semibold text-[var(--pmu-primary)] disabled:cursor-not-allowed disabled:opacity-55"
+              >
+                {selectedInCombo
+                  ? "Dans le combo"
+                  : comboFull
+                    ? "Combo complet"
+                    : "+ Ajouter au combo"}
+              </button>
             ) : null}
           </article>
         );

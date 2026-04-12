@@ -15,6 +15,7 @@ import {
   getRacePriorityBadge,
   type RacePriorityBadge,
 } from "@/lib/race-priority";
+import type { RoleCheval } from "@/lib/horse-roles";
 import type { Lisibilite, PredictionDecision, RaceSummary } from "@/lib/types";
 
 export type ScoreStage = "preview_2h" | "preview_1h" | "final_30m" | "finished";
@@ -123,6 +124,7 @@ export type FocusParticipant = {
 export type FocusDetailResponse = {
   success?: boolean;
   participants?: FocusParticipant[] | number | null;
+  roles?: RoleCheval[] | null;
   minutesUntilStart?: number | null;
   pronoAvailable?: boolean;
   isFinished?: boolean;
