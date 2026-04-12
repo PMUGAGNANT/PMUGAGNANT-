@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 
 import { CourseRoles } from "@/components/CourseRoles";
+import { LiveCotesChart } from "@/components/LiveCotesChart";
 import { CourseDetailSkeleton } from "@/features/race/components/CourseDetailSkeleton";
 import { CoursePronostic } from "@/features/race/components/CoursePronostic";
 import {
@@ -74,6 +75,7 @@ function RaceDetailsContent({
   const pronostic = useMemo(() => normalizePronostic(data), [data]);
   const roles = useMemo(() => normalizeRoles(data), [data]);
   const top5 = useMemo(() => getTopFiveNumbers(pronostic, data), [data, pronostic]);
+  const pepiteRole = roles.find((role) => role.role === "PEPITE") ?? null;
 
   if (!courseInfo) {
     return <CourseNotFoundState />;
@@ -122,6 +124,10 @@ function RaceDetailsContent({
           />
 
           <CourseRoles roles={roles} lisibilite={roleLisibilite} />
+          <LiveCotesChart
+            series={data.liveCotes ?? []}
+            pepiteNum={pepiteRole?.cheval_num ?? null}
+          />
 
           {top5.length > 0 ? (
             <TopFiveCard top5={top5} participants={participants} />

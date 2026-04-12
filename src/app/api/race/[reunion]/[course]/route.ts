@@ -7,6 +7,7 @@ import {
 } from "@/lib/client-race-scoring";
 import { attachFaultRates } from "@/lib/horse-faults";
 import { detecterRoles } from "@/lib/horse-roles";
+import { getLiveCotesSeries } from "@/lib/live-cotes";
 import { fetchMeteoHippodrome } from "@/lib/meteo";
 import { loadAlgoParameters } from "@/lib/config";
 import { badRequest, serverError } from "@/lib/api-response";
@@ -151,6 +152,14 @@ export async function GET(
           ? computedAnalysis
           : null;
       const allowFullScore = subscriptionState.isSubscribed || isFinished;
+      const liveCotes = allowFullScore
+        ? await getLiveCotesSeries(
+            date,
+            courseInfo as RaceSummary,
+            participants,
+            computedAnalysis.top5.map((runner) => runner.numPmu)
+          )
+        : null;
       const decision = allowFullScore
         ? computedAnalysis.prediction.decisionCourse
         : "REJET";
@@ -198,6 +207,7 @@ export async function GET(
         isFinished,
         analysis,
         roles: allowFullScore ? roles : null,
+        liveCotes,
         refreshPriority,
         paywall:
           !isFinished && !subscriptionState.isSubscribed
@@ -228,6 +238,7 @@ export async function GET(
       pronoAvailable,
       isFinished,
       analysis,
+      liveCotes: null,
       refreshPriority: null,
       paywall: null,
     });

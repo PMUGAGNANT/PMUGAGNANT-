@@ -7,6 +7,7 @@ import { getMinutesUntilStart, getTodayDateStr as getTodayDateStrFromUtils, pars
 import { attachFaultRates, upsertFaultRates } from "@/lib/horse-faults";
 import { getAllRaces, getFinalReports, getParticipants } from "@/lib/pmu-api";
 import { fetchMeteoHippodrome } from "@/lib/meteo";
+import { snapshotLiveCotes } from "@/lib/live-cotes";
 import {
   getPreRaceRefreshDecision,
   getResultRefreshDecision,
@@ -650,6 +651,7 @@ export async function runPreRaceSecondPass(
     );
 
     await persistProcessedRace(dateStr, current, updatedRows);
+    await snapshotLiveCotes(dateStr, race, current.participants);
     const meteo = await fetchMeteoHippodrome(race.hippodrome, race.heureDepart);
     if (meteo?.terrain_impact === "DEFAVORABLE") {
       const validRows = updatedRows.filter((row) => row.decision === "VALIDE");
