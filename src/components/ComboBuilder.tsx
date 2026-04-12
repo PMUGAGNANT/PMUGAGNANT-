@@ -79,25 +79,24 @@ function normalizeSelection(selection: ComboSelectionInput): ComboSelection {
 
 function isStoredComboSelection(value: unknown): value is ComboSelection {
   if (!value || typeof value !== "object") return false;
-
-  const selection = value as ComboSelection;
+  const s = value as ComboSelection;
   return (
-    typeof selection.id === "string" &&
-    typeof selection.cheval_nom === "string" &&
-    typeof selection.courseLabel === "string" &&
-    (selection.role === "PEPITE" || selection.role === "OUTSIDER") &&
-    typeof selection.cote === "number" &&
-    typeof selection.confiance === "number" &&
-    typeof selection.probability === "number"
+    typeof s.id === "string" &&
+    typeof s.cheval_nom === "string" &&
+    typeof s.courseLabel === "string" &&
+    (s.role === "PEPITE" || s.role === "OUTSIDER") &&
+    typeof s.cote === "number" &&
+    typeof s.confiance === "number" &&
+    typeof s.probability === "number"
   );
 }
 
 function formatCote(value: number) {
-  return Number.isFinite(value) ? value.toFixed(2) : "--";
+  return Number.isFinite(value) && value > 0 ? `${value.toFixed(1)}x` : "--";
 }
 
 function formatPercent(value: number) {
-  return `${round2(value * 100).toFixed(2)}%`;
+  return `${round2(value * 100).toFixed(1)}%`;
 }
 
 function buildTicketText(
@@ -108,20 +107,20 @@ function buildTicketText(
   potentialGain: number
 ) {
   return [
-    "Ticket combo PMU Gagnant",
-    `Mise: ${round2(stake)} EUR`,
-    `Cote combinee: ${formatCote(combinedOdds)}`,
-    `Probabilite estimee: ${formatPercent(estimatedProbability)}`,
-    `Gain potentiel: ${round2(potentialGain)} EUR`,
+    "🎯 Ticket combo TurfEdge",
+    `Mise : ${round2(stake)} €`,
+    `Cote combinée : ${combinedOdds.toFixed(1)}x`,
+    `Probabilité estimée : ${formatPercent(estimatedProbability)}`,
+    `Gain potentiel : ${round2(potentialGain)} €`,
     "",
     ...selections.map(
-      (selection, index) =>
-        `${index + 1}. ${selection.courseLabel} - #${selection.cheval_num} ${
-          selection.cheval_nom
-        } - ${selection.role} - cote ${formatCote(selection.cote)}`
+      (s, i) =>
+        `${i + 1}. ${s.courseLabel} — N°${s.cheval_num} ${s.cheval_nom} (${s.role}) @ ${s.cote.toFixed(1)}x`
     ),
   ].join("\n");
 }
+
+/* ── Context Provider ─────────────────────────────────────── */
 
 export function ComboProvider({ children }: { children: ReactNode }) {
   const [selections, setSelections] = useState<ComboSelection[]>([]);
@@ -134,12 +133,8 @@ export function ComboProvider({ children }: { children: ReactNode }) {
       try {
         const raw = window.localStorage.getItem(STORAGE_KEY);
         const stored = raw ? (JSON.parse(raw) as unknown) : null;
-
         if (stored && typeof stored === "object") {
-          const payload = stored as {
-            selections?: unknown;
-            stake?: unknown;
-          };
+          const payload = stored as { selections?: unknown; stake?: unknown };
           if (Array.isArray(payload.selections)) {
             setSelections(
               payload.selections.filter(isStoredComboSelection).slice(0, MAX_SELECTIONS)
@@ -149,75 +144,51 @@ export function ComboProvider({ children }: { children: ReactNode }) {
             setStakeState(Math.max(1, round2(payload.stake)));
           }
         }
-      } catch {
-        /* ignore local state */
-      } finally {
+      } catch { /* ignore */ } finally {
         setHydrated(true);
       }
     }, 0);
-
     return () => window.clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
     if (!hydrated) return;
-
     try {
-      window.localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ selections, stake })
-      );
-    } catch {
-      /* ignore local state */
-    }
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ selections, stake }));
+    } catch { /* ignore */ }
   }, [hydrated, selections, stake]);
 
   const addSelection = useCallback((selection: ComboSelectionInput) => {
     const normalized = normalizeSelection(selection);
-
     setSelections((current) => {
-      if (current.some((item) => item.id === normalized.id)) {
-        return current;
-      }
-
-      if (current.length >= MAX_SELECTIONS) {
-        return current;
-      }
-
+      if (current.some((item) => item.id === normalized.id)) return current;
+      if (current.length >= MAX_SELECTIONS) return current;
       return [...current, normalized];
     });
     setIsOpen(true);
   }, []);
 
   const removeSelection = useCallback((id: string) => {
-    setSelections((current) => current.filter((selection) => selection.id !== id));
+    setSelections((current) => current.filter((s) => s.id !== id));
   }, []);
 
-  const clearSelections = useCallback(() => {
-    setSelections([]);
-  }, []);
-
+  const clearSelections = useCallback(() => setSelections([]), []);
   const updateStake = useCallback((nextStake: number) => {
     setStakeState(Number.isFinite(nextStake) ? Math.max(1, round2(nextStake)) : 1);
   }, []);
-
   const isSelected = useCallback(
-    (id: string) => selections.some((selection) => selection.id === id),
+    (id: string) => selections.some((s) => s.id === id),
     [selections]
   );
 
   const value = useMemo<ComboContextValue>(
     () => ({
-      selections,
-      stake,
-      isOpen,
-      addSelection,
-      removeSelection,
-      clearSelections,
+      selections, stake, isOpen,
+      addSelection, removeSelection, clearSelections,
       setStake: updateStake,
       openPanel: () => setIsOpen(true),
       closePanel: () => setIsOpen(false),
-      togglePanel: () => setIsOpen((current) => !current),
+      togglePanel: () => setIsOpen((v) => !v),
       isSelected,
     }),
     [addSelection, clearSelections, isOpen, isSelected, removeSelection, selections, stake, updateStake]
@@ -228,181 +199,501 @@ export function ComboProvider({ children }: { children: ReactNode }) {
 
 export function useCombo() {
   const context = useContext(ComboContext);
-  if (!context) {
-    throw new Error("useCombo must be used inside ComboProvider.");
-  }
-
+  if (!context) throw new Error("useCombo must be used inside ComboProvider.");
   return context;
 }
 
+/* ── Bouton flottant ──────────────────────────────────────── */
+
+function ComboTrigger({
+  count,
+  onClick,
+}: {
+  count: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`Ouvrir le combo — ${count} cheval${count !== 1 ? "x" : ""} sélectionné${count !== 1 ? "s" : ""}`}
+      style={{
+        position: "fixed",
+        bottom: "1.25rem",
+        right: "1.25rem",
+        zIndex: 50,
+        display: "flex",
+        alignItems: "center",
+        gap: "0.6rem",
+        border: "1px solid var(--pmu-primary)",
+        borderRadius: "8px",
+        background: "var(--pmu-primary)",
+        color: "var(--pmu-on-primary)",
+        padding: "0.7rem 1.1rem",
+        fontSize: "0.88rem",
+        fontWeight: 600,
+        cursor: "pointer",
+        transition: "opacity 0.18s",
+      }}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 6h16M4 12h10M4 18h6"/>
+      </svg>
+      Combo
+      {count > 0 && (
+        <span style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: "20px",
+          height: "20px",
+          borderRadius: "50%",
+          background: "var(--pmu-on-primary)",
+          color: "var(--pmu-primary)",
+          fontSize: "0.72rem",
+          fontWeight: 700,
+        }}>
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
+/* ── Carte cheval dans le combo ───────────────────────────── */
+
+function ComboCard({
+  selection,
+  onRemove,
+}: {
+  selection: ComboSelection;
+  onRemove: () => void;
+}) {
+  const roleLabel = selection.role === "PEPITE" ? "💎 Pépite" : "🚀 Outsider";
+  const roleColor = selection.role === "PEPITE"
+    ? { border: "rgba(140,109,47,0.35)", bg: "rgba(244,237,216,0.6)", text: "var(--pmu-gold)" }
+    : { border: "rgba(42,77,18,0.25)", bg: "var(--pmu-primary-soft)", text: "var(--pmu-primary)" };
+
+  return (
+    <div style={{
+      border: "1px solid var(--pmu-border)",
+      borderRadius: "8px",
+      background: "var(--pmu-surface-highlight)",
+      padding: "12px 14px",
+    }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "10px" }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <p style={{
+            fontFamily: "var(--font-display), Georgia, serif",
+            fontSize: "1rem",
+            fontWeight: 700,
+            fontStyle: "italic",
+            color: "var(--pmu-text)",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}>
+            N°{selection.cheval_num} {selection.cheval_nom}
+          </p>
+          <p style={{ fontSize: "0.75rem", color: "var(--pmu-text-muted)", marginTop: "2px" }}>
+            {selection.courseLabel}
+          </p>
+        </div>
+        <span style={{
+          display: "inline-flex",
+          alignItems: "center",
+          border: `1px solid ${roleColor.border}`,
+          borderRadius: "999px",
+          background: roleColor.bg,
+          color: roleColor.text,
+          padding: "2px 10px",
+          fontSize: "0.7rem",
+          fontWeight: 700,
+          flexShrink: 0,
+          whiteSpace: "nowrap",
+        }}>
+          {roleLabel}
+        </span>
+      </div>
+
+      {/* Stats */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr 1fr",
+        gap: "8px",
+        marginTop: "10px",
+      }}>
+        <div style={{ textAlign: "center" }}>
+          <p style={{ fontSize: "0.65rem", fontWeight: 600, textTransform: "uppercase", color: "var(--pmu-text-muted)", letterSpacing: "0.06em" }}>Cote</p>
+          <p style={{
+            fontFamily: "var(--font-display), Georgia, serif",
+            fontSize: "1.1rem",
+            fontWeight: 700,
+            color: "var(--pmu-primary)",
+            marginTop: "2px",
+          }}>
+            {formatCote(selection.cote)}
+          </p>
+        </div>
+        <div style={{ textAlign: "center", borderLeft: "1px solid var(--pmu-border)", borderRight: "1px solid var(--pmu-border)" }}>
+          <p style={{ fontSize: "0.65rem", fontWeight: 600, textTransform: "uppercase", color: "var(--pmu-text-muted)", letterSpacing: "0.06em" }}>Confiance</p>
+          <p style={{
+            fontFamily: "var(--font-display), Georgia, serif",
+            fontSize: "1.1rem",
+            fontWeight: 700,
+            color: "var(--pmu-text)",
+            marginTop: "2px",
+          }}>
+            {selection.confiance.toFixed(1)}/10
+          </p>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <p style={{ fontSize: "0.65rem", fontWeight: 600, textTransform: "uppercase", color: "var(--pmu-text-muted)", letterSpacing: "0.06em" }}>Proba</p>
+          <p style={{
+            fontFamily: "var(--font-display), Georgia, serif",
+            fontSize: "1.1rem",
+            fontWeight: 700,
+            color: "var(--pmu-text)",
+            marginTop: "2px",
+          }}>
+            {formatPercent(selection.probability)}
+          </p>
+        </div>
+      </div>
+
+      {/* Supprimer */}
+      <button
+        type="button"
+        onClick={onRemove}
+        style={{
+          display: "block",
+          width: "100%",
+          marginTop: "10px",
+          paddingTop: "8px",
+          borderTop: "1px solid var(--pmu-border)",
+          fontSize: "0.75rem",
+          fontWeight: 600,
+          color: "var(--pmu-red)",
+          textAlign: "center",
+          background: "none",
+          cursor: "pointer",
+        }}
+      >
+        Retirer du combo
+      </button>
+    </div>
+  );
+}
+
+/* ── Slots vides ──────────────────────────────────────────── */
+
+function EmptySlot({ index }: { index: number }) {
+  return (
+    <div style={{
+      border: "1px dashed var(--pmu-border-strong)",
+      borderRadius: "8px",
+      padding: "14px",
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+    }}>
+      <div style={{
+        width: "28px",
+        height: "28px",
+        borderRadius: "50%",
+        border: "1px dashed var(--pmu-border-strong)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        color: "var(--pmu-text-muted)",
+        fontSize: "0.8rem",
+        fontWeight: 600,
+      }}>
+        {index}
+      </div>
+      <p style={{ fontSize: "0.78rem", color: "var(--pmu-text-muted)" }}>
+        Ajoute une pépite ou un outsider depuis une course
+      </p>
+    </div>
+  );
+}
+
+/* ── Panel principal ──────────────────────────────────────── */
+
 export function ComboPanel() {
   const {
-    selections,
-    stake,
-    isOpen,
-    removeSelection,
-    clearSelections,
-    setStake,
-    closePanel,
-    togglePanel,
+    selections, stake, isOpen,
+    removeSelection, clearSelections,
+    setStake, closePanel, togglePanel,
   } = useCombo();
   const [copied, setCopied] = useState(false);
 
   const metrics = useMemo(() => {
     const combinedOdds =
       selections.length > 0
-        ? selections.reduce((product, selection) => product * selection.cote, 1)
+        ? selections.reduce((p, s) => p * s.cote, 1)
         : 0;
     const estimatedProbability =
       selections.length > 0
-        ? selections.reduce((product, selection) => product * selection.probability, 1)
+        ? selections.reduce((p, s) => p * s.probability, 1)
         : 0;
-    const potentialGain = combinedOdds * stake;
-
     return {
       combinedOdds: round2(combinedOdds),
       estimatedProbability: round2(estimatedProbability),
-      potentialGain: round2(potentialGain),
+      potentialGain: round2(combinedOdds * stake),
     };
   }, [selections, stake]);
 
-  const canCopy = selections.length >= 2 && selections.length <= MAX_SELECTIONS;
+  const canCopy = selections.length >= 2;
   const missingCount = Math.max(0, 2 - selections.length);
+  const slotsToShow = Math.max(0, 2 - selections.length);
 
   async function copyTicket() {
     if (!canCopy || !navigator.clipboard) return;
-
     await navigator.clipboard.writeText(
-      buildTicketText(
-        selections,
-        stake,
-        metrics.combinedOdds,
-        metrics.estimatedProbability,
-        metrics.potentialGain
-      )
+      buildTicketText(selections, stake, metrics.combinedOdds, metrics.estimatedProbability, metrics.potentialGain)
     );
     setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
+    window.setTimeout(() => setCopied(false), 1800);
   }
 
   if (!isOpen) {
-    return (
-      <button
-        type="button"
-        onClick={togglePanel}
-        className="fixed bottom-4 right-4 z-50 rounded-lg border border-[var(--pmu-primary)] bg-[var(--pmu-primary)] px-4 py-3 text-sm font-semibold text-[var(--pmu-on-primary)]"
-      >
-        Combo ({selections.length})
-      </button>
-    );
+    return <ComboTrigger count={selections.length} onClick={togglePanel} />;
   }
 
   return (
-    <aside className="fixed inset-x-3 bottom-3 z-50 max-h-[82vh] overflow-y-auto rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] p-4 text-[var(--pmu-text)] md:inset-x-auto md:right-5 md:bottom-5 md:w-[27rem]">
-      <div className="flex items-start justify-between gap-3">
+    <aside style={{
+      position: "fixed",
+      right: "1.25rem",
+      bottom: "1.25rem",
+      zIndex: 50,
+      width: "min(calc(100vw - 2.5rem), 26rem)",
+      maxHeight: "85vh",
+      overflowY: "auto",
+      border: "1px solid var(--pmu-border-strong)",
+      borderRadius: "8px",
+      background: "var(--pmu-surface)",
+      boxShadow: "0 8px 32px rgba(24,22,15,0.14)",
+      color: "var(--pmu-text)",
+    }}>
+
+      {/* Header */}
+      <div style={{
+        position: "sticky",
+        top: 0,
+        background: "var(--pmu-surface)",
+        borderBottom: "1px solid var(--pmu-border)",
+        padding: "14px 16px",
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+        gap: "12px",
+        zIndex: 1,
+      }}>
         <div>
-          <p className="app-kicker">Ticket multi</p>
-          <h2 className="mt-1 text-2xl font-black">Combo courses</h2>
-          <p className="mt-1 text-sm text-[var(--pmu-text-soft)]">
-            2 a 4 chevaux, pepites et outsiders seulement.
+          <p style={{
+            fontSize: "0.68rem",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "0.1em",
+            color: "var(--pmu-primary)",
+          }}>
+            Ticket multi
+          </p>
+          <h2 style={{
+            fontFamily: "var(--font-display), Georgia, serif",
+            fontSize: "1.5rem",
+            fontWeight: 700,
+            fontStyle: "italic",
+            color: "var(--pmu-text)",
+            marginTop: "2px",
+            lineHeight: 1,
+          }}>
+            Combo courses
+          </h2>
+          <p style={{ fontSize: "0.75rem", color: "var(--pmu-text-muted)", marginTop: "4px" }}>
+            {selections.length === 0
+              ? "Ajoute 2 à 4 pépites ou outsiders"
+              : `${selections.length} cheval${selections.length > 1 ? "x" : ""} sélectionné${selections.length > 1 ? "s" : ""} — max ${MAX_SELECTIONS}`}
           </p>
         </div>
         <button
           type="button"
           onClick={closePanel}
-          className="rounded-lg border border-[var(--pmu-border)] px-3 py-2 text-sm font-semibold text-[var(--pmu-text-soft)]"
+          style={{
+            border: "1px solid var(--pmu-border)",
+            borderRadius: "6px",
+            background: "var(--pmu-surface-highlight)",
+            color: "var(--pmu-text-soft)",
+            padding: "6px 12px",
+            fontSize: "0.8rem",
+            fontWeight: 500,
+            cursor: "pointer",
+            flexShrink: 0,
+          }}
         >
           Fermer
         </button>
       </div>
 
-      <div className="mt-4 space-y-2">
-        {selections.length > 0 ? (
-          selections.map((selection) => (
-            <div
-              key={selection.id}
-              className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface-highlight)] p-3"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-black">
-                    #{selection.cheval_num} {selection.cheval_nom}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--pmu-text-soft)]">
-                    {selection.courseLabel}
-                  </p>
-                </div>
-                <span className="rounded-lg border border-[var(--pmu-primary)] px-2 py-1 text-[11px] font-semibold text-[var(--pmu-primary)]">
-                  {selection.role}
-                </span>
-              </div>
+      {/* Liste des chevaux */}
+      <div style={{ padding: "12px 16px", display: "grid", gap: "8px" }}>
+        {selections.map((s) => (
+          <ComboCard
+            key={s.id}
+            selection={s}
+            onRemove={() => removeSelection(s.id)}
+          />
+        ))}
+        {/* Slots vides */}
+        {Array.from({ length: slotsToShow }).map((_, i) => (
+          <EmptySlot key={i} index={selections.length + i + 1} />
+        ))}
+      </div>
 
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--pmu-text-soft)]">
-                <span>Cote {formatCote(selection.cote)}</span>
-                <span>Proba {formatPercent(selection.probability)}</span>
-                <button
-                  type="button"
-                  onClick={() => removeSelection(selection.id)}
-                  className="font-semibold text-[var(--pmu-red)]"
-                >
-                  Supprimer
-                </button>
-              </div>
-            </div>
-          ))
-        ) : (
-          <div className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface-highlight)] p-4 text-sm leading-6 text-[var(--pmu-text-soft)]">
-            Ajoute une pepite ou un outsider depuis une course pour demarrer le ticket.
+      {/* Métriques */}
+      {selections.length > 0 && (
+        <div style={{
+          borderTop: "1px solid var(--pmu-border)",
+          borderBottom: "1px solid var(--pmu-border)",
+          padding: "12px 16px",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr",
+          gap: "8px",
+          background: "var(--pmu-surface-2)",
+        }}>
+          <div>
+            <p style={{ fontSize: "0.65rem", fontWeight: 600, textTransform: "uppercase", color: "var(--pmu-text-muted)", letterSpacing: "0.06em" }}>
+              Cote combinée
+            </p>
+            <p style={{
+              fontFamily: "var(--font-display), Georgia, serif",
+              fontSize: "1.4rem",
+              fontWeight: 700,
+              color: "var(--pmu-primary)",
+              marginTop: "2px",
+            }}>
+              {formatCote(metrics.combinedOdds)}
+            </p>
           </div>
-        )}
-      </div>
-
-      <div className="mt-4 grid gap-2 sm:grid-cols-3">
-        <div className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface-highlight)] p-3">
-          <p className="app-label">Cote combinee</p>
-          <p className="mt-1 text-lg font-black">{formatCote(metrics.combinedOdds)}</p>
+          <div style={{ borderLeft: "1px solid var(--pmu-border)", paddingLeft: "12px" }}>
+            <p style={{ fontSize: "0.65rem", fontWeight: 600, textTransform: "uppercase", color: "var(--pmu-text-muted)", letterSpacing: "0.06em" }}>
+              Proba
+            </p>
+            <p style={{
+              fontFamily: "var(--font-display), Georgia, serif",
+              fontSize: "1.4rem",
+              fontWeight: 700,
+              color: "var(--pmu-text)",
+              marginTop: "2px",
+            }}>
+              {formatPercent(metrics.estimatedProbability)}
+            </p>
+          </div>
+          <div style={{ borderLeft: "1px solid var(--pmu-border)", paddingLeft: "12px" }}>
+            <p style={{ fontSize: "0.65rem", fontWeight: 600, textTransform: "uppercase", color: "var(--pmu-gold)", letterSpacing: "0.06em" }}>
+              Gain potentiel
+            </p>
+            <p style={{
+              fontFamily: "var(--font-display), Georgia, serif",
+              fontSize: "1.4rem",
+              fontWeight: 700,
+              color: "var(--pmu-gold)",
+              marginTop: "2px",
+            }}>
+              {metrics.potentialGain > 0 ? `${metrics.potentialGain.toFixed(0)} €` : "-- €"}
+            </p>
+          </div>
         </div>
-        <div className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface-highlight)] p-3">
-          <p className="app-label">Proba estimee</p>
-          <p className="mt-1 text-lg font-black">
-            {formatPercent(metrics.estimatedProbability)}
+      )}
+
+      {/* Mise + actions */}
+      <div style={{ padding: "14px 16px", display: "grid", gap: "12px" }}>
+        <div>
+          <label style={{
+            display: "block",
+            fontSize: "0.68rem",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "0.08em",
+            color: "var(--pmu-text-muted)",
+            marginBottom: "6px",
+          }}>
+            Ma mise (€)
+          </label>
+          <input
+            type="number"
+            min="1"
+            value={stake}
+            onChange={(e) => setStake(Number(e.target.value))}
+            style={{
+              width: "100%",
+              border: "1px solid var(--pmu-border-strong)",
+              borderRadius: "6px",
+              background: "var(--pmu-surface-highlight)",
+              color: "var(--pmu-text)",
+              padding: "8px 12px",
+              fontSize: "1rem",
+              fontWeight: 600,
+            }}
+          />
+        </div>
+
+        {missingCount > 0 && (
+          <p style={{
+            fontSize: "0.78rem",
+            color: "var(--pmu-orange)",
+            padding: "8px 10px",
+            border: "1px solid rgba(184,80,48,0.2)",
+            borderRadius: "6px",
+            background: "var(--pmu-earth-light)",
+          }}>
+            Ajoute encore {missingCount} cheval{missingCount > 1 ? "x" : ""} pour pouvoir copier le ticket.
           </p>
+        )}
+
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button
+            type="button"
+            disabled={!canCopy}
+            onClick={copyTicket}
+            style={{
+              flex: 1,
+              border: "1px solid var(--pmu-primary)",
+              borderRadius: "8px",
+              background: canCopy ? "var(--pmu-primary)" : "var(--pmu-primary-soft)",
+              color: canCopy ? "var(--pmu-on-primary)" : "var(--pmu-text-muted)",
+              padding: "10px 16px",
+              fontSize: "0.88rem",
+              fontWeight: 600,
+              cursor: canCopy ? "pointer" : "not-allowed",
+              opacity: canCopy ? 1 : 0.7,
+              transition: "opacity 0.18s",
+            }}
+          >
+            {copied ? "✓ Copié !" : "Copier le ticket"}
+          </button>
+          {selections.length > 0 && (
+            <button
+              type="button"
+              onClick={clearSelections}
+              style={{
+                border: "1px solid var(--pmu-border)",
+                borderRadius: "8px",
+                background: "var(--pmu-surface-highlight)",
+                color: "var(--pmu-text-soft)",
+                padding: "10px 14px",
+                fontSize: "0.82rem",
+                fontWeight: 500,
+                cursor: "pointer",
+              }}
+            >
+              Vider
+            </button>
+          )}
         </div>
-        <div className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface-highlight)] p-3">
-          <p className="app-label">Gain</p>
-          <p className="mt-1 text-lg font-black">{metrics.potentialGain} EUR</p>
-        </div>
-      </div>
-
-      <label className="mt-4 block">
-        <span className="app-label">Mise</span>
-        <input
-          type="number"
-          min="1"
-          value={stake}
-          onChange={(event) => setStake(Number(event.target.value))}
-          className="app-input mt-2"
-        />
-      </label>
-
-      {missingCount > 0 ? (
-        <p className="mt-3 text-sm text-[var(--pmu-orange)]">
-          Ajoute encore {missingCount} cheval{missingCount > 1 ? "x" : ""} pour copier le ticket.
-        </p>
-      ) : null}
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={!canCopy}
-          onClick={copyTicket}
-          className="app-button-primary flex-1 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {copied ? "Ticket copie" : "Copier le ticket"}
-        </button>
-        <button type="button" onClick={clearSelections} className="app-button-secondary">
-          Vider
-        </button>
       </div>
     </aside>
   );
