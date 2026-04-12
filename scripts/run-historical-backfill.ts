@@ -1,3 +1,4 @@
+import "./load-env";
 import { formatDateToPmu, parsePmuDate } from "../src/lib/date-utils";
 
 function getFlag(name: string) {

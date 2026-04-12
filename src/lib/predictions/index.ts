@@ -256,6 +256,22 @@ export function analyzeRaceWithParameters(
     ranked.find((runner) => runner.prediction.decision === "SURVEILLANCE") ??
     ranked[0] ??
     null;
+  const pepiteDuJour = // v9.3
+    ranked
+      .filter(
+        (runner) =>
+          (runner.cote ?? 0) >= 5.0 &&
+          runner.prediction.scoreCheval >= 58 && // v9.3
+          runner.prediction.confiance >= 6.0 && // v9.3
+          runner.signaux.valueIntrinseque >= 2 &&
+          runner.prediction.decision !== "REJET" &&
+          runner.numPmu !== (favori?.numPmu ?? -1)
+      )
+      .sort((a, b) => {
+        const ratioA = a.prediction.scoreCheval / Math.max(a.cote ?? 1, 1);
+        const ratioB = b.prediction.scoreCheval / Math.max(b.cote ?? 1, 1);
+        return ratioB - ratioA;
+      })[0] ?? null;
   const soliditeFavori = buildFavoriteSolidity(favori, ranked.slice(0, 5));
   const recommandation = buildRecommendationRefined(
     buildRecommendation(lisibilite, favori, soliditeFavori),
@@ -284,6 +300,7 @@ export function analyzeRaceWithParameters(
     ranking: ranked,
     top5: ranked.slice(0, 5),
     favori,
+    pepiteDuJour,
     soliditeFavori,
     recommandation,
     scoreConfiance,

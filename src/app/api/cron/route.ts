@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ensureCronAuthorized } from "@/lib/cron-auth";
+import { runEngineLearning } from "@/lib/engine-learning";
+import { runEnginePromotion } from "@/lib/engine-promotion";
 import { getTodayDateStr } from "@/lib/pmu-api";
 import { runMorningAnalysis, runPreRaceSecondPass, runResultSync } from "@/lib/prediction-pipeline";
 import { runWeeklyReport } from "@/lib/weekly-reports";
@@ -16,6 +18,7 @@ export const maxDuration = 300;
  *   - morning   : once at ~07:00
  *   - prerace   : every 5 min (always)
  *   - results   : every 10 min (on the :00, :10, :20, :30, :40, :50)
+ *   - learning+promotion : once at ~04:00 in sequence
  *   - weekly    : Sunday at ~19:00
  */
 export async function GET(request: NextRequest) {
@@ -67,6 +70,29 @@ export async function GET(request: NextRequest) {
   }
 
   // --- Weekly report: Sunday 19:00–19:04 window ---
+  if (hour === 4 && minute < 5) {
+    try {
+      results.learning = await runEngineLearning(now);
+    } catch (e) {
+      logger.error("cron.dispatch.learning_failed", e, { date });
+      results.learning = { error: e instanceof Error ? e.message : "learning failed" };
+      results.promotion = {
+        skipped: true,
+        reason: "learning-failed",
+      };
+      return NextResponse.json({ success: true, ...results });
+    }
+
+    try {
+      results.promotion = await runEnginePromotion(now);
+    } catch (e) {
+      logger.error("cron.dispatch.promotion_failed", e, { date });
+      results.promotion = {
+        error: e instanceof Error ? e.message : "promotion failed",
+      };
+    }
+  }
+
   if (weekday === "Sun" && hour === 19 && minute < 5) {
     try {
       results.weekly = await runWeeklyReport();

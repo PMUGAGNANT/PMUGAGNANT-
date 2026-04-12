@@ -1,12 +1,37 @@
 import { loadAlgoParameters } from "@/lib/config";
-import { getMinutesUntilStart } from "@/lib/date-utils";
+import { genererAvisJour } from "@/lib/avis-pipeline";
+import {
+  computeClientRaceScore,
+  type ApiRaceScoreLite,
+} from "@/lib/client-race-scoring";
+import { getMinutesUntilStart, getTodayDateStr as getTodayDateStrFromUtils, parsePmuDate } from "@/lib/date-utils";
 import { attachFaultRates, upsertFaultRates } from "@/lib/horse-faults";
 import { getAllRaces, getFinalReports, getParticipants } from "@/lib/pmu-api";
+import { fetchMeteoHippodrome } from "@/lib/meteo";
+import { snapshotLiveCotes } from "@/lib/live-cotes";
+import {
+  getPreRaceRefreshDecision,
+  getResultRefreshDecision,
+  type RefreshPriorityHints,
+} from "@/lib/race-refresh-policy";
 import {
   buildCourseRecord,
   buildPredictionStageSnapshot,
   buildPredictionRows,
+  buildRaceEngineRunRow,
+  buildRunnerFeatureSnapshots,
+  buildRunnerMarketSnapshots,
+  buildRunnerOutcomeRows,
+  buildRunnerScoreSnapshots,
+  completeRaceEngineRun,
+  createRaceEngineRun,
+  failRaceEngineRun,
   getRacePredictions,
+  listPredictionsByDate,
+  upsertRunnerFeatureSnapshots,
+  upsertRunnerMarketSnapshots,
+  upsertRunnerOutcomes,
+  upsertRunnerScoreSnapshots,
   upsertCourseRecord,
   upsertPredictionStageSnapshot,
   upsertPredictions,
@@ -15,6 +40,7 @@ import { analyzeRaceWithParameters } from "@/lib/predictions";
 import {
   formatMorningTelegram,
   formatPreRaceTelegram,
+  alerteTerrainChange,
   isTelegramConfigured,
   sendTelegramMessage,
 } from "@/lib/telegram";
@@ -35,6 +61,11 @@ interface ProcessedRace {
   participants: Participant[];
   analysis: RaceAnalysis;
   rows: PredictionRow[];
+  instrumentation: {
+    runId: string;
+    featureSnapshots: ReturnType<typeof buildRunnerFeatureSnapshots>;
+    marketSnapshots: ReturnType<typeof buildRunnerMarketSnapshots>;
+  };
 }
 
 interface SelectionAlert {
@@ -118,6 +149,142 @@ function keepRace(race: RaceSummary, options: RangeOptions) {
   return true;
 }
 
+function getRaceKey(reunion: number, course: number) {
+  return `${reunion}-${course}`;
+}
+
+function getCourseDecision(rows: PredictionRow[]): PredictionDecision {
+  if (rows.some((row) => row.decision === "VALIDE")) {
+    return "VALIDE";
+  }
+
+  if (rows.some((row) => row.decision === "SURVEILLANCE")) {
+    return "SURVEILLANCE";
+  }
+
+  return "REJET";
+}
+
+function getPrimaryRaceRow(rows: PredictionRow[]) {
+  return (
+    rows.find((row) => row.decision === "VALIDE") ??
+    rows.find((row) => row.decision === "SURVEILLANCE") ??
+    rows[0] ??
+    null
+  );
+}
+
+function getHomeScoreStage(
+  dateStr: string,
+  race: RaceSummary
+): ApiRaceScoreLite["stage"] {
+  const minutesUntilStart = getMinutesUntilStart(race.heureDepart, dateStr);
+
+  if (minutesUntilStart < -10) {
+    return "finished";
+  }
+
+  if (minutesUntilStart <= 30) {
+    return "final_30m";
+  }
+
+  if (minutesUntilStart <= 60) {
+    return "preview_1h";
+  }
+
+  return "preview_2h";
+}
+
+function hasStrongOddsVariation(row: PredictionRow) {
+  if (
+    row.signal_variation === "FORTE_BAISSE" ||
+    row.signal_variation === "FORTE_HAUSSE"
+  ) {
+    return true;
+  }
+
+  return row.variation_cote !== null && Math.abs(row.variation_cote) >= 20;
+}
+
+function hasBoardGreenSignal(dateStr: string, race: RaceSummary, rows: PredictionRow[]) {
+  const primaryRow = getPrimaryRaceRow(rows);
+  if (!primaryRow) {
+    return false;
+  }
+
+  const courseDecision = getCourseDecision(rows);
+  const stage = getHomeScoreStage(dateStr, race);
+  const playable =
+    stage !== "finished" &&
+    primaryRow.lisibilite !== "LOTERIE" &&
+    courseDecision !== "REJET" &&
+    rows.some((row) => row.decision === "VALIDE");
+  const apiLite: ApiRaceScoreLite = {
+    score: null,
+    scoreDetailsLocked: false,
+    stage,
+    lisibilite: primaryRow.lisibilite,
+    decision: courseDecision,
+    playable,
+    pick: {
+      numPmu: primaryRow.cheval_num,
+      nom: primaryRow.cheval_nom,
+      confidence: primaryRow.confiance,
+      betType: primaryRow.pari_conseille ?? null,
+      topFacteurs: null,
+    },
+  };
+
+  return (
+    computeClientRaceScore(
+      race,
+      apiLite,
+      Math.round(getMinutesUntilStart(race.heureDepart, dateStr))
+    ).playTier === "jouable"
+  );
+}
+
+function buildRefreshHintsByRace(dateStr: string, races: RaceSummary[], rows: PredictionRow[]) {
+  const hintsByRace = new Map<string, RefreshPriorityHints>();
+  const raceByKey = new Map(
+    races.map((race) => [getRaceKey(race.reunion, race.course), race] as const)
+  );
+  const rowsByRace = new Map<string, PredictionRow[]>();
+
+  for (const row of rows) {
+    const key = getRaceKey(row.reunion, row.course);
+    const current = rowsByRace.get(key) ?? [];
+
+    current.push(row);
+    rowsByRace.set(key, current);
+  }
+
+  for (const [key, raceRows] of rowsByRace) {
+    const race = raceByKey.get(key);
+    const current = hintsByRace.get(key) ?? {};
+
+    if (race && hasBoardGreenSignal(dateStr, race, raceRows)) {
+      current.hasBoardGreenSignal = true;
+    }
+
+    if (raceRows.some((row) => row.decision === "VALIDE")) {
+      current.hasPlayableSignal = true;
+    }
+
+    if (raceRows.some((row) => row.decision === "SURVEILLANCE")) {
+      current.hasWatchSignal = true;
+    }
+
+    if (raceRows.some((row) => hasStrongOddsVariation(row))) {
+      current.hasStrongOddsVariation = true;
+    }
+
+    hintsByRace.set(key, current);
+  }
+
+  return hintsByRace;
+}
+
 async function processRace(
   dateStr: string,
   race: RaceSummary,
@@ -129,16 +296,44 @@ async function processRace(
   );
 
   await upsertFaultRates(participants);
+  const run = await createRaceEngineRun(
+    buildRaceEngineRunRow(dateStr, race, stage, parameters, participants.length)
+  );
+  const runId = run.id;
 
-  const analysis = analyzeRaceWithParameters(race, participants, parameters);
-  const rows = buildPredictionRows(dateStr, race, analysis, stage);
+  if (!runId) {
+    throw new Error("Race engine run id missing after insert.");
+  }
 
-  return {
-    race,
-    participants,
-    analysis,
-    rows,
-  };
+  try {
+    const analysis = analyzeRaceWithParameters(race, participants, parameters);
+    const rows = buildPredictionRows(dateStr, race, analysis, stage);
+
+    return {
+      race,
+      participants,
+      analysis,
+      rows,
+      instrumentation: {
+        runId,
+        featureSnapshots: buildRunnerFeatureSnapshots(
+          runId,
+          dateStr,
+          race,
+          stage,
+          participants,
+          analysis
+        ),
+        marketSnapshots: buildRunnerMarketSnapshots(dateStr, race, stage, participants),
+      },
+    };
+  } catch (error) {
+    await failRaceEngineRun(
+      runId,
+      error instanceof Error ? error.message : String(error)
+    );
+    throw error;
+  }
 }
 
 function getPrimarySelection(processed: ProcessedRace): SelectionAlert | null {
@@ -175,6 +370,52 @@ async function processInBatches<T, R>(
   }
 
   return all;
+}
+
+async function persistProcessedRace(
+  dateStr: string,
+  processed: ProcessedRace,
+  rows: PredictionRow[],
+  extra?: {
+    outcomeRows?: ReturnType<typeof buildRunnerOutcomeRows>;
+    stageSnapshotNotes?: string[];
+  }
+) {
+  try {
+    await upsertCourseRecord(buildCourseRecord(dateStr, processed.race, processed.analysis));
+    await upsertPredictions(rows);
+    await upsertPredictionStageSnapshot(
+      buildPredictionStageSnapshot(
+        dateStr,
+        processed.race,
+        processed.analysis,
+        rows,
+        rows[0]?.stage ?? "MATIN",
+        extra?.stageSnapshotNotes ?? []
+      )
+    );
+    await upsertRunnerMarketSnapshots(processed.instrumentation.marketSnapshots);
+    await upsertRunnerFeatureSnapshots(processed.instrumentation.featureSnapshots);
+    await upsertRunnerScoreSnapshots(
+      buildRunnerScoreSnapshots(processed.instrumentation.runId, rows, processed.analysis)
+    );
+
+    if (extra?.outcomeRows && extra.outcomeRows.length > 0) {
+      await upsertRunnerOutcomes(extra.outcomeRows);
+    }
+
+    await completeRaceEngineRun(processed.instrumentation.runId, processed.analysis);
+  } catch (error) {
+    try {
+      await failRaceEngineRun(
+        processed.instrumentation.runId,
+        error instanceof Error ? error.message : String(error)
+      );
+    } catch {
+      /* ignore */
+    }
+    throw error;
+  }
 }
 
 function adjustDecisionAfterPreRace(
@@ -308,6 +549,17 @@ function applyPreRaceSecondPass(
   return { updatedRows, alerts };
 }
 
+function likesLightGround(value?: string | null) {
+  const normalized = (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  return ["bon", "leger", "rapide", "sec", "firm", "good"].some((token) =>
+    normalized.includes(token)
+  );
+}
+
 function settlePredictionRow(
   row: PredictionRow,
   participant: Participant | undefined,
@@ -349,11 +601,7 @@ export async function runMorningAnalysis(dateStr: string) {
   const races = await getAllRaces(dateStr);
   const processed = await processInBatches(races, async (race) => {
     const current = await processRace(dateStr, race, parameters, "MATIN");
-    await upsertCourseRecord(buildCourseRecord(dateStr, race, current.analysis));
-    await upsertPredictions(current.rows);
-    await upsertPredictionStageSnapshot(
-      buildPredictionStageSnapshot(dateStr, race, current.analysis, current.rows, "MATIN")
-    );
+    await persistProcessedRace(dateStr, current, current.rows);
     return current;
   });
 
@@ -363,6 +611,13 @@ export async function runMorningAnalysis(dateStr: string) {
 
   if (isTelegramConfigured()) {
     await sendTelegramMessage(formatMorningTelegram(dateStr, selections));
+  }
+
+  try {
+    await genererAvisJour(dateStr);
+    console.log("Avis expert generes");
+  } catch (error) {
+    console.error("Erreur generation avis:", error);
   }
 
   return {
@@ -381,14 +636,31 @@ export async function runPreRaceSecondPass(
   options: RangeOptions = {}
 ) {
   const parameters = await loadAlgoParameters();
-  const races = (await getAllRaces(dateStr)).filter((race) => {
-    if (!keepRace(race, options)) {
-      return false;
-    }
-
-    const minutesUntil = getMinutesUntilStart(race.heureDepart, race.dateStr);
-    return minutesUntil <= 10 && minutesUntil >= -15;
-  });
+  const explicitTarget =
+    (options.reunion !== null && options.reunion !== undefined) ||
+    (options.course !== null && options.course !== undefined);
+  const candidateRaces = (await getAllRaces(dateStr)).filter((race) =>
+    keepRace(race, options)
+  );
+  const now = new Date();
+  const refreshHintsByRace = explicitTarget
+    ? new Map<string, RefreshPriorityHints>()
+    : buildRefreshHintsByRace(
+        dateStr,
+        candidateRaces,
+        await listPredictionsByDate(dateStr)
+      );
+  const scheduledRaces = candidateRaces.map((race) => ({
+    race,
+    refresh: getPreRaceRefreshDecision(
+      race,
+      now,
+      refreshHintsByRace.get(getRaceKey(race.reunion, race.course))
+    ),
+  }));
+  const races = explicitTarget
+    ? candidateRaces
+    : scheduledRaces.filter((entry) => entry.refresh.due).map((entry) => entry.race);
 
   const processed = await processInBatches(races, async (race) => {
     const baselineRows = await getRacePredictions(dateStr, race.reunion, race.course);
@@ -399,21 +671,34 @@ export async function runPreRaceSecondPass(
       parameters
     );
 
-    await upsertCourseRecord(buildCourseRecord(dateStr, race, current.analysis));
-    await upsertPredictions(updatedRows);
-    await upsertPredictionStageSnapshot(
-      buildPredictionStageSnapshot(
-        dateStr,
-        race,
-        current.analysis,
-        updatedRows,
-        "T10",
-        alerts.slice(0, 3).map((alert) => {
-          const details = alert.extra.length > 0 ? ` (${alert.extra.join(", ")})` : "";
-          return `#${alert.chevalNum} ${alert.chevalNom} -> ${alert.decision}${details}`;
+    await persistProcessedRace(dateStr, current, updatedRows, {
+      stageSnapshotNotes: alerts.slice(0, 3).map((alert) => {
+        const details = alert.extra.length > 0 ? ` (${alert.extra.join(", ")})` : "";
+        return `#${alert.chevalNum} ${alert.chevalNom} -> ${alert.decision}${details}`;
+      }),
+    });
+    await snapshotLiveCotes(dateStr, race, current.participants);
+    const meteo = await fetchMeteoHippodrome(race.hippodrome, race.heureDepart);
+    if (meteo?.terrain_impact === "DEFAVORABLE") {
+      const validRows = updatedRows.filter((row) => row.decision === "VALIDE");
+      const impacted = validRows
+        .map((row) => {
+          const participant = current.participants.find((item) => item.numPmu === row.cheval_num);
+          return participant && likesLightGround(participant.terrainPreference)
+            ? `#${row.cheval_num} ${row.cheval_nom}`
+            : null;
         })
-      )
-    );
+        .filter((value): value is string => value !== null);
+
+      if (impacted.length > 0) {
+        await alerteTerrainChange(
+          `R${race.reunion}C${race.course}`,
+          race.hippodrome,
+          meteo,
+          impacted
+        );
+      }
+    }
 
     return {
       race,
@@ -430,7 +715,12 @@ export async function runPreRaceSecondPass(
   return {
     success: true,
     date: dateStr,
+    scheduleMode: explicitTarget ? "manual" : "dynamic-windows",
+    racesConsidered: candidateRaces.length,
     racesProcessed: processed.length,
+    racesSkippedBySchedule: explicitTarget
+      ? 0
+      : scheduledRaces.filter((entry) => !entry.refresh.due).length,
     updatedPredictions: processed.reduce((sum, race) => sum + race.updatedRows.length, 0),
     alerts,
   };
@@ -438,13 +728,26 @@ export async function runPreRaceSecondPass(
 
 export async function runResultSync(dateStr: string, options: RangeOptions = {}) {
   const parameters = await loadAlgoParameters();
-  const races = (await getAllRaces(dateStr)).filter((race) => {
-    if (!keepRace(race, options)) {
-      return false;
-    }
-
-    return getMinutesUntilStart(race.heureDepart, race.dateStr) < -10;
-  });
+  const explicitTarget =
+    (options.reunion !== null && options.reunion !== undefined) ||
+    (options.course !== null && options.course !== undefined);
+  const isHistoricalDate =
+    parsePmuDate(dateStr).getTime() < parsePmuDate(getTodayDateStrFromUtils()).getTime();
+  const candidateRaces = (await getAllRaces(dateStr)).filter((race) =>
+    keepRace(race, options)
+  );
+  const now = new Date();
+  const scheduledRaces = candidateRaces.map((race) => ({
+    race,
+    refresh: getResultRefreshDecision(race, now),
+  }));
+  const races = isHistoricalDate
+    ? candidateRaces
+    : explicitTarget
+    ? candidateRaces.filter(
+        (race) => getMinutesUntilStart(race.heureDepart, race.dateStr) < -10
+      )
+    : scheduledRaces.filter((entry) => entry.refresh.due).map((entry) => entry.race);
 
   const processed = await processInBatches(races, async (race) => {
     const current = await processRace(dateStr, race, parameters, "RESULTAT");
@@ -459,21 +762,18 @@ export async function runResultSync(dateStr: string, options: RangeOptions = {})
       settlePredictionRow(row, participantByHorse.get(row.cheval_num), reports)
     );
 
-    await upsertCourseRecord(buildCourseRecord(dateStr, race, current.analysis));
-    await upsertPredictions(settledRows);
-    await upsertPredictionStageSnapshot(
-      buildPredictionStageSnapshot(
-        dateStr,
-        race,
-        current.analysis,
-        settledRows,
-        "RESULTAT",
-        settledRows
-          .filter((row) => row.resultat_gagnant || row.resultat_place)
-          .slice(0, 3)
-          .map((row) => `#${row.cheval_num} ${row.cheval_nom} ${row.resultat_gagnant ? "gagnant" : "place"}`)
-      )
-    );
+    await persistProcessedRace(dateStr, current, settledRows, {
+      outcomeRows: buildRunnerOutcomeRows(dateStr, race, current.participants, reports),
+      stageSnapshotNotes: settledRows
+        .filter((row) => row.resultat_gagnant || row.resultat_place)
+        .slice(0, 3)
+        .map(
+          (row) =>
+            `#${row.cheval_num} ${row.cheval_nom} ${
+              row.resultat_gagnant ? "gagnant" : "place"
+            }`
+        ),
+    });
 
     return {
       race,
@@ -484,7 +784,18 @@ export async function runResultSync(dateStr: string, options: RangeOptions = {})
   return {
     success: true,
     date: dateStr,
+    scheduleMode: isHistoricalDate
+      ? "historical-backfill"
+      : explicitTarget
+        ? "manual"
+        : "dynamic-windows",
+    racesConsidered: candidateRaces.length,
     racesProcessed: processed.length,
+    racesSkippedBySchedule: isHistoricalDate
+      ? 0
+      : explicitTarget
+      ? Math.max(candidateRaces.length - races.length, 0)
+      : scheduledRaces.filter((entry) => !entry.refresh.due).length,
     settledPredictions: processed.reduce((sum, race) => sum + race.settledRows.length, 0),
   };
 }

@@ -24,11 +24,11 @@ export interface UserBadgeTier {
 }
 
 export const USER_BADGE_TIERS: UserBadgeTier[] = [
-  { label: "DEBUTANT", emoji: "🌱", threshold: 0 },
-  { label: "REGULIER", emoji: "⭐", threshold: 5 },
-  { label: "CONFIRME", emoji: "🏆", threshold: 20 },
-  { label: "EXPERT", emoji: "💎", threshold: 50 },
-  { label: "LEGENDE", emoji: "👑", threshold: 100 },
+  { label: "DEBUTANT", emoji: "D", threshold: 0 },
+  { label: "REGULIER", emoji: "R", threshold: 5 },
+  { label: "CONFIRME", emoji: "C", threshold: 20 },
+  { label: "EXPERT", emoji: "E", threshold: 50 },
+  { label: "LEGENDE", emoji: "L", threshold: 100 },
 ];
 
 function round1(value: number) {
@@ -70,7 +70,10 @@ export function getBadgeTier(totalWon: number) {
 
   const currentIndex = USER_BADGE_TIERS.findIndex((tier) => tier.label === current.label);
   const next = currentIndex >= 0 ? USER_BADGE_TIERS[currentIndex + 1] ?? null : null;
-  const previous = currentIndex > 0 ? USER_BADGE_TIERS[currentIndex - 1] ?? USER_BADGE_TIERS[0]! : USER_BADGE_TIERS[0]!;
+  const previous =
+    currentIndex > 0
+      ? USER_BADGE_TIERS[currentIndex - 1] ?? USER_BADGE_TIERS[0]!
+      : USER_BADGE_TIERS[0]!;
 
   return {
     current,
@@ -82,7 +85,9 @@ export function getBadgeTier(totalWon: number) {
 export function calculateStreaksFromBets(bets: UserBetOutcomeRow[]) {
   const total_followed = bets.length;
   const total_won = bets.filter((bet) => isWinningBetStatus(bet.statut)).length;
-  const settled = [...bets].filter((bet) => isSettledBetStatus(bet.statut)).sort(compareBetRowsNewest);
+  const settled = [...bets]
+    .filter((bet) => isSettledBetStatus(bet.statut))
+    .sort(compareBetRowsNewest);
 
   let current_streak = 0;
   for (const bet of settled) {

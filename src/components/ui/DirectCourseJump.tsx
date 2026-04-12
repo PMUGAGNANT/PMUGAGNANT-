@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import type { RaceSummary } from "@/lib/types";
 
@@ -41,30 +41,18 @@ export function DirectCourseJump({ races, onOpenRace }: DirectCourseJumpProps) {
     }));
   }, [sortedRaces]);
 
-  const [selectedMeeting, setSelectedMeeting] = useState<number | null>(null);
-  const [selectedCourse, setSelectedCourse] = useState<number | null>(null);
+  const [selectedMeetingPreference, setSelectedMeetingPreference] = useState<number | null>(null);
+  const [selectedCoursePreference, setSelectedCoursePreference] = useState<number | null>(null);
 
-  useEffect(() => {
+  const selectedMeeting = useMemo(() => {
     if (meetings.length === 0) {
-      setSelectedMeeting(null);
-      setSelectedCourse(null);
-      return;
+      return null;
     }
 
-    const meetingExists = meetings.some((item) => item.reunion === selectedMeeting);
-    const fallbackMeeting = meetingExists ? selectedMeeting : meetings[0]!.reunion;
-    const currentMeeting = meetings.find((item) => item.reunion === fallbackMeeting) ?? meetings[0]!;
-    const courseExists = currentMeeting.entries.some((race) => race.course === selectedCourse);
-    const fallbackCourse = courseExists ? selectedCourse : currentMeeting.entries[0]?.course ?? null;
-
-    if (fallbackMeeting !== selectedMeeting) {
-      setSelectedMeeting(fallbackMeeting);
-    }
-
-    if (fallbackCourse !== selectedCourse) {
-      setSelectedCourse(fallbackCourse);
-    }
-  }, [meetings, selectedCourse, selectedMeeting]);
+    return meetings.some((item) => item.reunion === selectedMeetingPreference)
+      ? selectedMeetingPreference
+      : meetings[0]!.reunion;
+  }, [meetings, selectedMeetingPreference]);
 
   const courseOptions = useMemo(() => {
     if (selectedMeeting == null) {
@@ -73,6 +61,16 @@ export function DirectCourseJump({ races, onOpenRace }: DirectCourseJumpProps) {
 
     return meetings.find((item) => item.reunion === selectedMeeting)?.entries ?? [];
   }, [meetings, selectedMeeting]);
+
+  const selectedCourse = useMemo(() => {
+    if (courseOptions.length === 0) {
+      return null;
+    }
+
+    return courseOptions.some((race) => race.course === selectedCoursePreference)
+      ? selectedCoursePreference
+      : courseOptions[0]?.course ?? null;
+  }, [courseOptions, selectedCoursePreference]);
 
   const selectedRace = useMemo(() => {
     if (selectedMeeting == null || selectedCourse == null) {
@@ -100,9 +98,9 @@ export function DirectCourseJump({ races, onOpenRace }: DirectCourseJumpProps) {
             value={selectedMeeting ?? ""}
             onChange={(event) => {
               const nextMeeting = Number(event.target.value);
-              setSelectedMeeting(Number.isFinite(nextMeeting) ? nextMeeting : null);
+              setSelectedMeetingPreference(Number.isFinite(nextMeeting) ? nextMeeting : null);
               const firstRace = meetings.find((item) => item.reunion === nextMeeting)?.entries[0];
-              setSelectedCourse(firstRace?.course ?? null);
+              setSelectedCoursePreference(firstRace?.course ?? null);
             }}
           >
             {meetings.map((item) => (
@@ -120,7 +118,7 @@ export function DirectCourseJump({ races, onOpenRace }: DirectCourseJumpProps) {
             value={selectedCourse ?? ""}
             onChange={(event) => {
               const nextCourse = Number(event.target.value);
-              setSelectedCourse(Number.isFinite(nextCourse) ? nextCourse : null);
+              setSelectedCoursePreference(Number.isFinite(nextCourse) ? nextCourse : null);
             }}
             disabled={courseOptions.length === 0}
           >

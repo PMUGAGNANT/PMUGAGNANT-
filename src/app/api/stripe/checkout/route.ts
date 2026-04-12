@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { client, state } = await getRequestSubscriptionState(
+    const { state } = await getRequestSubscriptionState(
       request.headers.get("authorization")
     );
 
@@ -25,11 +25,7 @@ export async function POST(request: NextRequest) {
       return unauthorized("Connexion requise pour souscrire.");
     }
 
-    if (!client) {
-      return serverError("Client Supabase indisponible.");
-    }
-
-    if (state.isSubscribed) {
+    if (state.isStripeSubscribed) {
       return badRequest("Abonnement deja actif.");
     }
 
@@ -42,7 +38,7 @@ export async function POST(request: NextRequest) {
         metadata: { userId: state.user.id },
       });
       customerId = customer.id;
-      await ensureStripeCustomer(client, state.user.id, customerId);
+      await ensureStripeCustomer(state.user.id, customerId);
     }
 
     const session = await stripe.checkout.sessions.create({

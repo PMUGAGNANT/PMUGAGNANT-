@@ -35,7 +35,7 @@ export function ReferralInput({ defaultCode = "" }: ReferralInputProps) {
 
     if (!session) {
       setTone("info");
-      setMessage("Créez ou connectez votre compte, puis le code sera appliqué.");
+      setMessage("Cree ou connecte ton compte, puis le code sera applique.");
       return;
     }
 
@@ -44,7 +44,7 @@ export function ReferralInput({ defaultCode = "" }: ReferralInputProps) {
     try {
       const successMessage = await applyReferralCode(code, session.access_token);
       setTone("success");
-      setMessage(`🎉 ${successMessage}`);
+      setMessage(successMessage);
     } catch (error) {
       setTone("error");
       setMessage(error instanceof Error ? error.message : "Code invalide");
@@ -53,90 +53,49 @@ export function ReferralInput({ defaultCode = "" }: ReferralInputProps) {
     }
   }
 
-  return (
-    <section
-      style={{
-        marginTop: 18,
-        borderRadius: 20,
-        border: "1px solid var(--pmu-border)",
-        background: "var(--pmu-surface-2)",
-        padding: 16,
-      }}
-    >
-      <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--pmu-primary)" }}>
-        Code parrainage
-      </div>
-      <div style={{ marginTop: 8, fontSize: 16, fontWeight: 800, color: "var(--pmu-text)" }}>
-        Vous avez un code parrainage ?
-      </div>
-      <div style={{ marginTop: 6, fontSize: 13, lineHeight: "20px", color: "var(--pmu-text-muted)" }}>
-        Entrez-le ici pour activer 7 jours Premium offerts.
-      </div>
+  const toneClass =
+    tone === "success"
+      ? "border-[color-mix(in_srgb,var(--pmu-primary)_26%,transparent)] bg-[var(--pmu-primary-fade)] text-[var(--pmu-primary)]"
+      : tone === "error"
+        ? "border-[color-mix(in_srgb,var(--pmu-red)_26%,transparent)] bg-[color-mix(in_srgb,var(--pmu-red)_10%,transparent)] text-[var(--pmu-red)]"
+        : "border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_88%,transparent)] text-[var(--pmu-text-soft)]";
 
-      <div style={{ marginTop: 14, display: "grid", gap: 10, gridTemplateColumns: "minmax(0,1fr) auto" }}>
+  return (
+    <section className="mt-6 rounded-[1.35rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_92%,transparent)] p-5">
+      <p className="app-kicker">Code parrainage</p>
+      <h3 className="mt-3 text-2xl font-black leading-[1.02] text-[var(--pmu-text)]">
+        Tu as un code invite ?
+      </h3>
+      <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">
+        Entre-le ici pour activer 7 jours premium offerts.
+      </p>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-[minmax(0,1fr),auto]">
         <input
           value={code}
           onChange={(event) => setCode(normalizeReferralCode(event.target.value))}
           placeholder="ABC12345"
           maxLength={8}
-          style={{
-            width: "100%",
-            padding: "14px 16px",
-            borderRadius: 14,
-            border: "1px solid var(--pmu-border-strong)",
-            background: "var(--pmu-bg)",
-            color: "var(--pmu-text)",
-            fontSize: 16,
-            fontWeight: 700,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-          }}
+          className="app-input font-mono text-base font-black uppercase tracking-[0.18em]"
         />
         <button
           type="button"
           onClick={() => void handleApply()}
           disabled={loading || code.length < 4}
-          className="app-button-primary"
-          style={{ whiteSpace: "nowrap", opacity: loading || code.length < 4 ? 0.7 : 1 }}
+          className="app-button-primary whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? "Validation..." : "Valider mon code"}
         </button>
       </div>
 
       {defaultCode ? (
-        <div style={{ marginTop: 10, fontSize: 12, fontWeight: 700, color: "var(--pmu-primary)" }}>
-          Code détecté automatiquement depuis votre lien d&apos;invitation.
-        </div>
+        <p className="mt-3 text-sm font-semibold text-[var(--pmu-primary)]">
+          Code detecte automatiquement depuis ton lien d&apos;invitation.
+        </p>
       ) : null}
 
       {message ? (
-        <div
-          style={{
-            marginTop: 12,
-            borderRadius: 14,
-            padding: "12px 14px",
-            fontSize: 13,
-            fontWeight: 700,
-            color:
-              tone === "success"
-                ? "var(--pmu-primary)"
-                : tone === "error"
-                  ? "var(--pmu-red)"
-                  : "var(--pmu-text-soft)",
-            background:
-              tone === "success"
-                ? "var(--pmu-primary-fade)"
-                : tone === "error"
-                  ? "color-mix(in srgb, var(--pmu-red) 10%, transparent)"
-                  : "color-mix(in srgb, var(--pmu-text) 8%, transparent)",
-            border:
-              tone === "success"
-                ? "1px solid color-mix(in srgb, var(--pmu-primary) 28%, transparent)"
-                : tone === "error"
-                  ? "1px solid color-mix(in srgb, var(--pmu-red) 28%, transparent)"
-                  : "1px solid var(--pmu-border)",
-          }}
-        >
+        <div className={`mt-4 rounded-[1rem] border px-4 py-3 text-sm font-semibold leading-7 ${toneClass}`}>
           {message}
         </div>
       ) : null}

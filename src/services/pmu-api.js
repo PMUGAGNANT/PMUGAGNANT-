@@ -42,6 +42,32 @@ function toParisHour(ms) {
     });
 }
 
+function hasQuinteOffer(course) {
+    if (Boolean(course?.grandPrixNationalTrot)) {
+        return true;
+    }
+
+    const categorieParticularite = String(course?.categorieParticularite ?? '').toUpperCase();
+    if (categorieParticularite.includes('QUINTE')) {
+        return true;
+    }
+
+    const paris = Array.isArray(course?.paris) ? course.paris : [];
+    if (
+        paris.some((pari) => {
+            const pariType = String(pari?.typePari ?? pari?.codePari ?? '').toUpperCase();
+            return pariType.includes('QUINTE') || pari?.nouveauQuinte === true;
+        })
+    ) {
+        return true;
+    }
+
+    const cagnottes = Array.isArray(course?.cagnottes) ? course.cagnottes : [];
+    return cagnottes.some((cagnotte) =>
+        String(cagnotte?.typePari ?? cagnotte?.codePari ?? '').toUpperCase().includes('QUINTE')
+    );
+}
+
 function normalizeOdds(rawValue) {
     if (typeof rawValue !== 'number' || Number.isNaN(rawValue)) {
         return null;
@@ -113,7 +139,7 @@ async function getAllRaces(dateStr) {
                 discipline,
                 estTrot: discipline.includes('TROT'),
                 estPlat: discipline === 'PLAT',
-                estQuinte: Boolean(course?.grandPrixNationalTrot) || String(course?.categorieParticularite ?? '') === 'QUINTE',
+                estQuinte: hasQuinteOffer(course),
                 allocation: Number(course?.montantTotalOffert ?? 0),
                 distance: Number(course?.distance ?? 0),
                 nombrePartants: Number(course?.nombreDeclaresPartants ?? 0)
@@ -140,7 +166,7 @@ async function getCourseConditions(dateStr, reunion, course) {
         const data = await fetchPmuJson(`/programme/${dateStr}/R${reunion}/C${course}`);
         return {
             hippodrome: String(data?.reunion?.hippodrome?.libelleCourt ?? data?.hippodrome?.libelleCourt ?? ''),
-            estQuinte: Boolean(data?.course?.grandPrixNationalTrot) || String(data?.course?.categorieParticularite ?? '') === 'QUINTE'
+            estQuinte: hasQuinteOffer(data?.course ?? {})
         };
     } catch {
         return {};

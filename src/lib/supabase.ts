@@ -1,18 +1,26 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
 let browserClient: SupabaseClient | null = null;
 let adminClient: SupabaseClient | null = null;
 
+function getSupabaseUrl() {
+  return process.env.NEXT_PUBLIC_SUPABASE_URL;
+}
+
+function getSupabaseAnonKey() {
+  return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+}
+
+function getSupabaseServiceRoleKey() {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY;
+}
+
 export function hasSupabaseConfig() {
-  return Boolean(supabaseUrl && supabaseAnonKey);
+  return Boolean(getSupabaseUrl() && getSupabaseAnonKey());
 }
 
 export function hasSupabaseAdminConfig() {
-  return Boolean(supabaseUrl && supabaseServiceRoleKey);
+  return Boolean(getSupabaseUrl() && getSupabaseServiceRoleKey());
 }
 
 export function getSupabaseConfigError() {
@@ -29,7 +37,7 @@ export function getSupabaseBrowserClient() {
   }
 
   if (!browserClient) {
-    browserClient = createClient(supabaseUrl!, supabaseAnonKey!);
+    browserClient = createClient(getSupabaseUrl()!, getSupabaseAnonKey()!);
   }
 
   return browserClient;
@@ -40,7 +48,7 @@ export function createSupabaseRequestClient(accessToken?: string) {
     return null;
   }
 
-  return createClient(supabaseUrl!, supabaseAnonKey!, {
+  return createClient(getSupabaseUrl()!, getSupabaseAnonKey()!, {
     global: {
       headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
     },
@@ -53,7 +61,7 @@ export function getSupabaseAdminClient() {
   }
 
   if (!adminClient) {
-    adminClient = createClient(supabaseUrl!, supabaseServiceRoleKey!, {
+    adminClient = createClient(getSupabaseUrl()!, getSupabaseServiceRoleKey()!, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,

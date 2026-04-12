@@ -1,4 +1,4 @@
-import type { AlgoParameters } from "@/lib/types";
+import type { AlgoParameters, SegmentKey } from "@/lib/types";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
 export const DEFAULT_ALGO_PARAMETERS: AlgoParameters = {
@@ -78,23 +78,51 @@ function deepMerge<T extends JsonRecord>(base: T, override: JsonRecord): T {
   return next as T;
 }
 
+function collectActiveSegmentCalibrationOverrides(
+  rows: Array<{ segment_key?: string | null; calibration_payload?: unknown }>
+) {
+  return rows.reduce<JsonRecord>((acc, row) => {
+    const segmentKey = row.segment_key as SegmentKey | undefined;
+    if (!segmentKey || !isJsonRecord(row.calibration_payload)) {
+      return acc;
+    }
+
+    acc[segmentKey] = row.calibration_payload;
+    return acc;
+  }, {});
+}
+
 export async function loadAlgoParameters(): Promise<AlgoParameters> {
   const admin = getSupabaseAdminClient();
   if (!admin) {
     return DEFAULT_ALGO_PARAMETERS;
   }
 
-  const { data, error } = await admin.from("parametres").select("key, value_json");
-  if (error || !data || data.length === 0) {
-    return DEFAULT_ALGO_PARAMETERS;
-  }
+  const [{ data }, { data: segmentRows, error: segmentError }] =
+    await Promise.all([
+      admin.from("parametres").select("key, value_json"),
+      admin
+        .from("segment_calibrations")
+        .select("segment_key, calibration_payload")
+        .eq("stage", "MATIN")
+        .eq("is_active", true),
+    ]);
 
-  const overrides = data.reduce<JsonRecord>((acc, row) => {
+  const overrides = (data ?? []).reduce<JsonRecord>((acc, row) => {
     if (row.key && row.value_json) {
       acc[row.key] = row.value_json;
     }
     return acc;
   }, {});
+
+  const segmentCalibrationOverrides =
+    !segmentError && Array.isArray(segmentRows)
+      ? collectActiveSegmentCalibrationOverrides(segmentRows)
+      : {};
+
+  const baseProbabilityCalibration = isJsonRecord(overrides.probabilityCalibration)
+    ? overrides.probabilityCalibration
+    : {};
 
   const nestedOverride: JsonRecord = {
     validation: overrides.validation ?? {},
@@ -103,7 +131,10 @@ export async function loadAlgoParameters(): Promise<AlgoParameters> {
     outsiders: overrides.outsiders ?? {},
     preRace: overrides.preRace ?? {},
     fautifs: overrides.fautifs ?? {},
-    probabilityCalibration: overrides.probabilityCalibration ?? {},
+    probabilityCalibration: {
+      ...baseProbabilityCalibration,
+      segments: segmentCalibrationOverrides,
+    },
   };
 
   return deepMerge(

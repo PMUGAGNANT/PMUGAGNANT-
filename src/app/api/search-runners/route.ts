@@ -13,7 +13,7 @@ import type { Participant, RaceSummary } from "@/lib/types";
 
 export const revalidate = 300;
 
-type SearchRunnerType = "jockey" | "driver" | "entraineur" | "cheval";
+type SearchRunnerType = "numero" | "jockey" | "driver" | "entraineur" | "cheval";
 
 type SearchRunnerEntry = {
   reunion: number;
@@ -82,6 +82,7 @@ function buildEntry(race: RaceSummary, participant: Participant): SearchRunnerEn
 function buildIndexRows(race: RaceSummary, participant: Participant) {
   const entry = buildEntry(race, participant);
   const fields: Array<{ type: SearchRunnerType; value: string }> = [
+    { type: "numero", value: String(participant.numPmu) },
     { type: "driver", value: participant.driver },
     { type: "jockey", value: participant.jockey },
     { type: "entraineur", value: participant.entraineur },
@@ -251,7 +252,9 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  if (query.length < 2) {
+  const isNumericQuery = /^\d+$/.test(query);
+
+  if (query.length < 2 && !isNumericQuery) {
     return NextResponse.json(
       {
         success: true,

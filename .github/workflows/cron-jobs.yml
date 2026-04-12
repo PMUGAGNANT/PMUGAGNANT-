@@ -2,24 +2,48 @@ name: PMU Cron Jobs
 
 on:
   schedule:
-    # Pre-race analysis — every 5 minutes
     - cron: "*/5 * * * *"
-    # Weekly report — Sunday 19:00 UTC
-    - cron: "0 19 * * 0"
   workflow_dispatch:
     inputs:
       job:
-        description: "Job to run (prerace, results, weekly)"
+        description: "Job to run (dispatch, morning, prerace, results, calibration, learning, promotion, weekly)"
         required: true
         type: choice
         options:
+          - dispatch
+          - morning
           - prerace
           - results
+          - calibration
+          - learning
+          - promotion
           - weekly
 
 jobs:
+  dispatch:
+    if: github.event_name == 'schedule' || github.event.inputs.job == 'dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger unified cron dispatcher
+        run: |
+          curl -sf -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron" \
+            --max-time 290
+
+  morning:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'morning'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger morning analysis
+        run: |
+          curl -sf -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/morning" \
+            --max-time 290
+
   prerace:
-    if: github.event.schedule == '*/5 * * * *' || github.event.inputs.job == 'prerace'
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'prerace'
     runs-on: ubuntu-latest
     steps:
       - name: Trigger pre-race analysis
@@ -27,32 +51,54 @@ jobs:
           curl -sf -X GET \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "${{ secrets.APP_URL }}/api/cron/prerace" \
-            --max-time 290 || true
+            --max-time 290
 
   results:
-    if: github.event.schedule == '*/5 * * * *' || github.event.inputs.job == 'results'
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'results'
     runs-on: ubuntu-latest
     steps:
-      - name: Check if should run (every 10 min)
-        id: check
-        run: |
-          MINUTE=$(date -u +%M)
-          # Run on even 10-min marks: 00, 10, 20, 30, 40, 50
-          if [ $((MINUTE % 10)) -lt 5 ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          fi
       - name: Trigger results sync
-        if: steps.check.outputs.run == 'true' || github.event.inputs.job == 'results'
         run: |
           curl -sf -X GET \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "${{ secrets.APP_URL }}/api/cron/results" \
-            --max-time 290 || true
+            --max-time 290
+
+  calibration:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'calibration'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger probability calibration
+        run: |
+          curl -sf -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/calibration" \
+            --max-time 290
+
+  learning:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'learning'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger engine learning
+        run: |
+          curl -sf -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/learning" \
+            --max-time 290
+
+  promotion:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'promotion'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger engine promotion
+        run: |
+          curl -sf -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/promotion" \
+            --max-time 290
 
   weekly:
-    if: github.event.schedule == '0 19 * * 0' || github.event.inputs.job == 'weekly'
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'weekly'
     runs-on: ubuntu-latest
     steps:
       - name: Trigger weekly report
@@ -60,4 +106,4 @@ jobs:
           curl -sf -X GET \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             "${{ secrets.APP_URL }}/api/cron/weekly" \
-            --max-time 290 || true
+            --max-time 290

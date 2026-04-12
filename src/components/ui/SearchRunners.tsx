@@ -89,11 +89,11 @@ export function SearchRunners({ dateStr }: SearchRunnersProps) {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [results, setResults] = useState<SearchRunnerGroup[]>([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [focused, setFocused] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [resolvedRequestKey, setResolvedRequestKey] = useState("");
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -123,19 +123,15 @@ export function SearchRunners({ dateStr }: SearchRunnersProps) {
   useEffect(() => {
     abortRef.current?.abort();
 
-    if (debouncedQuery.length < 2) {
-      setLoading(false);
-      setError(null);
-      setResults([]);
-      setActiveIndex(-1);
+    const requestKey =
+      debouncedQuery.length >= 2 ? `${dateStr}:${debouncedQuery}` : "";
+
+    if (!requestKey) {
       return;
     }
 
     const controller = new AbortController();
     abortRef.current = controller;
-    setLoading(true);
-    setError(null);
-    setOpen(true);
 
     void fetch(`/api/search-runners?q=${encodeURIComponent(debouncedQuery)}&date=${dateStr}`, {
       cache: "no-store",
@@ -148,7 +144,9 @@ export function SearchRunners({ dateStr }: SearchRunnersProps) {
         }
 
         setResults(payload.results ?? []);
+        setError(null);
         setActiveIndex(-1);
+        setResolvedRequestKey(requestKey);
       })
       .catch((fetchError) => {
         if (fetchError instanceof Error && fetchError.name === "AbortError") {
@@ -159,17 +157,16 @@ export function SearchRunners({ dateStr }: SearchRunnersProps) {
         setError(
           fetchError instanceof Error ? fetchError.message : "Impossible de lancer la recherche."
         );
+        setResolvedRequestKey(requestKey);
       })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
-      });
 
     return () => {
       controller.abort();
     };
   }, [dateStr, debouncedQuery]);
+
+  const loading =
+    debouncedQuery.length >= 2 && resolvedRequestKey !== `${dateStr}:${debouncedQuery}`;
 
   const keyboardOptions = useMemo<KeyboardOption[]>(() => {
     if (query.trim().length >= 2) {
@@ -200,9 +197,11 @@ export function SearchRunners({ dateStr }: SearchRunnersProps) {
 
   function applySuggestion(label: string) {
     setQuery(label);
+    setError(null);
     setOpen(true);
     setFocused(true);
     setActiveIndex(-1);
+    setResolvedRequestKey("");
     requestAnimationFrame(() => {
       inputRef.current?.focus();
     });
@@ -214,10 +213,10 @@ export function SearchRunners({ dateStr }: SearchRunnersProps) {
     setDebouncedQuery("");
     setResults([]);
     setError(null);
-    setLoading(false);
     setOpen(true);
     setFocused(true);
     setActiveIndex(-1);
+    setResolvedRequestKey("");
     requestAnimationFrame(() => {
       inputRef.current?.focus();
     });
@@ -315,9 +314,15 @@ export function SearchRunners({ dateStr }: SearchRunnersProps) {
                 setOpen(true);
               }}
               onChange={(event) => {
-                setQuery(event.target.value);
+                const nextValue = event.target.value;
+                setQuery(nextValue);
+                setError(null);
                 setOpen(true);
                 setActiveIndex(-1);
+                if (nextValue.trim().length < 2) {
+                  setResults([]);
+                  setResolvedRequestKey("");
+                }
               }}
               onKeyDown={handleKeyDown}
             />

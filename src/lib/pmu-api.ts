@@ -54,6 +54,35 @@ function toParisHour(ms?: number | null) {
   });
 }
 
+function hasQuinteOffer(course: Record<string, unknown>) {
+  if (Boolean(course.grandPrixNationalTrot)) {
+    return true;
+  }
+
+  const categorieParticularite = String(course.categorieParticularite ?? "").toUpperCase();
+  if (categorieParticularite.includes("QUINTE")) {
+    return true;
+  }
+
+  const paris = Array.isArray(course.paris) ? (course.paris as Record<string, unknown>[]) : [];
+  if (
+    paris.some((pari) => {
+      const pariType = String(pari.typePari ?? pari.codePari ?? "").toUpperCase();
+      return pariType.includes("QUINTE") || pari.nouveauQuinte === true;
+    })
+  ) {
+    return true;
+  }
+
+  const cagnottes = Array.isArray(course.cagnottes)
+    ? (course.cagnottes as Record<string, unknown>[])
+    : [];
+
+  return cagnottes.some((cagnotte) =>
+    String(cagnotte.typePari ?? cagnotte.codePari ?? "").toUpperCase().includes("QUINTE")
+  );
+}
+
 function getCoteFromParticipant(raw: Record<string, unknown>): number | null {
   const coteDirect = raw.coteDirect as Record<string, unknown> | undefined;
   const lastReport = raw.dernierRapportDirect as Record<string, unknown> | undefined;
@@ -230,6 +259,7 @@ function mapParticipant(raw: Record<string, unknown>): Participant {
     driver: String(raw.driver ?? raw.driverPrincipal ?? ""),
     entraineur: String(raw.entraineur ?? raw.entraineurPrincipal ?? ""),
     jockey: String(raw.jockey ?? raw.jockeyPrincipal ?? raw.driver ?? ""),
+    proprietaire: String(raw.proprietaire ?? raw.proprietairePrincipal ?? raw.owner ?? ""),
     age: Number(raw.age ?? 0),
     sexe: String(raw.sexe ?? ""),
     cote,
@@ -328,9 +358,7 @@ export async function getAllRaces(dateStr?: string): Promise<RaceSummary[]> {
         discipline,
         estTrot: discipline.includes("TROT"),
         estPlat: discipline === "PLAT",
-        estQuinte:
-          Boolean(course.grandPrixNationalTrot) ||
-          String(course.categorieParticularite ?? "") === "QUINTE",
+        estQuinte: hasQuinteOffer(course),
         allocation: Number(course.montantTotalOffert ?? 0),
         distance: Number(course.distance ?? 0),
         nombrePartants: Number(course.nombreDeclaresPartants ?? 0),

@@ -11,6 +11,11 @@ import {
   parsePositiveInteger,
 } from "@/lib/request-utils";
 import { logger } from "@/lib/server-logger";
+import {
+  buildSubscriptionStateFromProfile,
+  PROFILE_SUBSCRIPTION_SELECT,
+  type SubscriptionProfileSnapshot,
+} from "@/lib/subscription";
 
 function getSupabaseClient(req: NextRequest) {
   const token = getBearerToken(req.headers.get("authorization"));
@@ -64,6 +69,44 @@ async function getAuthenticatedUserClient(req: NextRequest) {
   return { client, user };
 }
 
+type BetPlacementResult = {
+  bet_id: string;
+  solde: number;
+};
+
+function mapBetPlacementError(error: { message?: string } | null) {
+  const message = error?.message ?? "";
+
+  switch (message) {
+    case "AUTH_REQUIRED":
+      return unauthorized("Connexion requise.");
+    case "INVALID_DATE":
+      return badRequest("Format de date invalide. Attendu : DDMMYYYY.");
+    case "INVALID_REUNION":
+    case "INVALID_COURSE":
+    case "INVALID_HORSE":
+      return badRequest("Identifiant de course invalide.");
+    case "INVALID_HORSE_NAME":
+      return badRequest("Nom de cheval invalide.");
+    case "INVALID_BET_TYPE":
+      return badRequest("Type de pari invalide.");
+    case "INVALID_STAKE":
+      return badRequest("La mise doit être comprise entre 1 et 50.");
+    case "INVALID_ODDS":
+      return badRequest("Cote invalide.");
+    case "INSUFFICIENT_FUNDS":
+      return badRequest("Solde insuffisant.");
+    case "BET_ALREADY_EXISTS":
+      return badRequest("Vous avez déjà parié sur cette course.");
+    case "PROFILE_NOT_FOUND":
+      return badRequest("Profil introuvable.");
+    default:
+      break;
+  }
+
+  return serverError("Échec de création du pari.", error ?? undefined);
+}
+
 export async function GET(req: NextRequest) {
   const auth = await getAuthenticatedUserClient(req);
   if ("errorResponse" in auth) {
@@ -83,7 +126,7 @@ export async function GET(req: NextRequest) {
 
   const { data: profile, error: profileError } = await client
     .from("profiles")
-    .select("solde,is_subscribed,subscription_status,stripe_customer_id")
+    .select(`solde,${PROFILE_SUBSCRIPTION_SELECT}`)
     .eq("id", user.id)
     .single();
 
@@ -94,13 +137,21 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  const subscriptionState = buildSubscriptionStateFromProfile(
+    profile as SubscriptionProfileSnapshot | null | undefined,
+    user
+  );
+
   return NextResponse.json({
     success: true,
     bets: bets ?? [],
     solde: profile?.solde ?? 1000,
-    isSubscribed: Boolean(profile?.is_subscribed),
-    subscriptionStatus: profile?.subscription_status ?? "FREE",
-    stripeCustomerId: profile?.stripe_customer_id ?? null,
+    isSubscribed: subscriptionState.isSubscribed,
+    isStripeSubscribed: subscriptionState.isStripeSubscribed,
+    accessSource: subscriptionState.accessSource,
+    subscriptionStatus: subscriptionState.subscriptionStatus,
+    stripeCustomerId: subscriptionState.stripeCustomerId,
+    premiumAccessExpiresAt: subscriptionState.premiumAccessExpiresAt,
   });
 }
 
@@ -110,7 +161,7 @@ export async function POST(req: NextRequest) {
     return auth.errorResponse;
   }
 
-  const { client, user } = auth;
+  const { client } = auth;
   let body: unknown;
   try {
     body = await req.json();
@@ -135,7 +186,7 @@ export async function POST(req: NextRequest) {
     return badRequest("Format de date invalide. Attendu : DDMMYYYY.");
   }
 
-  if (mise < 1 || mise > 50) {
+  if (!Number.isInteger(mise) || mise < 1 || mise > 50) {
     return badRequest("La mise doit être comprise entre 1 et 50.");
   }
 
@@ -147,78 +198,37 @@ export async function POST(req: NextRequest) {
     return badRequest("Type de pari invalide.");
   }
 
-  const { data: profile, error: profileError } = await client
-    .from("profiles")
-    .select("solde")
-    .eq("id", user.id)
-    .single();
+  const { data, error } = await client.rpc("place_user_bet", {
+    p_date_str: date_str,
+    p_reunion: reunion,
+    p_course: course,
+    p_hippodrome: hippodrome,
+    p_heure_depart: heure_depart,
+    p_cheval_num: cheval_num,
+    p_cheval_nom: cheval_nom,
+    p_type_pari: type_pari,
+    p_mise: mise,
+    p_cote: cote,
+  });
 
-  if (profileError) {
-    return serverError("Impossible de récupérer le solde du profil.", profileError, { userId: user.id });
-  }
-
-  const solde = profile?.solde ?? 1000;
-  if (solde < mise) {
-    return badRequest("Solde insuffisant.");
-  }
-
-  const { data: existing, error: duplicateCheckError } = await client
-    .from("bets")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("date_str", date_str)
-    .eq("reunion", reunion)
-    .eq("course", course)
-    .limit(1);
-
-  if (duplicateCheckError) {
-    return serverError("Impossible de vérifier le doublon de pari.", duplicateCheckError, { userId: user.id, date_str, reunion, course });
-  }
-
-  if (existing && existing.length > 0) {
-    return badRequest("Vous avez déjà parié sur cette course.");
-  }
-
-  const { data: insertedBet, error: betError } = await client
-    .from("bets")
-    .insert({
-      user_id: user.id,
+  if (error) {
+    logger.warn("bets.place_failed", {
       date_str,
       reunion,
       course,
-      hippodrome,
-      heure_depart,
-      cheval_num,
-      cheval_nom,
-      type_pari,
-      mise,
-      cote,
-      statut: "EN_ATTENTE",
-      gain: null,
-    })
-    .select("id")
-    .single();
-
-  if (betError) {
-    return serverError("Échec de création du pari.", betError, { userId: user.id, date_str, reunion, course });
+      error: error.message,
+    });
+    return mapBetPlacementError(error);
   }
 
-  const { error: profileUpdateError } = await client
-    .from("profiles")
-    .update({ solde: solde - mise })
-    .eq("id", user.id);
-
-  if (profileUpdateError) {
-    logger.error("bets.profile_update_failed", profileUpdateError, { userId: user.id, betId: insertedBet?.id });
-    if (insertedBet?.id) {
-      await client.from("bets").delete().eq("id", insertedBet.id);
-    }
-
-    return serverError("Échec de mise à jour du profil.", profileUpdateError, { userId: user.id });
+  const placement =
+    data && typeof data === "object" ? (data as unknown as BetPlacementResult) : null;
+  if (!placement || typeof placement.solde !== "number") {
+    return serverError("Réponse de placement invalide.");
   }
 
   return NextResponse.json({
     success: true,
-    solde: solde - mise,
+    solde: placement.solde,
   });
 }

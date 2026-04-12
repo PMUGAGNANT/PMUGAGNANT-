@@ -18,7 +18,6 @@ import type {
 } from "@/lib/types";
 import {
   BANKROLL_BASE_EUROS,
-  VALUE_CONFIRMATION_MULTIPLIER,
   clamp,
   kellyFraction,
   marketProbabilityFromOdds,
@@ -207,6 +206,10 @@ export function determineHorseDecision(
     }
   }
 
+  if (candidate.confiance < 5.5 && decision === "VALIDE") { // v9.3
+    decision = "SURVEILLANCE"; // v9.3
+  } // v9.3
+
   return { decision, typePariConseille, miseConseillee };
 }
 
@@ -217,8 +220,9 @@ export function buildValue(
 ): ValueAnalysis {
   const cotePMU = runner.cote ?? runner.coteDepart ?? runner.coteMatin ?? 0;
   const probabiliteImplicite = marketProbabilityFromOdds(cotePMU);
+  const valueConfirmationMultiplier = lisibilite === "LISIBLE" ? 1.1 : 1.25; // v9.3
   const probabiliteValueSeuil = clamp(
-    probabiliteImplicite * VALUE_CONFIRMATION_MULTIPLIER,
+    probabiliteImplicite * valueConfirmationMultiplier, // v9.3
     0,
     1
   );
@@ -738,7 +742,7 @@ export function computeConfidence(
   scoreFinalPari: number,
   marketEdge: number
 ) {
-  return round1(
+  const confianceActuelle = round1( // v9.3
     clamp(
       scoreFinalPari / 10 +
         runner.signaux.marche / 10 -
@@ -754,6 +758,16 @@ export function computeConfidence(
       10
     )
   );
+  const signauxForts = [ // v9.3
+    runner.signaux.forme, // v9.3
+    runner.signaux.regularite, // v9.3
+    runner.signaux.victoire, // v9.3
+    runner.signaux.podium, // v9.3
+    runner.signaux.humain, // v9.3
+    runner.signaux.marche, // v9.3
+  ].filter((signal) => signal > 6).length; // v9.3
+
+  return signauxForts < 2 ? Math.min(confianceActuelle, 5.8) : confianceActuelle; // v9.3
 }
 
 export function computeKellyMetrics(

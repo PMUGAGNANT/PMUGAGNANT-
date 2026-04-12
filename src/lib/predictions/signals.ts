@@ -253,6 +253,28 @@ function getPopularitySignal(participant: Participant) {
   return 0;
 }
 
+function getIntrinsicValueSignal(
+  scoreIntrinseque: number,
+  cote: number | null,
+  nombrePartants: number
+) {
+  if (cote === null || !Number.isFinite(cote) || cote <= 1) return 0;
+  void nombrePartants;
+
+  const probaMarche = 1 / cote;
+  const probaAlgo = clamp(scoreIntrinseque / 100, 0.03, 0.55);
+  const edge = probaAlgo - probaMarche;
+
+  if (edge >= 0.18) return 8;
+  if (edge >= 0.12) return 6;
+  if (edge >= 0.06) return 4;
+  if (edge >= 0.02) return 2;
+  if (edge <= -0.18) return -4;
+  if (edge <= -0.1) return -2;
+
+  return 0;
+}
+
 function getVictorySignal(participant: Participant, stats: MusicStats) {
   const total = Math.max(participant.nombreCourses, countEncodedRuns(participant.musique), 1);
   const winRate = participant.nombreVictoires / total;
@@ -355,6 +377,33 @@ export function buildSignals(
         ? 6
         : 0;
   const risque = getRiskPenalty(participant, stats, parameters);
+  const scoreIntrinseque =
+    32 +
+    forme +
+    regularite +
+    victoire +
+    podium +
+    humain +
+    entraineur +
+    jockeyForme +
+    trainerTrack +
+    gains +
+    popularite +
+    stalle +
+    poids +
+    distance +
+    terrain +
+    meteo +
+    hippodrome +
+    ageSexe +
+    repos -
+    risque -
+    faute;
+  const valueIntrinseque = getIntrinsicValueSignal(
+    clamp(scoreIntrinseque, 0, 100),
+    participant.cote,
+    race.nombrePartants
+  );
 
   return {
     forme,
@@ -376,6 +425,7 @@ export function buildSignals(
     hippodrome,
     ageSexe,
     repos,
+    valueIntrinseque,
     faute,
     risque,
   };
@@ -401,10 +451,12 @@ export function computeBaseHorseScore(signaux: RunnerSignals) {
     signaux.meteo +
     signaux.hippodrome +
     signaux.ageSexe +
-    signaux.repos;
+    signaux.repos +
+    signaux.valueIntrinseque;
 
-  const negatives = signaux.risque + signaux.faute;
-  return clamp(32 + positives - negatives, 0, 100);
+  const negatives = signaux.risque + signaux.faute; // v9.3
+  const risqueMultiplier = signaux.risque > 12 ? 0.7 : signaux.risque > 8 ? 0.85 : 1; // v9.3
+  return clamp((32 + positives) * risqueMultiplier - negatives, 0, 100); // v9.3
 }
 
 function getTerrainReadabilitySignal(race: RaceSummary) {

@@ -1,3 +1,5 @@
+import "./load-env";
+
 function getFlag(name: string) {
   const prefix = `--${name}=`;
   const match = process.argv.find((arg) => arg.startsWith(prefix));
