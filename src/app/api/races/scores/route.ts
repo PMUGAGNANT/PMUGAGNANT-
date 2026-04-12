@@ -71,11 +71,8 @@ export async function GET(request: Request) {
       }
     > = {};
 
-    // Compute from 2 hours before the start, then keep updating until finished.
-    const analyzableRaces = races.filter((r: { heureDepart: string; dateStr: string }) => {
-      const min = getMinutesUntilStart(r.heureDepart, r.dateStr);
-      return min <= 120;
-    });
+    // Keep combo candidates visible on the list without forcing users to open each race.
+    const analyzableRaces = races;
 
     // Process in parallel batches of 5
     const batchSize = 5;
@@ -132,6 +129,7 @@ export async function GET(request: Request) {
 
           const score = allowFullScore ? analysis.scoreConfiance?.score ?? null : null;
           const scoreLocked = !allowFullScore;
+          const canExposeComboCandidate = stage !== "finished";
 
           return {
             key,
@@ -168,7 +166,7 @@ export async function GET(request: Request) {
                     topFacteurs: analysis.pepiteDuJour.prediction.topFacteurs,
                   }
                 : null,
-            comboCandidate: allowFullScore ? comboCandidate : null,
+            comboCandidate: canExposeComboCandidate ? comboCandidate : null,
           };
         })
       );
