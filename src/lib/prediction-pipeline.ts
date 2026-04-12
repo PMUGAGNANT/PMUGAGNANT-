@@ -6,6 +6,7 @@ import {
 import { getMinutesUntilStart, getTodayDateStr as getTodayDateStrFromUtils, parsePmuDate } from "@/lib/date-utils";
 import { attachFaultRates, upsertFaultRates } from "@/lib/horse-faults";
 import { getAllRaces, getFinalReports, getParticipants } from "@/lib/pmu-api";
+import { fetchMeteoHippodrome } from "@/lib/meteo";
 import {
   getPreRaceRefreshDecision,
   getResultRefreshDecision,
@@ -35,6 +36,7 @@ import { analyzeRaceWithParameters } from "@/lib/predictions";
 import {
   formatMorningTelegram,
   formatPreRaceTelegram,
+  alerteTerrainChange,
   isTelegramConfigured,
   sendTelegramMessage,
 } from "@/lib/telegram";
@@ -532,6 +534,17 @@ function applyPreRaceSecondPass(
   return { updatedRows, alerts };
 }
 
+function likesLightGround(value?: string | null) {
+  const normalized = (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  return ["bon", "leger", "rapide", "sec", "firm", "good"].some((token) =>
+    normalized.includes(token)
+  );
+}
+
 function settlePredictionRow(
   row: PredictionRow,
   participant: Participant | undefined,
@@ -637,6 +650,27 @@ export async function runPreRaceSecondPass(
     );
 
     await persistProcessedRace(dateStr, current, updatedRows);
+    const meteo = await fetchMeteoHippodrome(race.hippodrome, race.heureDepart);
+    if (meteo?.terrain_impact === "DEFAVORABLE") {
+      const validRows = updatedRows.filter((row) => row.decision === "VALIDE");
+      const impacted = validRows
+        .map((row) => {
+          const participant = current.participants.find((item) => item.numPmu === row.cheval_num);
+          return participant && likesLightGround(participant.terrainPreference)
+            ? `#${row.cheval_num} ${row.cheval_nom}`
+            : null;
+        })
+        .filter((value): value is string => value !== null);
+
+      if (impacted.length > 0) {
+        await alerteTerrainChange(
+          `R${race.reunion}C${race.course}`,
+          race.hippodrome,
+          meteo,
+          impacted
+        );
+      }
+    }
 
     return {
       race,

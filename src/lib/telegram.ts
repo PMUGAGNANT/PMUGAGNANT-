@@ -1,4 +1,5 @@
 import type { WeeklyReportRow } from "@/lib/types";
+import type { MeteoData } from "@/lib/meteo";
 import { logger } from "@/lib/server-logger";
 
 const TELEGRAM_ENDPOINT = "https://api.telegram.org";
@@ -134,4 +135,31 @@ export function formatWeeklyTelegram(
     adjustments.length > 0 ? ["Auto-ajustements :", ...adjustments] : ["Auto-ajustements : aucun"];
 
   return [...header, ...insightLines, ...adjustmentLines].join("\n");
+}
+
+export async function alerteTerrainChange(
+  course: string,
+  hippodrome: string,
+  meteo: MeteoData,
+  chevauxImpactes: string[]
+): Promise<void> {
+  if (!isTelegramConfigured()) {
+    return;
+  }
+
+  const impacted =
+    chevauxImpactes.length > 0
+      ? chevauxImpactes.map((cheval) => `- ${cheval}`).join("\n")
+      : "- Aucun cheval identifie";
+
+  await sendTelegramMessage(
+    [
+      "PMU Gagnant",
+      `Alerte terrain - ${course} ${hippodrome}`,
+      `${meteo.description}, ${meteo.temperature}C, vent ${meteo.vent_kmh} km/h, humidite ${meteo.humidite}%`,
+      meteo.alerte ?? "Terrain defavorable prevu.",
+      "Chevaux a verifier :",
+      impacted,
+    ].join("\n")
+  );
 }

@@ -91,6 +91,7 @@ function RaceDetailsContent({
         paywallRequired={paywallRequired}
         isFinished={isFinished}
         refreshPriority={data.refreshPriority ?? null}
+        meteo={data.meteo ?? null}
       />
 
       <section className="grid gap-5 xl:grid-cols-[1.12fr,0.88fr]">

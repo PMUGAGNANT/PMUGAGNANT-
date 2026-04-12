@@ -9,6 +9,7 @@ import {
   getPriorityToneColor,
   type RacePriorityBadge,
 } from "@/lib/race-priority";
+import type { MeteoData } from "@/lib/meteo";
 
 import { RaceStatusPill } from "@/features/race/components/RaceStatusPill";
 
@@ -19,6 +20,7 @@ export function RaceHeroSection({
   paywallRequired,
   isFinished,
   refreshPriority,
+  meteo,
 }: {
   courseInfo: RaceCourseInfo;
   selectedDate: string | null;
@@ -26,6 +28,7 @@ export function RaceHeroSection({
   paywallRequired: boolean;
   isFinished: boolean;
   refreshPriority?: RacePriorityBadge | null;
+  meteo?: MeteoData | null;
 }) {
   const titlePrefix = `R${courseInfo.reunion ?? ""}C${courseInfo.course ?? ""}`;
   const dateLabel = formatDateLabel(selectedDate ?? courseInfo.dateStr ?? null);
@@ -47,6 +50,18 @@ export function RaceHeroSection({
     courseInfo.terrain || null,
     courseInfo.meteo || null,
   ].filter(Boolean) as string[];
+  const weatherIcon =
+    meteo?.description.toLowerCase().includes("pluie")
+      ? "🌧️"
+      : meteo?.description.toLowerCase().includes("nuage")
+        ? "⛅"
+        : "☀️";
+  const impactTone =
+    meteo?.terrain_impact === "FAVORABLE"
+      ? "text-green-700 bg-green-100 border-green-300"
+      : meteo?.terrain_impact === "DEFAVORABLE"
+        ? "text-red-700 bg-red-100 border-red-300"
+        : "text-slate-700 bg-slate-100 border-slate-300";
 
   return (
     <section className="app-page-hero p-6 md:p-8">
@@ -94,6 +109,27 @@ export function RaceHeroSection({
               </span>
             ))}
           </div>
+
+          {meteo ? (
+            <div className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-xl" aria-hidden>
+                  {weatherIcon}
+                </span>
+                <span className="font-semibold text-[var(--pmu-text)]">
+                  {meteo.description} - {meteo.temperature}°C - Vent {meteo.vent_kmh} km/h
+                </span>
+                <span className={`rounded-lg border px-2 py-1 text-xs font-semibold ${impactTone}`}>
+                  Terrain {meteo.terrain_impact.toLowerCase()}
+                </span>
+              </div>
+              {meteo.alerte ? (
+                <p className="mt-3 rounded-lg border border-orange-300 bg-orange-100 px-3 py-2 text-sm font-semibold text-orange-800">
+                  ⚠️ Alerte terrain - {meteo.alerte}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">

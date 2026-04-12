@@ -7,6 +7,7 @@ import {
 } from "@/lib/client-race-scoring";
 import { attachFaultRates } from "@/lib/horse-faults";
 import { detecterRoles } from "@/lib/horse-roles";
+import { fetchMeteoHippodrome } from "@/lib/meteo";
 import { loadAlgoParameters } from "@/lib/config";
 import { badRequest, serverError } from "@/lib/api-response";
 import { getRacePriorityBadge } from "@/lib/race-priority";
@@ -115,6 +116,7 @@ export async function GET(
     if (!courseInfo) {
       return NextResponse.json({ success: false, error: 'Race not found' }, { status: 404 });
     }
+    const meteo = await fetchMeteoHippodrome(courseInfo.hippodrome, courseInfo.heureDepart);
 
     // Get participants and enrich them with historical risk signals.
     const participants = await attachFaultRates(await getParticipants(date, rNum, cNum));
@@ -188,6 +190,7 @@ export async function GET(
       return NextResponse.json({
         success: true,
         courseInfo,
+        meteo,
         participants,
         officialArrival,
         minutesUntilStart: minutesUntil,
@@ -218,6 +221,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       courseInfo,
+      meteo,
       participants,
       officialArrival,
       minutesUntilStart: minutesUntil,
