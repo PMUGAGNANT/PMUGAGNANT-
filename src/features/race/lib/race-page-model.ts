@@ -2,6 +2,7 @@ import type {
   ArrivalRow,
   CourseParticipantRow,
 } from "@/features/race/components/ParticipantsTable";
+import type { AvisExpertPrediction } from "@/lib/avis-generator";
 import type { RoleCheval } from "@/lib/horse-roles";
 import type { LiveCotesSeries } from "@/lib/live-cotes";
 import type { MeteoData } from "@/lib/meteo";
@@ -53,6 +54,7 @@ export type RaceApiResponse = {
   participants?: RaceApiParticipant[] | number | null;
   officialArrival?: ArrivalRow[] | null;
   roles?: RoleCheval[] | null;
+  avisExpert?: AvisExpertPrediction[] | null;
   liveCotes?: LiveCotesSeries[] | null;
   meteo?: MeteoData | null;
   minutesUntilStart?: number | null;

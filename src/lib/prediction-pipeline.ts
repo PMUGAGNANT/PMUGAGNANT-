@@ -1,4 +1,5 @@
 import { loadAlgoParameters } from "@/lib/config";
+import { genererAvisJour } from "@/lib/avis-pipeline";
 import {
   computeClientRaceScore,
   type ApiRaceScoreLite,
@@ -597,6 +598,13 @@ export async function runMorningAnalysis(dateStr: string) {
 
   if (isTelegramConfigured()) {
     await sendTelegramMessage(formatMorningTelegram(dateStr, selections));
+  }
+
+  try {
+    await genererAvisJour(dateStr);
+    console.log("Avis expert generes");
+  } catch (error) {
+    console.error("Erreur generation avis:", error);
   }
 
   return {

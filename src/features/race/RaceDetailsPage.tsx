@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 
+import { AvisExpert } from "@/components/AvisExpert";
 import { CourseRoles } from "@/components/CourseRoles";
 import { LiveCotesChart } from "@/components/LiveCotesChart";
 import { CourseDetailSkeleton } from "@/features/race/components/CourseDetailSkeleton";
@@ -124,6 +125,10 @@ function RaceDetailsContent({
           />
 
           <CourseRoles roles={roles} lisibilite={roleLisibilite} course={courseInfo} />
+          <AvisExpert
+            predictions={data.avisExpert ?? []}
+            isPremium={!paywallRequired || isFinished}
+          />
           <LiveCotesChart
             series={data.liveCotes ?? []}
             pepiteNum={pepiteRole?.cheval_num ?? null}

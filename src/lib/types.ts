@@ -374,6 +374,11 @@ export interface PredictionRow {
   rapport_place: number | null;
   rapport_gagnant: number | null;
   gain_simule: number | null;
+  avis_texte?: string | null;
+  avis_note?: number | null;
+  avis_verdict?: "MISER" | "SURVEILLER" | "EVITER" | null;
+  avis_pari_type?: "GAGNANT" | "PLACE" | null;
+  avis_generated_at?: string | null;
   stage?: ScoreStage | null;
   created_at?: string;
   updated_at?: string;

@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { getAllRaces, getParticipants, getTodayDateStr } from "@/lib/pmu-api";
 import { analyzeRaceWithParameters, getMinutesUntilStart } from "@/lib/analysis";
 import {
+  buildAvisExpertFromAnalysis,
+  fetchAvisExpertTop5,
+} from "@/lib/avis-pipeline";
+import {
   computeClientRaceScore,
   type ApiRaceScoreLite,
 } from "@/lib/client-race-scoring";
@@ -152,6 +156,13 @@ export async function GET(
           ? computedAnalysis
           : null;
       const allowFullScore = subscriptionState.isSubscribed || isFinished;
+      const storedAvis = await fetchAvisExpertTop5(date, rNum, cNum);
+      const avisExpert = buildAvisExpertFromAnalysis(
+        computedAnalysis,
+        participants,
+        courseInfo as RaceSummary,
+        storedAvis
+      );
       const liveCotes = allowFullScore
         ? await getLiveCotesSeries(
             date,
@@ -207,6 +218,7 @@ export async function GET(
         isFinished,
         analysis,
         roles: allowFullScore ? roles : null,
+        avisExpert,
         liveCotes,
         refreshPriority,
         paywall:
@@ -238,6 +250,7 @@ export async function GET(
       pronoAvailable,
       isFinished,
       analysis,
+      avisExpert: null,
       liveCotes: null,
       refreshPriority: null,
       paywall: null,
