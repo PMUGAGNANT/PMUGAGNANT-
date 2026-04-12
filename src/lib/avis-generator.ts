@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 
 export type AvisVerdict = "MISER" | "SURVEILLER" | "EVITER";
 export type AvisPariType = "GAGNANT" | "PLACE";
@@ -87,12 +87,12 @@ export function calculerVerdict(
 export async function genererAvisTexte(
   cheval: ChevalPourAvis
 ): Promise<string | null> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return null;
   }
 
-  const client = new Anthropic({ apiKey });
+  const client = new OpenAI({ apiKey });
   const prompt = `Tu es un expert turf qui redige des avis sur les chevaux pour un journal hippique professionnel.
 
 Cheval : ${cheval.cheval_nom} (N${cheval.cheval_num})
@@ -115,20 +115,21 @@ Ne depasse jamais 180 caracteres.
 Reponds UNIQUEMENT avec le texte de l'avis, sans guillemets ni ponctuation finale.`;
 
   try {
-    const response = await client.messages.create({
-      model: process.env.ANTHROPIC_MODEL ?? "claude-opus-4-6",
-      max_tokens: 150,
-      messages: [{ role: "user", content: prompt }],
+    const response = await client.responses.create({
+      model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+      input: prompt,
+      max_output_tokens: 90,
+      temperature: 0.45,
     });
 
-    const text = response.content[0];
-    if (!text || text.type !== "text") {
+    const text = response.output_text;
+    if (!text) {
       return null;
     }
 
-    return stripFinalPunctuation(text.text).slice(0, 180) || null;
+    return stripFinalPunctuation(text).slice(0, 180) || null;
   } catch (error) {
-    console.error("Erreur generation avis Claude:", error);
+    console.error("Erreur generation avis OpenAI:", error);
     return null;
   }
 }
