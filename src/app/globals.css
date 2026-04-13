@@ -547,10 +547,15 @@ img, svg { display: block; }
 .turf-main-column { display: grid; gap: 16px; }
 .turf-home-aside {
   position: sticky;
-  top: 110px;
+  top: 136px;
+  align-self: start;
   display: grid;
   gap: 12px;
+  max-height: calc(100vh - 156px);
+  overflow-y: auto;
+  scrollbar-width: none;
 }
+.turf-home-aside::-webkit-scrollbar { display: none; }
 .turf-aside-card { padding: 16px; }
 
 /* Score radar */
