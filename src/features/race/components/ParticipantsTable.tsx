@@ -50,7 +50,7 @@ function getOddsTone(odds?: number | null) {
   }
 
   if (odds < 5) return "var(--pmu-primary)";
-  if (odds <= 10) return "var(--pmu-orange)";
+  if (odds <= 10) return "var(--pmu-gold)";
   return "var(--pmu-text)";
 }
 
@@ -59,42 +59,67 @@ function formatOdds(odds?: number | null) {
   return odds.toFixed(1);
 }
 
-function formatSexAge(participant: CourseParticipantRow) {
-  const sexe = participant.sexe || "--";
-  const age = Number.isFinite(participant.age) ? participant.age : "--";
-  return `${sexe}/${age}`;
-}
-
-function getArrivalPosition(arrivalMap: Map<number, number | null>, numPmu: number) {
-  const value = arrivalMap.get(numPmu);
-  if (!value) return "--";
-  return value === 1 ? "1er" : `${value}e`;
-}
-
-function getScoreTone(score?: number | null) {
+function getScoreStyle(score?: number | null) {
   if (score === null || score === undefined || !Number.isFinite(score)) {
     return {
       label: "--",
-      accent: "○",
-      color: "var(--pmu-text-soft)",
+      background: "#F5F2EB",
+      color: "#9C9485",
     };
   }
 
   const rounded = Math.round(score);
 
   if (score >= 70) {
-    return { label: `${rounded}/100`, accent: "●", color: "var(--pmu-primary)" };
-  }
-
-  if (score >= 60) {
-    return { label: `${rounded}/100`, accent: "◆", color: "var(--pmu-orange)" };
+    return {
+      label: `${rounded}`,
+      background: "#EAF3DE",
+      color: "#2A4D12",
+    };
   }
 
   if (score >= 50) {
-    return { label: `${rounded}/100`, accent: "●", color: "var(--pmu-orange)" };
+    return {
+      label: `${rounded}`,
+      background: "#FEF3C7",
+      color: "#8C6D2F",
+    };
   }
 
-  return { label: `${rounded}/100`, accent: "○", color: "var(--pmu-text-soft)" };
+  return {
+    label: `${rounded}`,
+    background: "#F5F2EB",
+    color: "#9C9485",
+  };
+}
+
+function getArrivalLabel(position?: number | null) {
+  if (!position) return "--";
+  return position === 1 ? "1er" : `${position}e`;
+}
+
+function getArrivalChipStyle(position?: number | null) {
+  if (position === 1) {
+    return {
+      background: "#FDFCF9",
+      border: "1px solid #8C6D2F",
+      color: "#8C6D2F",
+    };
+  }
+
+  if (position === 2 || position === 3) {
+    return {
+      background: "#F5F2EB",
+      border: "1px solid #C2B49A",
+      color: "#5A5444",
+    };
+  }
+
+  return {
+    background: "#F5F2EB",
+    border: "1px solid var(--pmu-border)",
+    color: "#9C9485",
+  };
 }
 
 function getFallbackRole(
@@ -139,11 +164,11 @@ function getRoleColor(role?: TypeRoleCheval | null) {
     case "FAVORI":
       return "var(--pmu-primary)";
     case "PEPITE":
-      return "var(--pmu-orange)";
+      return "var(--pmu-gold)";
     case "OUTSIDER":
-      return "var(--pmu-red)";
+      return "var(--pmu-primary)";
     case "OUBLIE":
-      return "var(--pmu-blue)";
+      return "var(--pmu-text-muted)";
     default:
       return null;
   }
@@ -168,33 +193,6 @@ function RunnerTags({ role }: { role: RoleCheval | null }) {
       </span>
     </div>
   );
-}
-
-function getRowBackground(index: number, role: RoleCheval | null) {
-  const color = getRoleColor(role?.role);
-  if (color) return `color-mix(in srgb, ${color} 8%, var(--pmu-surface))`;
-
-  return index % 2 === 0
-    ? "color-mix(in srgb, var(--pmu-surface) 88%, transparent)"
-    : "color-mix(in srgb, var(--pmu-surface-2) 88%, transparent)";
-}
-
-function getNumberChipStyle(role: RoleCheval | null) {
-  const color = getRoleColor(role?.role);
-
-  if (color) {
-    return {
-      background: `color-mix(in srgb, ${color} 12%, transparent)`,
-      color,
-      border: `1px solid color-mix(in srgb, ${color} 24%, transparent)`,
-    };
-  }
-
-  return {
-    background: "color-mix(in srgb, var(--pmu-surface-highlight) 76%, var(--pmu-surface))",
-    color: "var(--pmu-text)",
-    border: "1px solid var(--pmu-border)",
-  };
 }
 
 function normalizeSearch(value?: string | null) {
@@ -260,6 +258,10 @@ export function ParticipantsTable({
     return humanMatches && trainerMatches && ownerMatches;
   }
 
+  const visibleParticipants = activeFilters
+    ? sortedParticipants.filter(participantMatchesFilters)
+    : sortedParticipants;
+
   if (safeParticipants.length === 0) {
     return (
       <section className="app-card overflow-hidden p-5 md:p-6">
@@ -280,20 +282,29 @@ export function ParticipantsTable({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="app-kicker">Table des partants</p>
-            <h2 className="mt-2 text-2xl font-black text-[var(--pmu-text)] md:text-3xl">
-              Tous les chevaux de la course
+            <h2 className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+              Tous les chevaux
             </h2>
             <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">
-              Tableau PMU complet avec lecture moteur, cote, musique et tags de
-              priorité.
+              Lecture courte : numéro, cheval, musique, score et cote.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
             <span className="app-pill text-xs">{safeParticipants.length} partants</span>
-            <span className="app-pill text-xs">
-              {courseFinished ? "Course réglée" : "Tri par numéro PMU"}
-            </span>
+            {activeFilters ? (
+              <button
+                type="button"
+                className="app-pill text-xs"
+                onClick={() => {
+                  setHumanSearch("");
+                  setTrainerFilter("");
+                  setOwnerFilter("");
+                }}
+              >
+                Effacer filtres
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -304,7 +315,7 @@ export function ParticipantsTable({
               type="search"
               value={humanSearch}
               onChange={(event) => setHumanSearch(event.target.value)}
-              placeholder="Rechercher un jockey..."
+              placeholder="No, cheval, jockey..."
               className="app-input mt-2 w-full"
             />
           </label>
@@ -343,66 +354,88 @@ export function ParticipantsTable({
         </div>
       </div>
 
-      <div className="hidden overflow-x-auto xl:block">
-        <table className="app-table min-w-[1180px] table-auto">
+      <div className="hidden lg:block">
+        <table className="app-table w-full table-fixed">
+          <colgroup>
+            {courseFinished ? <col className="w-[72px]" /> : null}
+            <col className="w-[72px]" />
+            <col />
+            <col className="w-[122px]" />
+            <col className="w-[98px]" />
+            <col className="w-[82px]" />
+          </colgroup>
           <thead>
             <tr>
-              <th className="w-[88px]">N°</th>
-              <th className="min-w-[240px]">Cheval</th>
-              <th className="min-w-[180px]">{estPlat ? "Jockey" : "Driver"}</th>
-              <th className="min-w-[180px]">Entraînement</th>
-              <th className="w-[110px]">Profil</th>
-              <th className="w-[96px]">Cote</th>
-              <th className="min-w-[150px]">Musique</th>
-              <th className="w-[120px]">Score IA</th>
-              {courseFinished ? <th className="w-[90px]">Arrivée</th> : null}
+              {courseFinished ? <th>Arr.</th> : null}
+              <th>N°</th>
+              <th>Cheval</th>
+              <th>Musique</th>
+              <th>Score</th>
+              <th>Cote</th>
             </tr>
           </thead>
           <tbody>
-            {sortedParticipants.map((participant, index) => {
+            {visibleParticipants.map((participant, index) => {
               const numPmu = Number(participant.numero ?? 0);
+              const arrivalPosition = arrivalMap.get(numPmu) ?? null;
               const role =
                 participant.roleCheval ??
                 getFallbackRole(participant, favoriNum, pepiteNum);
-              const score = getScoreTone(participant.scoreIa);
-              const numberStyle = getNumberChipStyle(role);
+              const isAlgoPick =
+                favoriNum !== null &&
+                favoriNum !== undefined &&
+                String(participant.numero ?? "") === String(favoriNum);
+              const isWinner = arrivalPosition === 1;
+              const score = getScoreStyle(participant.scoreIa);
               const struck = participant.nonPartant ? "line-through opacity-60" : "";
-              const matchesFilters = participantMatchesFilters(participant);
+              const rowBackground = participant.nonPartant
+                ? "var(--pmu-surface-2)"
+                : isWinner
+                  ? "#F4EDD8"
+                  : isAlgoPick
+                    ? "#EAF3DE"
+                    : index % 2 === 0
+                      ? "var(--pmu-surface)"
+                      : "var(--pmu-surface-2)";
 
               return (
-                <tr
-                  key={`${participant.numero}-${index}`}
-                  className={`transition hover:bg-[color-mix(in_srgb,var(--pmu-surface-highlight)_42%,var(--pmu-surface))] ${
-                    activeFilters && !matchesFilters ? "opacity-40" : ""
-                  }`}
-                  style={{
-                    background: getRowBackground(index, role),
-                  }}
-                >
+                <tr key={`${participant.numero}-${index}`} style={{ background: rowBackground }}>
+                  {courseFinished ? (
+                    <td>
+                      <span
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold"
+                        style={getArrivalChipStyle(arrivalPosition)}
+                      >
+                        {getArrivalLabel(arrivalPosition)}
+                      </span>
+                    </td>
+                  ) : null}
                   <td>
-                    <span
-                      className="inline-flex min-w-12 items-center justify-center rounded-xl px-3 py-2 text-sm font-black"
-                      style={numberStyle}
-                    >
+                    <span className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface-highlight)] px-2 text-sm font-bold text-[var(--pmu-text)]">
                       {participant.numero ?? "--"}
                     </span>
                   </td>
                   <td>
                     <div className="min-w-0">
-                      <p className={`font-bold text-[var(--pmu-text)] ${struck}`}>
+                      <p className={`truncate font-bold text-[var(--pmu-text)] ${struck}`}>
                         {participant.nom || "--"}
+                      </p>
+                      <p className="truncate text-xs text-[var(--pmu-text-soft)]">
+                        {getHumanLead(participant, estPlat)}
                       </p>
                       <RunnerTags role={role} />
                     </div>
                   </td>
-                  <td className="text-[var(--pmu-text)]">
-                    {getHumanLead(participant, estPlat)}
+                  <td className="font-mono text-[0.65rem] text-[var(--pmu-text-soft)]">
+                    {participant.musique || "--"}
                   </td>
-                  <td className="text-[var(--pmu-text-soft)]">
-                    {participant.entraineur || "--"}
-                  </td>
-                  <td className="font-mono text-sm text-[var(--pmu-text-soft)]">
-                    {formatSexAge(participant)}
+                  <td>
+                    <span
+                      className="inline-flex min-w-12 justify-center rounded-full px-2 py-1 text-xs font-bold"
+                      style={{ background: score.background, color: score.color }}
+                    >
+                      {score.label}
+                    </span>
                   </td>
                   <td>
                     <span
@@ -412,23 +445,6 @@ export function ParticipantsTable({
                       {formatOdds(participant.cote)}
                     </span>
                   </td>
-                  <td className="font-mono text-sm text-[var(--pmu-text-soft)]">
-                    {participant.musique || "--"}
-                  </td>
-                  <td>
-                    <span
-                      className="inline-flex items-center gap-1 rounded-full border border-[var(--pmu-border)] px-2 py-1 font-mono text-sm font-bold tabular-nums"
-                      style={{ color: score.color }}
-                    >
-                      <span aria-hidden>{score.accent}</span>
-                      <span>{score.label}</span>
-                    </span>
-                  </td>
-                  {courseFinished ? (
-                    <td className="font-semibold text-[var(--pmu-text)]">
-                      {getArrivalPosition(arrivalMap, numPmu)}
-                    </td>
-                  ) : null}
                 </tr>
               );
             })}
@@ -436,60 +452,77 @@ export function ParticipantsTable({
         </table>
       </div>
 
-      <div className="grid gap-3 p-4 xl:hidden">
-        {sortedParticipants.map((participant, index) => {
+      <div className="grid gap-3 p-4 lg:hidden">
+        {visibleParticipants.map((participant, index) => {
           const numPmu = Number(participant.numero ?? 0);
+          const arrivalPosition = arrivalMap.get(numPmu) ?? null;
           const role =
-            participant.roleCheval ??
-            getFallbackRole(participant, favoriNum, pepiteNum);
-          const score = getScoreTone(participant.scoreIa);
-          const numberStyle = getNumberChipStyle(role);
+            participant.roleCheval ?? getFallbackRole(participant, favoriNum, pepiteNum);
+          const score = getScoreStyle(participant.scoreIa);
+          const isAlgoPick =
+            favoriNum !== null &&
+            favoriNum !== undefined &&
+            String(participant.numero ?? "") === String(favoriNum);
+          const isWinner = arrivalPosition === 1;
           const struck = participant.nonPartant ? "line-through opacity-60" : "";
-          const matchesFilters = participantMatchesFilters(participant);
+          const background = participant.nonPartant
+            ? "var(--pmu-surface-2)"
+            : isWinner
+              ? "#F4EDD8"
+              : isAlgoPick
+                ? "#EAF3DE"
+                : "var(--pmu-surface)";
 
           return (
             <article
               key={`${participant.numero}-${index}`}
-              className={`rounded-[1.25rem] border p-4 ${
-                activeFilters && !matchesFilters ? "opacity-40" : ""
-              }`}
+              className="rounded-lg border p-4"
               style={{
+                background,
                 borderColor: "var(--pmu-border)",
-                background: getRowBackground(index, role),
+                opacity: participant.nonPartant ? 0.45 : 1,
               }}
             >
               <div className="flex items-start gap-3">
-                <div
-                  className="inline-flex min-w-11 items-center justify-center rounded-xl px-2.5 py-2 text-sm font-black"
-                  style={numberStyle}
-                >
+                {courseFinished ? (
+                  <span
+                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                    style={getArrivalChipStyle(arrivalPosition)}
+                  >
+                    {getArrivalLabel(arrivalPosition)}
+                  </span>
+                ) : null}
+                <span className="inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface-highlight)] px-2 text-sm font-bold text-[var(--pmu-text)]">
                   {participant.numero ?? "--"}
-                </div>
+                </span>
                 <div className="min-w-0 flex-1">
                   <p className={`truncate text-base font-bold text-[var(--pmu-text)] ${struck}`}>
                     {participant.nom || "--"}
                   </p>
-                  <p className="mt-0.5 truncate text-sm text-[var(--pmu-text-soft)]">
+                  <p className="truncate text-sm text-[var(--pmu-text-soft)]">
                     {getHumanLead(participant, estPlat)}
                   </p>
                   <RunnerTags role={role} />
                 </div>
               </div>
 
-              <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                <div className="app-card-muted px-3 py-3">
-                  <p className="app-label">Entraînement</p>
-                  <p className="mt-1 text-[var(--pmu-text)]">
-                    {participant.entraineur || "--"}
+              <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
+                <div className="rounded-lg bg-[var(--pmu-surface-2)] px-3 py-2">
+                  <p className="app-label">Musique</p>
+                  <p className="mt-1 truncate font-mono text-[0.65rem] text-[var(--pmu-text-soft)]">
+                    {participant.musique || "--"}
                   </p>
                 </div>
-                <div className="app-card-muted px-3 py-3">
-                  <p className="app-label">Profil</p>
-                  <p className="mt-1 text-[var(--pmu-text)]">
-                    {formatSexAge(participant)}
-                  </p>
+                <div className="rounded-lg bg-[var(--pmu-surface-2)] px-3 py-2">
+                  <p className="app-label">Score</p>
+                  <span
+                    className="mt-1 inline-flex rounded-full px-2 py-1 text-xs font-bold"
+                    style={{ background: score.background, color: score.color }}
+                  >
+                    {score.label}
+                  </span>
                 </div>
-                <div className="app-card-muted px-3 py-3">
+                <div className="rounded-lg bg-[var(--pmu-surface-2)] px-3 py-2">
                   <p className="app-label">Cote</p>
                   <p
                     className="mt-1 font-mono font-bold tabular-nums"
@@ -498,30 +531,16 @@ export function ParticipantsTable({
                     {formatOdds(participant.cote)}
                   </p>
                 </div>
-                <div className="app-card-muted px-3 py-3">
-                  <p className="app-label">Score IA</p>
-                  <p className="mt-1 font-semibold" style={{ color: score.color }}>
-                    {score.accent} {score.label}
-                  </p>
-                </div>
-                <div className="col-span-2 app-card-muted px-3 py-3">
-                  <p className="app-label">Musique</p>
-                  <p className="mt-1 font-mono text-[var(--pmu-text)]">
-                    {participant.musique || "--"}
-                  </p>
-                </div>
-                {courseFinished ? (
-                  <div className="col-span-2 app-card-muted px-3 py-3">
-                    <p className="app-label">Arrivée</p>
-                    <p className="mt-1 font-semibold text-[var(--pmu-text)]">
-                      {getArrivalPosition(arrivalMap, numPmu)}
-                    </p>
-                  </div>
-                ) : null}
               </div>
             </article>
           );
         })}
+
+        {visibleParticipants.length === 0 ? (
+          <p className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-4 py-5 text-center text-sm text-[var(--pmu-text-soft)]">
+            Aucun cheval ne correspond aux filtres.
+          </p>
+        ) : null}
       </div>
     </section>
   );

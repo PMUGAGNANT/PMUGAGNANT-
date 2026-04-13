@@ -2,37 +2,46 @@
 
 import { useEffect, useState } from "react";
 import { useCombo } from "@/components/ComboBuilder";
+import type { ArrivalRow } from "@/features/race/components/ParticipantsTable";
 import type { RoleCheval, RoleId, LisibiliteRoleCheval } from "@/lib/horse-roles";
 import { calculerKelly } from "@/lib/kelly";
 
 const ROLE_STYLES: Record<
   RoleId,
   {
-    card: string;
-    text: string;
-    bar: string;
+    background: string;
+    border: string;
+    color: string;
   }
 > = {
   FAVORI: {
-    card: "border-[var(--pmu-primary)] bg-[var(--pmu-primary-fade)]",
-    text: "text-[var(--pmu-primary)]",
-    bar: "bg-[var(--pmu-primary)]",
+    background: "#EAF3DE",
+    border: "rgba(42,77,18,0.2)",
+    color: "#2A4D12",
   },
   PEPITE: {
-    card: "border-[var(--pmu-gold)] bg-[var(--pmu-gold-light)]",
-    text: "text-[var(--pmu-gold)]",
-    bar: "bg-[var(--pmu-gold)]",
+    background: "#FDFAF2",
+    border: "rgba(140,109,47,0.3)",
+    color: "#8C6D2F",
   },
   OUTSIDER: {
-    card: "border-[var(--pmu-primary)] bg-[var(--pmu-primary-soft)]",
-    text: "text-[var(--pmu-primary)]",
-    bar: "bg-[var(--pmu-primary)]",
+    background: "#F0F9E8",
+    border: "rgba(42,77,18,0.2)",
+    color: "#2A4D12",
   },
   OUBLIE: {
-    card: "border-[var(--pmu-sand)] bg-[var(--pmu-surface-2)]",
-    text: "text-[var(--pmu-text-soft)]",
-    bar: "bg-[var(--pmu-sand)]",
+    background: "#FDFCF9",
+    border: "rgba(24,22,15,0.09)",
+    color: "#9C9485",
   },
+};
+
+type CourseRolesCourse = {
+  dateStr?: string | null;
+  reunion?: number | string | null;
+  course?: number | string | null;
+  hippodrome?: string | null;
+  nomCourse?: string | null;
 };
 
 function formatCote(value: number) {
@@ -53,14 +62,6 @@ function getRiskClass(level: "FAIBLE" | "MOYEN" | "ELEVE") {
   return "border-[var(--pmu-red)] bg-[var(--pmu-earth-light)] text-[var(--pmu-red)]";
 }
 
-type CourseRolesCourse = {
-  dateStr?: string | null;
-  reunion?: number | string | null;
-  course?: number | string | null;
-  hippodrome?: string | null;
-  nomCourse?: string | null;
-};
-
 function getCourseLabel(course?: CourseRolesCourse | null) {
   const raceLabel =
     course?.reunion !== null &&
@@ -74,14 +75,28 @@ function getCourseLabel(course?: CourseRolesCourse | null) {
   return place ? `${raceLabel} ${place}` : raceLabel;
 }
 
+function getFinalPosition(
+  officialArrival: ArrivalRow[] | null | undefined,
+  chevalNum: number
+) {
+  const row = officialArrival?.find(
+    (arrival) => String(arrival.numPmu) === String(chevalNum)
+  );
+
+  if (!row?.position) return null;
+  return row.position === 1 ? "1er" : `${row.position}e`;
+}
+
 export function CourseRoles({
   roles,
   lisibilite = "COMPLEXE",
   course,
+  officialArrival = [],
 }: {
   roles: RoleCheval[];
   lisibilite?: LisibiliteRoleCheval;
   course?: CourseRolesCourse | null;
+  officialArrival?: ArrivalRow[] | null;
 }) {
   const { addSelection, isSelected, selections } = useCombo();
   const [bankroll, setBankroll] = useState(1000);
@@ -117,7 +132,8 @@ export function CourseRoles({
     <section className="grid gap-3 sm:grid-cols-2">
       {roles.map((role) => {
         const style = ROLE_STYLES[role.role];
-        const score = formatScore(role.score_cheval);
+        const score = Math.max(0, Math.min(100, formatScore(role.score_cheval)));
+        const positionFinale = getFinalPosition(officialArrival, role.cheval_num);
         const showKelly = role.role !== "FAVORI";
         const canAddToCombo = role.role === "PEPITE" || role.role === "OUTSIDER";
         const comboId = `${course?.dateStr ?? "date"}-${course?.reunion ?? "R"}-${
@@ -138,70 +154,99 @@ export function CourseRoles({
         return (
           <article
             key={role.role}
-            className={`rounded-lg border p-4 ${style.card}`}
+            style={{
+              background: style.background,
+              border: `1px solid ${style.border}`,
+              borderRadius: "8px",
+              padding: "0.85rem 1rem",
+            }}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className={`text-sm font-semibold ${style.text}`}>
-                  {role.emoji} {role.label}
-                </p>
-                <h3 className="mt-2 truncate text-lg font-bold text-[var(--pmu-text)]">
-                  N°{role.cheval_num} {role.cheval_nom}
-                </h3>
-              </div>
-
+            <div className="mb-2 flex items-start justify-between gap-3">
               <span
-                className={`rounded-lg border border-current px-2 py-1 text-xs font-semibold ${style.text}`}
+                style={{
+                  color: style.color,
+                  fontSize: "0.65rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                }}
               >
-                Cote {formatCote(role.cote)}
+                {role.emoji} {role.label}
+              </span>
+              <span
+                style={{
+                  color: style.color,
+                  fontFamily: "var(--font-display), Georgia, serif",
+                  fontWeight: 700,
+                }}
+              >
+                {formatCote(role.cote)}x
               </span>
             </div>
 
-            <div className="mt-4">
-              <div className="h-2 overflow-hidden rounded-lg bg-[var(--pmu-border)]">
-                <div
-                  className={`h-full rounded-lg ${style.bar}`}
-                  style={{ width: `${Math.max(0, Math.min(100, score))}%` }}
-                />
-              </div>
-              <div className="mt-3 flex flex-wrap justify-between gap-2 text-sm">
-                <span className="text-[var(--pmu-text-soft)]">
-                  Score algo{" "}
-                  <strong className="text-[var(--pmu-text)]">{score}/100</strong>
-                </span>
-                <span className="text-[var(--pmu-text-soft)]">
-                  Confiance{" "}
-                  <strong className="text-[var(--pmu-text)]">
-                    {role.confiance.toFixed(1)}/10
-                  </strong>
-                </span>
-              </div>
-            </div>
+            <p
+              title={role.cheval_nom}
+              style={{
+                color: "var(--pmu-text)",
+                fontFamily: "var(--font-display), Georgia, serif",
+                fontSize: "1rem",
+                fontStyle: "italic",
+                fontWeight: 700,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {role.cheval_nom}
+            </p>
+            <p style={{ color: "var(--pmu-text-muted)", fontSize: "0.65rem" }}>
+              N°{role.cheval_num}
+              {positionFinale ? ` · arrivée ${positionFinale}` : ""}
+            </p>
 
-            <p className="mt-3 text-sm leading-6 text-[var(--pmu-text-soft)]">
+            <div
+              style={{
+                background: style.color,
+                borderRadius: "999px",
+                height: "3px",
+                marginTop: "0.5rem",
+                maxWidth: "100%",
+                width: `${score}%`,
+              }}
+            />
+
+            <p
+              style={{
+                color: "var(--pmu-text-muted)",
+                fontSize: "0.68rem",
+                lineHeight: 1.3,
+                marginTop: "0.45rem",
+              }}
+            >
               {role.raison}
             </p>
 
             {kelly ? (
-              <div className="mt-4 rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] p-3">
+              <div className="mt-3 border-t border-[var(--pmu-border)] pt-3">
                 <label className="block">
-                  <span className="text-xs font-semibold uppercase text-[var(--pmu-text-muted)]">
-                    Ma bankroll
-                  </span>
+                  <span className="app-label">Bankroll</span>
                   <input
                     type="number"
                     min="1"
                     value={bankroll || ""}
                     onChange={(event) => updateBankroll(event.target.value)}
-                    className="mt-2 w-full rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface-highlight)] px-3 py-2 text-sm text-[var(--pmu-text)]"
+                    className="app-input mt-1 w-full"
                   />
                 </label>
-
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-[var(--pmu-text)]">
-                    Mise conseillée : {kelly.mise_conseille} EUR ({kelly.fraction_bankroll}% bankroll)
-                  </p>
-                  <span className={`rounded-lg border px-2 py-1 text-xs font-semibold ${getRiskClass(kelly.niveau_risque)}`}>
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--pmu-text-soft)]">
+                  <span>
+                    Mise suggérée :{" "}
+                    <strong className="text-[var(--pmu-text)]">
+                      {kelly.mise_conseille} EUR
+                    </strong>{" "}
+                    ({kelly.fraction_bankroll}%)
+                  </span>
+                  <span className={`rounded-lg border px-2 py-1 font-semibold ${getRiskClass(kelly.niveau_risque)}`}>
                     {kelly.niveau_risque}
                   </span>
                 </div>
@@ -227,13 +272,13 @@ export function CourseRoles({
                     probability: role.confiance / 10,
                   })
                 }
-                className="mt-4 w-full rounded-lg border border-[var(--pmu-primary)] bg-[var(--pmu-primary-fade)] px-3 py-2 text-sm font-semibold text-[var(--pmu-primary)] disabled:cursor-not-allowed disabled:opacity-55"
+                className="mt-3 w-full rounded-lg border border-[var(--pmu-primary)] bg-[var(--pmu-primary-fade)] px-3 py-2 text-sm font-semibold text-[var(--pmu-primary)] disabled:cursor-not-allowed disabled:opacity-55"
               >
                 {selectedInCombo
-                  ? "✓ Dans le combo"
+                  ? "Dans le combo"
                   : comboFull
                     ? "Combo complet"
-                    : "+ Ajouter au combo"}
+                    : "Ajouter au combo"}
               </button>
             ) : null}
           </article>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 
@@ -11,22 +11,127 @@ import { CourseDetailSkeleton } from "@/features/race/components/CourseDetailSke
 import { CoursePronostic } from "@/features/race/components/CoursePronostic";
 import {
   AnalysisPendingCard,
-  CourseDeskCard,
   LockedTicketCard,
   OfficialArrivalCard,
-  TopFiveCard,
 } from "@/features/race/components/RaceDetailCards";
-import { ParticipantsTable } from "@/features/race/components/ParticipantsTable";
+import {
+  ParticipantsTable,
+  type ArrivalRow,
+} from "@/features/race/components/ParticipantsTable";
 import { RaceHeroSection } from "@/features/race/components/RaceHeroSection";
 import {
-  getTopFiveNumbers,
   normalizeOfficialArrival,
   normalizeParticipants,
   normalizePronostic,
   normalizeRoles,
+  type PronosticCardData,
   type RaceApiResponse,
 } from "@/features/race/lib/race-page-model";
 import { fetchRaceDetails } from "@/features/races/api/client";
+
+function SectionKicker({ children }: { children: ReactNode }) {
+  return (
+    <p
+      style={{
+        fontSize: "0.65rem",
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: "0.1em",
+        color: "var(--pmu-primary)",
+        marginBottom: "0.6rem",
+        display: "block",
+      }}
+    >
+      {children}
+    </p>
+  );
+}
+
+function TicketResultBanner({
+  pronostic,
+  officialArrival,
+}: {
+  pronostic: PronosticCardData;
+  officialArrival: ArrivalRow[];
+}) {
+  const pickNum = pronostic.favoris?.[0] ?? pronostic.top5?.[0] ?? null;
+
+  if (pickNum === null) {
+    return null;
+  }
+
+  const arrival = officialArrival.find(
+    (row) => String(row.numPmu) === String(pickNum)
+  );
+  const position = arrival?.position ?? null;
+  const isWinner = position === 1;
+  const isPlaced = position !== null && position <= 3;
+  const tone = isWinner
+    ? {
+        background: "#EAF3DE",
+        border: "#C0DD97",
+        color: "#2A4D12",
+        icon: "✓",
+        title: "Ticket gagnant",
+      }
+    : isPlaced
+      ? {
+          background: "#F4EDD8",
+          border: "rgba(140,109,47,0.3)",
+          color: "#8C6D2F",
+          icon: "•",
+        title: "Cheval placé",
+        }
+      : {
+          background: "#FFF1EE",
+          border: "rgba(184,80,48,0.2)",
+          color: "#B85030",
+          icon: "×",
+          title: "Ticket perdant",
+        };
+
+  return (
+    <div
+      style={{
+        background: tone.background,
+        border: `1px solid ${tone.border}`,
+        borderRadius: "8px",
+        padding: "0.85rem 1rem",
+        display: "flex",
+        alignItems: "center",
+        gap: "0.75rem",
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          flexShrink: 0,
+          color: tone.color,
+          fontSize: "1.3rem",
+          fontWeight: 800,
+        }}
+      >
+        {tone.icon}
+      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ color: tone.color, fontSize: "0.88rem", fontWeight: 700 }}>
+          {tone.title} - N°{pickNum} {arrival?.nom ?? ""}
+        </p>
+        <p
+          style={{
+            color: "var(--pmu-text-muted)",
+            fontSize: "0.72rem",
+            marginTop: "0.15rem",
+          }}
+        >
+          {pronostic.betType || "Simple gagnant"} · Mise{" "}
+          {pronostic.miseConseil ?? 0} EUR
+          {position ? ` · Arrivée ${position === 1 ? "1er" : `${position}e`}` : ""}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function CourseLoadError({
   error,
@@ -75,7 +180,6 @@ function RaceDetailsContent({
   const officialArrival = useMemo(() => normalizeOfficialArrival(data), [data]);
   const pronostic = useMemo(() => normalizePronostic(data), [data]);
   const roles = useMemo(() => normalizeRoles(data), [data]);
-  const top5 = useMemo(() => getTopFiveNumbers(pronostic, data), [data, pronostic]);
   const pepiteRole = roles.find((role) => role.role === "PEPITE") ?? null;
 
   if (!courseInfo) {
@@ -99,8 +203,26 @@ function RaceDetailsContent({
         lisibilite={roleLisibilite}
       />
 
-      <section className="grid gap-6 xl:grid-cols-[1.1fr,0.9fr]">
-        <div className="space-y-6">
+      <div className="space-y-6">
+        {isFinished && pronostic && officialArrival.length > 0 ? (
+          <section>
+            <SectionKicker>Résultat du ticket</SectionKicker>
+            <TicketResultBanner
+              pronostic={pronostic}
+              officialArrival={officialArrival}
+            />
+          </section>
+        ) : null}
+
+        {isFinished && officialArrival.length > 0 ? (
+          <section>
+            <SectionKicker>Arrivée officielle</SectionKicker>
+            <OfficialArrivalCard arrivee={officialArrival} />
+          </section>
+        ) : null}
+
+        <section>
+          <SectionKicker>Ticket algo</SectionKicker>
           {paywallRequired ? (
             <LockedTicketCard
               previewLabel={data.paywall?.preview?.favori?.nom ?? null}
@@ -112,19 +234,42 @@ function RaceDetailsContent({
           ) : (
             <AnalysisPendingCard />
           )}
+        </section>
 
-          {roles.length > 0 ? (
-            <section className="app-card p-5 md:p-6">
-              <p className="app-kicker mb-3">4 rôles clés</p>
-              <CourseRoles roles={roles} lisibilite={roleLisibilite} course={courseInfo} />
-            </section>
-          ) : null}
+        {roles.length > 0 ? (
+          <section>
+            <SectionKicker>4 rôles clés</SectionKicker>
+            <CourseRoles
+              roles={roles}
+              lisibilite={roleLisibilite}
+              course={courseInfo}
+              officialArrival={isFinished ? officialArrival : []}
+            />
+          </section>
+        ) : null}
 
-          <AvisExpert
-            predictions={data.avisExpert ?? []}
-            isPremium={!paywallRequired || isFinished}
-          />
+        {!isFinished ? (
+          <section>
+            <SectionKicker>Avis expert - top 5</SectionKicker>
+            <AvisExpert
+              predictions={data.avisExpert ?? []}
+              isPremium={!paywallRequired}
+            />
+          </section>
+        ) : null}
 
+        {(data.liveCotes ?? []).length > 0 ? (
+          <section>
+            <SectionKicker>Évolution des cotes</SectionKicker>
+            <LiveCotesChart
+              series={data.liveCotes ?? []}
+              pepiteNum={pepiteRole?.cheval_num ?? null}
+            />
+          </section>
+        ) : null}
+
+        <section>
+          <SectionKicker>Tableau des partants</SectionKicker>
           <ParticipantsTable
             participants={participants}
             favoriNum={pronostic?.favoris?.[0] ?? null}
@@ -133,36 +278,8 @@ function RaceDetailsContent({
             courseFinished={isFinished}
             officialArrival={officialArrival}
           />
-
-          {officialArrival.length > 0 ? (
-            <OfficialArrivalCard arrivee={officialArrival} />
-          ) : null}
-        </div>
-
-        <div className="grid gap-6 self-start">
-          <CourseDeskCard
-            courseInfo={courseInfo}
-            minutesUntilStart={data.minutesUntilStart}
-            pronostic={pronostic}
-            paywallRequired={paywallRequired}
-            paywallPreview={data.paywall?.preview ?? null}
-            isFinished={isFinished}
-            refreshPriority={data.refreshPriority ?? null}
-          />
-
-          {(data.liveCotes ?? []).length > 0 ? (
-            <LiveCotesChart
-              series={data.liveCotes ?? []}
-              pepiteNum={pepiteRole?.cheval_num ?? null}
-            />
-          ) : null}
-
-          {top5.length > 0 ? (
-            <TopFiveCard top5={top5} participants={participants} />
-          ) : null}
-        </div>
-      </section>
-
+        </section>
+      </div>
     </>
   );
 }
@@ -224,7 +341,7 @@ export default function RaceDetailsPage() {
   const paywallRequired = data?.paywall?.required === true;
 
   return (
-    <main className="mx-auto flex w-full max-w-[96rem] flex-col gap-6 px-4 py-4 md:px-6">
+    <main className="mx-auto flex w-full max-w-[60rem] flex-col gap-6 px-4 py-5 md:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link href={backHref} className="app-button-secondary inline-flex">
           Retour aux courses

@@ -5,13 +5,16 @@ import {
   formatMinutesLabel,
   type RaceCourseInfo,
 } from "@/features/race/lib/race-page-model";
-import {
-  getPriorityToneColor,
-  type RacePriorityBadge,
-} from "@/lib/race-priority";
 import type { MeteoData } from "@/lib/meteo";
+import type { RacePriorityBadge } from "@/lib/race-priority";
 
-import { RaceStatusPill } from "@/features/race/components/RaceStatusPill";
+function WeatherIcon({ description }: { description?: string | null }) {
+  const normalized = (description ?? "").toLowerCase();
+
+  if (normalized.includes("pluie")) return <span aria-hidden>🌧️</span>;
+  if (normalized.includes("nuage")) return <span aria-hidden>⛅</span>;
+  return <span aria-hidden>☀️</span>;
+}
 
 export function RaceHeroSection({
   courseInfo,
@@ -34,140 +37,155 @@ export function RaceHeroSection({
 }) {
   const titlePrefix = `R${courseInfo.reunion ?? ""}C${courseInfo.course ?? ""}`;
   const dateLabel = formatDateLabel(selectedDate ?? courseInfo.dateStr ?? null);
-  const statusTone = isFinished
-    ? "neutral"
-    : paywallRequired
-      ? "warning"
-      : "primary";
   const statusLabel = isFinished
-    ? "Résultat officiel"
+    ? "Course terminée"
     : paywallRequired
       ? "Ticket premium"
-      : "Signal disponible";
-
-  const pills = [
-    formatDiscipline(courseInfo.discipline),
-    courseInfo.distance ? `${courseInfo.distance} m` : null,
-    courseInfo.nombrePartants ? `${courseInfo.nombrePartants} partants` : null,
-    courseInfo.terrain || null,
-    courseInfo.meteo || null,
-  ].filter(Boolean) as string[];
-  const weatherIcon =
-    meteo?.description.toLowerCase().includes("pluie")
-      ? "🌧️"
-      : meteo?.description.toLowerCase().includes("nuage")
-        ? "⛅"
-        : "☀️";
-  const impactTone =
-    meteo?.terrain_impact === "FAVORABLE"
-      ? "text-[var(--pmu-primary)] bg-[var(--pmu-primary-soft)] border-[var(--pmu-primary)]"
-      : meteo?.terrain_impact === "DEFAVORABLE"
-        ? "text-[var(--pmu-red)] bg-[var(--pmu-earth-light)] border-[var(--pmu-red)]"
-        : "text-[var(--pmu-text-soft)] bg-[var(--pmu-surface-2)] border-[var(--pmu-border)]";
-  const impactLabel =
-    meteo?.terrain_impact === "FAVORABLE"
-      ? "favorable"
-      : meteo?.terrain_impact === "DEFAVORABLE"
-        ? "défavorable"
-        : "neutre";
+      : `${courseInfo.heureDepart || "Départ"} · ${formatMinutesLabel(minutesUntilStart)}`;
+  const stats = [
+    { label: "Départ", value: courseInfo.heureDepart || "--" },
+    {
+      label: "Distance",
+      value: courseInfo.distance ? `${courseInfo.distance} m` : "--",
+    },
+    {
+      label: "Partants",
+      value: courseInfo.nombrePartants ? String(courseInfo.nombrePartants) : "--",
+    },
+    { label: "Dotation", value: formatEuros(courseInfo.allocation) || "--" },
+  ];
 
   return (
-    <section className="app-page-hero p-6 md:p-8">
-      <div className="relative z-[1] grid gap-6 xl:grid-cols-[1.15fr,0.85fr] xl:items-end">
-        <div className="space-y-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <RaceStatusPill label={statusLabel} tone={statusTone} />
-            {dateLabel ? <span className="app-pill text-xs">{dateLabel}</span> : null}
-            {lisibilite ? <span className="app-pill text-xs">{lisibilite}</span> : null}
-            {refreshPriority ? (
-              <span
-                className="rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em]"
-                style={{
-                  color: getPriorityToneColor(refreshPriority.tone),
-                  borderColor: `color-mix(in srgb, ${getPriorityToneColor(
-                    refreshPriority.tone
-                  )} 24%, transparent)`,
-                  background: `color-mix(in srgb, ${getPriorityToneColor(
-                    refreshPriority.tone
-                  )} 10%, var(--pmu-surface))`,
-                }}
-              >
-                {refreshPriority.label} - {refreshPriority.detail}
-              </span>
-            ) : null}
-          </div>
+    <section
+      style={{
+        background: "var(--pmu-primary)",
+        borderRadius: "8px",
+        padding: "1.5rem 2rem",
+        color: "var(--pmu-on-primary)",
+      }}
+    >
+      <p
+        style={{
+          fontSize: "0.65rem",
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "0.12em",
+          opacity: 0.72,
+          marginBottom: "0.4rem",
+        }}
+      >
+        {titlePrefix} · {(courseInfo.hippodrome || "Programme").toUpperCase()}
+      </p>
 
-          <div>
-            <p className="app-kicker">
-              {titlePrefix} - {(courseInfo.hippodrome || "Programme").toUpperCase()}
+      <h1
+        style={{
+          fontFamily: "var(--font-display), Georgia, serif",
+          fontSize: "clamp(1.6rem, 3vw, 2.2rem)",
+          fontWeight: 700,
+          fontStyle: "italic",
+          lineHeight: 1.05,
+          color: "var(--pmu-on-primary)",
+        }}
+      >
+        {courseInfo.nomCourse || `Course ${courseInfo.course ?? ""}`}
+      </h1>
+
+      <p style={{ fontSize: "0.78rem", opacity: 0.76, marginTop: "0.45rem" }}>
+        {formatDiscipline(courseInfo.discipline)} ·{" "}
+        {courseInfo.distance ? `${courseInfo.distance} m` : "Distance à confirmer"} ·{" "}
+        {formatEuros(courseInfo.allocation) || "Allocation à confirmer"}
+      </p>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {dateLabel ? (
+          <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-[var(--pmu-on-primary)]">
+            {dateLabel}
+          </span>
+        ) : null}
+        {lisibilite ? (
+          <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-[var(--pmu-on-primary)]">
+            {lisibilite}
+          </span>
+        ) : null}
+        <span
+          className="rounded-full border px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.08em]"
+          style={{
+            borderColor: isFinished
+              ? "rgba(255,232,163,0.32)"
+              : "rgba(253,252,249,0.2)",
+            background: isFinished
+              ? "rgba(140,109,47,0.45)"
+              : "rgba(253,252,249,0.1)",
+            color: isFinished ? "#FFE8A3" : "var(--pmu-on-primary)",
+          }}
+        >
+          {statusLabel}
+        </span>
+        {refreshPriority ? (
+          <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-[var(--pmu-on-primary)]">
+            {refreshPriority.label}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat) => (
+          <div
+            key={stat.label}
+            style={{
+              background: "rgba(253,252,249,0.1)",
+              border: "1px solid rgba(253,252,249,0.15)",
+              borderRadius: "6px",
+              padding: "0.6rem 0.75rem",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "0.6rem",
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                opacity: 0.68,
+                marginBottom: "0.3rem",
+              }}
+            >
+              {stat.label}
             </p>
-            <h1 className="mt-2 max-w-4xl text-4xl font-black leading-[0.93] text-[var(--pmu-text)] md:text-6xl">
-              {courseInfo.nomCourse || `Course ${courseInfo.course ?? ""}`}
-            </h1>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
-              La fiche course sert de poste de lecture unique : ticket, contexte
-              PMU, tableau des partants et résultat officiel restent dans le même
-              flux.
+            <p
+              style={{
+                fontFamily: "var(--font-display), Georgia, serif",
+                fontSize: "1.2rem",
+                fontWeight: 700,
+                color: "var(--pmu-on-primary)",
+              }}
+            >
+              {stat.value}
             </p>
           </div>
+        ))}
+      </div>
 
-          <div className="flex flex-wrap gap-2">
-            {pills.map((pill) => (
-              <span key={pill} className="app-pill text-xs">
-                {pill}
-              </span>
-            ))}
-          </div>
-
-          {meteo ? (
-            <div className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] p-4">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="text-xl" aria-hidden>
-                  {weatherIcon}
-                </span>
-                <span className="font-semibold text-[var(--pmu-text)]">
-                  {meteo.description} - {meteo.temperature}°C - Vent {meteo.vent_kmh} km/h
-                </span>
-                <span className={`rounded-lg border px-2 py-1 text-xs font-semibold ${impactTone}`}>
-                  Terrain {impactLabel}
-                </span>
-              </div>
-              {meteo.alerte ? (
-                <p className="mt-3 rounded-lg border border-[var(--pmu-orange)] bg-[var(--pmu-earth-light)] px-3 py-2 text-sm font-semibold text-[var(--pmu-orange)]">
-                  ⚠️ Alerte terrain - {meteo.alerte}
-                </p>
-              ) : null}
-            </div>
+      {meteo ? (
+        <div
+          className="mt-3 flex flex-wrap items-center gap-2"
+          style={{
+            background: "rgba(253,252,249,0.08)",
+            borderRadius: "6px",
+            padding: "0.5rem 0.75rem",
+            fontSize: "0.75rem",
+          }}
+        >
+          <WeatherIcon description={meteo.description} />
+          <span style={{ opacity: 0.86 }}>
+            {meteo.description} · {meteo.temperature}°C · Vent {meteo.vent_kmh} km/h
+          </span>
+          {meteo.terrain_impact === "DEFAVORABLE" ? (
+            <span className="ml-auto rounded-full bg-[rgba(184,80,48,0.25)] px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-[#FFB299]">
+              Terrain défavorable
+            </span>
           ) : null}
         </div>
-
-        <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4 xl:mt-0">
-          <div className="app-card-muted px-4 py-3">
-            <p className="app-label">Départ</p>
-            <p className="mt-1 font-[family-name:var(--font-display)] text-xl font-bold text-[var(--pmu-text)]">
-              {courseInfo.heureDepart || "--"}
-            </p>
-          </div>
-          <div className="app-card-muted px-4 py-3">
-            <p className="app-label">Fenêtre</p>
-            <p className="mt-1 font-[family-name:var(--font-display)] text-xl font-bold text-[var(--pmu-text)]">
-              {formatMinutesLabel(minutesUntilStart)}
-            </p>
-          </div>
-          <div className="app-card-muted px-4 py-3">
-            <p className="app-label">Distance</p>
-            <p className="mt-1 font-[family-name:var(--font-display)] text-xl font-bold text-[var(--pmu-text)]">
-              {courseInfo.distance ? `${courseInfo.distance} m` : "--"}
-            </p>
-          </div>
-          <div className="app-card-muted px-4 py-3">
-            <p className="app-label">Dotation</p>
-            <p className="mt-1 font-[family-name:var(--font-display)] text-xl font-bold text-[var(--pmu-text)]">
-              {formatEuros(courseInfo.allocation) || "--"}
-            </p>
-          </div>
-        </div>
-      </div>
+      ) : null}
     </section>
   );
 }

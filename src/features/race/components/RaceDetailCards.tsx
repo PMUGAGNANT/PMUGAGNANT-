@@ -268,28 +268,140 @@ export function OfficialArrivalCard({ arrivee }: { arrivee: ArrivalRow[] }) {
     return null;
   }
 
+  const top5 = arrivee.slice(0, 5);
+
   return (
-    <section className="app-card p-5 md:p-6">
-      <div className="app-section-heading">
-        <div>
-          <p className="app-kicker">Résultat officiel</p>
-          <h2 className="app-section-title">Arrivée officielle</h2>
-        </div>
+    <section
+      style={{
+        background: "var(--pmu-surface)",
+        border: "1px solid var(--pmu-border)",
+        borderRadius: "8px",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          alignItems: "center",
+          background: "var(--pmu-gold)",
+          display: "flex",
+          justifyContent: "space-between",
+          padding: "0.6rem 1rem",
+        }}
+      >
+        <span
+          style={{
+            color: "rgba(255,240,200,0.85)",
+            fontSize: "0.65rem",
+            fontWeight: 700,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+          }}
+        >
+          Arrivée officielle PMU
+        </span>
+        <span style={{ color: "#FFE8A3", fontSize: "0.72rem", fontWeight: 700 }}>
+          Homologué
+        </span>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {arrivee.map((row, index) => (
-          <div
-            key={`${row.numPmu}-${index}`}
-            className="rounded-[1.2rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_92%,transparent)] px-4 py-4 text-center"
-          >
-            <p className="app-label">{index + 1}e place</p>
-            <p className="mt-2 text-3xl font-black text-[var(--pmu-text)]">
-              {row.numPmu}
-            </p>
-            <p className="mt-1 text-sm text-[var(--pmu-text-soft)]">{row.nom}</p>
-          </div>
-        ))}
+      <div style={{ padding: "1rem" }}>
+        <div className="grid gap-2 sm:grid-cols-5">
+          {top5.map((row, index) => (
+            <div
+              key={`${row.numPmu}-${index}`}
+              style={{
+                background:
+                  index === 0
+                    ? "#F4EDD8"
+                    : index < 3
+                      ? "#F5F2EB"
+                      : "var(--pmu-surface)",
+                border: "1px solid",
+                borderColor:
+                  index === 0
+                    ? "rgba(140,109,47,0.3)"
+                    : "rgba(24,22,15,0.08)",
+                borderRadius: "8px",
+                padding: "0.75rem 0.5rem",
+                textAlign: "center",
+              }}
+            >
+              <p
+                style={{
+                  color: index === 0 ? "#8C6D2F" : "#9C9485",
+                  fontSize: "0.6rem",
+                  fontWeight: 700,
+                  marginBottom: "0.3rem",
+                  textTransform: "uppercase",
+                }}
+              >
+                {index === 0 ? "1er" : `${index + 1}e`}
+              </p>
+              <p
+                style={{
+                  color:
+                    index === 0 ? "#8C6D2F" : index < 3 ? "#5A5444" : "#9C9485",
+                  fontFamily: "var(--font-display), Georgia, serif",
+                  fontSize: "1.6rem",
+                  fontWeight: 700,
+                  lineHeight: 1,
+                }}
+              >
+                {row.numPmu}
+              </p>
+              <p
+                style={{
+                  color: "#5A5444",
+                  fontSize: "0.65rem",
+                  fontWeight: 500,
+                  lineHeight: 1.2,
+                  marginTop: "0.3rem",
+                }}
+              >
+                {row.nom}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 grid gap-2 border-t border-[var(--pmu-border)] pt-3 sm:grid-cols-3">
+          {[
+            { label: "Rapport gagnant", value: "--" },
+            { label: "Rapport placé", value: "--" },
+            { label: "Couplé gagnant", value: "--" },
+          ].map((rapport) => (
+            <div
+              key={rapport.label}
+              style={{
+                background: "#F5F2EB",
+                borderRadius: "6px",
+                padding: "0.6rem 0.75rem",
+              }}
+            >
+              <p
+                style={{
+                  color: "#9C9485",
+                  fontSize: "0.6rem",
+                  fontWeight: 600,
+                  marginBottom: "0.3rem",
+                  textTransform: "uppercase",
+                }}
+              >
+                {rapport.label}
+              </p>
+              <p
+                style={{
+                  color: "#2A4D12",
+                  fontFamily: "var(--font-display), Georgia, serif",
+                  fontSize: "1.1rem",
+                  fontWeight: 700,
+                }}
+              >
+                {rapport.value}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
