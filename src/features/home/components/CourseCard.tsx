@@ -28,6 +28,11 @@ type CourseComboCandidate = {
   score_cheval: number;
 };
 
+type CourseComboAction = CourseComboCandidate & {
+  variant: "pepite" | "outsider" | "surveillance";
+  label: string;
+};
+
 export type CourseCardProps = {
   raceTitle: string;
   subtitleLine: string;
@@ -41,7 +46,9 @@ export type CourseCardProps = {
   pickNum?: number | null;
   pickNom?: string | null;
   pickConfidence?: number | null;
+  pickCote?: number | null;
   pickBetType?: string | null;
+  decision?: string | null;
   topFacteurs?: string[];
   priorityBadge?: RacePriorityBadge | null;
   comboCandidate?: CourseComboCandidate | null;
@@ -66,6 +73,68 @@ function ctaLabel(score: number): string {
   return "Lire la course";
 }
 
+function scoreFromConfidence(confidence?: number | null, fallback = 0) {
+  const value = confidence ?? fallback;
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, Math.round(value * 10)));
+}
+
+function getCourseComboAction({
+  comboCandidate,
+  decision,
+  displayScore,
+  pickConfidence,
+  pickCote,
+  pickNom,
+  pickNum,
+}: {
+  comboCandidate: CourseComboCandidate | null;
+  decision?: string | null;
+  displayScore: number;
+  pickConfidence?: number | null;
+  pickCote?: number | null;
+  pickNom?: string | null;
+  pickNum?: number | null;
+}): CourseComboAction | null {
+  if (decision === "REJET") {
+    return null;
+  }
+
+  if (decision === "VALIDE" && comboCandidate?.role === "PEPITE") {
+    return {
+      ...comboCandidate,
+      variant: "pepite",
+      label: `💎 Ajouter ${comboCandidate.cheval_nom} au combo`,
+    };
+  }
+
+  if (decision === "VALIDE" && comboCandidate?.role === "OUTSIDER") {
+    return {
+      ...comboCandidate,
+      variant: "outsider",
+      label: `🚀 Ajouter ${comboCandidate.cheval_nom} au combo`,
+    };
+  }
+
+  if (decision === "SURVEILLANCE" && pickNum != null) {
+    const chevalNom = pickNom ?? `N°${pickNum}`;
+    const confiance = pickConfidence ?? 0;
+
+    return {
+      cheval_num: pickNum,
+      cheval_nom: chevalNom,
+      cote: pickCote ?? comboCandidate?.cote ?? 1,
+      role: "OUTSIDER",
+      confiance,
+      score_cheval: scoreFromConfidence(confiance, displayScore),
+      variant: "surveillance",
+      label: `👁️ Ajouter ${chevalNom} en observation`,
+    };
+  }
+
+  return null;
+}
+
 export function CourseCard({
   raceTitle,
   subtitleLine,
@@ -79,7 +148,9 @@ export function CourseCard({
   pickNum,
   pickNom,
   pickConfidence,
+  pickCote,
   pickBetType,
+  decision = null,
   topFacteurs,
   priorityBadge = null,
   comboCandidate = null,
@@ -114,10 +185,21 @@ export function CourseCard({
   const priorityToneColor = priorityBadge
     ? getPriorityToneColor(priorityBadge.tone)
     : "var(--pmu-text-muted)";
-  const comboId = comboCandidate
-    ? `${dateStr ?? "date"}-${reunion ?? "R"}-${course ?? "C"}-${comboCandidate.cheval_num}-${comboCandidate.role}`
+  const comboAction = getCourseComboAction({
+    comboCandidate,
+    decision,
+    displayScore,
+    pickConfidence,
+    pickCote,
+    pickNom,
+    pickNum,
+  });
+  const comboId = comboAction
+    ? `${dateStr ?? "date"}-${reunion ?? "R"}-${course ?? "C"}-${comboAction.cheval_num}-${comboAction.role}${
+        comboAction.variant === "surveillance" ? "-surveillance" : ""
+      }`
     : "";
-  const selectedInCombo = comboCandidate ? isSelected(comboId) : false;
+  const selectedInCombo = comboAction ? isSelected(comboId) : false;
   const comboFull = selections.length >= 4 && !selectedInCombo;
 
   const lines: Array<{ label: string; value: string }> = [];
@@ -326,7 +408,7 @@ export function CourseCard({
         </div>
       </div>
 
-      {comboCandidate ? (
+      {comboAction ? (
         <button
           type="button"
           disabled={selectedInCombo || comboFull}
@@ -342,34 +424,36 @@ export function CourseCard({
               reunion: reunion ?? "",
               course: course ?? "",
               courseLabel: courseLabel ?? `R${reunion ?? ""}C${course ?? ""}`,
-              cheval_num: comboCandidate.cheval_num,
-              cheval_nom: comboCandidate.cheval_nom,
-              cote: comboCandidate.cote,
-              role: comboCandidate.role,
-              confiance: comboCandidate.confiance,
-              probability: comboCandidate.confiance / 10,
+              cheval_num: comboAction.cheval_num,
+              cheval_nom: comboAction.cheval_nom,
+              cote: comboAction.cote,
+              role: comboAction.role,
+              confiance: comboAction.confiance,
+              probability: comboAction.confiance / 10,
             });
           }}
           className={`mt-auto w-full rounded-lg border px-4 py-3 text-sm font-black transition-colors disabled:cursor-not-allowed ${
             selectedInCombo || comboFull
               ? "border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] text-[var(--pmu-text-muted)]"
-              : comboCandidate.role === "PEPITE"
+              : comboAction.variant === "pepite"
                 ? "border-[color-mix(in_srgb,var(--pmu-gold)_35%,transparent)] bg-[var(--pmu-gold-light)] text-[var(--pmu-gold)] hover:bg-[color-mix(in_srgb,var(--pmu-gold-light)_82%,white)]"
-                : "border-[color-mix(in_srgb,var(--pmu-primary)_32%,transparent)] bg-[var(--pmu-primary-fade)] text-[var(--pmu-primary)] hover:bg-[color-mix(in_srgb,var(--pmu-primary)_14%,var(--pmu-surface))]"
+                : comboAction.variant === "outsider"
+                  ? "border-[color-mix(in_srgb,var(--pmu-primary)_32%,transparent)] bg-[#EAF3DE] text-[var(--pmu-primary)] hover:bg-[color-mix(in_srgb,var(--pmu-primary)_14%,var(--pmu-surface))]"
+                  : "border-dashed border-[#F59E0B] bg-[#FEF3C7] text-[#92400E] hover:bg-[#FDE68A]"
           }`}
         >
           {selectedInCombo
-            ? "\u2713 Dans le combo"
+            ? "✓ Dans le combo"
             : comboFull
               ? "Combo complet"
-              : `${comboCandidate.role === "PEPITE" ? "Pepite" : "Outsider"} - Ajouter #${comboCandidate.cheval_num} ${comboCandidate.cheval_nom} au combo`}
+              : comboAction.label}
         </button>
       ) : null}
 
       <button
         type="button"
         onClick={onClick}
-        className={`app-button-primary w-full ${comboCandidate ? "" : "mt-auto"}`}
+        className={`app-button-primary w-full ${comboAction ? "" : "mt-auto"}`}
       >
         {ctaLabel(displayScore)}
       </button>
