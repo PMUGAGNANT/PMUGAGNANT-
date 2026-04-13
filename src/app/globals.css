@@ -593,6 +593,19 @@ img, svg { display: block; }
   padding: 10px 14px;
   font-size: 0.82rem;
 }
+.turf-ticket-card__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+}
+.turf-ticket-card__race {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  opacity: 0.78;
+}
 .turf-ticket-card__body { display: grid; gap: 0; padding: 6px 14px 14px; }
 .turf-ticket-row {
   display: grid;

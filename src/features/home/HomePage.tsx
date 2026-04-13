@@ -889,7 +889,14 @@ function HomeAside({
       </section>
 
       <section className="turf-aside-card turf-ticket-card">
-        <header>Ticket prioritaire</header>
+        <header className="turf-ticket-card__header">
+          <span>Ticket prioritaire</span>
+          {focusRaceMeta ? (
+            <span className="turf-ticket-card__race">
+              {focusRaceMeta.code} · {focusRaceMeta.hippodrome.toLocaleUpperCase("fr-FR")}
+            </span>
+          ) : null}
+        </header>
         <div className="turf-ticket-card__body">
           {ticketRows.length > 0 ? (
             ticketRows.map((participant, index) => {
