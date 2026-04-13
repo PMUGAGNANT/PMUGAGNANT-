@@ -199,7 +199,7 @@ export function CourseRoles({
 
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-[var(--pmu-text)]">
-                    Mise conseillee : {kelly.mise_conseille} EUR ({kelly.fraction_bankroll}% bankroll)
+                    Mise conseillée : {kelly.mise_conseille} EUR ({kelly.fraction_bankroll}% bankroll)
                   </p>
                   <span className={`rounded-lg border px-2 py-1 text-xs font-semibold ${getRiskClass(kelly.niveau_risque)}`}>
                     {kelly.niveau_risque}
@@ -230,7 +230,7 @@ export function CourseRoles({
                 className="mt-4 w-full rounded-lg border border-[var(--pmu-primary)] bg-[var(--pmu-primary-fade)] px-3 py-2 text-sm font-semibold text-[var(--pmu-primary)] disabled:cursor-not-allowed disabled:opacity-55"
               >
                 {selectedInCombo
-                  ? "Dans le combo"
+                  ? "✓ Dans le combo"
                   : comboFull
                     ? "Combo complet"
                     : "+ Ajouter au combo"}

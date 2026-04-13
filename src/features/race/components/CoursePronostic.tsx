@@ -45,16 +45,16 @@ function getSelectedHorse(
 function factorToSentence(raw: string) {
   const normalized = normalizeKey(raw);
 
-  if (normalized.includes("forme recente")) return "Forme recente solide.";
-  if (normalized.includes("musique recente")) return "Musique recente reguliere.";
-  if (normalized.includes("poids fraicheur")) return "Poids et fraicheur coherents.";
+  if (normalized.includes("forme recente")) return "Forme récente solide.";
+  if (normalized.includes("musique recente")) return "Musique récente régulière.";
+  if (normalized.includes("poids fraicheur")) return "Poids et fraîcheur cohérents.";
   if (normalized.includes("distance piste")) return "Distance et piste dans son profil.";
-  if (normalized.includes("marche pmu")) return "Le marche PMU confirme sa chance.";
-  if (normalized.includes("jockey")) return "Pilotage interessant pour cette course.";
-  if (normalized.includes("driver")) return "Driver bien place dans ce lot.";
-  if (normalized.includes("entraineur")) return "Entrainement fiable sur ce profil.";
-  if (normalized.includes("terrain")) return "Terrain favorable a son profil.";
-  if (normalized.includes("corde")) return "Numero de corde coherent.";
+  if (normalized.includes("marche pmu")) return "Le marché PMU confirme sa chance.";
+  if (normalized.includes("jockey")) return "Pilotage intéressant pour cette course.";
+  if (normalized.includes("driver")) return "Driver bien placé dans ce lot.";
+  if (normalized.includes("entraineur")) return "Entraînement fiable sur ce profil.";
+  if (normalized.includes("terrain")) return "Terrain favorable à son profil.";
+  if (normalized.includes("corde")) return "Numéro de corde cohérent.";
 
   const cleaned = raw.trim();
   if (!cleaned) return "";
@@ -79,24 +79,24 @@ function buildReasons(
   }
 
   if (selectedHorse.musique && selectedHorse.musique !== "--") {
-    reasons.add("Musique recente a surveiller de pres.");
+    reasons.add("Musique récente à surveiller de près.");
   }
 
   if (typeof selectedHorse.cote === "number" && Number.isFinite(selectedHorse.cote)) {
     if (selectedHorse.cote <= 5) {
-      reasons.add("Le marche PMU le tient haut dans les jeux.");
+      reasons.add("Le marché PMU le tient haut dans les jeux.");
     } else if (selectedHorse.cote <= 10) {
-      reasons.add("Cote interessante avec un vrai rapport risque rendement.");
+      reasons.add("Cote intéressante avec un vrai rapport risque rendement.");
     }
   }
 
   const human = selectedHorse.jockey || selectedHorse.driver;
   if (human) {
-    reasons.add(`Pilotage confie a ${human}.`);
+    reasons.add(`Pilotage confié à ${human}.`);
   }
 
   if (selectedHorse.entraineur) {
-    reasons.add(`Entrainement ${selectedHorse.entraineur}.`);
+    reasons.add(`Entraînement ${selectedHorse.entraineur}.`);
   }
 
   if (
@@ -104,11 +104,11 @@ function buildReasons(
     selectedHorse.corde !== undefined &&
     `${selectedHorse.corde}` !== ""
   ) {
-    reasons.add("Profil poids corde coherent.");
+    reasons.add("Profil poids corde cohérent.");
   }
 
   if (reasons.size === 0) {
-    reasons.add("Le moteur retient ce cheval sur la synthese globale de la course.");
+    reasons.add("Le moteur retient ce cheval sur la synthèse globale de la course.");
   }
 
   return [...reasons].slice(0, 4);
@@ -119,7 +119,7 @@ function getVerdictLabel(pronostic: PronosticCardData) {
 
   if (pronostic.valueBet) {
     return {
-      label: "Bonne opportunite",
+      label: "Bonne opportunité",
       tone: "var(--pmu-orange)",
       background: "color-mix(in srgb, var(--pmu-orange) 12%, transparent)",
     };
@@ -127,7 +127,7 @@ function getVerdictLabel(pronostic: PronosticCardData) {
 
   if (recommendation.includes("surveill")) {
     return {
-      label: "A surveiller",
+      label: "À surveiller",
       tone: "var(--pmu-orange)",
       background: "color-mix(in srgb, var(--pmu-orange) 12%, transparent)",
     };
@@ -135,7 +135,7 @@ function getVerdictLabel(pronostic: PronosticCardData) {
 
   if (recommendation.includes("pass") || recommendation.includes("eviter")) {
     return {
-      label: "A eviter",
+      label: "À éviter",
       tone: "var(--pmu-red)",
       background: "color-mix(in srgb, var(--pmu-red) 12%, transparent)",
     };
@@ -192,7 +192,7 @@ export function CoursePronostic({
           </div>
 
           <div>
-            <p className="app-kicker">Decision moteur</p>
+            <p className="app-kicker">Décision moteur</p>
             <h2 className="mt-2 text-[2.1rem] font-black leading-[0.94] text-[var(--pmu-text)] md:text-[3.2rem]">
               N°{selectedHorse.numero}{" "}
               <span style={{ color: verdict.tone }}>{selectedHorse.nom}</span>
@@ -200,16 +200,16 @@ export function CoursePronostic({
             <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
               {human ? `${human} · ` : ""}
               {selectedHorse.entraineur
-                ? `Entrainement ${selectedHorse.entraineur}. `
+                ? `Entraînement ${selectedHorse.entraineur}. `
                 : ""}
-              Le moteur garde ce cheval comme point d&apos;entree principal sur la
+              Le moteur garde ce cheval comme point d&apos;entrée principal sur la
               course.
             </p>
           </div>
 
           <div className="rounded-[1.3rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] p-4">
             <div className="flex items-center justify-between gap-3">
-              <p className="app-label">Barometre de confiance</p>
+              <p className="app-label">Baromètre de confiance</p>
               <span className="text-lg font-black" style={{ color: verdict.tone }}>
                 {confidence.toFixed(1)}/10
               </span>
@@ -269,7 +269,7 @@ export function CoursePronostic({
           </div>
 
           <div className="rounded-[1.3rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_84%,transparent)] p-4">
-            <p className="app-kicker text-[10px]">Synthese ticket</p>
+            <p className="app-kicker text-[10px]">Synthèse ticket</p>
             <div className="mt-3 space-y-3 text-sm text-[var(--pmu-text-soft)]">
               <div className="flex items-center justify-between gap-3">
                 <span>Cheval retenu</span>
@@ -286,7 +286,7 @@ export function CoursePronostic({
               <div className="flex items-center justify-between gap-3">
                 <span>Profil</span>
                 <span className="font-black text-[var(--pmu-text)]">
-                  {selectedHorse.musique || "A confirmer"}
+                  {selectedHorse.musique || "À confirmer"}
                 </span>
               </div>
             </div>
@@ -304,8 +304,8 @@ export function CoursePronostic({
                 N°{pepite.numero} {pepite.nom}
               </p>
               <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">
-                Profil plus speculatif a garder en observation, surtout si la
-                cote reste bien orientee.
+                Profil plus spéculatif à garder en observation, surtout si la
+                cote reste bien orientée.
               </p>
             </div>
           ) : null}

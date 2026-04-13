@@ -7,8 +7,8 @@ const VERDICT_STYLES: Record<AvisVerdict, string> = {
 };
 
 const PARI_LABEL: Record<AvisPariType, string> = {
-  GAGNANT: "Gagnant conseille",
-  PLACE: "Place conseille",
+  GAGNANT: "Gagnant conseillé",
+  PLACE: "Place conseillé",
 };
 
 const BORDER_COLORS = [
@@ -179,13 +179,13 @@ export function AvisExpert({
               {isPremiumLocked ? (
                 <div className="mt-2 flex items-center gap-3 rounded-lg bg-[var(--pmu-surface-2)] px-3 py-2.5">
                   <span className="text-xs text-[var(--pmu-text-soft)]">
-                    Avis expert et note reserves aux membres premium
+                    Avis expert et note réservés aux membres premium
                   </span>
                   <a
                     href="/premium"
                     className="ml-auto rounded-full border border-[var(--pmu-border)] bg-[var(--pmu-surface)] px-3 py-1 text-xs font-medium text-[var(--pmu-text-soft)]"
                   >
-                    Debloquer
+                    Débloquer
                   </a>
                 </div>
               ) : (
@@ -209,7 +209,7 @@ export function AvisExpert({
                     </p>
                   ) : (
                     <p className="text-xs italic text-[var(--pmu-text-muted)]">
-                      Avis en cours de generation...
+                      Avis en cours de génération...
                     </p>
                   )}
 
