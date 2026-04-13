@@ -58,7 +58,9 @@ function HomeBoardCard({
       pickNum={item.score?.pick?.numPmu}
       pickNom={item.score?.pick?.nom}
       pickConfidence={item.score?.pick?.confidence}
+      pickCote={item.score?.pick?.cote}
       pickBetType={item.score?.pick?.betType}
+      decision={item.score?.decision}
       topFacteurs={item.score?.pick?.topFacteurs}
       priorityBadge={item.priorityBadge}
       comboCandidate={item.score?.comboCandidate ?? null}

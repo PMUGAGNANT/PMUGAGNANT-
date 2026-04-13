@@ -55,6 +55,7 @@ export async function GET(request: Request) {
               decision: PredictionDecision;
               betType: string;
               confidence: number;
+              cote: number | null;
               topFacteurs: string[];
             }
           | null;
@@ -153,6 +154,7 @@ export async function GET(request: Request) {
                     decision: analysis.favori.prediction.decision,
                     betType: analysis.favori.prediction.typePariConseille,
                     confidence: analysis.favori.prediction.confiance,
+                    cote: analysis.favori.cote ?? analysis.favori.coteDepart ?? null,
                     topFacteurs: analysis.favori.prediction.topFacteurs,
                   }
                 : null,

@@ -551,6 +551,66 @@ function HomeFocusPanel({
   );
 }
 
+type HomeComboAction = {
+  cheval_num: number;
+  cheval_nom: string;
+  cote: number;
+  role: ComboRole;
+  confiance: number;
+  score_cheval: number;
+  variant: "pepite" | "outsider" | "surveillance";
+  label: string;
+};
+
+function buildScoreFromConfidence(confidence?: number | null, fallback = 0) {
+  const value = confidence ?? fallback;
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, Math.round(value * 10)));
+}
+
+function getComboActionForRace(item: FeaturedRace): HomeComboAction | null {
+  const score = item.score;
+  if (!score || score.decision === "REJET") {
+    return null;
+  }
+
+  const roleCandidate = score.comboCandidate ?? null;
+
+  if (score.decision === "VALIDE" && roleCandidate?.role === "PEPITE") {
+    return {
+      ...roleCandidate,
+      variant: "pepite",
+      label: `💎 Ajouter ${roleCandidate.cheval_nom} au combo`,
+    };
+  }
+
+  if (score.decision === "VALIDE" && roleCandidate?.role === "OUTSIDER") {
+    return {
+      ...roleCandidate,
+      variant: "outsider",
+      label: `🚀 Ajouter ${roleCandidate.cheval_nom} au combo`,
+    };
+  }
+
+  if (score.decision === "SURVEILLANCE" && score.pick?.numPmu != null) {
+    const chevalNom = score.pick.nom ?? `N°${score.pick.numPmu}`;
+    const confiance = score.pick.confidence ?? 0;
+
+    return {
+      cheval_num: score.pick.numPmu,
+      cheval_nom: chevalNom,
+      cote: score.pick.cote ?? roleCandidate?.cote ?? 1,
+      role: "OUTSIDER",
+      confiance,
+      score_cheval: buildScoreFromConfidence(confiance, item.scoreValue),
+      variant: "surveillance",
+      label: `👁️ Ajouter ${chevalNom} en observation`,
+    };
+  }
+
+  return null;
+}
+
 function CompactRaceCard({
   item,
   onOpenRace,
@@ -563,17 +623,19 @@ function CompactRaceCard({
     ? getPriorityToneColor(item.priorityBadge.tone)
     : "var(--pmu-text-muted)";
   const raceCode = formatRaceCode(item.race);
-  const comboCandidate = item.score?.comboCandidate ?? null;
+  const comboCandidate = getComboActionForRace(item);
   const comboId = comboCandidate
-    ? `${item.race.dateStr}-${item.race.reunion}-${item.race.course}-${comboCandidate.cheval_num}-${comboCandidate.role}`
+    ? `${item.race.dateStr}-${item.race.reunion}-${item.race.course}-${comboCandidate.cheval_num}-${comboCandidate.role}${
+        comboCandidate.variant === "surveillance" ? "-surveillance" : ""
+      }`
     : "";
   const selectedInCombo = comboCandidate ? isSelected(comboId) : false;
   const comboFull = selections.length >= 4 && !selectedInCombo;
   const comboButtonLabel = selectedInCombo
-    ? "Dans le combo"
+    ? "✓ Dans le combo"
     : comboFull
       ? "Combo complet"
-      : `Ajouter #${comboCandidate?.cheval_num ?? "--"} ${comboCandidate?.cheval_nom ?? "cheval"} au combo`;
+      : comboCandidate?.label ?? "";
 
   return (
     <article
@@ -674,17 +736,13 @@ function CompactRaceCard({
           className={`mt-auto w-full rounded-lg border px-4 py-3 text-sm font-black transition-colors disabled:cursor-not-allowed ${
             selectedInCombo || comboFull
               ? "border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] text-[var(--pmu-text-muted)]"
-              : comboCandidate.role === "PEPITE"
+              : comboCandidate.variant === "pepite"
                 ? "border-[color-mix(in_srgb,var(--pmu-gold)_35%,transparent)] bg-[var(--pmu-gold-light)] text-[var(--pmu-gold)] hover:bg-[color-mix(in_srgb,var(--pmu-gold-light)_82%,white)]"
-                : "border-[color-mix(in_srgb,var(--pmu-primary)_32%,transparent)] bg-[var(--pmu-primary-fade)] text-[var(--pmu-primary)] hover:bg-[color-mix(in_srgb,var(--pmu-primary)_14%,var(--pmu-surface))]"
+                : comboCandidate.variant === "outsider"
+                  ? "border-[color-mix(in_srgb,var(--pmu-primary)_32%,transparent)] bg-[#EAF3DE] text-[var(--pmu-primary)] hover:bg-[color-mix(in_srgb,var(--pmu-primary)_14%,var(--pmu-surface))]"
+                  : "border-dashed border-[#F59E0B] bg-[#FEF3C7] text-[#92400E] hover:bg-[#FDE68A]"
           }`}
         >
-          {selectedInCombo ? "\u2713 " : ""}
-          {comboCandidate.role === "PEPITE" && !selectedInCombo && !comboFull
-            ? "Pépite - "
-            : comboCandidate.role === "OUTSIDER" && !selectedInCombo && !comboFull
-              ? "Outsider - "
-              : ""}
           {comboButtonLabel}
         </button>
       ) : null}

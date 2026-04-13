@@ -45,6 +45,7 @@ export type RaceScore = {
     decision?: string | null;
     betType?: string | null;
     confidence?: number | null;
+    cote?: number | null;
     topFacteurs?: string[];
   } | null;
   pepiteDuJour?: {
