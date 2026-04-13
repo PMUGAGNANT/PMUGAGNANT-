@@ -109,7 +109,7 @@ function getFallbackRole(
     cote: participant.cote ?? 0,
     score_cheval: participant.scoreIa ?? 0,
     confiance: 0,
-    raison: "Repere principal du moteur.",
+    raison: "Repère principal du moteur.",
     variation_cote: null,
   };
 
@@ -285,14 +285,14 @@ export function ParticipantsTable({
             </h2>
             <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">
               Tableau PMU complet avec lecture moteur, cote, musique et tags de
-              priorite.
+              priorité.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
             <span className="app-pill text-xs">{safeParticipants.length} partants</span>
             <span className="app-pill text-xs">
-              {courseFinished ? "Course reglee" : "Tri par numero PMU"}
+              {courseFinished ? "Course réglée" : "Tri par numéro PMU"}
             </span>
           </div>
         </div>
@@ -310,13 +310,13 @@ export function ParticipantsTable({
           </label>
 
           <label className="block">
-            <span className="app-label">Entraineur</span>
+            <span className="app-label">Entraîneur</span>
             <select
               value={trainerFilter}
               onChange={(event) => setTrainerFilter(event.target.value)}
               className="app-input mt-2 w-full"
             >
-              <option value="">Tous les entraineurs</option>
+              <option value="">Tous les entraîneurs</option>
               {trainers.map((trainer) => (
                 <option key={trainer} value={trainer}>
                   {trainer}
@@ -326,13 +326,13 @@ export function ParticipantsTable({
           </label>
 
           <label className="block">
-            <span className="app-label">Proprietaire</span>
+            <span className="app-label">Propriétaire</span>
             <select
               value={ownerFilter}
               onChange={(event) => setOwnerFilter(event.target.value)}
               className="app-input mt-2 w-full"
             >
-              <option value="">Tous les proprietaires</option>
+              <option value="">Tous les propriétaires</option>
               {owners.map((owner) => (
                 <option key={owner} value={owner}>
                   {owner}
@@ -350,12 +350,12 @@ export function ParticipantsTable({
               <th className="w-[88px]">N°</th>
               <th className="min-w-[240px]">Cheval</th>
               <th className="min-w-[180px]">{estPlat ? "Jockey" : "Driver"}</th>
-              <th className="min-w-[180px]">Entrainement</th>
+              <th className="min-w-[180px]">Entraînement</th>
               <th className="w-[110px]">Profil</th>
               <th className="w-[96px]">Cote</th>
               <th className="min-w-[150px]">Musique</th>
               <th className="w-[120px]">Score IA</th>
-              {courseFinished ? <th className="w-[90px]">Arrivee</th> : null}
+              {courseFinished ? <th className="w-[90px]">Arrivée</th> : null}
             </tr>
           </thead>
           <tbody>
@@ -478,7 +478,7 @@ export function ParticipantsTable({
 
               <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                 <div className="app-card-muted px-3 py-3">
-                  <p className="app-label">Entrainement</p>
+                  <p className="app-label">Entraînement</p>
                   <p className="mt-1 text-[var(--pmu-text)]">
                     {participant.entraineur || "--"}
                   </p>
@@ -512,7 +512,7 @@ export function ParticipantsTable({
                 </div>
                 {courseFinished ? (
                   <div className="col-span-2 app-card-muted px-3 py-3">
-                    <p className="app-label">Arrivee</p>
+                    <p className="app-label">Arrivée</p>
                     <p className="mt-1 font-semibold text-[var(--pmu-text)]">
                       {getArrivalPosition(arrivalMap, numPmu)}
                     </p>

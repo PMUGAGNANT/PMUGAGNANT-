@@ -43,7 +43,7 @@ function CourseLoadError({
       </h1>
       <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">{error}</p>
       <button type="button" className="app-button-primary mt-5" onClick={onRetry}>
-        Reessayer
+        Réessayer
       </button>
     </section>
   );
@@ -57,7 +57,7 @@ function CourseNotFoundState() {
         Course introuvable
       </h1>
       <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">
-        Le programme n&apos;a pas renvoye de contexte exploitable pour cette course.
+        Le programme n&apos;a pas renvoyé de contexte exploitable pour cette course.
       </p>
     </section>
   );
@@ -96,6 +96,7 @@ function RaceDetailsContent({
         isFinished={isFinished}
         refreshPriority={data.refreshPriority ?? null}
         meteo={data.meteo ?? null}
+        lisibilite={roleLisibilite}
       />
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr,0.9fr]">
@@ -112,6 +113,13 @@ function RaceDetailsContent({
             <AnalysisPendingCard />
           )}
 
+          {roles.length > 0 ? (
+            <section className="app-card p-5 md:p-6">
+              <p className="app-kicker mb-3">4 rôles clés</p>
+              <CourseRoles roles={roles} lisibilite={roleLisibilite} course={courseInfo} />
+            </section>
+          ) : null}
+
           <AvisExpert
             predictions={data.avisExpert ?? []}
             isPremium={!paywallRequired || isFinished}
@@ -125,16 +133,13 @@ function RaceDetailsContent({
             courseFinished={isFinished}
             officialArrival={officialArrival}
           />
+
+          {officialArrival.length > 0 ? (
+            <OfficialArrivalCard arrivee={officialArrival} />
+          ) : null}
         </div>
 
-        <div className="grid gap-6">
-          {roles.length > 0 ? (
-            <section className="app-card p-5 md:p-6">
-              <p className="app-kicker mb-3">4 roles cles</p>
-              <CourseRoles roles={roles} lisibilite={roleLisibilite} course={courseInfo} />
-            </section>
-          ) : null}
-
+        <div className="grid gap-6 self-start">
           <CourseDeskCard
             courseInfo={courseInfo}
             minutesUntilStart={data.minutesUntilStart}
@@ -145,10 +150,12 @@ function RaceDetailsContent({
             refreshPriority={data.refreshPriority ?? null}
           />
 
-          <LiveCotesChart
-            series={data.liveCotes ?? []}
-            pepiteNum={pepiteRole?.cheval_num ?? null}
-          />
+          {(data.liveCotes ?? []).length > 0 ? (
+            <LiveCotesChart
+              series={data.liveCotes ?? []}
+              pepiteNum={pepiteRole?.cheval_num ?? null}
+            />
+          ) : null}
 
           {top5.length > 0 ? (
             <TopFiveCard top5={top5} participants={participants} />
@@ -156,9 +163,6 @@ function RaceDetailsContent({
         </div>
       </section>
 
-      {officialArrival.length > 0 ? (
-        <OfficialArrivalCard arrivee={officialArrival} />
-      ) : null}
     </>
   );
 }
@@ -228,7 +232,7 @@ export default function RaceDetailsPage() {
 
         {paywallRequired ? (
           <Link href="/premium" className="app-button-primary inline-flex">
-            Debloquer le ticket
+            Débloquer le ticket
           </Link>
         ) : null}
       </div>

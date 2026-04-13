@@ -30,21 +30,21 @@ export function LockedTicketCard({
   return (
     <section className="app-card p-5 md:p-6">
       <div className="flex flex-wrap items-center gap-2">
-        <RaceStatusPill label="Reserve premium" tone="warning" />
+        <RaceStatusPill label="Réservé premium" tone="warning" />
         {previewLisibilite ? <span className="app-pill text-xs">{previewLisibilite}</span> : null}
       </div>
 
       <h2 className="mt-4 text-3xl font-black text-[var(--pmu-text)]">
-        Le ticket detaille est verrouille
+        Le ticket détaillé est verrouillé
       </h2>
       <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
-        Le tableau des partants reste accessible, mais la lecture complete du
-        moteur et le ticket d&apos;execution sont reserves a l&apos;acces Premium.
+        Le tableau des partants reste accessible, mais la lecture complète du
+        moteur et le ticket d&apos;exécution sont réservés à l&apos;accès Premium.
       </p>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <div className="app-card-muted px-4 py-4">
-          <p className="app-label">Cheval repere</p>
+          <p className="app-label">Cheval repéré</p>
           <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
             {previewLabel || "Signal en cours"}
           </p>
@@ -52,13 +52,13 @@ export function LockedTicketCard({
         <div className="app-card-muted px-4 py-4">
           <p className="app-label">Orientation</p>
           <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
-            {previewRecommendation || "Lecture a confirmer"}
+            {previewRecommendation || "Lecture à confirmer"}
           </p>
         </div>
       </div>
 
       <Link href="/premium" className="app-button-primary mt-5 inline-flex">
-        Debloquer le pronostic premium
+        Débloquer le pronostic premium
       </Link>
     </section>
   );
@@ -72,8 +72,8 @@ export function AnalysisPendingCard() {
         Le moteur termine la lecture
       </h2>
       <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
-        Les partants sont deja visibles, mais le ticket n&apos;est pas encore
-        assez ferme pour etre affiche ici.
+        Les partants sont déjà visibles, mais le ticket n&apos;est pas encore
+        assez ferme pour être affiché ici.
       </p>
     </section>
   );
@@ -116,13 +116,13 @@ export function TopFiveCard({
                 </span>
                 <div>
                   <p className="font-black text-[var(--pmu-text)]">
-                    No {numero} {participant?.nom || `Cheval ${numero}`}
+                    N° {numero} {participant?.nom || `Cheval ${numero}`}
                   </p>
                   <p className="text-sm text-[var(--pmu-text-soft)]">
                     {participant?.entraineur ||
                       participant?.jockey ||
                       participant?.driver ||
-                      "Profil a confirmer"}
+                      "Profil à confirmer"}
                   </p>
                 </div>
               </div>
@@ -272,8 +272,8 @@ export function OfficialArrivalCard({ arrivee }: { arrivee: ArrivalRow[] }) {
     <section className="app-card p-5 md:p-6">
       <div className="app-section-heading">
         <div>
-          <p className="app-kicker">Resultat officiel</p>
-          <h2 className="app-section-title">Arrivee officielle</h2>
+          <p className="app-kicker">Résultat officiel</p>
+          <h2 className="app-section-title">Arrivée officielle</h2>
         </div>
       </div>
 
@@ -322,7 +322,7 @@ export function CourseDeskCard({
           <h2 className="app-section-title">Lecture rapide</h2>
         </div>
         <RaceStatusPill
-          label={isFinished ? "Terminee" : paywallRequired ? "Preview" : "Active"}
+          label={isFinished ? "Terminée" : paywallRequired ? "Preview" : "Active"}
           tone={isFinished ? "neutral" : paywallRequired ? "warning" : "primary"}
         />
       </div>
@@ -335,7 +335,7 @@ export function CourseDeskCard({
           </p>
         </div>
         <div className="app-card-muted px-4 py-4">
-          <p className="app-label">Fenetre</p>
+          <p className="app-label">Fenêtre</p>
           <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
             {formatMinutesLabel(minutesUntilStart)}
           </p>
@@ -343,7 +343,7 @@ export function CourseDeskCard({
         <div className="app-card-muted px-4 py-4">
           <p className="app-label">Cheval principal</p>
           <p className="mt-2 text-lg font-black text-[var(--pmu-text)]">
-            {mainHorse ? `No ${mainHorse}` : "A confirmer"}
+            {mainHorse ? `N° ${mainHorse}` : "À confirmer"}
           </p>
         </div>
         <div className="app-card-muted px-4 py-4">
@@ -373,7 +373,7 @@ export function CourseDeskCard({
         <p className="mt-2 text-sm leading-7 text-[var(--pmu-text-soft)]">
           {[
             courseInfo.terrain ? `Terrain ${courseInfo.terrain}` : null,
-            courseInfo.meteo ? `Meteo ${courseInfo.meteo}` : null,
+          courseInfo.meteo ? `Météo ${courseInfo.meteo}` : null,
             courseInfo.nombrePartants ? `${courseInfo.nombrePartants} partants` : null,
           ]
             .filter(Boolean)

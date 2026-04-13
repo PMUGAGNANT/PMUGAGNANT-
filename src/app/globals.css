@@ -137,7 +137,7 @@ h1, h2, h3, h4,
   font-family: var(--font-display), Georgia, serif;
   font-weight: 700;
   line-height: 1.1;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   color: var(--pmu-text);
 }
 

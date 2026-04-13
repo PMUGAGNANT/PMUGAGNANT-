@@ -33,15 +33,32 @@ const monoFont = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PMU Gagnant | Radar PMU et decisions de course",
+  title: "TurfEdge - L'IA qui lit les courses PMU à ta place",
   description:
-    "PMU Gagnant aide a reperer les meilleures courses PMU chaque jour avec une lecture claire, rapide et disciplinee.",
+    "Chaque matin, TurfEdge analyse toutes les courses PMU et te dit exactement quoi jouer, quoi ignorer, et combien miser. Score de confiance, ticket optimisé, signal T-10min.",
+  keywords: [
+    "PMU",
+    "pronostic",
+    "turf",
+    "hippique",
+    "algorithme",
+    "intelligence artificielle",
+    "cheval",
+    "course",
+  ],
   manifest: "/manifest.json",
   openGraph: {
-    title: "PMU Gagnant | Radar PMU et decisions de course",
+    title: "TurfEdge - L'IA qui lit les courses PMU à ta place",
     description:
-      "PMU Gagnant aide a reperer les meilleures courses PMU chaque jour avec une lecture claire, rapide et disciplinee.",
+      "Analyse IA de toutes les courses PMU. Score de confiance, ticket optimisé, signal T-10min. Essai gratuit.",
     type: "website",
+    locale: "fr_FR",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "TurfEdge - L'IA qui lit les courses PMU",
+    description:
+      "Score de confiance, ticket optimisé, signal T-10min. IA hippique actionnable.",
   },
 };
 

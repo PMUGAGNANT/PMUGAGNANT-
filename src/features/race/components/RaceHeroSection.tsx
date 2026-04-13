@@ -21,6 +21,7 @@ export function RaceHeroSection({
   isFinished,
   refreshPriority,
   meteo,
+  lisibilite,
 }: {
   courseInfo: RaceCourseInfo;
   selectedDate: string | null;
@@ -29,6 +30,7 @@ export function RaceHeroSection({
   isFinished: boolean;
   refreshPriority?: RacePriorityBadge | null;
   meteo?: MeteoData | null;
+  lisibilite?: string | null;
 }) {
   const titlePrefix = `R${courseInfo.reunion ?? ""}C${courseInfo.course ?? ""}`;
   const dateLabel = formatDateLabel(selectedDate ?? courseInfo.dateStr ?? null);
@@ -38,7 +40,7 @@ export function RaceHeroSection({
       ? "warning"
       : "primary";
   const statusLabel = isFinished
-    ? "Resultat officiel"
+    ? "Résultat officiel"
     : paywallRequired
       ? "Ticket premium"
       : "Signal disponible";
@@ -62,6 +64,12 @@ export function RaceHeroSection({
       : meteo?.terrain_impact === "DEFAVORABLE"
         ? "text-[var(--pmu-red)] bg-[var(--pmu-earth-light)] border-[var(--pmu-red)]"
         : "text-[var(--pmu-text-soft)] bg-[var(--pmu-surface-2)] border-[var(--pmu-border)]";
+  const impactLabel =
+    meteo?.terrain_impact === "FAVORABLE"
+      ? "favorable"
+      : meteo?.terrain_impact === "DEFAVORABLE"
+        ? "défavorable"
+        : "neutre";
 
   return (
     <section className="app-page-hero p-6 md:p-8">
@@ -70,6 +78,7 @@ export function RaceHeroSection({
           <div className="flex flex-wrap items-center gap-2">
             <RaceStatusPill label={statusLabel} tone={statusTone} />
             {dateLabel ? <span className="app-pill text-xs">{dateLabel}</span> : null}
+            {lisibilite ? <span className="app-pill text-xs">{lisibilite}</span> : null}
             {refreshPriority ? (
               <span
                 className="rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em]"
@@ -97,7 +106,7 @@ export function RaceHeroSection({
             </h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
               La fiche course sert de poste de lecture unique : ticket, contexte
-              PMU, tableau des partants et resultat officiel restent dans le meme
+              PMU, tableau des partants et résultat officiel restent dans le même
               flux.
             </p>
           </div>
@@ -120,7 +129,7 @@ export function RaceHeroSection({
                   {meteo.description} - {meteo.temperature}°C - Vent {meteo.vent_kmh} km/h
                 </span>
                 <span className={`rounded-lg border px-2 py-1 text-xs font-semibold ${impactTone}`}>
-                  Terrain {meteo.terrain_impact.toLowerCase()}
+                  Terrain {impactLabel}
                 </span>
               </div>
               {meteo.alerte ? (
@@ -134,13 +143,13 @@ export function RaceHeroSection({
 
         <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4 xl:mt-0">
           <div className="app-card-muted px-4 py-3">
-            <p className="app-label">Depart</p>
+            <p className="app-label">Départ</p>
             <p className="mt-1 font-[family-name:var(--font-display)] text-xl font-bold text-[var(--pmu-text)]">
               {courseInfo.heureDepart || "--"}
             </p>
           </div>
           <div className="app-card-muted px-4 py-3">
-            <p className="app-label">Fenetre</p>
+            <p className="app-label">Fenêtre</p>
             <p className="mt-1 font-[family-name:var(--font-display)] text-xl font-bold text-[var(--pmu-text)]">
               {formatMinutesLabel(minutesUntilStart)}
             </p>
