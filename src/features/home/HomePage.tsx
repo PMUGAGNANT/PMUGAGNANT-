@@ -114,11 +114,11 @@ function HomeControlBar({
         <h1>{formatDisplayDate(selectedDate)}</h1>
         <div className="turf-day-strip__pills">
           <span>{stats.total} courses</span>
-          <span>{stats.playable} validees</span>
+          <span>{stats.playable} validées</span>
           <span>{alertCount} alertes T-10</span>
         </div>
         <p>
-          Score journee <strong>{dayScore || "--"} / 100</strong>
+          Score journée <strong>{dayScore || "--"} / 100</strong>
         </p>
       </div>
 
@@ -171,7 +171,7 @@ function HomeControlBar({
 
       <div className="turf-kpi-grid">
         <div className="app-card-muted">
-          <p className="app-label">Validees</p>
+          <p className="app-label">Validées</p>
           <p>{stats.playable}</p>
           <span>sur {stats.total} courses</span>
         </div>
@@ -225,7 +225,7 @@ function HomeFocusPanel({
         </h2>
         <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--pmu-text-soft)]">
           La page restera volontairement simple : une course focus, puis des
-          listes de courses par couleur. Des que les donnees arrivent, le desk
+          listes de courses par couleur. Dès que les données arrivent, le desk
           se remplit ici.
         </p>
       </section>
@@ -249,7 +249,7 @@ function HomeFocusPanel({
       : focusDetail?.paywall?.preview?.favori?.numPmu ||
           focusDetail?.paywall?.preview?.favori?.nom
         ? `#${focusDetail?.paywall?.preview?.favori?.numPmu ?? "--"} ${focusDetail?.paywall?.preview?.favori?.nom ?? "Favori"}`
-        : "Ticket principal en preparation";
+    : "Ticket principal en préparation";
   const focusBetType = focusRace.score?.pick?.betType
     ? getBetTypeLabel(focusRace.score)
     : focusDetail?.analysis?.recommandation?.decision ??
@@ -302,7 +302,7 @@ function HomeFocusPanel({
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="app-kicker">Course a ouvrir</p>
+            <p className="app-kicker">Course à ouvrir</p>
             <span className="app-pill text-[11px]">{focusLisibilite.toLowerCase()}</span>
             {focusPriority ? (
               <span
@@ -355,7 +355,7 @@ function HomeFocusPanel({
               </div>
             </div>
             <div className="app-card-muted px-4 py-3.5">
-              <p className="app-label">Fenetre</p>
+              <p className="app-label">Fenêtre</p>
               <p className="mt-1 text-base font-black text-[var(--pmu-text)]">{focusMinutes}</p>
             </div>
             <div className="app-card-muted px-4 py-3.5">
@@ -402,7 +402,7 @@ function HomeFocusPanel({
                 onClick={onOpenPremium}
                 className="app-button-secondary min-w-[14rem]"
               >
-                Debloquer le ticket
+                Débloquer le ticket
               </button>
             ) : null}
             {comboCandidate ? (
@@ -451,7 +451,7 @@ function HomeFocusPanel({
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <div className="app-card-muted px-4 py-3.5">
-              <p className="app-label">Cote repere</p>
+              <p className="app-label">Cote repère</p>
               <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">
                 {selectedParticipant
                   ? `Cote ${formatOddsLabel(selectedParticipant.cote)}`
@@ -477,7 +477,7 @@ function HomeFocusPanel({
           <div>
             <p className="app-label">Partants utiles</p>
             <h3 className="mt-1 text-[1.65rem] font-black text-[var(--pmu-text)]">
-              Lecture dense sur les 5 chevaux a garder
+              Lecture dense sur les 5 chevaux à garder
             </h3>
           </div>
           <span className="app-pill text-xs">
@@ -516,7 +516,7 @@ function HomeFocusPanel({
                       {participant.nom ?? "Cheval"}
                     </p>
                     <p className="truncate text-sm text-[var(--pmu-text-soft)]">
-                      {participant.jockey ?? participant.driver ?? "Jockey non renseigne"}
+                      {participant.jockey ?? participant.driver ?? "Jockey non renseigné"}
                       {participant.entraineur ? ` - ${participant.entraineur}` : ""}
                     </p>
                   </div>
@@ -542,7 +542,7 @@ function HomeFocusPanel({
             })
           ) : (
             <div className="rounded-[1rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_84%,transparent)] px-4 py-4 text-sm leading-6 text-[var(--pmu-text-soft)]">
-              Le detail course remontera ici des que l API PMU donnera un bloc complet.
+              Le détail course remontera ici dès que l&apos;API PMU donnera un bloc complet.
             </div>
           )}
         </div>
@@ -596,7 +596,7 @@ function CompactRaceCard({
               {raceCode}
             </span>
             <p className="app-kicker">
-              Reunion {item.race.reunion} - Course {item.race.course}
+              Réunion {item.race.reunion} - Course {item.race.course}
             </p>
           </div>
           <h3 className="mt-1 text-[1.3rem] font-black leading-[1.02] text-[var(--pmu-text)]">
@@ -611,7 +611,7 @@ function CompactRaceCard({
             background: `color-mix(in srgb, ${toneColor} 10%, var(--pmu-surface))`,
           }}
         >
-          {item.priorityBadge?.label ?? "A suivre"}
+          {item.priorityBadge?.label ?? "À suivre"}
         </div>
       </div>
 
@@ -633,7 +633,7 @@ function CompactRaceCard({
           </p>
         </div>
         <div className="app-card-muted px-3 py-3">
-          <p className="app-label">Depart</p>
+          <p className="app-label">Départ</p>
           <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">
             {item.race.heureDepart} - {formatMinutesLabel(item.minutesUntilStart)}
           </p>
@@ -681,7 +681,7 @@ function CompactRaceCard({
         >
           {selectedInCombo ? "\u2713 " : ""}
           {comboCandidate.role === "PEPITE" && !selectedInCombo && !comboFull
-            ? "Pepite - "
+            ? "Pépite - "
             : comboCandidate.role === "OUTSIDER" && !selectedInCombo && !comboFull
               ? "Outsider - "
               : ""}
@@ -794,7 +794,7 @@ function HomeAside({
         <div className="turf-radar-card__score">
           {radarScore || "--"}
         </div>
-        <p className="app-label">Score journee - lisibilite</p>
+        <p className="app-label">Score journée - lisibilité</p>
 
         {focusRaceMeta ? (
           <div className="mt-4 rounded-[0.7rem] border border-[color-mix(in_srgb,var(--pmu-primary)_28%,transparent)] bg-[var(--pmu-primary-fade)] px-3 py-2">
@@ -812,7 +812,7 @@ function HomeAside({
 
         <div className="turf-radar-lines">
           <div>
-            <span>Lisibilite</span>
+            <span>Lisibilité</span>
             <i style={{ width: `${focusRace ? 82 : 36}%` }} />
           </div>
           <div>
@@ -820,7 +820,7 @@ function HomeAside({
             <i style={{ width: `${focusRace ? Math.max(34, radarScore - 10) : 28}%` }} />
           </div>
           <div>
-            <span>Fiabilite</span>
+            <span>Fiabilité</span>
             <i style={{ width: `${focusRace ? Math.max(38, radarScore - 4) : 30}%` }} />
           </div>
           <div>
@@ -852,7 +852,7 @@ function HomeAside({
                     </p>
                     <small>
                       Cote {formatOddsLabel(participant.cote)} -{" "}
-                      {participant.jockey ?? participant.driver ?? "monte a confirmer"}
+                      {participant.jockey ?? participant.driver ?? "monte à confirmer"}
                     </small>
                   </div>
                 </div>
@@ -870,7 +870,7 @@ function HomeAside({
               </div>
             </div>
           ) : (
-            <p className="turf-ticket-card__empty">Ticket principal en preparation</p>
+            <p className="turf-ticket-card__empty">Ticket principal en préparation</p>
           )}
         </div>
       </section>
@@ -879,7 +879,7 @@ function HomeAside({
         <p>Jouer juste, jouer rare, jouer fort</p>
         <span>TurfEdge &middot; Algo v9.2</span>
         <small>
-          {stats.playable} validee{stats.playable > 1 ? "s" : ""} sur {stats.total} courses
+          {stats.playable} validée{stats.playable > 1 ? "s" : ""} sur {stats.total} courses
         </small>
       </section>
     </aside>
@@ -1054,7 +1054,7 @@ function PageContent() {
         ]);
 
         if (!racesResponse.success) {
-          throw new Error("Le service courses a renvoye une reponse invalide.");
+        throw new Error("Le service courses a renvoyé une réponse invalide.");
         }
 
         const scoresJson = scoresResponse ?? { success: true, scores: [] };
@@ -1139,7 +1139,7 @@ function PageContent() {
       },
       {
         value: "urgent",
-        label: "Depart proche",
+        label: "Départ proche",
         description: `Moins de ${URGENT_MINUTES_LIMIT} min`,
         count: featuredRaces.filter(
           (item) =>
@@ -1320,7 +1320,7 @@ function PageContent() {
                 className="app-button-primary mt-4"
                 onClick={() => setFetchRevision((revision) => revision + 1)}
               >
-                Reessayer
+                Réessayer
               </button>
             </section>
           ) : featuredRaces.length === 0 ? (
@@ -1330,7 +1330,7 @@ function PageContent() {
               </p>
               <p className="mt-3 text-sm leading-6 text-[var(--pmu-text-soft)]">
                 La home reste volontairement simple : un focus, puis les courses par
-                couleur. Recharge la journee ou change de date.
+                couleur. Recharge la journée ou change de date.
               </p>
             </section>
           ) : (
@@ -1376,7 +1376,7 @@ function PageContent() {
               ) : (
                 <section className="app-card p-5 text-sm leading-6 text-[var(--pmu-text-soft)]">
                   Ce filtre ne sort aucune course sur cette date. Repasse en vue
-                  complete pour revoir tout le programme.
+                  complète pour revoir tout le programme.
                   <button
                     type="button"
                     className="app-button-secondary mt-4"
