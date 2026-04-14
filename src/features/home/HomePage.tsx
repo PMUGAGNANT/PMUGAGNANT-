@@ -840,6 +840,7 @@ function HomeAside({
   const focusRaceMeta = focusRace
     ? {
         code: formatRaceCode(focusRace.race),
+        label: `Réunion ${focusRace.race.reunion} · Course ${focusRace.race.course}`,
         hippodrome: focusRace.race.hippodrome,
         heureDepart: focusRace.race.heureDepart,
       }
@@ -893,7 +894,7 @@ function HomeAside({
           <span>Ticket prioritaire</span>
           {focusRaceMeta ? (
             <span className="turf-ticket-card__race">
-              {focusRaceMeta.code} · {focusRaceMeta.hippodrome.toLocaleUpperCase("fr-FR")}
+              {focusRaceMeta.label} · {focusRaceMeta.hippodrome.toLocaleUpperCase("fr-FR")}
             </span>
           ) : null}
         </header>
@@ -1173,7 +1174,6 @@ function PageContent() {
     );
   }, [races, scores, selectedDate, sortMode]);
 
-  const focusRace = useMemo(() => getRadarRace(featuredRaces), [featuredRaces]);
   const topParisItems = useMemo(
     () => getTopParisItems(featuredRaces, navigateToRace),
     [featuredRaces, navigateToRace]
@@ -1251,6 +1251,35 @@ function PageContent() {
     }
   }, [featuredRaces, quickFilter, topParisCodes]);
 
+  const lanes = useMemo<HomeLane[]>(() => {
+    const activeLanes: HomeLane[] = [
+      {
+        key: "jouable" as const,
+        items: filteredFeaturedRaces.filter((item) => item.status === "jouable"),
+      },
+      {
+        key: "surveillance" as const,
+        items: filteredFeaturedRaces.filter((item) => item.status === "surveillance"),
+      },
+      {
+        key: "passer" as const,
+        items: filteredFeaturedRaces.filter((item) => item.status === "passer"),
+      },
+    ].filter((lane) => lane.items.length > 0);
+
+    if (activeLanes.length > 0) {
+      return activeLanes;
+    }
+
+    const results = filteredFeaturedRaces.filter((item) => item.status === "resultat");
+    return results.length > 0 ? [{ key: "resultat", items: results }] : [];
+  }, [filteredFeaturedRaces]);
+
+  const focusRace = useMemo(
+    () => lanes[0]?.items[0] ?? getRadarRace(filteredFeaturedRaces),
+    [filteredFeaturedRaces, lanes]
+  );
+
   useEffect(() => {
     if (!focusRace) {
       setFocusDetail(null);
@@ -1325,30 +1354,6 @@ function PageContent() {
       active,
     };
   }, [featuredRaces, races]);
-
-  const lanes = useMemo<HomeLane[]>(() => {
-    const activeLanes: HomeLane[] = [
-      {
-        key: "jouable" as const,
-        items: filteredFeaturedRaces.filter((item) => item.status === "jouable"),
-      },
-      {
-        key: "surveillance" as const,
-        items: filteredFeaturedRaces.filter((item) => item.status === "surveillance"),
-      },
-      {
-        key: "passer" as const,
-        items: filteredFeaturedRaces.filter((item) => item.status === "passer"),
-      },
-    ].filter((lane) => lane.items.length > 0);
-
-    if (activeLanes.length > 0) {
-      return activeLanes;
-    }
-
-    const results = filteredFeaturedRaces.filter((item) => item.status === "resultat");
-    return results.length > 0 ? [{ key: "resultat", items: results }] : [];
-  }, [filteredFeaturedRaces]);
 
   return (
     <div className="turf-home-page mx-auto flex w-full max-w-[96rem] flex-col gap-6 lg:gap-8">
