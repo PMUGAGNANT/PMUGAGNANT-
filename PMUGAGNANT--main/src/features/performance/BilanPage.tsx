@@ -58,6 +58,16 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
+function formatShortDate(value: string | null) {
+  if (!value) return "--";
+  const date = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "short",
+  }).format(date);
+}
+
 function segmentLabel(segment: PerformanceSegmentFilter) {
   if (segment === "ALL") return "Tous segments";
   return segment.replaceAll("_", " ");
@@ -254,6 +264,29 @@ function BilanPageContent() {
               onChange={(value) => updateFilters({ betType: value })}
             />
           </div>
+
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="app-card-muted px-4 py-3">
+              <p className="app-label">Fenetre analysee</p>
+              <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">
+                {data
+                  ? `${formatShortDate(data.range.startIso)} - ${formatShortDate(data.range.endIso)}`
+                  : "--"}
+              </p>
+            </div>
+            <div className="app-card-muted px-4 py-3">
+              <p className="app-label">Dernier ticket settle</p>
+              <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">
+                {data ? formatShortDate(data.range.lastSettledDate) : "--"}
+              </p>
+            </div>
+            <div className="app-card-muted px-4 py-3">
+              <p className="app-label">Calibration</p>
+              <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">
+                {data ? `${data.risk.calibrationSampleSize} lignes` : "--"}
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -273,12 +306,13 @@ function BilanPageContent() {
         </section>
       ) : data && kpis ? (
         <>
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
             <KpiCard label="ROI global" value={formatPercent(kpis.globalRoi)} tone={roiTone} />
             <KpiCard label="Paris valides" value={String(kpis.validatedBets)} />
             <KpiCard label="Reussite gagnant" value={formatRate(kpis.winRate)} tone="good" />
             <KpiCard label="Reussite place" value={formatRate(kpis.placeRate)} tone="warn" />
             <KpiCard label="Gain net" value={formatCurrency(kpis.netGain)} tone={gainTone} />
+            <KpiCard label="Rendement" value={formatRate(kpis.paybackRate)} tone={kpis.paybackRate >= 100 ? "good" : "bad"} />
           </section>
 
           <section className="grid gap-5 xl:grid-cols-[1.05fr,0.95fr]">
@@ -319,6 +353,33 @@ function BilanPageContent() {
               ) : (
                 <EmptyState text="Pas encore de tickets settles pour cette fenetre." />
               )}
+
+              <div className="mt-5 grid gap-3 md:grid-cols-4">
+                <div className="app-card-muted px-4 py-3">
+                  <p className="app-label">Profit cumule</p>
+                  <p className="mt-1 text-lg font-black text-[var(--pmu-text)]">
+                    {formatCurrency(kpis.netGain)}
+                  </p>
+                </div>
+                <div className="app-card-muted px-4 py-3">
+                  <p className="app-label">Drawdown max</p>
+                  <p className="mt-1 text-lg font-black text-[var(--pmu-red)]">
+                    {formatCurrency(data.risk.maxDrawdown)}
+                  </p>
+                </div>
+                <div className="app-card-muted px-4 py-3">
+                  <p className="app-label">Meilleur jour</p>
+                  <p className="mt-1 text-lg font-black text-[var(--pmu-primary)]">
+                    {formatCurrency(data.risk.bestDayProfit)}
+                  </p>
+                </div>
+                <div className="app-card-muted px-4 py-3">
+                  <p className="app-label">Pire jour</p>
+                  <p className="mt-1 text-lg font-black text-[var(--pmu-red)]">
+                    {formatCurrency(data.risk.worstDayProfit)}
+                  </p>
+                </div>
+              </div>
             </section>
 
             <section className="app-card p-5 md:p-6">
@@ -352,6 +413,27 @@ function BilanPageContent() {
               ) : (
                 <EmptyState text="Pas assez d'historique pour calibrer cette vue." />
               )}
+
+              <div className="mt-5 grid gap-3 md:grid-cols-3">
+                <div className="app-card-muted px-4 py-3">
+                  <p className="app-label">Erreur calibration</p>
+                  <p className="mt-1 text-lg font-black text-[var(--pmu-text)]">
+                    {formatRate(data.risk.calibrationError)}
+                  </p>
+                </div>
+                <div className="app-card-muted px-4 py-3">
+                  <p className="app-label">Paris en attente</p>
+                  <p className="mt-1 text-lg font-black text-[var(--pmu-text)]">
+                    {data.risk.pendingBets}
+                  </p>
+                </div>
+                <div className="app-card-muted px-4 py-3">
+                  <p className="app-label">Mise moyenne</p>
+                  <p className="mt-1 text-lg font-black text-[var(--pmu-text)]">
+                    {formatCurrency(data.risk.averageStake)}
+                  </p>
+                </div>
+              </div>
             </section>
           </section>
 
@@ -363,15 +445,19 @@ function BilanPageContent() {
               </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[46rem] text-left text-sm">
+              <table className="w-full min-w-[64rem] text-left text-sm">
                 <thead className="border-y border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] text-[var(--pmu-text-muted)]">
                   <tr>
                     <th className="px-5 py-3">Segment</th>
                     <th className="px-5 py-3">Paris</th>
+                    <th className="px-5 py-3">G/P</th>
                     <th className="px-5 py-3">ROI</th>
                     <th className="px-5 py-3">Taux win</th>
+                    <th className="px-5 py-3">Taux place</th>
+                    <th className="px-5 py-3">Conf.</th>
+                    <th className="px-5 py-3">Cote moy.</th>
                     <th className="px-5 py-3">Mise</th>
-                    <th className="px-5 py-3">Gains</th>
+                    <th className="px-5 py-3">Net</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -381,12 +467,22 @@ function BilanPageContent() {
                         {row.segment.replaceAll("_", " ")}
                       </td>
                       <td className="px-5 py-4 text-[var(--pmu-text-soft)]">{row.bets}</td>
+                      <td className="px-5 py-4 text-[var(--pmu-text-soft)]">
+                        {row.wins}/{row.places}
+                      </td>
                       <td className="px-5 py-4 font-black" style={{ color: row.roi >= 0 ? "var(--pmu-primary)" : "var(--pmu-red)" }}>
                         {formatPercent(row.roi)}
                       </td>
                       <td className="px-5 py-4 text-[var(--pmu-text-soft)]">{formatRate(row.winRate)}</td>
+                      <td className="px-5 py-4 text-[var(--pmu-text-soft)]">{formatRate(row.placeRate)}</td>
+                      <td className="px-5 py-4 text-[var(--pmu-text-soft)]">{row.averageConfidence.toFixed(1)}</td>
+                      <td className="px-5 py-4 text-[var(--pmu-text-soft)]">
+                        {row.averageOdds === null ? "--" : row.averageOdds.toFixed(1)}
+                      </td>
                       <td className="px-5 py-4 text-[var(--pmu-text-soft)]">{formatCurrency(row.stake)}</td>
-                      <td className="px-5 py-4 text-[var(--pmu-text-soft)]">{formatCurrency(row.gain)}</td>
+                      <td className="px-5 py-4 font-black" style={{ color: row.netGain >= 0 ? "var(--pmu-primary)" : "var(--pmu-red)" }}>
+                        {formatCurrency(row.netGain)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

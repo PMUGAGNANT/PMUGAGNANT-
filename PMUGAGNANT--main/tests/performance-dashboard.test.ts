@@ -85,8 +85,13 @@ test("buildPerformanceDashboard calcule les KPI ROI et gain net", () => {
   assert.equal(dashboard.kpis.totalGain, 40);
   assert.equal(dashboard.kpis.netGain, 20);
   assert.equal(dashboard.kpis.globalRoi, 100);
+  assert.equal(dashboard.kpis.paybackRate, 200);
   assert.equal(dashboard.kpis.winRate, 50);
   assert.equal(dashboard.kpis.placeRate, 50);
+  assert.equal(dashboard.risk.bestDayProfit, 20);
+  assert.equal(dashboard.risk.worstDayProfit, 20);
+  assert.equal(dashboard.risk.calibrationSampleSize, 2);
+  assert.equal(dashboard.timeline[0]?.betCount, 2);
 });
 
 test("buildPerformanceDashboard filtre segment et type de pari", () => {
@@ -118,5 +123,7 @@ test("buildPerformanceDashboard filtre segment et type de pari", () => {
   assert.equal(dashboard.kpis.validatedBets, 1);
   assert.equal(dashboard.kpis.totalGain, 18);
   assert.equal(dashboard.segments.find((row) => row.segment === "PLAT_SPRINT")?.bets, 1);
+  assert.equal(dashboard.segments.find((row) => row.segment === "PLAT_SPRINT")?.places, 1);
+  assert.equal(dashboard.segments.find((row) => row.segment === "PLAT_SPRINT")?.netGain, 8);
   assert.equal(dashboard.segments.find((row) => row.segment === "TROT_ATTELE")?.bets, 0);
 });

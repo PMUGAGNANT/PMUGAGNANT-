@@ -288,7 +288,7 @@ export async function GET(request: Request) {
           period,
           segment,
           betType,
-        }),
+        }, new Date().toISOString(), { startIso, endIso }),
       });
     } catch (error) {
       return serverError("Echec du chargement du cockpit performance.", error, {
