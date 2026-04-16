@@ -1,0 +1,144 @@
+import type { AlgoParameters, SegmentKey } from "@/lib/types";
+import { getSupabaseAdminClient } from "@/lib/supabase";
+
+export const DEFAULT_ALGO_PARAMETERS: AlgoParameters = {
+  validation: {
+    confianceMin: 6,
+    qualiteMin: 70,
+    lisibilitesAcceptees: ["LISIBLE", "COMPLEXE"],
+  },
+  lisibilite: {
+    coefficients: {
+      LISIBLE: 1,
+      COMPLEXE: 0.6,
+      LOTERIE: 0,
+    },
+    valueCoefficients: {
+      LISIBLE: 1,
+      COMPLEXE: 0.5,
+      LOTERIE: 0,
+    },
+    thresholds: {
+      readableMin: 66,
+      complexMin: 38,
+    },
+  },
+  value: {
+    maxCap: 5,
+    confidenceMin: 6,
+  },
+  outsiders: {
+    coteMin: 8,
+    variationMinPct: -15,
+    miseReductionFactor: 0.5,
+    maxPerReunion: 1,
+  },
+  preRace: {
+    strongDropPct: -20,
+    negativeRisePct: 30,
+    strongBonus: 1,
+    riseMalus: 1.5,
+    retractDecisionBelowConfidence: 6,
+  },
+  fautifs: {
+    warningRate: 0.3,
+    rejectRate: 0.5,
+    warningMalus: 1.5,
+  },
+  probabilityCalibration: {
+    bins: [
+      { min: 0, max: 0.1, multiplier: 1 },
+      { min: 0.1, max: 0.2, multiplier: 1 },
+      { min: 0.2, max: 0.3, multiplier: 1 },
+      { min: 0.3, max: 0.4, multiplier: 1 },
+      { min: 0.4, max: 0.5, multiplier: 1 },
+      { min: 0.5, max: 1, multiplier: 1 },
+    ],
+  },
+};
+
+type JsonRecord = Record<string, unknown>;
+
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function deepMerge<T extends JsonRecord>(base: T, override: JsonRecord): T {
+  const next: JsonRecord = { ...base };
+
+  for (const [key, value] of Object.entries(override)) {
+    const current = next[key];
+    if (isJsonRecord(current) && isJsonRecord(value)) {
+      next[key] = deepMerge(current, value);
+    } else {
+      next[key] = value;
+    }
+  }
+
+  return next as T;
+}
+
+function collectActiveSegmentCalibrationOverrides(
+  rows: Array<{ segment_key?: string | null; calibration_payload?: unknown }>
+) {
+  return rows.reduce<JsonRecord>((acc, row) => {
+    const segmentKey = row.segment_key as SegmentKey | undefined;
+    if (!segmentKey || !isJsonRecord(row.calibration_payload)) {
+      return acc;
+    }
+
+    acc[segmentKey] = row.calibration_payload;
+    return acc;
+  }, {});
+}
+
+export async function loadAlgoParameters(): Promise<AlgoParameters> {
+  const admin = getSupabaseAdminClient();
+  if (!admin) {
+    return DEFAULT_ALGO_PARAMETERS;
+  }
+
+  const [{ data }, { data: segmentRows, error: segmentError }] =
+    await Promise.all([
+      admin.from("parametres").select("key, value_json"),
+      admin
+        .from("segment_calibrations")
+        .select("segment_key, calibration_payload")
+        .eq("stage", "MATIN")
+        .eq("is_active", true),
+    ]);
+
+  const overrides = (data ?? []).reduce<JsonRecord>((acc, row) => {
+    if (row.key && row.value_json) {
+      acc[row.key] = row.value_json;
+    }
+    return acc;
+  }, {});
+
+  const segmentCalibrationOverrides =
+    !segmentError && Array.isArray(segmentRows)
+      ? collectActiveSegmentCalibrationOverrides(segmentRows)
+      : {};
+
+  const baseProbabilityCalibration = isJsonRecord(overrides.probabilityCalibration)
+    ? overrides.probabilityCalibration
+    : {};
+
+  const nestedOverride: JsonRecord = {
+    validation: overrides.validation ?? {},
+    lisibilite: overrides.lisibilite ?? {},
+    value: overrides.value ?? {},
+    outsiders: overrides.outsiders ?? {},
+    preRace: overrides.preRace ?? {},
+    fautifs: overrides.fautifs ?? {},
+    probabilityCalibration: {
+      ...baseProbabilityCalibration,
+      segments: segmentCalibrationOverrides,
+    },
+  };
+
+  return deepMerge(
+    DEFAULT_ALGO_PARAMETERS as unknown as JsonRecord,
+    nestedOverride
+  ) as unknown as AlgoParameters;
+}

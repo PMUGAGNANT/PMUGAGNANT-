@@ -1,0 +1,3 @@
+Ce dossier (src/core, src/services, src/use-cases, etc.) est du code Node/JS historique.
+L’application Next.js (App Router) s’appuie sur src/lib/ (predictions.ts, pmu-api.ts, …).
+Ne pas dupliquer la logique métier ici sans synchronisation avec src/lib.

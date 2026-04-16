@@ -1,0 +1,17 @@
+{
+  "name": "PMU Gagnant",
+  "short_name": "PMU AI",
+  "description": "Pronostics IA courses hippiques",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#060606",
+  "theme_color": "#00FF88",
+  "icons": [
+    {
+      "src": "/logo-turfedge.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

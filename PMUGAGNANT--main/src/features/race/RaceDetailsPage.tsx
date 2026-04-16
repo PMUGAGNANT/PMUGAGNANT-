@@ -1,0 +1,371 @@
+"use client";
+
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import Link from "next/link";
+import { useParams, useSearchParams } from "next/navigation";
+
+import { AvisExpert } from "@/components/AvisExpert";
+import { CourseRoles } from "@/components/CourseRoles";
+import { LiveCotesChart } from "@/components/LiveCotesChart";
+import { CourseDetailSkeleton } from "@/features/race/components/CourseDetailSkeleton";
+import { CoursePronostic } from "@/features/race/components/CoursePronostic";
+import {
+  AnalysisPendingCard,
+  LockedTicketCard,
+  OfficialArrivalCard,
+} from "@/features/race/components/RaceDetailCards";
+import {
+  ParticipantsTable,
+  type ArrivalRow,
+} from "@/features/race/components/ParticipantsTable";
+import { RaceHeroSection } from "@/features/race/components/RaceHeroSection";
+import {
+  normalizeOfficialArrival,
+  normalizeParticipants,
+  normalizePronostic,
+  normalizeRoles,
+  type PronosticCardData,
+  type RaceApiResponse,
+} from "@/features/race/lib/race-page-model";
+import { fetchRaceDetails } from "@/features/races/api/client";
+
+function SectionKicker({ children }: { children: ReactNode }) {
+  return (
+    <p
+      style={{
+        fontSize: "0.65rem",
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: "0.1em",
+        color: "var(--pmu-primary)",
+        marginBottom: "0.6rem",
+        display: "block",
+      }}
+    >
+      {children}
+    </p>
+  );
+}
+
+function TicketResultBanner({
+  pronostic,
+  officialArrival,
+}: {
+  pronostic: PronosticCardData;
+  officialArrival: ArrivalRow[];
+}) {
+  const pickNum = pronostic.favoris?.[0] ?? pronostic.top5?.[0] ?? null;
+
+  if (pickNum === null) {
+    return null;
+  }
+
+  const arrival = officialArrival.find(
+    (row) => String(row.numPmu) === String(pickNum)
+  );
+  const position = arrival?.position ?? null;
+  const isWinner = position === 1;
+  const isPlaced = position !== null && position <= 3;
+  const tone = isWinner
+    ? {
+        background: "#EAF3DE",
+        border: "#C0DD97",
+        color: "#2A4D12",
+        icon: "✓",
+        title: "Ticket gagnant",
+      }
+    : isPlaced
+      ? {
+          background: "#F4EDD8",
+          border: "rgba(140,109,47,0.3)",
+          color: "#8C6D2F",
+          icon: "•",
+        title: "Cheval placé",
+        }
+      : {
+          background: "#FFF1EE",
+          border: "rgba(184,80,48,0.2)",
+          color: "#B85030",
+          icon: "×",
+          title: "Ticket perdant",
+        };
+
+  return (
+    <div
+      style={{
+        background: tone.background,
+        border: `1px solid ${tone.border}`,
+        borderRadius: "8px",
+        padding: "0.85rem 1rem",
+        display: "flex",
+        alignItems: "center",
+        gap: "0.75rem",
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          flexShrink: 0,
+          color: tone.color,
+          fontSize: "1.3rem",
+          fontWeight: 800,
+        }}
+      >
+        {tone.icon}
+      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ color: tone.color, fontSize: "0.88rem", fontWeight: 700 }}>
+          {tone.title} - N°{pickNum} {arrival?.nom ?? ""}
+        </p>
+        <p
+          style={{
+            color: "var(--pmu-text-muted)",
+            fontSize: "0.72rem",
+            marginTop: "0.15rem",
+          }}
+        >
+          {pronostic.betType || "Simple gagnant"} · Mise{" "}
+          {pronostic.miseConseil ?? 0} EUR
+          {position ? ` · Arrivée ${position === 1 ? "1er" : `${position}e`}` : ""}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function CourseLoadError({
+  error,
+  onRetry,
+}: {
+  error: string;
+  onRetry: () => void;
+}) {
+  return (
+    <section className="app-card p-6 md:p-7">
+      <p className="app-kicker">Fiche course</p>
+      <h1 className="mt-2 text-3xl font-black text-[var(--pmu-text)]">
+        Impossible de charger cette course
+      </h1>
+      <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">{error}</p>
+      <button type="button" className="app-button-primary mt-5" onClick={onRetry}>
+        Réessayer
+      </button>
+    </section>
+  );
+}
+
+function CourseNotFoundState() {
+  return (
+    <section className="app-card p-6 md:p-7">
+      <p className="app-kicker">Fiche course</p>
+      <h1 className="mt-2 text-3xl font-black text-[var(--pmu-text)]">
+        Course introuvable
+      </h1>
+      <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">
+        Le programme n&apos;a pas renvoyé de contexte exploitable pour cette course.
+      </p>
+    </section>
+  );
+}
+
+function RaceDetailsContent({
+  data,
+  selectedDate,
+}: {
+  data: RaceApiResponse;
+  selectedDate: string | null;
+}) {
+  const courseInfo = data.courseInfo ?? null;
+  const participants = useMemo(() => normalizeParticipants(data), [data]);
+  const officialArrival = useMemo(() => normalizeOfficialArrival(data), [data]);
+  const pronostic = useMemo(() => normalizePronostic(data), [data]);
+  const roles = useMemo(() => normalizeRoles(data), [data]);
+  const pepiteRole = roles.find((role) => role.role === "PEPITE") ?? null;
+
+  if (!courseInfo) {
+    return <CourseNotFoundState />;
+  }
+
+  const isFinished = Boolean(data.isFinished || officialArrival.length > 0);
+  const paywallRequired = data.paywall?.required === true;
+  const roleLisibilite = data.analysis?.prediction?.lisibilite ?? "COMPLEXE";
+
+  return (
+    <>
+      <RaceHeroSection
+        courseInfo={courseInfo}
+        selectedDate={selectedDate}
+        minutesUntilStart={data.minutesUntilStart}
+        paywallRequired={paywallRequired}
+        isFinished={isFinished}
+        refreshPriority={data.refreshPriority ?? null}
+        meteo={data.meteo ?? null}
+        lisibilite={roleLisibilite}
+      />
+
+      <div className="space-y-6">
+        {isFinished && pronostic && officialArrival.length > 0 ? (
+          <section>
+            <SectionKicker>Résultat du ticket</SectionKicker>
+            <TicketResultBanner
+              pronostic={pronostic}
+              officialArrival={officialArrival}
+            />
+          </section>
+        ) : null}
+
+        {isFinished && officialArrival.length > 0 ? (
+          <section>
+            <SectionKicker>Arrivée officielle</SectionKicker>
+            <OfficialArrivalCard arrivee={officialArrival} />
+          </section>
+        ) : null}
+
+        <section>
+          <SectionKicker>Ticket algo</SectionKicker>
+          {paywallRequired ? (
+            <LockedTicketCard
+              previewLabel={data.paywall?.preview?.favori?.nom ?? null}
+              previewLisibilite={data.paywall?.preview?.lisibilite ?? null}
+              previewRecommendation={data.paywall?.preview?.recommendation ?? null}
+            />
+          ) : pronostic ? (
+            <CoursePronostic pronostic={pronostic} participants={participants} />
+          ) : (
+            <AnalysisPendingCard />
+          )}
+        </section>
+
+        {roles.length > 0 ? (
+          <section>
+            <SectionKicker>4 rôles clés</SectionKicker>
+            <CourseRoles
+              roles={roles}
+              lisibilite={roleLisibilite}
+              course={courseInfo}
+              officialArrival={isFinished ? officialArrival : []}
+            />
+          </section>
+        ) : null}
+
+        {!isFinished ? (
+          <section>
+            <SectionKicker>Avis expert - top 5</SectionKicker>
+            <AvisExpert
+              predictions={data.avisExpert ?? []}
+              isPremium={!paywallRequired}
+            />
+          </section>
+        ) : null}
+
+        {(data.liveCotes ?? []).length > 0 ? (
+          <section>
+            <SectionKicker>Évolution des cotes</SectionKicker>
+            <LiveCotesChart
+              series={data.liveCotes ?? []}
+              pepiteNum={pepiteRole?.cheval_num ?? null}
+            />
+          </section>
+        ) : null}
+
+        <section>
+          <SectionKicker>Tableau des partants</SectionKicker>
+          <ParticipantsTable
+            participants={participants}
+            favoriNum={pronostic?.favoris?.[0] ?? null}
+            pepiteNum={data.analysis?.pepiteDuJour?.numPmu ?? null}
+            estPlat={courseInfo.discipline?.toUpperCase() === "PLAT"}
+            courseFinished={isFinished}
+            officialArrival={officialArrival}
+          />
+        </section>
+      </div>
+    </>
+  );
+}
+
+export default function RaceDetailsPage() {
+  const params = useParams<{ reunion: string; course: string }>();
+  const searchParams = useSearchParams();
+
+  const [data, setData] = useState<RaceApiResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [fetchRevision, setFetchRevision] = useState(0);
+
+  const reunion = params?.reunion ?? "";
+  const course = params?.course ?? "";
+  const selectedDate = searchParams.get("date");
+  const backHref = selectedDate ? `/?date=${selectedDate}` : "/";
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRace() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const payload = await fetchRaceDetails<RaceApiResponse>(reunion, course, {
+          date: selectedDate,
+        });
+
+        if (!cancelled) {
+          setData(payload);
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Impossible de charger cette course"
+          );
+          setData(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    if (reunion && course) {
+      void loadRace();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [course, fetchRevision, reunion, selectedDate]);
+
+  const paywallRequired = data?.paywall?.required === true;
+
+  return (
+    <main className="mx-auto flex w-full max-w-[60rem] flex-col gap-6 px-4 py-5 md:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link href={backHref} className="app-button-secondary inline-flex">
+          Retour aux courses
+        </Link>
+
+        {paywallRequired ? (
+          <Link href="/premium" className="app-button-primary inline-flex">
+            Débloquer le ticket
+          </Link>
+        ) : null}
+      </div>
+
+      {loading ? (
+        <CourseDetailSkeleton />
+      ) : error ? (
+        <CourseLoadError
+          error={error}
+          onRetry={() => setFetchRevision((revision) => revision + 1)}
+        />
+      ) : data ? (
+        <RaceDetailsContent data={data} selectedDate={selectedDate} />
+      ) : (
+        <CourseNotFoundState />
+      )}
+    </main>
+  );
+}
