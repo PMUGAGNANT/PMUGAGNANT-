@@ -4,7 +4,6 @@ import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ReferralInput } from "@/components/ui/ReferralInput";
-import { ThemeToggle } from "@/features/layout/components/ThemeToggle";
 import { applyReferralCode } from "@/lib/referral-client";
 import { normalizeReferralCode } from "@/lib/referral";
 import {
@@ -150,11 +149,10 @@ function LoginPageContent() {
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="hidden rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_88%,transparent)] px-4 py-2 text-sm font-black tracking-[-0.03em] text-[var(--pmu-text)] sm:inline-flex"
+              className="hidden rounded-lg border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_88%,transparent)] px-4 py-2 text-sm font-black text-[var(--pmu-text)] shadow-[var(--pmu-shadow-sm)] sm:inline-flex"
             >
               PMU Gagnant
             </Link>
-            <ThemeToggle compact className="!w-auto !px-3" />
           </div>
         </header>
 

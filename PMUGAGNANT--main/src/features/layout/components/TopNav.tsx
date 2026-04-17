@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -19,12 +20,13 @@ export function TopNav() {
     <header className="turf-topbar">
       <div className="turf-topbar__inner">
         <Link href="/" className="turf-brand" aria-label="PMU Gagnant">
-          <img
+          <Image
             src="/logo-turfedge.png"
             alt="TurfEdge"
             width={56}
             height={56}
-            style={{ borderRadius: "8px" }}
+            className="turf-brand__logo"
+            priority
           />
           <span className="min-w-0">
             <span className="turf-brand__name">
@@ -59,7 +61,7 @@ export function TopNav() {
 
         <div className="turf-topbar__actions">
           <Link href="/premium" className="turf-premium-link">
-            Premium
+            Passer premium
           </Link>
         </div>
       </div>

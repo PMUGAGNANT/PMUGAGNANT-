@@ -76,10 +76,10 @@ const FAQ_ITEMS = [
 function CheckIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <circle cx="8" cy="8" r="8" fill="#2A4D12" />
+      <circle cx="8" cy="8" r="8" fill="var(--pmu-primary)" />
       <path
         d="M5 8l2 2 4-4"
-        stroke="#FDFCF9"
+        stroke="var(--pmu-on-primary)"
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth="1.8"
@@ -91,8 +91,8 @@ function CheckIcon() {
 function CrossIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <circle cx="8" cy="8" r="8" fill="#F5F2EB" />
-      <path d="M10 6L6 10M6 6l4 4" stroke="#9C9485" strokeLinecap="round" strokeWidth="1.5" />
+      <circle cx="8" cy="8" r="8" fill="var(--pmu-surface-2)" />
+      <path d="M10 6L6 10M6 6l4 4" stroke="var(--pmu-text-muted)" strokeLinecap="round" strokeWidth="1.5" />
     </svg>
   );
 }
@@ -104,50 +104,14 @@ export default function PremiumPage() {
 
   return (
     <div style={{ margin: "0 auto", maxWidth: "860px", padding: "0 1rem 4rem" }}>
-      <section
-        style={{
-          background: "#2A4D12",
-          borderRadius: "8px",
-          color: "#FDFCF9",
-          marginBottom: "1.5rem",
-          padding: "3rem 2.5rem",
-          textAlign: "center",
-        }}
-      >
-        <p
-          style={{
-            fontSize: "0.68rem",
-            fontWeight: 700,
-            letterSpacing: "0.14em",
-            marginBottom: "1rem",
-            opacity: 0.7,
-            textTransform: "uppercase",
-          }}
-        >
+      <section className="app-page-hero mb-6 p-6 text-center md:p-10">
+        <p className="app-kicker mb-4">
           TurfEdge Premium · {priceLabel}
         </p>
-        <h1
-          style={{
-            color: "#FDFCF9",
-            fontFamily: "var(--font-display), Georgia, serif",
-            fontSize: "clamp(2rem, 5vw, 3.2rem)",
-            fontStyle: "italic",
-            fontWeight: 700,
-            lineHeight: 1.05,
-            marginBottom: "1.25rem",
-          }}
-        >
+        <h1 className="mx-auto mb-5 max-w-3xl text-[2.35rem] font-black leading-tight text-[var(--pmu-text)] md:text-[3.2rem]">
           L&apos;IA qui lit toutes les courses PMU à ta place. Chaque matin.
         </h1>
-        <p
-          style={{
-            fontSize: "1rem",
-            lineHeight: 1.65,
-            margin: "0 auto 2rem",
-            maxWidth: "540px",
-            opacity: 0.82,
-          }}
-        >
+        <p className="mx-auto mb-8 max-w-[34rem] text-base leading-7 text-[var(--pmu-text-soft)]">
           Score de confiance, cheval retenu, mise conseillée, alerte T-10. Tu ouvres TurfEdge,
           tu sais quoi faire.
         </p>
@@ -155,37 +119,18 @@ export default function PremiumPage() {
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", justifyContent: "center" }}>
           <Link
             href={premiumCheckoutHref}
-            style={{
-              background: "#FDFCF9",
-              border: "none",
-              borderRadius: "8px",
-              color: "#2A4D12",
-              display: "inline-block",
-              fontSize: "0.95rem",
-              fontWeight: 700,
-              padding: "0.9rem 2rem",
-              textDecoration: "none",
-            }}
+            className="app-button-primary"
           >
             Commencer · {priceLabel}
           </Link>
           <Link
             href="/bilan"
-            style={{
-              border: "1px solid rgba(253,252,249,0.3)",
-              borderRadius: "8px",
-              color: "#FDFCF9",
-              display: "inline-block",
-              fontSize: "0.95rem",
-              fontWeight: 500,
-              padding: "0.9rem 1.5rem",
-              textDecoration: "none",
-            }}
+            className="app-button-secondary"
           >
             Voir le bilan du moteur →
           </Link>
         </div>
-        <p style={{ fontSize: "0.72rem", marginTop: "1rem", opacity: 0.55 }}>
+        <p className="mt-4 text-xs text-[var(--pmu-text-muted)]">
           Paiement sécurisé via Stripe · Annulable à tout moment
         </p>
       </section>
@@ -206,7 +151,7 @@ export default function PremiumPage() {
           <div
             key={stat.label}
             style={{
-              background: "#FDFCF9",
+              background: "var(--pmu-surface)",
               border: "1px solid rgba(24,22,15,0.09)",
               borderRadius: "8px",
               padding: "1.25rem",
@@ -215,7 +160,7 @@ export default function PremiumPage() {
           >
             <p
               style={{
-                color: "#2A4D12",
+                color: "var(--pmu-primary)",
                 fontFamily: "var(--font-display), Georgia, serif",
                 fontSize: "1.8rem",
                 fontWeight: 700,
@@ -224,10 +169,10 @@ export default function PremiumPage() {
             >
               {stat.num}
             </p>
-            <p style={{ color: "#18160F", fontSize: "0.78rem", fontWeight: 600, marginTop: "0.4rem" }}>
+            <p style={{ color: "var(--pmu-text)", fontSize: "0.78rem", fontWeight: 600, marginTop: "0.4rem" }}>
               {stat.label}
             </p>
-            <p style={{ color: "#9C9485", fontSize: "0.68rem", marginTop: "0.2rem" }}>{stat.sub}</p>
+            <p style={{ color: "var(--pmu-text-muted)", fontSize: "0.68rem", marginTop: "0.2rem" }}>{stat.sub}</p>
           </div>
         ))}
       </section>
@@ -235,10 +180,10 @@ export default function PremiumPage() {
       <section style={{ marginBottom: "1.5rem" }}>
         <p
           style={{
-            color: "#2A4D12",
+            color: "var(--pmu-primary)",
             fontSize: "0.65rem",
             fontWeight: 700,
-            letterSpacing: "0.1em",
+            letterSpacing: 0,
             marginBottom: "0.75rem",
             textTransform: "uppercase",
           }}
@@ -256,7 +201,7 @@ export default function PremiumPage() {
             <div
               key={feature.title}
               style={{
-                background: "#FDFCF9",
+                background: "var(--pmu-surface)",
                 border: "1px solid rgba(24,22,15,0.09)",
                 borderRadius: "8px",
                 padding: "1.1rem 1.25rem",
@@ -267,7 +212,7 @@ export default function PremiumPage() {
               </div>
               <p
                 style={{
-                  color: "#18160F",
+                  color: "var(--pmu-text)",
                   fontFamily: "var(--font-display), Georgia, serif",
                   fontSize: "1rem",
                   fontWeight: 700,
@@ -276,7 +221,7 @@ export default function PremiumPage() {
               >
                 {feature.title}
               </p>
-              <p style={{ color: "#5A5444", fontSize: "0.78rem", lineHeight: 1.55 }}>{feature.text}</p>
+              <p style={{ color: "var(--pmu-text-soft)", fontSize: "0.78rem", lineHeight: 1.55 }}>{feature.text}</p>
             </div>
           ))}
         </div>
@@ -284,7 +229,7 @@ export default function PremiumPage() {
 
       <section
         style={{
-          background: "#FDFCF9",
+          background: "var(--pmu-surface)",
           border: "1px solid rgba(24,22,15,0.09)",
           borderRadius: "8px",
           marginBottom: "1.5rem",
@@ -293,13 +238,13 @@ export default function PremiumPage() {
       >
         <div
           style={{
-            background: "#2A4D12",
-            color: "#FDFCF9",
+            background: "var(--pmu-primary)",
+            color: "var(--pmu-on-primary)",
             display: "grid",
             fontSize: "0.65rem",
             fontWeight: 700,
             gridTemplateColumns: "1fr 100px 100px",
-            letterSpacing: "0.08em",
+            letterSpacing: 0,
             padding: "0.75rem 1.25rem",
             textTransform: "uppercase",
           }}
@@ -313,7 +258,7 @@ export default function PremiumPage() {
             key={row.feature}
             style={{
               alignItems: "center",
-              background: index % 2 === 0 ? "#FDFCF9" : "#F9F8F4",
+              background: index % 2 === 0 ? "var(--pmu-surface)" : "var(--pmu-surface-2)",
               borderBottom:
                 index < COMPARE_ROWS.length - 1 ? "1px solid rgba(24,22,15,0.06)" : "none",
               display: "grid",
@@ -321,14 +266,14 @@ export default function PremiumPage() {
               padding: "0.7rem 1.25rem",
             }}
           >
-            <span style={{ color: "#18160F", fontSize: "0.82rem", fontWeight: 500 }}>{row.feature}</span>
+            <span style={{ color: "var(--pmu-text)", fontSize: "0.82rem", fontWeight: 500 }}>{row.feature}</span>
             <div style={{ textAlign: "center" }}>
               {row.free === true ? (
                 <CheckIcon />
               ) : row.free === false ? (
                 <CrossIcon />
               ) : (
-                <span style={{ color: "#8C6D2F", fontSize: "0.68rem", fontWeight: 600 }}>{row.free}</span>
+                <span style={{ color: "var(--pmu-gold)", fontSize: "0.68rem", fontWeight: 600 }}>{row.free}</span>
               )}
             </div>
             <div style={{ textAlign: "center" }}>
@@ -340,7 +285,7 @@ export default function PremiumPage() {
 
       <section
         style={{
-          background: "#F4EDD8",
+          background: "var(--pmu-gold-light)",
           border: "1px solid rgba(140,109,47,0.25)",
           borderRadius: "8px",
           marginBottom: "1.5rem",
@@ -350,7 +295,7 @@ export default function PremiumPage() {
       >
         <p
           style={{
-            color: "#2A4D12",
+            color: "var(--pmu-primary)",
             fontFamily: "var(--font-display), Georgia, serif",
             fontSize: "1.5rem",
             fontStyle: "italic",
@@ -362,10 +307,10 @@ export default function PremiumPage() {
         </p>
         <p
           style={{
-            color: "#8C6D2F",
+            color: "var(--pmu-gold)",
             fontSize: "0.72rem",
             fontWeight: 600,
-            letterSpacing: "0.08em",
+            letterSpacing: 0,
             marginBottom: "1.5rem",
             textTransform: "uppercase",
           }}
@@ -375,10 +320,10 @@ export default function PremiumPage() {
         <Link
           href={premiumCheckoutHref}
           style={{
-            background: "#2A4D12",
+            background: "var(--pmu-primary)",
             border: "none",
             borderRadius: "8px",
-            color: "#FDFCF9",
+            color: "var(--pmu-on-primary)",
             display: "inline-block",
             fontSize: "0.95rem",
             fontWeight: 700,
@@ -388,7 +333,7 @@ export default function PremiumPage() {
         >
           Commencer maintenant · {priceLabel}
         </Link>
-        <p style={{ color: "#9C9485", fontSize: "0.72rem", marginTop: "0.75rem" }}>
+        <p style={{ color: "var(--pmu-text-muted)", fontSize: "0.72rem", marginTop: "0.75rem" }}>
           Annulable à tout moment · Paiement sécurisé Stripe
         </p>
       </section>
@@ -403,7 +348,7 @@ export default function PremiumPage() {
       >
         <div
           style={{
-            background: "#FDFCF9",
+            background: "var(--pmu-surface)",
             border: "1px solid rgba(24,22,15,0.09)",
             borderRadius: "8px",
             padding: "1.25rem",
@@ -411,10 +356,10 @@ export default function PremiumPage() {
         >
           <p
             style={{
-              color: "#2A4D12",
+              color: "var(--pmu-primary)",
               fontSize: "0.65rem",
               fontWeight: 700,
-              letterSpacing: "0.1em",
+              letterSpacing: 0,
               marginBottom: "0.75rem",
               textTransform: "uppercase",
             }}
@@ -437,13 +382,13 @@ export default function PremiumPage() {
               }}
             >
               <CheckIcon />
-              <span style={{ color: "#5A5444", fontSize: "0.78rem", lineHeight: 1.4 }}>{item}</span>
+              <span style={{ color: "var(--pmu-text-soft)", fontSize: "0.78rem", lineHeight: 1.4 }}>{item}</span>
             </div>
           ))}
         </div>
         <div
           style={{
-            background: "#FDFCF9",
+            background: "var(--pmu-surface)",
             border: "1px solid rgba(184,80,48,0.15)",
             borderRadius: "8px",
             padding: "1.25rem",
@@ -451,10 +396,10 @@ export default function PremiumPage() {
         >
           <p
             style={{
-              color: "#B85030",
+              color: "var(--pmu-red)",
               fontSize: "0.65rem",
               fontWeight: 700,
-              letterSpacing: "0.1em",
+              letterSpacing: 0,
               marginBottom: "0.75rem",
               textTransform: "uppercase",
             }}
@@ -476,7 +421,7 @@ export default function PremiumPage() {
               }}
             >
               <CrossIcon />
-              <span style={{ color: "#5A5444", fontSize: "0.78rem", lineHeight: 1.4 }}>{item}</span>
+              <span style={{ color: "var(--pmu-text-soft)", fontSize: "0.78rem", lineHeight: 1.4 }}>{item}</span>
             </div>
           ))}
         </div>
@@ -488,7 +433,7 @@ export default function PremiumPage() {
 
       <section
         style={{
-          background: "#FDFCF9",
+          background: "var(--pmu-surface)",
           border: "1px solid rgba(24,22,15,0.09)",
           borderRadius: "8px",
           marginBottom: "1.5rem",
@@ -497,10 +442,10 @@ export default function PremiumPage() {
       >
         <p
           style={{
-            color: "#2A4D12",
+            color: "var(--pmu-primary)",
             fontSize: "0.65rem",
             fontWeight: 700,
-            letterSpacing: "0.1em",
+            letterSpacing: 0,
             marginBottom: "1rem",
             textTransform: "uppercase",
           }}
@@ -515,69 +460,33 @@ export default function PremiumPage() {
           }}
         >
           {FAQ_ITEMS.map((item) => (
-            <div key={item.q} style={{ background: "#F5F2EB", borderRadius: "8px", padding: "1rem" }}>
-              <p style={{ color: "#18160F", fontSize: "0.88rem", fontWeight: 700, marginBottom: "0.5rem" }}>
+            <div key={item.q} style={{ background: "var(--pmu-surface-2)", borderRadius: "8px", padding: "1rem" }}>
+              <p style={{ color: "var(--pmu-text)", fontSize: "0.88rem", fontWeight: 700, marginBottom: "0.5rem" }}>
                 {item.q}
               </p>
-              <p style={{ color: "#5A5444", fontSize: "0.78rem", lineHeight: 1.55 }}>{item.a}</p>
+              <p style={{ color: "var(--pmu-text-soft)", fontSize: "0.78rem", lineHeight: 1.55 }}>{item.a}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <section
-        style={{
-          background: "#2A4D12",
-          borderRadius: "8px",
-          color: "#FDFCF9",
-          padding: "2.5rem",
-          textAlign: "center",
-        }}
-      >
-        <h2
-          style={{
-            color: "#FDFCF9",
-            fontFamily: "var(--font-display), Georgia, serif",
-            fontSize: "clamp(1.5rem, 3vw, 2.2rem)",
-            fontStyle: "italic",
-            fontWeight: 700,
-            marginBottom: "0.75rem",
-          }}
-        >
+      <section className="app-page-hero p-6 text-center md:p-10">
+        <h2 className="mb-3 text-[2rem] font-black leading-tight text-[var(--pmu-text)] md:text-[2.45rem]">
           Prêt à jouer avec un vrai cadre ?
         </h2>
-        <p style={{ fontSize: "0.9rem", marginBottom: "1.5rem", opacity: 0.8 }}>
+        <p className="mb-6 text-sm text-[var(--pmu-text-soft)]">
           {priceLabel} · Annulable à tout moment · Paiement sécurisé
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", justifyContent: "center" }}>
           <Link
             href={premiumCheckoutHref}
-            style={{
-              background: "#FDFCF9",
-              border: "none",
-              borderRadius: "8px",
-              color: "#2A4D12",
-              display: "inline-block",
-              fontSize: "0.95rem",
-              fontWeight: 700,
-              padding: "0.9rem 2.5rem",
-              textDecoration: "none",
-            }}
+            className="app-button-primary"
           >
             Commencer · {priceLabel}
           </Link>
           <Link
             href="/"
-            style={{
-              border: "1px solid rgba(253,252,249,0.3)",
-              borderRadius: "8px",
-              color: "#FDFCF9",
-              display: "inline-block",
-              fontSize: "0.95rem",
-              fontWeight: 500,
-              padding: "0.9rem 1.5rem",
-              textDecoration: "none",
-            }}
+            className="app-button-secondary"
           >
             Retour à l&apos;accueil
           </Link>

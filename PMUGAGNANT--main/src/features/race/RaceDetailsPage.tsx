@@ -30,21 +30,7 @@ import {
 import { fetchRaceDetails } from "@/features/races/api/client";
 
 function SectionKicker({ children }: { children: ReactNode }) {
-  return (
-    <p
-      style={{
-        fontSize: "0.65rem",
-        fontWeight: 700,
-        textTransform: "uppercase",
-        letterSpacing: "0.1em",
-        color: "var(--pmu-primary)",
-        marginBottom: "0.6rem",
-        display: "block",
-      }}
-    >
-      {children}
-    </p>
-  );
+  return <p className="app-kicker mb-3">{children}</p>;
 }
 
 function TicketResultBanner({
@@ -68,24 +54,24 @@ function TicketResultBanner({
   const isPlaced = position !== null && position <= 3;
   const tone = isWinner
     ? {
-        background: "#EAF3DE",
-        border: "#C0DD97",
-        color: "#2A4D12",
+        background: "var(--pmu-primary-soft)",
+        border: "color-mix(in srgb, var(--pmu-primary) 28%, transparent)",
+        color: "var(--pmu-primary)",
         icon: "✓",
         title: "Ticket gagnant",
       }
     : isPlaced
       ? {
-          background: "#F4EDD8",
-          border: "rgba(140,109,47,0.3)",
-          color: "#8C6D2F",
+          background: "var(--pmu-gold-light)",
+          border: "color-mix(in srgb, var(--pmu-gold) 30%, transparent)",
+          color: "var(--pmu-gold)",
           icon: "•",
-        title: "Cheval placé",
+          title: "Cheval placé",
         }
       : {
-          background: "#FFF1EE",
-          border: "rgba(184,80,48,0.2)",
-          color: "#B85030",
+          background: "color-mix(in srgb, var(--pmu-red) 9%, white)",
+          border: "color-mix(in srgb, var(--pmu-red) 20%, transparent)",
+          color: "var(--pmu-red)",
           icon: "×",
           title: "Ticket perdant",
         };
@@ -100,6 +86,7 @@ function TicketResultBanner({
         display: "flex",
         alignItems: "center",
         gap: "0.75rem",
+        boxShadow: "var(--pmu-shadow-sm)",
       }}
     >
       <span

@@ -8,6 +8,7 @@ import {
   formatMinutesLabel,
   formatOddsLabel,
   formatRelativeDay,
+  formatStake,
   getBetTypeLabel,
   getParticipantNum,
   type FeaturedRace,
@@ -90,6 +91,15 @@ export function PriorityTickets({
     focusRace.score?.pick?.confidence ??
     selectedParticipant?.prediction?.confiance ??
     null;
+  const focusStakeValue = focusConfidence
+    ? Math.max(6, Math.round(focusConfidence * 2.5))
+    : 8;
+  const focusStake = formatStake(focusStakeValue);
+  const focusOdds = focusRace.score?.pick?.cote ?? selectedParticipant?.cote ?? null;
+  const focusGrossReturn =
+    typeof focusOdds === "number" && Number.isFinite(focusOdds)
+      ? focusStakeValue * focusOdds
+      : null;
   const roleCandidate =
     focusDetail?.roles?.find(
       (role) => role.role === "PEPITE" || role.role === "OUTSIDER"
@@ -165,28 +175,47 @@ export function PriorityTickets({
       </div>
 
       <div className="mt-6 grid gap-4 xl:grid-cols-[1.1fr,0.9fr]">
-        <section className="rounded-[1.35rem] border border-[color-mix(in_srgb,var(--pmu-primary)_16%,transparent)] bg-[var(--pmu-primary-fade)] p-5">
+        <section className="rounded-lg border border-[color-mix(in_srgb,var(--pmu-primary)_16%,transparent)] bg-[var(--pmu-primary-fade)] p-5">
           <div className="grid gap-3 md:grid-cols-4">
             <div className="app-card-muted px-4 py-3.5">
-              <p className="app-label">Radar</p>
-              <p className="mt-1 text-3xl font-black text-[var(--pmu-primary)] md:text-4xl">
-                {focusRace.scoreValue.toFixed(1)}/10
+              <p className="app-label">Pronostic</p>
+              <p className="mt-1 text-base font-black text-[var(--pmu-text)]">
+                {focusPickTitle}
               </p>
             </div>
             <div className="app-card-muted px-4 py-3.5">
-              <p className="app-label">Fenetre</p>
-              <p className="mt-1 text-base font-black text-[var(--pmu-text)]">{focusMinutes}</p>
-            </div>
-            <div className="app-card-muted px-4 py-3.5">
-              <p className="app-label">Ticket</p>
-              <p className="mt-1 text-base font-black text-[var(--pmu-text)]">{focusPickTitle}</p>
-            </div>
-            <div className="app-card-muted px-4 py-3.5">
               <p className="app-label">Confiance</p>
-              <p className="mt-1 text-base font-black text-[var(--pmu-text)]">
+              <p className="mt-1 text-3xl font-black text-[var(--pmu-primary)] md:text-4xl">
                 {focusConfidence != null && Number.isFinite(focusConfidence)
                   ? `${focusConfidence.toFixed(1)}/10`
-                  : "Lecture active"}
+                  : `${focusRace.scoreValue.toFixed(1)}/10`}
+              </p>
+              <div className="confidence-meter mt-2" aria-hidden>
+                <span
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      Math.max(0, (focusConfidence ?? focusRace.scoreValue) * 10)
+                    )}%`,
+                  }}
+                />
+              </div>
+            </div>
+            <div className="stake-chip px-4 py-3.5">
+              <p className="app-label text-[var(--pmu-gold)]">Mise conseillée</p>
+              <p className="mt-1 text-3xl font-black text-[var(--pmu-text)] md:text-4xl">
+                {focusStake}
+              </p>
+              <p className="mt-1 text-[11px] font-semibold text-[var(--pmu-text-soft)]">
+                {focusGrossReturn
+                  ? `${focusStake} × cote ${formatOddsLabel(focusOdds)} = ${formatStake(focusGrossReturn)} brut`
+                  : "Calcul affiché dès cote disponible"}
+              </p>
+            </div>
+            <div className="app-card-muted px-4 py-3.5">
+              <p className="app-label">Résultat</p>
+              <p className="mt-1 text-base font-black text-[var(--pmu-text)]">
+                {focusRace.status === "resultat" ? "À vérifier" : focusMinutes}
               </p>
             </div>
           </div>
@@ -243,7 +272,7 @@ export function PriorityTickets({
           </div>
         </section>
 
-        <section className="rounded-[1.35rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] p-5">
+        <section className="rounded-lg border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="app-label">Ticket principal</p>
@@ -263,13 +292,13 @@ export function PriorityTickets({
               </p>
             </div>
             <div className="app-card-muted px-4 py-3.5">
-              <p className="app-label">Actives</p>
-              <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">{stats.active} courses</p>
+              <p className="app-label">Mise</p>
+              <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">{focusStake}</p>
             </div>
             <div className="app-card-muted px-4 py-3.5">
               <p className="app-label">Rythme</p>
               <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">
-                {focusPriority?.detail ?? "Suivi courant"}
+                {focusPriority?.detail ?? `${stats.active} courses actives`}
               </p>
             </div>
           </div>

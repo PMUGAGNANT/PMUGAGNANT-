@@ -66,6 +66,14 @@ function formatCountdown(minutes: number): string {
   return m === 0 ? `${h} h` : `${h} h ${m}`;
 }
 
+function formatEuros(value: number): string {
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 function ctaLabel(score: number): string {
   if (score >= 9) return "Ouvrir le signal";
   if (score >= 7) return "Voir la selection";
@@ -201,6 +209,8 @@ export function CourseCard({
     : "";
   const selectedInCombo = comboAction ? isSelected(comboId) : false;
   const comboFull = selections.length >= 4 && !selectedInCombo;
+  const stakeValue = Math.max(6, Math.round((pickConfidence ?? displayScore) * 2.5));
+  const stakeLabel = formatEuros(stakeValue);
 
   const lines: Array<{ label: string; value: string }> = [];
   if (profile.favoriFragileNum != null) {
@@ -279,21 +289,27 @@ export function CourseCard({
         </div>
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-4">
         <div className="app-card-muted px-4 py-4">
-          <p className="app-label">Score</p>
+          <p className="app-label">Confiance</p>
           <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
             {displayScore.toFixed(1)}/10
           </p>
         </div>
         <div className="app-card-muted px-4 py-4">
-          <p className="app-label">Ticket</p>
+          <p className="app-label">Pronostic</p>
           <p className="mt-2 text-sm font-black text-[var(--pmu-text)]">
             {ticketSummary}
           </p>
         </div>
+        <div className="stake-chip px-4 py-4">
+          <p className="app-label text-[var(--pmu-gold)]">Mise</p>
+          <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
+            {stakeLabel}
+          </p>
+        </div>
         <div className="app-card-muted px-4 py-4">
-          <p className="app-label">Lecture</p>
+          <p className="app-label">Résultat</p>
           <p className="mt-2 text-sm font-black" style={{ color: eloBadge.color }}>
             {eloLabel.label}
           </p>
@@ -388,12 +404,11 @@ export function CourseCard({
       </div>
 
       <div className="space-y-2.5">
-        <div className="h-2.5 w-full overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--pmu-surface-2)_78%,transparent)]">
-          <div
-            className="h-full rounded-full transition-all duration-500"
+        <div className="confidence-meter">
+          <span
             style={{
               width: `${progressPct}%`,
-              background: `linear-gradient(90deg, ${interpreted.color}, color-mix(in srgb, ${interpreted.color} 62%, white))`,
+              background: `linear-gradient(90deg, ${interpreted.color}, color-mix(in srgb, ${interpreted.color} 62%, var(--pmu-gold)))`,
             }}
           />
         </div>

@@ -9,12 +9,12 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { isPmuTheme, THEME_STORAGE_KEY, type PmuTheme } from "@/lib/theme-preference";
+import { THEME_STORAGE_KEY, type PmuTheme } from "@/lib/theme-preference";
 
-function applyThemeToDocument(theme: PmuTheme) {
-  document.documentElement.dataset.theme = theme;
+function applyThemeToDocument() {
+  document.documentElement.dataset.theme = "warm";
   try {
-    localStorage.setItem(THEME_STORAGE_KEY, theme);
+    localStorage.setItem(THEME_STORAGE_KEY, "warm");
   } catch {
     /* ignore */
   }
@@ -41,18 +41,6 @@ function emitChange() {
 }
 
 function getThemeFromStorage(): PmuTheme {
-  try {
-    const stored = localStorage.getItem(THEME_STORAGE_KEY);
-    if (isPmuTheme(stored)) {
-      return stored;
-    }
-  } catch {
-    /* ignore */
-  }
-  const fromDom = document.documentElement.dataset.theme;
-  if (fromDom === "warm" || fromDom === "dark") {
-    return fromDom;
-  }
   return "warm";
 }
 
@@ -72,19 +60,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const theme = useSyncExternalStore(subscribe, getThemeFromStorage, getServerSnapshot);
 
   useEffect(() => {
-    applyThemeToDocument(theme);
+    applyThemeToDocument();
   }, [theme]);
 
   const setTheme = useCallback((next: PmuTheme) => {
-    applyThemeToDocument(next);
+    void next;
+    applyThemeToDocument();
     emitChange();
   }, []);
 
   const toggleTheme = useCallback(() => {
-    const next: PmuTheme = theme === "dark" ? "warm" : "dark";
-    applyThemeToDocument(next);
+    applyThemeToDocument();
     emitChange();
-  }, [theme]);
+  }, []);
 
   const value = useMemo(() => ({ theme, setTheme, toggleTheme }), [theme, setTheme, toggleTheme]);
 

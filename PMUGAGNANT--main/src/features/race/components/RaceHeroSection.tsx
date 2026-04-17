@@ -56,73 +56,50 @@ export function RaceHeroSection({
   ];
 
   return (
-    <section
-      style={{
-        background: "var(--pmu-primary)",
-        borderRadius: "8px",
-        padding: "1.5rem 2rem",
-        color: "var(--pmu-on-primary)",
-      }}
-    >
-      <p
-        style={{
-          fontSize: "0.65rem",
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: "0.12em",
-          opacity: 0.72,
-          marginBottom: "0.4rem",
-        }}
-      >
-        {titlePrefix} · {(courseInfo.hippodrome || "Programme").toUpperCase()}
-      </p>
+    <section className="app-page-hero p-5 md:p-7">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <p className="app-kicker">
+            {titlePrefix} · {(courseInfo.hippodrome || "Programme").toUpperCase()}
+          </p>
 
-      <h1
-        style={{
-          fontFamily: "var(--font-display), Georgia, serif",
-          fontSize: "clamp(1.6rem, 3vw, 2.2rem)",
-          fontWeight: 700,
-          fontStyle: "italic",
-          lineHeight: 1.05,
-          color: "var(--pmu-on-primary)",
-        }}
-      >
-        {courseInfo.nomCourse || `Course ${courseInfo.course ?? ""}`}
-      </h1>
+          <h1 className="mt-2 text-[2rem] font-black leading-tight text-[var(--pmu-text)] md:text-[2.65rem]">
+            {courseInfo.nomCourse || `Course ${courseInfo.course ?? ""}`}
+          </h1>
 
-      <p style={{ fontSize: "0.78rem", opacity: 0.76, marginTop: "0.45rem" }}>
-        {formatDiscipline(courseInfo.discipline)} ·{" "}
-        {courseInfo.distance ? `${courseInfo.distance} m` : "Distance à confirmer"} ·{" "}
-        {formatEuros(courseInfo.allocation) || "Allocation à confirmer"}
-      </p>
+          <p className="mt-3 text-sm leading-6 text-[var(--pmu-text-soft)]">
+            {formatDiscipline(courseInfo.discipline)} ·{" "}
+            {courseInfo.distance ? `${courseInfo.distance} m` : "Distance à confirmer"} ·{" "}
+            {formatEuros(courseInfo.allocation) || "Allocation à confirmer"}
+          </p>
+        </div>
+
+        <div className="stake-chip px-4 py-3 lg:min-w-[14rem]">
+          <p className="text-[0.72rem] font-bold uppercase text-[var(--pmu-gold)]">
+            Statut course
+          </p>
+          <p className="mt-1 text-lg font-black text-[var(--pmu-text)]">
+            {statusLabel}
+          </p>
+        </div>
+      </div>
 
       <div className="mt-3 flex flex-wrap gap-2">
         {dateLabel ? (
-          <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-[var(--pmu-on-primary)]">
+          <span className="app-pill text-xs">
             {dateLabel}
           </span>
         ) : null}
         {lisibilite ? (
-          <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-[var(--pmu-on-primary)]">
+          <span className="app-pill text-xs">
             {lisibilite}
           </span>
         ) : null}
-        <span
-          className="rounded-full border px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.08em]"
-          style={{
-            borderColor: isFinished
-              ? "rgba(255,232,163,0.32)"
-              : "rgba(253,252,249,0.2)",
-            background: isFinished
-              ? "rgba(140,109,47,0.45)"
-              : "rgba(253,252,249,0.1)",
-            color: isFinished ? "#FFE8A3" : "var(--pmu-on-primary)",
-          }}
-        >
+        <span className={isFinished ? "app-pill text-xs text-[var(--pmu-gold)]" : "app-pill text-xs"}>
           {statusLabel}
         </span>
         {refreshPriority ? (
-          <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-[var(--pmu-on-primary)]">
+          <span className="app-pill text-xs">
             {refreshPriority.label}
           </span>
         ) : null}
@@ -132,33 +109,12 @@ export function RaceHeroSection({
         {stats.map((stat) => (
           <div
             key={stat.label}
-            style={{
-              background: "rgba(253,252,249,0.1)",
-              border: "1px solid rgba(253,252,249,0.15)",
-              borderRadius: "6px",
-              padding: "0.6rem 0.75rem",
-            }}
+            className="result-chip px-4 py-3"
           >
-            <p
-              style={{
-                fontSize: "0.6rem",
-                fontWeight: 600,
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                opacity: 0.68,
-                marginBottom: "0.3rem",
-              }}
-            >
+            <p className="app-label">
               {stat.label}
             </p>
-            <p
-              style={{
-                fontFamily: "var(--font-display), Georgia, serif",
-                fontSize: "1.2rem",
-                fontWeight: 700,
-                color: "var(--pmu-on-primary)",
-              }}
-            >
+            <p className="mt-1 font-[family-name:var(--font-display)] text-[1.45rem] font-bold text-[var(--pmu-text)]">
               {stat.value}
             </p>
           </div>
@@ -167,20 +123,14 @@ export function RaceHeroSection({
 
       {meteo ? (
         <div
-          className="mt-3 flex flex-wrap items-center gap-2"
-          style={{
-            background: "rgba(253,252,249,0.08)",
-            borderRadius: "6px",
-            padding: "0.5rem 0.75rem",
-            fontSize: "0.75rem",
-          }}
+          className="result-chip mt-3 flex flex-wrap items-center gap-2 px-4 py-3 text-sm"
         >
           <WeatherIcon description={meteo.description} />
-          <span style={{ opacity: 0.86 }}>
+          <span className="text-[var(--pmu-text-soft)]">
             {meteo.description} · {meteo.temperature}°C · Vent {meteo.vent_kmh} km/h
           </span>
           {meteo.terrain_impact === "DEFAVORABLE" ? (
-            <span className="ml-auto rounded-full bg-[rgba(184,80,48,0.25)] px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-[#FFB299]">
+            <span className="ml-auto rounded-lg bg-[color-mix(in_srgb,var(--pmu-red)_12%,white)] px-2 py-0.5 text-[0.72rem] font-bold uppercase text-[var(--pmu-red)]">
               Terrain défavorable
             </span>
           ) : null}

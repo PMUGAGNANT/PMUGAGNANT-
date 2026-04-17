@@ -13,7 +13,6 @@ import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 import { SidebarProgramme } from "./SidebarProgramme";
 import { SidebarQuinteCard } from "./SidebarQuinteCard";
 import { SidebarSearch } from "./SidebarSearch";
-import { ThemeToggle } from "./ThemeToggle";
 
 function ScrollArrow({ direction }: { direction: "up" | "down" }) {
   return (
@@ -377,7 +376,6 @@ export function Sidebar() {
                     Connexion, compte premium et bankroll gardes dans le meme
                     rail de pilotage.
                   </p>
-                  <ThemeToggle />
                 </section>
               </div>
             </div>

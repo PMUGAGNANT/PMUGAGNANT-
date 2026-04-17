@@ -467,7 +467,7 @@ function MesParisContent() {
 
           <aside className="app-card p-5 md:p-6">
             <p className="app-kicker">Solde actuel</p>
-            <div className="mt-4 text-[3.35rem] font-black leading-none tracking-[-0.06em] text-[var(--pmu-text)]">
+            <div className="mt-4 text-[3.35rem] font-black leading-none text-[var(--pmu-text)]">
               {formatEuros(solde)}
             </div>
             <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">

@@ -33,6 +33,14 @@ function formatOdds(value?: number | null) {
     : "--";
 }
 
+function formatEuros(value: number) {
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 function getSelectedHorse(
   pronostic: PronosticCardData,
   participants: CourseParticipantRow[] | null | undefined
@@ -118,97 +126,105 @@ export function CoursePronostic({ pronostic, participants }: CoursePronosticProp
   const progress = Math.min(100, Math.max(0, confidence * 10));
   const human = selectedHorse.jockey || selectedHorse.driver || "Jockey / driver à confirmer";
   const trainer = selectedHorse.entraineur || "Entraîneur à confirmer";
+  const stake = Math.max(0, pronostic.miseConseil ?? 0);
+  const odds = typeof selectedHorse.cote === "number" && Number.isFinite(selectedHorse.cote)
+    ? selectedHorse.cote
+    : null;
+  const grossReturn = odds ? stake * odds : null;
+  const netReturn = grossReturn !== null ? grossReturn - stake : null;
+  const netReturnLabel =
+    netReturn !== null
+      ? `${netReturn >= 0 ? "+" : ""}${formatEuros(netReturn)} net potentiel`
+      : "À suivre";
 
   return (
-    <section
-      className="overflow-hidden"
-      style={{
-        background: "var(--pmu-surface)",
-        border: "1px solid var(--pmu-border)",
-        borderRadius: "8px",
-      }}
-    >
-      <div
-        className="flex flex-wrap items-center justify-between gap-2"
-        style={{
-          background: "var(--pmu-primary)",
-          color: "var(--pmu-on-primary)",
-          padding: "0.65rem 1rem",
-        }}
-      >
-        <span className="text-[0.65rem] font-bold uppercase tracking-[0.1em]">
-          Décision moteur
+    <section className="premium-ticket-shell">
+      <div className="premium-ticket-bar">
+        <span className="text-[0.72rem] font-bold uppercase">
+          Pronostic validé
         </span>
-        <span className="text-[0.72rem] font-semibold opacity-85">
-          Signal validé · {betType}
+        <span className="rounded-lg border border-white/20 bg-white/10 px-3 py-1 text-[0.72rem] font-semibold">
+          {betType}
         </span>
       </div>
 
-      <div className="p-5">
-        <div className="flex gap-4">
-          <div
-            className="flex h-[52px] w-[52px] shrink-0 items-center justify-center"
-            style={{
-              background: "#EAF3DE",
-              borderRadius: "8px",
-              color: "#2A4D12",
-              fontFamily: "var(--font-display), Georgia, serif",
-              fontSize: "1.5rem",
-              fontWeight: 700,
-            }}
-          >
-            {selectedHorse.numero ?? "--"}
-          </div>
-          <div className="min-w-0 flex-1">
-            <h2
-              className="truncate"
-              style={{
-                color: "var(--pmu-text)",
-                fontFamily: "var(--font-display), Georgia, serif",
-                fontSize: "1.5rem",
-                fontStyle: "italic",
-                fontWeight: 700,
-                lineHeight: 1.1,
-              }}
+      <div className="p-5 md:p-6">
+        <div className="grid gap-5 lg:grid-cols-[1fr,18rem] lg:items-start">
+          <div className="flex gap-4">
+            <div
+              className="flex h-[56px] w-[56px] shrink-0 items-center justify-center rounded-lg border border-[color-mix(in_srgb,var(--pmu-primary)_22%,transparent)] bg-[var(--pmu-primary-soft)] text-2xl font-black text-[var(--pmu-primary)] shadow-[var(--pmu-shadow-sm)]"
             >
-              {selectedHorse.nom || "Cheval à confirmer"}
-            </h2>
-            <p className="mt-1 text-sm text-[var(--pmu-text-soft)]">
-              {human} · {trainer} · Cote {formatOdds(selectedHorse.cote)}
+              {selectedHorse.numero ?? "--"}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="app-kicker">Course → pronostic</p>
+              <h2 className="mt-1 truncate text-[1.75rem] font-black leading-tight text-[var(--pmu-text)] md:text-[2.15rem]">
+                {selectedHorse.nom || "Cheval à confirmer"}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">
+                {human} · {trainer} · Cote {formatOdds(selectedHorse.cote)}
+              </p>
+            </div>
+          </div>
+
+          <div
+            className="stake-chip px-4 py-4"
+            aria-label={`Mise conseillée ${formatEuros(stake)}`}
+          >
+            <p className="text-[0.72rem] font-bold uppercase text-[var(--pmu-gold)]">
+              Mise conseillée
+            </p>
+            <p className="mt-1 font-[family-name:var(--font-display)] text-4xl font-bold leading-none text-[var(--pmu-text)]">
+              {formatEuros(stake)}
+            </p>
+            <p className="mt-2 text-xs font-semibold leading-5 text-[var(--pmu-text-soft)]">
+              {odds
+                ? `${formatEuros(stake)} × cote ${formatOdds(odds)} = ${formatEuros(grossReturn ?? 0)} brut`
+                : "Calcul du retour potentiel en attente de cote."}
             </p>
           </div>
         </div>
 
-        <div className="mt-5">
-          <div className="flex items-center justify-between gap-3">
-            <p className="app-label">Confiance</p>
-            <span className="font-[family-name:var(--font-display)] text-xl font-bold text-[var(--pmu-primary)]">
-              {confidence.toFixed(1)}/10
-            </span>
+        <div className="mt-6 grid gap-3 md:grid-cols-[1.2fr,0.8fr]">
+          <div className="result-chip px-4 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="app-label">Confiance moteur</p>
+              <span className="font-[family-name:var(--font-display)] text-2xl font-bold text-[var(--pmu-primary)]">
+                {confidence.toFixed(1)}/10
+              </span>
+            </div>
+            <div className="confidence-meter mt-3" aria-hidden>
+              <span style={{ width: `${progress}%` }} />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="app-pill text-xs">Pronostic</span>
+              <span className="app-pill text-xs">{betType}</span>
+              <span className="app-pill text-xs">Lecture premium</span>
+            </div>
           </div>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--pmu-surface-2)]">
-            <div
-              className="h-full rounded-full bg-[var(--pmu-primary)]"
-              style={{ width: `${progress}%` }}
-            />
+
+          <div className="result-chip px-4 py-4">
+            <p className="app-label">Résultat attendu</p>
+            <p className="mt-2 text-xl font-black text-[var(--pmu-text)]">
+              {netReturnLabel}
+            </p>
+            <p className="mt-2 text-xs leading-5 text-[var(--pmu-text-soft)]">
+              Le résultat réel sera rapproché de l&apos;arrivée officielle dès validation.
+            </p>
           </div>
         </div>
 
         <div className="mt-5 grid gap-2 sm:grid-cols-3">
           {[
             { label: "Type pari", value: betType },
-            { label: "Mise conseillée", value: `${pronostic.miseConseil ?? 0} EUR` },
+            { label: "Mise", value: formatEuros(stake) },
             { label: "Cote", value: formatOdds(selectedHorse.cote) },
           ].map((stat) => (
             <div
               key={stat.label}
-              style={{
-                background: "#F5F2EB",
-                borderRadius: "6px",
-                padding: "0.7rem 0.8rem",
-              }}
+              className="result-chip px-4 py-3"
             >
-              <p className="text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-[var(--pmu-text-muted)]">
+              <p className="text-[0.72rem] font-bold uppercase text-[var(--pmu-text-muted)]">
                 {stat.label}
               </p>
               <p className="mt-1 font-[family-name:var(--font-display)] text-xl font-bold text-[var(--pmu-text)]">
@@ -222,13 +238,9 @@ export function CoursePronostic({ pronostic, participants }: CoursePronosticProp
           {reasons.map((reason, index) => (
             <div
               key={`${reason}-${index}`}
-              style={{
-                background: "#F5F2EB",
-                borderRadius: "6px",
-                padding: "0.75rem 0.85rem",
-              }}
+              className="result-chip px-4 py-3"
             >
-              <span className="mr-2 text-[0.66rem] font-bold uppercase tracking-[0.08em] text-[var(--pmu-primary)]">
+              <span className="mr-2 text-[0.72rem] font-bold uppercase text-[var(--pmu-primary)]">
                 {String(index + 1).padStart(2, "0")}
               </span>
               <span className="text-sm leading-6 text-[var(--pmu-text-soft)]">

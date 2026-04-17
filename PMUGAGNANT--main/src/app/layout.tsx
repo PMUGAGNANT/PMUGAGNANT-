@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Jost, Roboto_Mono } from "next/font/google";
-import Script from "next/script";
 import { ComboPanel, ComboProvider } from "@/components/ComboBuilder";
 import { AppShell } from "@/features/layout/components/AppShell";
 import { GlossaryPanel } from "@/components/ui/Glossary";
@@ -70,7 +69,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  themeColor: "#F5F2EB",
+  themeColor: "#FAF7EF",
 };
 
 export default function RootLayout({
@@ -86,9 +85,6 @@ export default function RootLayout({
         <a href="#main-content" className="pmu-skip-link">
           Aller au contenu
         </a>
-        <Script id="pmu-theme-init" strategy="beforeInteractive">
-          {`(function(){try{var k='pmu-theme-v2';var v=localStorage.getItem(k);document.documentElement.setAttribute('data-theme',v==='dark'?'dark':'warm');}catch(e){document.documentElement.setAttribute('data-theme','warm');}})();`}
-        </Script>
         <ThemeProvider>
           <ComboProvider>
             <ThemeMetaColor />
