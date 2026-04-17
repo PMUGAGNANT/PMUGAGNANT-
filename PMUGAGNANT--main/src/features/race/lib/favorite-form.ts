@@ -4,6 +4,11 @@ export interface FavoriteFormPoint {
   tone: "strong" | "good" | "neutral" | "weak";
 }
 
+export interface FavoriteFormTrend {
+  direction: "up" | "down" | "flat";
+  label: string;
+}
+
 function scorePosition(token: string) {
   const numeric = Number.parseInt(token, 10);
   if (Number.isFinite(numeric) && numeric > 0) {
@@ -64,4 +69,27 @@ export function parseFavoriteForm(musique?: string | null, limit = 5): FavoriteF
       tone: getTone(score),
     };
   });
+}
+
+export function getFavoriteFormTrend(points: FavoriteFormPoint[]): FavoriteFormTrend {
+  if (points.length < 3) {
+    return { direction: "flat", label: "Tendance stable" };
+  }
+
+  const recent = points.slice(0, 2).reduce((sum, point) => sum + point.score, 0) / 2;
+  const olderWindow = points.slice(-2);
+  const older =
+    olderWindow.reduce((sum, point) => sum + point.score, 0) /
+    Math.max(olderWindow.length, 1);
+  const delta = recent - older;
+
+  if (delta >= 18) {
+    return { direction: "up", label: "Tendance en hausse" };
+  }
+
+  if (delta <= -18) {
+    return { direction: "down", label: "Tendance en baisse" };
+  }
+
+  return { direction: "flat", label: "Tendance stable" };
 }
