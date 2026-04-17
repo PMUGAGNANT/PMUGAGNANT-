@@ -8,68 +8,107 @@ import {
   PREMIUM_MONTHLY_PRICE_CURRENCY_SUFFIX,
   PREMIUM_MONTHLY_PRICE_DISPLAY_MAIN,
 } from "@/lib/billing-display";
+import { formatLiveRoi, hasLiveStatsData } from "@/lib/live-stats";
+import { useLiveStats } from "@/lib/use-live-stats";
 
 const FEATURES = [
   {
-    emoji: "🎯",
-    title: "Ticket par course",
-    text: "Cheval retenu, type de pari, mise Kelly calculée. Pas une liste, une décision.",
+    label: "Ticket clair",
+    title: "Un cheval a jouer, pas une liste a decoder",
+    text: "Chaque course premium donne le cheval, le type de pari, la confiance et la mise conseillee.",
   },
   {
-    emoji: "💎",
-    title: "Pépites et outsiders",
-    text: "Les chevaux que le marché ignore mais que l'algo repère. C'est là que le ROI se construit.",
+    label: "Mise",
+    title: "Mise calculee selon le risque",
+    text: "TurfEdge affiche une mise simple et lisible pour eviter le coup de tete avant le depart.",
   },
   {
-    emoji: "📊",
-    title: "Score de confiance",
-    text: "De 0 à 10 sur chaque course. Tu sais exactement quand y aller et quand passer.",
+    label: "Confiance",
+    title: "Pourquoi l'algo est sur ce cheval",
+    text: "Tu vois les signaux positifs : forme, cote, humain, terrain, regularite et value.",
   },
   {
-    emoji: "⚡",
-    title: "Alerte T-10 minutes",
-    text: "Cote en baisse juste avant le départ = signal fort. Tu reçois l'alerte automatiquement.",
+    label: "Alertes",
+    title: "Alerte T-10 quand le marche bouge",
+    text: "Quand une cote devient interessante juste avant le depart, tu recois le signal au bon moment.",
   },
   {
-    emoji: "💰",
-    title: "Mise Kelly lisible",
-    text: "Combien miser selon ta bankroll. Pas d'improvisation, pas de trop gros coup.",
+    label: "Bilan",
+    title: "ROI, gains et pertes suivis",
+    text: "Le cockpit montre ce que les tickets auraient donne sur 7, 30 et 90 jours.",
   },
   {
-    emoji: "📈",
-    title: "Suivi de performance",
-    text: "ROI réel, bilan hebdomadaire, comparaison contre le hasard. Tu vois si ça marche.",
+    label: "Discipline",
+    title: "Jouer moins, mais mieux cadre",
+    text: "Les courses faibles sont marquees PASSER pour proteger la bankroll.",
+  },
+];
+
+const PREMIUM_EXAMPLES = [
+  {
+    title: "Course jouable",
+    horse: "#7 Helios du Val",
+    stake: "Mise 10 EUR",
+    gain: "Gain potentiel 47 EUR",
+    detail: "Confiance 8.1/10, 6 signaux positifs sur 7.",
+  },
+  {
+    title: "Course a eviter",
+    horse: "R3C6 - lot trop ouvert",
+    stake: "Mise 0 EUR",
+    gain: "Bankroll protegee",
+    detail: "TurfEdge dit PASSER quand le risque est trop haut.",
+  },
+  {
+    title: "Semaine suivie",
+    horse: "Tickets valides uniquement",
+    stake: "Mises conseillees",
+    gain: "Gain reel Supabase",
+    detail: "Une lecture simple : argent engage, gain, ROI, resultat.",
+  },
+];
+
+const TESTIMONIALS = [
+  {
+    quote: "Je ne cherche plus dans 40 partants. Je regarde JOUER ou PASSER, puis la mise.",
+    name: "Marc, parieur trot",
+  },
+  {
+    quote: "Le plus utile, c'est la discipline. TurfEdge m'evite les courses pieges.",
+    name: "Nadia, joueuse Quinte",
+  },
+  {
+    quote: "La page bilan m'a fait comprendre mes vrais points forts : plat sprint et petites mises.",
+    name: "Julien, abonne premium",
   },
 ];
 
 const COMPARE_ROWS = [
-  { feature: "Programme du jour complet", free: true, premium: true },
-  { feature: "Score journée et lisibilité", free: true, premium: true },
-  { feature: "Ticket détaillé par course", free: false, premium: true },
-  { feature: "Mise Kelly conseillée", free: false, premium: true },
-  { feature: "4 rôles clés : pépite, outsider, favori, oublié", free: false, premium: true },
-  { feature: "Avis expert top 5 chevaux", free: "Top 3", premium: true },
-  { feature: "Alerte T-10 min avant départ", free: false, premium: true },
-  { feature: "Combo courses multi-sélection", free: false, premium: true },
-  { feature: "Bilan ROI et suivi performance", free: false, premium: true },
+  { feature: "Programme PMU du jour", free: true, premium: true },
+  { feature: "Decision JOUER / PASSER", free: "apercu", premium: true },
+  { feature: "Cheval conseille par course", free: false, premium: true },
+  { feature: "Mise conseillee et gain potentiel", free: false, premium: true },
+  { feature: "Explication des signaux positifs", free: false, premium: true },
+  { feature: "Alertes T-10 avant depart", free: false, premium: true },
+  { feature: "Bilan ROI 7j / 30j / 90j", free: false, premium: true },
 ];
 
 const FAQ_ITEMS = [
   {
-    q: "À qui sert le premium ?",
-    a: "À quelqu'un qui veut une lecture actionnable : savoir quoi jouer, quoi ignorer et combien miser sans passer 2 h à trier 40 courses chaque matin.",
+    q: "Est-ce que TurfEdge garantit les gains ?",
+    a: "Non. Un pari reste risque. TurfEdge donne un cadre, une selection et une mise calculee pour jouer avec plus de discipline.",
   },
   {
-    q: "Est-ce que tout devient payant ?",
-    a: "Non. La page d'accueil avec le programme reste publique. Le premium débloque la lecture complète, les tickets détaillés, les alertes T-10 et les mises recommandées.",
+    q: "Qu'est-ce que je debloque en premium ?",
+    a: "Le cheval conseille, la mise, le gain potentiel, les raisons de confiance, les alertes et le bilan complet.",
   },
   {
-    q: "L'abonnement garantit-il des gains ?",
-    a: "Non. TurfEdge vend de la discipline, du filtrage et un moteur plus clair. Pas une promesse irréelle. Le ROI moyen sur les courses validées est de +8.3% : c'est un outil, pas une magie.",
+    q: "Puis-je arreter quand je veux ?",
+    a: "Oui. L'abonnement est gere par Stripe et peut etre annule depuis ton espace en quelques clics.",
   },
   {
-    q: "Peut-on arrêter à tout moment ?",
-    a: "Oui. Le portail Stripe te permet de gérer ou stopper l'abonnement en 2 clics, sans conditions.",
+    q: "Pour qui est fait TurfEdge ?",
+    a: "Pour les parieurs qui veulent une decision claire, pas un tableau interminable a interpreter.",
   },
 ];
 
@@ -97,399 +136,211 @@ function CrossIcon() {
   );
 }
 
+function AvailabilityCell({ value }: { value: boolean | string }) {
+  if (value === true) return <CheckIcon />;
+  if (value === false) return <CrossIcon />;
+  return <span className="text-xs font-bold uppercase text-[var(--pmu-gold)]">{value}</span>;
+}
+
+function formatEuros(value: number) {
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 export default function PremiumPage() {
+  const liveStats = useLiveStats();
+  const hasStats = hasLiveStatsData(liveStats.data);
   const premiumCheckoutRedirect = encodeURIComponent("/mes-paris?billing=checkout");
   const premiumCheckoutHref = `/login?redirect=${premiumCheckoutRedirect}`;
   const priceLabel = `${PREMIUM_MONTHLY_PRICE_DISPLAY_MAIN} ${PREMIUM_MONTHLY_PRICE_CURRENCY_SUFFIX}`;
+  const statCards = hasStats
+    ? [
+        { value: formatLiveRoi(liveStats.data.roi30d), label: "ROI reel 30 jours" },
+        { value: String(liveStats.data.totalPredictions), label: "tickets mesures 30j" },
+        { value: `${liveStats.data.winRate.toFixed(0)}%`, label: "reussite place/gagnant" },
+      ]
+    : [
+        { value: "--", label: "ROI reel 30 jours" },
+        { value: "--", label: "tickets mesures 30j" },
+        { value: "--", label: "reussite place/gagnant" },
+      ];
+  const premiumExamples = PREMIUM_EXAMPLES.map((example) => {
+    if (example.title !== "Semaine suivie") {
+      return example;
+    }
+
+    return {
+      ...example,
+      gain: hasStats ? `${liveStats.data.netGain7d >= 0 ? "+" : ""}${formatEuros(liveStats.data.netGain7d)}` : "Bilan en cours",
+      detail: hasStats
+        ? `Calcule sur ${liveStats.data.predictions7d} tickets mesures ces 7 derniers jours.`
+        : "Les gains se remplissent automatiquement avec l'historique Supabase.",
+    };
+  });
 
   return (
-    <div style={{ margin: "0 auto", maxWidth: "860px", padding: "0 1rem 4rem" }}>
-      <section className="app-page-hero mb-6 p-6 text-center md:p-10">
-        <p className="app-kicker mb-4">
-          TurfEdge Premium · {priceLabel}
-        </p>
-        <h1 className="mx-auto mb-5 max-w-3xl text-[2.35rem] font-black leading-tight text-[var(--pmu-text)] md:text-[3.2rem]">
-          L&apos;IA qui lit toutes les courses PMU à ta place. Chaque matin.
-        </h1>
-        <p className="mx-auto mb-8 max-w-[34rem] text-base leading-7 text-[var(--pmu-text-soft)]">
-          Score de confiance, cheval retenu, mise conseillée, alerte T-10. Tu ouvres TurfEdge,
-          tu sais quoi faire.
-        </p>
-        <PromoVideo />
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", justifyContent: "center" }}>
-          <Link
-            href={premiumCheckoutHref}
-            className="app-button-primary"
-          >
-            Commencer · {priceLabel}
-          </Link>
-          <Link
-            href="/bilan"
-            className="app-button-secondary"
-          >
-            Voir le bilan du moteur →
-          </Link>
+    <div className="mx-auto flex w-full max-w-[70rem] flex-col gap-6 px-4 pb-16">
+      <section className="app-page-hero overflow-hidden p-0">
+        <div className="grid gap-0 lg:grid-cols-[1fr,0.86fr]">
+          <div className="p-6 md:p-9">
+            <div className="flex flex-wrap gap-2">
+              <span className="turf-decision-badge" data-tone="success">
+                Premium
+              </span>
+              <span className="turf-decision-badge" data-tone="warning">
+                Offre fondateur limitee
+              </span>
+            </div>
+            <p className="app-kicker mt-6">TurfEdge Premium - {priceLabel}</p>
+            <h1 className="mt-3 max-w-3xl text-[2.45rem] font-black leading-[0.95] text-[var(--pmu-text)] md:text-[4.25rem]">
+              Passe du programme PMU au ticket clair en 30 secondes.
+            </h1>
+            <p className="mt-5 max-w-2xl text-base leading-8 text-[var(--pmu-text-soft)]">
+              Premium debloque la decision JOUER / PASSER, le cheval conseille,
+              la mise, le gain potentiel et les signaux qui expliquent la confiance.
+            </p>
+
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <Link href={premiumCheckoutHref} className="app-button-primary min-h-12">
+                Debloquer Premium - {priceLabel}
+              </Link>
+              <Link href="/bilan" className="app-button-secondary min-h-12">
+                Voir les gains suivis
+              </Link>
+            </div>
+
+            <p className="mt-4 text-xs font-semibold text-[var(--pmu-text-muted)]">
+              Paiement securise Stripe. Annulable a tout moment. 50 places fondateur a ce tarif cette semaine.
+            </p>
+          </div>
+          <div className="border-t border-[var(--pmu-border)] bg-[var(--pmu-primary-fade)] p-4 lg:border-l lg:border-t-0">
+            <PromoVideo />
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {statCards.map((stat) => (
+                <div key={stat.label} className="result-chip px-4 py-3 text-center">
+                  <p className="text-2xl font-black text-[var(--pmu-primary)]">{stat.value}</p>
+                  <p className="mt-1 text-xs font-semibold text-[var(--pmu-text-muted)]">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-        <p className="mt-4 text-xs text-[var(--pmu-text-muted)]">
-          Paiement sécurisé via Stripe · Annulable à tout moment
-        </p>
       </section>
 
-      <section
-        style={{
-          display: "grid",
-          gap: "0.75rem",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          marginBottom: "1.5rem",
-        }}
-      >
-        {[
-          { num: "13", label: "courses validées aujourd'hui", sub: "sur 38 analysées" },
-          { num: "+8.3%", label: "ROI moyen semaine", sub: "sur les courses validées" },
-          { num: "100/100", label: "score journée", sub: "lisibilité maximale" },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            style={{
-              background: "var(--pmu-surface)",
-              border: "1px solid rgba(24,22,15,0.09)",
-              borderRadius: "8px",
-              padding: "1.25rem",
-              textAlign: "center",
-            }}
-          >
-            <p
-              style={{
-                color: "var(--pmu-primary)",
-                fontFamily: "var(--font-display), Georgia, serif",
-                fontSize: "1.8rem",
-                fontWeight: 700,
-                lineHeight: 1,
-              }}
-            >
-              {stat.num}
-            </p>
-            <p style={{ color: "var(--pmu-text)", fontSize: "0.78rem", fontWeight: 600, marginTop: "0.4rem" }}>
-              {stat.label}
-            </p>
-            <p style={{ color: "var(--pmu-text-muted)", fontSize: "0.68rem", marginTop: "0.2rem" }}>{stat.sub}</p>
-          </div>
+      <section className="grid gap-4 md:grid-cols-3">
+        {premiumExamples.map((example) => (
+          <article key={example.title} className="app-card p-5">
+            <p className="app-kicker">{example.title}</p>
+            <h2 className="mt-2 text-2xl font-black text-[var(--pmu-text)]">{example.horse}</h2>
+            <div className="mt-5 grid gap-2">
+              <div className="stake-chip px-4 py-3">
+                <p className="app-label text-[var(--pmu-gold)]">Mise</p>
+                <p className="mt-1 text-2xl font-black text-[var(--pmu-text)]">{example.stake}</p>
+              </div>
+              <div className="result-chip px-4 py-3">
+                <p className="app-label">Resultat attendu</p>
+                <p className="mt-1 text-2xl font-black text-[var(--pmu-primary)]">{example.gain}</p>
+              </div>
+            </div>
+            <p className="mt-4 text-sm leading-6 text-[var(--pmu-text-soft)]">{example.detail}</p>
+          </article>
         ))}
       </section>
 
-      <section style={{ marginBottom: "1.5rem" }}>
-        <p
-          style={{
-            color: "var(--pmu-primary)",
-            fontSize: "0.65rem",
-            fontWeight: 700,
-            letterSpacing: 0,
-            marginBottom: "0.75rem",
-            textTransform: "uppercase",
-          }}
-        >
-          Ce qui est inclus
-        </p>
-        <div
-          style={{
-            display: "grid",
-            gap: "0.75rem",
-            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-          }}
-        >
+      <section className="app-card p-5 md:p-6">
+        <div className="app-section-heading">
+          <div>
+            <p className="app-kicker">Ce que Premium debloque</p>
+            <h2 className="app-section-title">Moins d&apos;hesitation, plus de cadre.</h2>
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((feature) => (
-            <div
-              key={feature.title}
-              style={{
-                background: "var(--pmu-surface)",
-                border: "1px solid rgba(24,22,15,0.09)",
-                borderRadius: "8px",
-                padding: "1.1rem 1.25rem",
-              }}
-            >
-              <div style={{ fontSize: "20px", marginBottom: "0.5rem" }} aria-hidden="true">
-                {feature.emoji}
-              </div>
-              <p
-                style={{
-                  color: "var(--pmu-text)",
-                  fontFamily: "var(--font-display), Georgia, serif",
-                  fontSize: "1rem",
-                  fontWeight: 700,
-                  marginBottom: "0.35rem",
-                }}
-              >
+            <article key={feature.title} className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] p-4">
+              <span className="turf-decision-badge" data-tone="success">
+                {feature.label}
+              </span>
+              <h3 className="mt-3 text-xl font-black leading-tight text-[var(--pmu-text)]">
                 {feature.title}
-              </p>
-              <p style={{ color: "var(--pmu-text-soft)", fontSize: "0.78rem", lineHeight: 1.55 }}>{feature.text}</p>
-            </div>
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">{feature.text}</p>
+            </article>
           ))}
         </div>
       </section>
 
-      <section
-        style={{
-          background: "var(--pmu-surface)",
-          border: "1px solid rgba(24,22,15,0.09)",
-          borderRadius: "8px",
-          marginBottom: "1.5rem",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            background: "var(--pmu-primary)",
-            color: "var(--pmu-on-primary)",
-            display: "grid",
-            fontSize: "0.65rem",
-            fontWeight: 700,
-            gridTemplateColumns: "1fr 100px 100px",
-            letterSpacing: 0,
-            padding: "0.75rem 1.25rem",
-            textTransform: "uppercase",
-          }}
-        >
-          <span style={{ color: "rgba(253,252,249,0.7)" }}>Fonctionnalité</span>
-          <span style={{ color: "rgba(253,252,249,0.7)", textAlign: "center" }}>Gratuit</span>
-          <span style={{ color: "#FFE8A3", textAlign: "center" }}>Premium</span>
+      <section className="app-card overflow-hidden p-0">
+        <div className="grid grid-cols-[1fr,88px,96px] bg-[var(--pmu-primary)] px-4 py-3 text-xs font-black uppercase text-[var(--pmu-on-primary)] md:grid-cols-[1fr,120px,120px]">
+          <span>Fonction</span>
+          <span className="text-center">Gratuit</span>
+          <span className="text-center text-[var(--pmu-gold-light)]">Premium</span>
         </div>
         {COMPARE_ROWS.map((row, index) => (
           <div
             key={row.feature}
-            style={{
-              alignItems: "center",
-              background: index % 2 === 0 ? "var(--pmu-surface)" : "var(--pmu-surface-2)",
-              borderBottom:
-                index < COMPARE_ROWS.length - 1 ? "1px solid rgba(24,22,15,0.06)" : "none",
-              display: "grid",
-              gridTemplateColumns: "1fr 100px 100px",
-              padding: "0.7rem 1.25rem",
-            }}
+            className={`grid grid-cols-[1fr,88px,96px] items-center border-b border-[var(--pmu-border)] px-4 py-3 text-sm last:border-b-0 md:grid-cols-[1fr,120px,120px] ${
+              index % 2 === 0 ? "bg-[var(--pmu-surface)]" : "bg-[var(--pmu-surface-2)]"
+            }`}
           >
-            <span style={{ color: "var(--pmu-text)", fontSize: "0.82rem", fontWeight: 500 }}>{row.feature}</span>
-            <div style={{ textAlign: "center" }}>
-              {row.free === true ? (
-                <CheckIcon />
-              ) : row.free === false ? (
-                <CrossIcon />
-              ) : (
-                <span style={{ color: "var(--pmu-gold)", fontSize: "0.68rem", fontWeight: 600 }}>{row.free}</span>
-              )}
+            <span className="font-bold text-[var(--pmu-text)]">{row.feature}</span>
+            <div className="flex justify-center">
+              <AvailabilityCell value={row.free} />
             </div>
-            <div style={{ textAlign: "center" }}>
-              <CheckIcon />
+            <div className="flex justify-center">
+              <AvailabilityCell value={row.premium} />
             </div>
           </div>
         ))}
       </section>
 
-      <section
-        style={{
-          background: "var(--pmu-gold-light)",
-          border: "1px solid rgba(140,109,47,0.25)",
-          borderRadius: "8px",
-          marginBottom: "1.5rem",
-          padding: "2rem",
-          textAlign: "center",
-        }}
-      >
-        <p
-          style={{
-            color: "var(--pmu-primary)",
-            fontFamily: "var(--font-display), Georgia, serif",
-            fontSize: "1.5rem",
-            fontStyle: "italic",
-            fontWeight: 700,
-            marginBottom: "0.5rem",
-          }}
-        >
-          &ldquo;Jouer juste, jouer rare, jouer fort.&rdquo;
-        </p>
-        <p
-          style={{
-            color: "var(--pmu-gold)",
-            fontSize: "0.72rem",
-            fontWeight: 600,
-            letterSpacing: 0,
-            marginBottom: "1.5rem",
-            textTransform: "uppercase",
-          }}
-        >
-          TurfEdge · Algo v9.2
-        </p>
-        <Link
-          href={premiumCheckoutHref}
-          style={{
-            background: "var(--pmu-primary)",
-            border: "none",
-            borderRadius: "8px",
-            color: "var(--pmu-on-primary)",
-            display: "inline-block",
-            fontSize: "0.95rem",
-            fontWeight: 700,
-            padding: "0.9rem 2.5rem",
-            textDecoration: "none",
-          }}
-        >
-          Commencer maintenant · {priceLabel}
-        </Link>
-        <p style={{ color: "var(--pmu-text-muted)", fontSize: "0.72rem", marginTop: "0.75rem" }}>
-          Annulable à tout moment · Paiement sécurisé Stripe
-        </p>
+      <section className="grid gap-4 md:grid-cols-3">
+        {TESTIMONIALS.map((item) => (
+          <article key={item.name} className="app-card p-5">
+            <p className="text-lg font-black leading-7 text-[var(--pmu-text)]">
+              &quot;{item.quote}&quot;
+            </p>
+            <p className="mt-4 text-sm font-bold text-[var(--pmu-primary)]">{item.name}</p>
+            <p className="mt-1 text-xs text-[var(--pmu-text-muted)]">Temoignage representatif</p>
+          </article>
+        ))}
       </section>
 
-      <section
-        style={{
-          display: "grid",
-          gap: "0.75rem",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          marginBottom: "1.5rem",
-        }}
-      >
-        <div
-          style={{
-            background: "var(--pmu-surface)",
-            border: "1px solid rgba(24,22,15,0.09)",
-            borderRadius: "8px",
-            padding: "1.25rem",
-          }}
-        >
-          <p
-            style={{
-              color: "var(--pmu-primary)",
-              fontSize: "0.65rem",
-              fontWeight: 700,
-              letterSpacing: 0,
-              marginBottom: "0.75rem",
-              textTransform: "uppercase",
-            }}
-          >
-            ✓ Pour toi si
-          </p>
-          {[
-            "Tu veux savoir quoi jouer sans trier 40 courses.",
-            "Tu veux jouer moins, mais avec plus de conviction.",
-            "Tu veux une mise claire sur ta bankroll.",
-            "Tu veux mesurer si l'algo apporte vraiment quelque chose.",
-          ].map((item) => (
-            <div
-              key={item}
-              style={{
-                alignItems: "flex-start",
-                display: "flex",
-                gap: "0.5rem",
-                marginBottom: "0.6rem",
-              }}
-            >
-              <CheckIcon />
-              <span style={{ color: "var(--pmu-text-soft)", fontSize: "0.78rem", lineHeight: 1.4 }}>{item}</span>
-            </div>
-          ))}
-        </div>
-        <div
-          style={{
-            background: "var(--pmu-surface)",
-            border: "1px solid rgba(184,80,48,0.15)",
-            borderRadius: "8px",
-            padding: "1.25rem",
-          }}
-        >
-          <p
-            style={{
-              color: "var(--pmu-red)",
-              fontSize: "0.65rem",
-              fontWeight: 700,
-              letterSpacing: 0,
-              marginBottom: "0.75rem",
-              textTransform: "uppercase",
-            }}
-          >
-            ✕ Pas pour toi si
-          </p>
-          {[
-            "Tu veux un tipster miracle à gains garantis.",
-            "Tu veux jouer chaque course sans filtre.",
-            "Tu refuses toute discipline de bankroll.",
-          ].map((item) => (
-            <div
-              key={item}
-              style={{
-                alignItems: "flex-start",
-                display: "flex",
-                gap: "0.5rem",
-                marginBottom: "0.6rem",
-              }}
-            >
-              <CrossIcon />
-              <span style={{ color: "var(--pmu-text-soft)", fontSize: "0.78rem", lineHeight: 1.4 }}>{item}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <div style={{ marginBottom: "1.5rem" }}>
-        <ReferralCard />
-      </div>
-
-      <section
-        style={{
-          background: "var(--pmu-surface)",
-          border: "1px solid rgba(24,22,15,0.09)",
-          borderRadius: "8px",
-          marginBottom: "1.5rem",
-          padding: "1.5rem",
-        }}
-      >
-        <p
-          style={{
-            color: "var(--pmu-primary)",
-            fontSize: "0.65rem",
-            fontWeight: 700,
-            letterSpacing: 0,
-            marginBottom: "1rem",
-            textTransform: "uppercase",
-          }}
-        >
-          Questions fréquentes
-        </p>
-        <div
-          style={{
-            display: "grid",
-            gap: "1rem",
-            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-          }}
-        >
-          {FAQ_ITEMS.map((item) => (
-            <div key={item.q} style={{ background: "var(--pmu-surface-2)", borderRadius: "8px", padding: "1rem" }}>
-              <p style={{ color: "var(--pmu-text)", fontSize: "0.88rem", fontWeight: 700, marginBottom: "0.5rem" }}>
-                {item.q}
-              </p>
-              <p style={{ color: "var(--pmu-text-soft)", fontSize: "0.78rem", lineHeight: 1.55 }}>{item.a}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="app-page-hero p-6 text-center md:p-10">
-        <h2 className="mb-3 text-[2rem] font-black leading-tight text-[var(--pmu-text)] md:text-[2.45rem]">
-          Prêt à jouer avec un vrai cadre ?
+      <section className="app-page-hero p-6 text-center md:p-9">
+        <p className="app-kicker">Offre limitee</p>
+        <h2 className="mx-auto mt-2 max-w-3xl text-3xl font-black leading-tight text-[var(--pmu-text)] md:text-5xl">
+          Les premiers abonnes gardent le tarif fondateur.
         </h2>
-        <p className="mb-6 text-sm text-[var(--pmu-text-soft)]">
-          {priceLabel} · Annulable à tout moment · Paiement sécurisé
+        <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[var(--pmu-text-soft)]">
+          Premium est fait pour les parieurs qui veulent une decision nette avant
+          le depart : JOUER, PASSER, mise, gain potentiel.
         </p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", justifyContent: "center" }}>
-          <Link
-            href={premiumCheckoutHref}
-            className="app-button-primary"
-          >
-            Commencer · {priceLabel}
+        <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+          <Link href={premiumCheckoutHref} className="app-button-primary min-h-12">
+            Prendre Premium - {priceLabel}
           </Link>
-          <Link
-            href="/"
-            className="app-button-secondary"
-          >
-            Retour à l&apos;accueil
+          <Link href="/" className="app-button-secondary min-h-12">
+            Voir les courses du jour
           </Link>
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-[0.9fr,1.1fr]">
+        <div>
+          <ReferralCard />
+        </div>
+        <div className="app-card p-5 md:p-6">
+          <p className="app-kicker">Questions frequentes</p>
+          <div className="mt-4 grid gap-3">
+            {FAQ_ITEMS.map((item) => (
+              <article key={item.q} className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] p-4">
+                <h3 className="text-base font-black text-[var(--pmu-text)]">{item.q}</h3>
+                <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">{item.a}</p>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
     </div>

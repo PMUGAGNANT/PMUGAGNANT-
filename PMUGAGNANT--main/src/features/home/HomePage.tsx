@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { DayRadar } from "@/features/home/components/DayRadar";
 import { HomeControlBar } from "@/features/home/components/HomeControlBar";
+import { HomeHero } from "@/features/home/components/HomeHero";
 import { HomeLoadingSkeleton } from "@/features/home/components/HomeLoadingSkeleton";
 import { PriorityTickets } from "@/features/home/components/PriorityTickets";
 import { ProgrammeTable } from "@/features/home/components/ProgrammeTable";
@@ -13,6 +14,7 @@ import { BIG_ALLOCATION_LIMIT, QUICK_FILTER_STORAGE_KEY, URGENT_MINUTES_LIMIT, i
 import { addDays, buildFeaturedRaces, coerceRaceSummaries, formatRaceCode, getRadarRace, getTopParisItems, normalizeDateParam, normalizeFocusParticipants, sortFeaturedRaces, type FocusDetailResponse, type FocusParticipant, type RaceScore, type RacesResponse, type ScoresResponse, type SortMode } from "@/features/home/lib/home-page-model";
 import { fetchRaceDetails, fetchRaceScoresForDate, fetchRacesForDate, normalizeRaceScoresPayload } from "@/features/races/api/client";
 import { getTodayDateStr } from "@/lib/date-utils";
+import { useLiveStats } from "@/lib/use-live-stats";
 import type { RaceSummary } from "@/lib/types";
 
 function PageContent() {
@@ -28,6 +30,7 @@ function PageContent() {
   const [error, setError] = useState<string | null>(null);
   const [fetchRevision, setFetchRevision] = useState(0);
   const [focusDetail, setFocusDetail] = useState<FocusDetailResponse | null>(null);
+  const liveStats = useLiveStats();
 
   const navigateToRace = useCallback(
     (race: RaceSummary) => router.push(`/course/${race.reunion}/${race.course}?date=${race.dateStr}`),
@@ -172,6 +175,14 @@ function PageContent() {
 
   return (
     <div className="turf-home-page mx-auto flex w-full max-w-[96rem] flex-col gap-6 lg:gap-8">
+      <HomeHero
+        stats={stats}
+        liveStats={liveStats.data}
+        focusRace={focusRace}
+        proofItems={topParisItems}
+        onOpenPremium={() => router.push("/premium")}
+        onOpenFocus={() => (focusRace ? navigateToRace(focusRace.race) : router.push("/premium"))}
+      />
       <HomeControlBar selectedDate={selectedDate} sortMode={sortMode} stats={stats} focusRace={focusRace} onPrevDay={() => setSelectedDate(addDays(selectedDate, -1))} onToday={() => setSelectedDate(getTodayDateStr())} onNextDay={() => setSelectedDate(addDays(selectedDate, 1))} onDateChange={setSelectedDate} onSortChange={setSortMode} />
       <div className="turf-main-layout">
         <div className="turf-main-column">
@@ -188,7 +199,7 @@ function PageContent() {
             </section>
           ) : (
             <>
-              <PriorityTickets focusRace={focusRace} focusDetail={focusDetail} focusParticipants={focusParticipants} isFocusLoading={isFocusLoading} stats={stats} sortMode={sortMode} onOpenRace={navigateToRace} onOpenPremium={() => router.push("/premium")} />
+              <PriorityTickets focusRace={focusRace} focusDetail={focusDetail} focusParticipants={focusParticipants} isFocusLoading={isFocusLoading} sortMode={sortMode} onOpenRace={navigateToRace} onOpenPremium={() => router.push("/premium")} />
               {topParisItems.length > 0 ? <TopParisStrip items={topParisItems} /> : null}
               <ProgrammeTable quickFilter={quickFilter} quickFilterOptions={quickFilterOptions} lanes={lanes} playableCount={stats.playable} onQuickFilterChange={setQuickFilter} onOpenRace={navigateToRace} />
             </>

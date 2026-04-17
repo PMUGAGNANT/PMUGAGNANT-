@@ -5,7 +5,9 @@ import type { RaceSummary } from "@/lib/types";
 import {
   formatCourseMeta,
   formatMinutesLabel,
+  formatOddsLabel,
   formatRaceCode,
+  formatStake,
   getBoardSectionMeta,
   getPickLabel,
   type FeaturedRace,
@@ -100,6 +102,20 @@ function CompactRaceCard({
     : comboFull
       ? "Combo complet"
       : comboCandidate?.label ?? "";
+  const decision =
+    item.status === "jouable"
+      ? { label: "JOUER", tone: "success" as const }
+      : item.status === "surveillance"
+        ? { label: "SURVEILLER", tone: "warning" as const }
+        : { label: "PASSER", tone: "neutral" as const };
+  const pickConfidence = item.score?.pick?.confidence ?? item.scoreValue;
+  const stakeValue = Math.max(6, Math.round(pickConfidence * 2.5));
+  const stake = formatStake(stakeValue);
+  const odds = item.score?.pick?.cote ?? null;
+  const grossReturn =
+    typeof odds === "number" && Number.isFinite(odds) && odds > 0
+      ? stakeValue * odds
+      : null;
 
   return (
     <article
@@ -118,7 +134,7 @@ function CompactRaceCard({
       <div className="flex w-full flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-[color-mix(in_srgb,var(--pmu-primary)_35%,transparent)] bg-[var(--pmu-primary-fade)] px-3 py-1 text-[12px] font-black uppercase tracking-[0.12em] text-[var(--pmu-primary)]">
+            <span className="rounded-lg border border-[color-mix(in_srgb,var(--pmu-primary)_35%,transparent)] bg-[var(--pmu-primary-fade)] px-3 py-1 text-[12px] font-black uppercase text-[var(--pmu-primary)]">
               {raceCode}
             </span>
             <p className="app-kicker">
@@ -130,7 +146,7 @@ function CompactRaceCard({
           </h3>
         </div>
         <div
-          className="rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em]"
+          className="rounded-lg border px-3 py-1.5 text-[11px] font-black uppercase"
           style={{
             color: toneColor,
             borderColor: `color-mix(in srgb, ${toneColor} 24%, transparent)`,
@@ -147,27 +163,29 @@ function CompactRaceCard({
 
       <div className="grid w-full gap-3 sm:grid-cols-4">
         <div className="app-card-muted px-3 py-3">
-          <p className="app-label">Score</p>
-          <p className="mt-1 text-2xl font-black text-[var(--pmu-text)]">
-            {item.scoreValue.toFixed(1)}/10
+          <p className="app-label">Decision</p>
+          <p className="mt-2">
+            <span className="turf-decision-badge" data-tone={decision.tone}>
+              {decision.label}
+            </span>
           </p>
         </div>
         <div className="app-card-muted px-3 py-3">
-          <p className="app-label">Ticket</p>
+          <p className="app-label">Cheval</p>
           <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">
             {getPickLabel(item.score)}
           </p>
         </div>
         <div className="app-card-muted px-3 py-3">
-          <p className="app-label">Depart</p>
+          <p className="app-label">Mise</p>
           <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">
-            {item.race.heureDepart} - {formatMinutesLabel(item.minutesUntilStart)}
+            {grossReturn ? `${stake} -> ${formatStake(grossReturn)}` : `${stake} - cote ${formatOddsLabel(odds)}`}
           </p>
         </div>
         <div className="app-card-muted px-3 py-3">
-          <p className="app-label">Signal</p>
+          <p className="app-label">Confiance</p>
           <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">
-            {item.score?.decision ?? item.status}
+            {item.scoreValue.toFixed(1)}/10 - {formatMinutesLabel(item.minutesUntilStart)}
           </p>
         </div>
       </div>

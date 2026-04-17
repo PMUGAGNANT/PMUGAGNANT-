@@ -11,9 +11,9 @@ import type { RacePriorityBadge } from "@/lib/race-priority";
 function WeatherIcon({ description }: { description?: string | null }) {
   const normalized = (description ?? "").toLowerCase();
 
-  if (normalized.includes("pluie")) return <span aria-hidden>🌧️</span>;
-  if (normalized.includes("nuage")) return <span aria-hidden>⛅</span>;
-  return <span aria-hidden>☀️</span>;
+  if (normalized.includes("pluie")) return <span className="app-pill text-xs">Pluie</span>;
+  if (normalized.includes("nuage")) return <span className="app-pill text-xs">Nuageux</span>;
+  return <span className="app-pill text-xs">Temps clair</span>;
 }
 
 export function RaceHeroSection({
@@ -38,12 +38,12 @@ export function RaceHeroSection({
   const titlePrefix = `R${courseInfo.reunion ?? ""}C${courseInfo.course ?? ""}`;
   const dateLabel = formatDateLabel(selectedDate ?? courseInfo.dateStr ?? null);
   const statusLabel = isFinished
-    ? "Course terminée"
+    ? "Course terminee"
     : paywallRequired
       ? "Ticket premium"
-      : `${courseInfo.heureDepart || "Départ"} · ${formatMinutesLabel(minutesUntilStart)}`;
+      : `${courseInfo.heureDepart || "Depart"} - ${formatMinutesLabel(minutesUntilStart)}`;
   const stats = [
-    { label: "Départ", value: courseInfo.heureDepart || "--" },
+    { label: "Depart", value: courseInfo.heureDepart || "--" },
     {
       label: "Distance",
       value: courseInfo.distance ? `${courseInfo.distance} m` : "--",
@@ -60,7 +60,7 @@ export function RaceHeroSection({
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <p className="app-kicker">
-            {titlePrefix} · {(courseInfo.hippodrome || "Programme").toUpperCase()}
+            {titlePrefix} - {(courseInfo.hippodrome || "Programme").toUpperCase()}
           </p>
 
           <h1 className="mt-2 text-[2rem] font-black leading-tight text-[var(--pmu-text)] md:text-[2.65rem]">
@@ -68,9 +68,13 @@ export function RaceHeroSection({
           </h1>
 
           <p className="mt-3 text-sm leading-6 text-[var(--pmu-text-soft)]">
-            {formatDiscipline(courseInfo.discipline)} ·{" "}
-            {courseInfo.distance ? `${courseInfo.distance} m` : "Distance à confirmer"} ·{" "}
-            {formatEuros(courseInfo.allocation) || "Allocation à confirmer"}
+            {formatDiscipline(courseInfo.discipline)} -{" "}
+            {courseInfo.distance ? `${courseInfo.distance} m` : "Distance a confirmer"} -{" "}
+            {formatEuros(courseInfo.allocation) || "Allocation a confirmer"}
+          </p>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--pmu-text-soft)]">
+            Lis cette fiche dans l&apos;ordre : decision, cheval conseille, mise,
+            gain potentiel, puis details.
           </p>
         </div>
 
@@ -127,11 +131,11 @@ export function RaceHeroSection({
         >
           <WeatherIcon description={meteo.description} />
           <span className="text-[var(--pmu-text-soft)]">
-            {meteo.description} · {meteo.temperature}°C · Vent {meteo.vent_kmh} km/h
+            {meteo.description} - {meteo.temperature} C - Vent {meteo.vent_kmh} km/h
           </span>
           {meteo.terrain_impact === "DEFAVORABLE" ? (
             <span className="ml-auto rounded-lg bg-[color-mix(in_srgb,var(--pmu-red)_12%,white)] px-2 py-0.5 text-[0.72rem] font-bold uppercase text-[var(--pmu-red)]">
-              Terrain défavorable
+              Terrain defavorable
             </span>
           ) : null}
         </div>
