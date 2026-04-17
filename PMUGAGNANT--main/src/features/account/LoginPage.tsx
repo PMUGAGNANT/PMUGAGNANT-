@@ -104,8 +104,8 @@ function LoginPageContent() {
         if (referralCode && signInData.session?.access_token) {
           try {
             await applyReferralCode(referralCode, signInData.session.access_token);
-          } catch (referralError) {
-            console.error(referralError);
+          } catch {
+            // Le parrainage ne doit pas bloquer la creation du compte.
           }
         }
       } else {

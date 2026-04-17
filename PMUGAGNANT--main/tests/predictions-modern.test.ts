@@ -5,6 +5,10 @@ import { DEFAULT_ALGO_PARAMETERS } from "../src/lib/config";
 import { analyzeRaceWithParameters, getRaceStatus } from "../src/lib/predictions";
 import { determineRaceReadabilityScore } from "../src/lib/predictions/signals";
 import { buildValue, determineHorseDecision } from "../src/lib/predictions/strategy";
+import {
+  SCORING_ALGO_VERSION,
+  getValueConfirmationMultiplier,
+} from "../src/lib/predictions/shared";
 import type { Participant, RaceSummary, ScoredParticipant } from "../src/lib/types";
 
 function createRace(overrides: Partial<RaceSummary> = {}): RaceSummary {
@@ -261,6 +265,25 @@ test("analyzeRaceWithParameters produit une synthese coherente sur un petit cham
   assert.ok(analysis.top5.length <= 4);
   assert.ok(analysis.favori !== null);
   assert.ok(["LISIBLE", "COMPLEXE", "LOTERIE"].includes(analysis.prediction.lisibilite));
+});
+
+test("le moteur expose les garde-fous v9.2 et garde une mise conseillee visible", () => {
+  const race = createRace({ nombrePartants: 6, terrain: "bon", meteo: "soleil" });
+  const participants = [
+    createParticipant(1, { cote: 2.1, coteMatin: 2.2, musique: "11121", nombreVictoires: 6, nombrePlaces: 10 }),
+    createParticipant(2, { cote: 2.4, coteMatin: 2.5, musique: "21212", nombreVictoires: 4, nombrePlaces: 9 }),
+    createParticipant(3, { cote: 2.8, coteMatin: 2.9, musique: "22123", nombreVictoires: 3, nombrePlaces: 8 }),
+    createParticipant(4, { cote: 3.2, coteMatin: 3.4, musique: "32323", nombreVictoires: 2, nombrePlaces: 7 }),
+  ];
+
+  const analysis = analyzeRaceWithParameters(race, participants, DEFAULT_ALGO_PARAMETERS);
+  const visibleTicket = analysis.ranking.find((runner) => runner.prediction.decision !== "REJET");
+
+  assert.equal(SCORING_ALGO_VERSION, "v9.2");
+  assert.equal(getValueConfirmationMultiplier("LISIBLE"), 1.1);
+  assert.equal(getValueConfirmationMultiplier("COMPLEXE"), 1.25);
+  assert.ok(visibleTicket, "un ticket doit etre visible sur un champ lisible");
+  assert.ok((visibleTicket?.prediction.miseConseillee ?? 0) > 0);
 });
 
 test("getRaceStatus distingue les courses finies et disponibles", () => {

@@ -14,11 +14,14 @@ export const PERFORMANCE_SEGMENTS: SegmentKey[] = [
 export type PerformancePeriod = "7j" | "30j" | "90j" | "all";
 export type PerformanceBetType = "ALL" | "GAGNANT" | "PLACE";
 export type PerformanceSegmentFilter = "ALL" | SegmentKey;
+export type PerformanceDistanceFilter = "ALL" | "SPRINT" | "MILE" | "LONG";
 
 export interface PerformanceFilters {
   period: PerformancePeriod;
   segment: PerformanceSegmentFilter;
   betType: PerformanceBetType;
+  hippodrome?: string;
+  distance?: PerformanceDistanceFilter;
 }
 
 export interface PerformanceKpis {
@@ -41,6 +44,17 @@ export interface PerformanceTimelinePoint {
   cumulativeProfit: number;
   cumulativeRoi: number;
   drawdown: number;
+}
+
+export interface PerformanceRangeSummary {
+  period: Exclude<PerformancePeriod, "all">;
+  label: string;
+  roi: number;
+  stake: number;
+  gain: number;
+  netGain: number;
+  bets: number;
+  timeline: PerformanceTimelinePoint[];
 }
 
 export interface PerformanceSegmentRow {
@@ -79,6 +93,22 @@ export interface PerformanceRiskMetrics {
   calibrationSampleSize: number;
 }
 
+export interface PerformanceComparisonRow {
+  id: string;
+  date: string;
+  raceLabel: string;
+  hippodrome: string;
+  cheval: string;
+  betType: "GAGNANT" | "PLACE" | null;
+  decision: PredictionRow["decision"];
+  suggestedStake: number;
+  actualStake: number;
+  gain: number;
+  netGain: number;
+  roi: number;
+  result: "GAGNANT" | "PLACE" | "PERDU" | "EN_ATTENTE";
+}
+
 export interface PerformanceDateRange {
   startIso: string;
   endIso: string;
@@ -91,9 +121,12 @@ export interface PerformanceDashboard {
   range: PerformanceDateRange;
   kpis: PerformanceKpis;
   risk: PerformanceRiskMetrics;
+  rangeSummaries: PerformanceRangeSummary[];
   timeline: PerformanceTimelinePoint[];
   segments: PerformanceSegmentRow[];
   calibration: PerformanceCalibrationBin[];
+  comparisonRows: PerformanceComparisonRow[];
+  availableHippodromes: string[];
   generatedAt: string;
 }
 
@@ -139,6 +172,19 @@ export function normalizePerformanceBetType(value: string | null): PerformanceBe
 
 export function normalizePerformanceSegment(value: string | null): PerformanceSegmentFilter {
   return value && isSegmentKey(value) ? value : "ALL";
+}
+
+export function normalizePerformanceHippodrome(value: string | null): string {
+  const normalized = (value ?? "").trim();
+  if (!normalized || normalized.toUpperCase() === "ALL") {
+    return "ALL";
+  }
+
+  return normalized.slice(0, 80);
+}
+
+export function normalizePerformanceDistance(value: string | null): PerformanceDistanceFilter {
+  return value === "SPRINT" || value === "MILE" || value === "LONG" ? value : "ALL";
 }
 
 export function getPerformanceDateRange(period: PerformancePeriod, now: Date = new Date()) {
@@ -192,6 +238,25 @@ function predictionKey(row: Pick<PredictionRow, "date" | "reunion" | "course">) 
   return `${row.date}-${row.reunion}-${row.course}`;
 }
 
+function isDateInRange(date: string, startIso: string, endIso: string) {
+  return date >= startIso && date <= endIso;
+}
+
+function getDistanceBucket(course: CourseRecordRow | null | undefined): PerformanceDistanceFilter {
+  const distance = course?.distance ?? 0;
+  if (!Number.isFinite(distance) || distance <= 0) {
+    return "ALL";
+  }
+  if (distance <= 1600) {
+    return "SPRINT";
+  }
+  if (distance <= 2200) {
+    return "MILE";
+  }
+
+  return "LONG";
+}
+
 function getStake(row: PredictionRow) {
   return Math.max(0, Number(row.mise_simulee ?? 0));
 }
@@ -230,40 +295,9 @@ function getCalibrationBin(probability: number) {
   );
 }
 
-export function buildPerformanceDashboard(
-  predictions: PredictionRow[],
-  courses: CourseRecordRow[],
-  filters: PerformanceFilters,
-  generatedAt = new Date().toISOString(),
-  range: { startIso: string; endIso: string } | null = null
-): PerformanceDashboard {
-  const courseMap = new Map(courses.map((course) => [predictionKey(course), course] as const));
-  const segmentByRace = new Map<string, SegmentKey>(
-    courses.map((course) => [predictionKey(course), getSegmentForCourse(course)] as const)
-  );
-
-  const betTypeFiltered = predictions.filter((row) => {
-    if (filters.betType !== "ALL" && row.pari_conseille !== filters.betType) {
-      return false;
-    }
-    return true;
-  });
-  const segmentFiltered = betTypeFiltered.filter((row) => {
-    const segment = segmentByRace.get(predictionKey(row)) ?? getSegmentForCourse(courseMap.get(predictionKey(row)));
-    return filters.segment === "ALL" || segment === filters.segment;
-  });
-  const playableRows = segmentFiltered.filter(isPlayable);
-  const pendingBets = segmentFiltered.filter(
-    (row) => row.decision !== "REJET" && getStake(row) > 0 && !isSettled(row)
-  ).length;
-  const rejectedRows = segmentFiltered.filter((row) => row.decision === "REJET").length;
-  const totalStake = round2(playableRows.reduce((sum, row) => sum + getStake(row), 0));
-  const totalGain = round2(playableRows.reduce((sum, row) => sum + getGain(row), 0));
-  const wins = playableRows.filter((row) => row.resultat_gagnant === true).length;
-  const places = playableRows.filter((row) => row.resultat_place === true).length;
-
+function buildTimeline(rows: PredictionRow[]): PerformanceTimelinePoint[] {
   const byDate = new Map<string, { stake: number; gain: number; count: number }>();
-  for (const row of playableRows) {
+  for (const row of rows) {
     const current = byDate.get(row.date) ?? { stake: 0, gain: 0, count: 0 };
     current.stake += getStake(row);
     current.gain += getGain(row);
@@ -274,7 +308,7 @@ export function buildPerformanceDashboard(
   let cumulativeStake = 0;
   let cumulativeGain = 0;
   let peakProfit = 0;
-  const timeline = [...byDate.entries()]
+  return [...byDate.entries()]
     .sort((left, right) => left[0].localeCompare(right[0]))
     .map(([date, values]) => {
       cumulativeStake += values.stake;
@@ -293,9 +327,146 @@ export function buildPerformanceDashboard(
         drawdown: round2(Math.max(0, peakProfit - cumulativeProfit)),
       };
     });
+}
+
+function buildRangeSummary(
+  period: Exclude<PerformancePeriod, "all">,
+  rows: PredictionRow[],
+  generatedAt: string
+): PerformanceRangeSummary {
+  const { startIso, endIso } = getPerformanceDateRange(period, new Date(generatedAt));
+  const rangeRows = rows.filter((row) => isDateInRange(row.date, startIso, endIso) && isPlayable(row));
+  const stake = round2(rangeRows.reduce((sum, row) => sum + getStake(row), 0));
+  const gain = round2(rangeRows.reduce((sum, row) => sum + getGain(row), 0));
+
+  return {
+    period,
+    label: period,
+    roi: roi(stake, gain),
+    stake,
+    gain,
+    netGain: round2(gain - stake),
+    bets: rangeRows.length,
+    timeline: buildTimeline(rangeRows),
+  };
+}
+
+function buildComparisonRows(rows: PredictionRow[]): PerformanceComparisonRow[] {
+  return rows
+    .filter((row) => row.decision !== "REJET" && getStake(row) > 0)
+    .sort((left, right) => {
+      const dateCompare = right.date.localeCompare(left.date);
+      if (dateCompare !== 0) return dateCompare;
+      if (right.reunion !== left.reunion) return right.reunion - left.reunion;
+      return right.course - left.course;
+    })
+    .slice(0, 60)
+    .map((row) => {
+      const actualStake = getStake(row);
+      const gain = getGain(row);
+      const result =
+        !isSettled(row)
+          ? "EN_ATTENTE"
+          : row.resultat_gagnant
+            ? "GAGNANT"
+            : row.resultat_place
+              ? "PLACE"
+              : "PERDU";
+
+      return {
+        id: `${row.date}-${row.reunion}-${row.course}-${row.cheval_num}`,
+        date: row.date,
+        raceLabel: `R${row.reunion}C${row.course}`,
+        hippodrome: row.hippodrome,
+        cheval: `#${row.cheval_num} ${row.cheval_nom}`,
+        betType: row.pari_conseille ?? null,
+        decision: row.decision,
+        suggestedStake: actualStake,
+        actualStake,
+        gain,
+        netGain: round2(gain - actualStake),
+        roi: roi(actualStake, gain),
+        result,
+      };
+    });
+}
+
+export function buildPerformanceDashboard(
+  predictions: PredictionRow[],
+  courses: CourseRecordRow[],
+  filters: PerformanceFilters,
+  generatedAt = new Date().toISOString(),
+  range: { startIso: string; endIso: string } | null = null
+): PerformanceDashboard {
+  const courseMap = new Map(courses.map((course) => [predictionKey(course), course] as const));
+  const segmentByRace = new Map<string, SegmentKey>(
+    courses.map((course) => [predictionKey(course), getSegmentForCourse(course)] as const)
+  );
+  const activeRange = getPerformanceDateRange(filters.period, new Date(generatedAt));
+  const hippodromeFilter = normalizePerformanceHippodrome(filters.hippodrome ?? "ALL");
+  const distanceFilter = normalizePerformanceDistance(filters.distance ?? "ALL");
+  const normalizedFilters: PerformanceFilters = {
+    ...filters,
+    hippodrome: hippodromeFilter,
+    distance: distanceFilter,
+  };
+  const availableHippodromes = [...new Set(courses.map((course) => course.hippodrome).filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right, "fr"));
+
+  const dateFiltered = predictions.filter((row) =>
+    isDateInRange(row.date, activeRange.startIso, activeRange.endIso)
+  );
+  const contextFiltered = dateFiltered.filter((row) => {
+    if (filters.betType !== "ALL" && row.pari_conseille !== filters.betType) {
+      return false;
+    }
+
+    const course = courseMap.get(predictionKey(row));
+    if (hippodromeFilter !== "ALL" && row.hippodrome !== hippodromeFilter && course?.hippodrome !== hippodromeFilter) {
+      return false;
+    }
+
+    if (distanceFilter !== "ALL" && getDistanceBucket(course) !== distanceFilter) {
+      return false;
+    }
+
+    return true;
+  });
+  const segmentFiltered = contextFiltered.filter((row) => {
+    const segment = segmentByRace.get(predictionKey(row)) ?? getSegmentForCourse(courseMap.get(predictionKey(row)));
+    return filters.segment === "ALL" || segment === filters.segment;
+  });
+  const playableRows = segmentFiltered.filter(isPlayable);
+  const pendingBets = segmentFiltered.filter(
+    (row) => row.decision !== "REJET" && getStake(row) > 0 && !isSettled(row)
+  ).length;
+  const rejectedRows = segmentFiltered.filter((row) => row.decision === "REJET").length;
+  const totalStake = round2(playableRows.reduce((sum, row) => sum + getStake(row), 0));
+  const totalGain = round2(playableRows.reduce((sum, row) => sum + getGain(row), 0));
+  const wins = playableRows.filter((row) => row.resultat_gagnant === true).length;
+  const places = playableRows.filter((row) => row.resultat_place === true).length;
+
+  const timeline = buildTimeline(playableRows);
+  const rangeSummarySourceRows = predictions.filter((row) => {
+    if (filters.betType !== "ALL" && row.pari_conseille !== filters.betType) {
+      return false;
+    }
+    const course = courseMap.get(predictionKey(row));
+    if (hippodromeFilter !== "ALL" && row.hippodrome !== hippodromeFilter && course?.hippodrome !== hippodromeFilter) {
+      return false;
+    }
+    if (distanceFilter !== "ALL" && getDistanceBucket(course) !== distanceFilter) {
+      return false;
+    }
+    const segment = segmentByRace.get(predictionKey(row)) ?? getSegmentForCourse(course);
+    return filters.segment === "ALL" || segment === filters.segment;
+  });
+  const rangeSummaries = (["7j", "30j", "90j"] as const).map((period) =>
+    buildRangeSummary(period, rangeSummarySourceRows, generatedAt)
+  );
 
   const segments = PERFORMANCE_SEGMENTS.map((segment) => {
-    const rows = betTypeFiltered.filter((row) => {
+    const rows = contextFiltered.filter((row) => {
       const rowSegment =
         segmentByRace.get(predictionKey(row)) ?? getSegmentForCourse(courseMap.get(predictionKey(row)));
       return rowSegment === segment && isPlayable(row);
@@ -366,10 +537,10 @@ export function buildPerformanceDashboard(
   const settledDates = playableRows.map((row) => row.date).sort((left, right) => left.localeCompare(right));
 
   return {
-    filters,
+    filters: normalizedFilters,
     range: {
-      startIso: range?.startIso ?? predictions[0]?.date ?? "",
-      endIso: range?.endIso ?? predictions[predictions.length - 1]?.date ?? "",
+      startIso: range?.startIso ?? activeRange.startIso,
+      endIso: range?.endIso ?? activeRange.endIso,
       firstSettledDate: settledDates[0] ?? null,
       lastSettledDate: settledDates[settledDates.length - 1] ?? null,
     },
@@ -393,9 +564,12 @@ export function buildPerformanceDashboard(
       calibrationError,
       calibrationSampleSize,
     },
+    rangeSummaries,
     timeline,
     segments,
     calibration,
+    comparisonRows: buildComparisonRows(segmentFiltered),
+    availableHippodromes,
     generatedAt,
   };
 }

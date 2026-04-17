@@ -127,3 +127,57 @@ test("buildPerformanceDashboard filtre segment et type de pari", () => {
   assert.equal(dashboard.segments.find((row) => row.segment === "PLAT_SPRINT")?.netGain, 8);
   assert.equal(dashboard.segments.find((row) => row.segment === "TROT_ATTELE")?.bets, 0);
 });
+
+test("buildPerformanceDashboard filtre hippodrome et distance puis expose les mises comparees", () => {
+  const dashboard = buildPerformanceDashboard(
+    [
+      createPrediction({
+        date: "2026-04-10",
+        hippodrome: "Chantilly",
+        mise_simulee: 8,
+        gain_simule: 16,
+      }),
+      createPrediction({
+        date: "2026-04-10",
+        reunion: 2,
+        course: 1,
+        hippodrome: "Vincennes",
+        mise_simulee: 10,
+        gain_simule: 0,
+      }),
+    ],
+    [
+      createCourse({
+        date: "2026-04-10",
+        hippodrome: "Chantilly",
+        discipline: "PLAT",
+        distance: 1400,
+      }),
+      createCourse({
+        date: "2026-04-10",
+        reunion: 2,
+        course: 1,
+        hippodrome: "Vincennes",
+        distance: 2700,
+      }),
+    ],
+    {
+      period: "30j",
+      segment: "ALL",
+      betType: "ALL",
+      hippodrome: "Chantilly",
+      distance: "SPRINT",
+    },
+    "2026-04-15T12:00:00.000Z"
+  );
+
+  assert.equal(dashboard.kpis.validatedBets, 1);
+  assert.equal(dashboard.kpis.totalStake, 8);
+  assert.equal(dashboard.kpis.totalGain, 16);
+  assert.equal(dashboard.rangeSummaries.length, 3);
+  assert.equal(dashboard.rangeSummaries.find((item) => item.period === "7j")?.bets, 1);
+  assert.equal(dashboard.comparisonRows[0]?.suggestedStake, 8);
+  assert.equal(dashboard.comparisonRows[0]?.actualStake, 8);
+  assert.equal(dashboard.comparisonRows[0]?.result, "GAGNANT");
+  assert.ok(dashboard.availableHippodromes.includes("Chantilly"));
+});

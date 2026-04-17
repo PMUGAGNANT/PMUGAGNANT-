@@ -8,17 +8,17 @@ const course = args[2] ? Number.parseInt(args[2], 10) : null;
 
 async function main() {
   if (reunion && course) {
-    console.log(`Generation avis R${reunion}C${course}...`);
+    process.stdout.write(`Generation avis R${reunion}C${course}...\n`);
     await genererAvisCourse(dateStr, reunion, course);
   } else {
-    console.log(`Generation avis journee ${dateStr}...`);
+    process.stdout.write(`Generation avis journee ${dateStr}...\n`);
     await genererAvisJour(dateStr);
   }
 
-  console.log("Termine.");
+  process.stdout.write("Termine.\n");
 }
 
 main().catch((error) => {
-  console.error(error);
+  process.stderr.write(`${error instanceof Error ? error.stack ?? error.message : String(error)}\n`);
   process.exit(1);
 });

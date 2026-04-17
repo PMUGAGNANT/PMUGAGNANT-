@@ -1069,3 +1069,30 @@ img, svg { display: block; }
     transition-duration: 0.01ms !important;
   }
 }
+
+@media print {
+  body {
+    background: #fff;
+  }
+
+  .turf-topbar,
+  .turf-search-strip,
+  .pmu-skip-link,
+  button,
+  select {
+    display: none;
+  }
+
+  .app-shell__content {
+    width: 100%;
+    padding: 0;
+  }
+
+  .app-card,
+  .app-card-muted,
+  .app-stat-card,
+  .app-page-hero {
+    box-shadow: none;
+    break-inside: avoid;
+  }
+}

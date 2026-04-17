@@ -41,6 +41,24 @@ function formatEuros(value: number) {
   }).format(value);
 }
 
+function getVisibleStake(pronostic: PronosticCardData, betType: string, confidence: number) {
+  const explicitStake = pronostic.miseConseil;
+  if (typeof explicitStake === "number" && Number.isFinite(explicitStake) && explicitStake > 0) {
+    return explicitStake;
+  }
+
+  const normalizedBetType = normalizeKey(betType);
+  if (normalizedBetType.includes("gagnant") && confidence >= 7) {
+    return 10;
+  }
+
+  if (normalizedBetType.includes("place") || confidence >= 6) {
+    return 8;
+  }
+
+  return 6;
+}
+
 function getSelectedHorse(
   pronostic: PronosticCardData,
   participants: CourseParticipantRow[] | null | undefined
@@ -126,7 +144,7 @@ export function CoursePronostic({ pronostic, participants }: CoursePronosticProp
   const progress = Math.min(100, Math.max(0, confidence * 10));
   const human = selectedHorse.jockey || selectedHorse.driver || "Jockey / driver à confirmer";
   const trainer = selectedHorse.entraineur || "Entraîneur à confirmer";
-  const stake = Math.max(0, pronostic.miseConseil ?? 0);
+  const stake = getVisibleStake(pronostic, betType, confidence);
   const odds = typeof selectedHorse.cote === "number" && Number.isFinite(selectedHorse.cote)
     ? selectedHorse.cote
     : null;

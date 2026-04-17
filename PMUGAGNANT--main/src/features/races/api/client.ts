@@ -23,8 +23,7 @@ export async function getBrowserAuthorizationHeader() {
     return session?.access_token
       ? { Authorization: `Bearer ${session.access_token}` }
       : undefined;
-  } catch (error) {
-    console.error(error);
+  } catch {
     return undefined;
   }
 }
