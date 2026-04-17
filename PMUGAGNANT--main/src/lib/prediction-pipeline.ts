@@ -7,6 +7,7 @@ import {
 import { getMinutesUntilStart, getTodayDateStr as getTodayDateStrFromUtils, parsePmuDate } from "@/lib/date-utils";
 import { attachFaultRates, upsertFaultRates } from "@/lib/horse-faults";
 import { getAllRaces, getFinalReports, getParticipants } from "@/lib/pmu-api";
+import { logger } from "@/lib/server-logger";
 import { fetchMeteoHippodrome } from "@/lib/meteo";
 import { snapshotLiveCotes } from "@/lib/live-cotes";
 import {
@@ -617,9 +618,9 @@ export async function runMorningAnalysis(dateStr: string) {
 
   try {
     await genererAvisJour(dateStr);
-    console.log("Avis expert generes");
+    logger.info("avis.generated", { date: dateStr });
   } catch (error) {
-    console.error("Erreur generation avis:", error);
+    logger.error("avis.generation_failed", error, { date: dateStr });
   }
 
   return {

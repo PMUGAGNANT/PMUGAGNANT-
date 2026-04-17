@@ -9,6 +9,7 @@ import {
   type ChevalPourAvis,
 } from "@/lib/avis-generator";
 import { getSupabaseAdminClient } from "@/lib/supabase";
+import { logger } from "@/lib/server-logger";
 import type {
   CourseRecordRow,
   Lisibilite,
@@ -121,7 +122,12 @@ export async function fetchAvisExpertTop5(
     .limit(5);
 
   if (error) {
-    console.error("Erreur lecture avis expert:", error.message);
+    logger.warn("avis.fetch_top5_failed", {
+      dateStr,
+      reunion,
+      course,
+      error: error.message,
+    });
     return [];
   }
 
@@ -216,7 +222,14 @@ export async function genererAvisCourse(
     .limit(5);
 
   if (error || !predictions || predictions.length === 0) {
-    if (error) console.error("Erreur predictions avis:", error.message);
+    if (error) {
+      logger.warn("avis.predictions_fetch_failed", {
+        dateStr,
+        reunion,
+        course,
+        error: error.message,
+      });
+    }
     return;
   }
 
@@ -258,10 +271,22 @@ export async function genererAvisCourse(
             .eq("cheval_num", prediction.cheval_num);
 
           if (updateError) {
-            console.error(`Erreur sauvegarde avis ${prediction.cheval_nom}:`, updateError.message);
+            logger.warn("avis.save_failed", {
+              dateStr,
+              reunion,
+              course,
+              cheval: prediction.cheval_nom,
+              error: updateError.message,
+            });
           }
         } catch (errorAvis) {
-          console.error(`Erreur avis ${prediction.cheval_nom}:`, errorAvis);
+          logger.warn("avis.generation_failed_for_horse", {
+            dateStr,
+            reunion,
+            course,
+            cheval: prediction.cheval_nom,
+            error: errorAvis instanceof Error ? errorAvis.message : String(errorAvis),
+          });
         }
       })
     );
@@ -280,7 +305,12 @@ export async function genererAvisJour(dateStr: string): Promise<void> {
     .eq("stage", "MATIN");
 
   if (error || !courses) {
-    if (error) console.error("Erreur liste courses avis:", error.message);
+    if (error) {
+      logger.warn("avis.course_list_failed", {
+        dateStr,
+        error: error.message,
+      });
+    }
     return;
   }
 

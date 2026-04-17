@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { useCombo, type ComboRole } from "@/components/ComboBuilder";
 import { getPriorityToneColor } from "@/lib/race-priority";
 import type { RaceSummary } from "@/lib/types";
@@ -10,6 +11,9 @@ import {
   type FeaturedRace,
 } from "@/features/home/lib/home-page-model";
 import type { HomeLane } from "@/features/home/components/home-page-types";
+
+const INITIAL_VISIBLE_COURSES = 8;
+const VISIBLE_COURSES_STEP = 8;
 
 type HomeComboAction = {
   cheval_num: number;
@@ -218,6 +222,12 @@ export function TopCoursesGrid({
   onOpenRace: (race: RaceSummary) => void;
 }) {
   const meta = getBoardSectionMeta(lane.key);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COURSES);
+  const visibleItems = useMemo(
+    () => lane.items.slice(0, visibleCount),
+    [lane.items, visibleCount]
+  );
+  const remainingCount = Math.max(lane.items.length - visibleItems.length, 0);
 
   return (
     <section className="space-y-4">
@@ -248,7 +258,7 @@ export function TopCoursesGrid({
       </div>
 
       <div className="grid gap-4 2xl:grid-cols-2">
-        {lane.items.map((item) => (
+        {visibleItems.map((item) => (
           <CompactRaceCard
             key={`${lane.key}-${item.race.reunion}-${item.race.course}`}
             item={item}
@@ -256,6 +266,21 @@ export function TopCoursesGrid({
           />
         ))}
       </div>
+
+      {remainingCount > 0 ? (
+        <button
+          type="button"
+          className="app-button-secondary w-full"
+          onClick={() =>
+            setVisibleCount((current) =>
+              Math.min(current + VISIBLE_COURSES_STEP, lane.items.length)
+            )
+          }
+        >
+          Afficher {Math.min(remainingCount, VISIBLE_COURSES_STEP)} course
+          {Math.min(remainingCount, VISIBLE_COURSES_STEP) > 1 ? "s" : ""} de plus
+        </button>
+      ) : null}
     </section>
   );
 }

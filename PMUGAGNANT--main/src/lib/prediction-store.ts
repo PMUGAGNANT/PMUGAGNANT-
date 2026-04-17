@@ -632,38 +632,64 @@ export async function listPredictionsByDate(dateStr: string) {
 
 export async function listPredictionsBetween(startIso: string, endIso: string) {
   const admin = getAdmin();
-  const { data, error } = await admin
-    .from("predictions")
-    .select("*")
-    .gte("date", startIso)
-    .lte("date", endIso)
-    .order("date", { ascending: true })
-    .order("reunion", { ascending: true })
-    .order("course", { ascending: true });
+  const rows: PredictionRow[] = [];
 
-  if (error) {
-    throw new Error(`Prediction range fetch failed: ${error.message}`);
+  for (let from = 0; ; from += PAGINATED_FETCH_SIZE) {
+    const to = from + PAGINATED_FETCH_SIZE - 1;
+    const { data, error } = await admin
+      .from("predictions")
+      .select("*")
+      .gte("date", startIso)
+      .lte("date", endIso)
+      .order("date", { ascending: true })
+      .order("reunion", { ascending: true })
+      .order("course", { ascending: true })
+      .range(from, to);
+
+    if (error) {
+      throw new Error(`Prediction range fetch failed: ${error.message}`);
+    }
+
+    const page = (data ?? []) as PredictionRow[];
+    rows.push(...page);
+
+    if (page.length < PAGINATED_FETCH_SIZE) {
+      break;
+    }
   }
 
-  return (data ?? []) as PredictionRow[];
+  return rows;
 }
 
 export async function listCourseRecordsBetween(startIso: string, endIso: string) {
   const admin = getAdmin();
-  const { data, error } = await admin
-    .from("courses")
-    .select("*")
-    .gte("date", startIso)
-    .lte("date", endIso)
-    .order("date", { ascending: true })
-    .order("reunion", { ascending: true })
-    .order("course", { ascending: true });
+  const rows: CourseRecordRow[] = [];
 
-  if (error) {
-    throw new Error(`Course range fetch failed: ${error.message}`);
+  for (let from = 0; ; from += PAGINATED_FETCH_SIZE) {
+    const to = from + PAGINATED_FETCH_SIZE - 1;
+    const { data, error } = await admin
+      .from("courses")
+      .select("*")
+      .gte("date", startIso)
+      .lte("date", endIso)
+      .order("date", { ascending: true })
+      .order("reunion", { ascending: true })
+      .order("course", { ascending: true })
+      .range(from, to);
+
+    if (error) {
+      throw new Error(`Course range fetch failed: ${error.message}`);
+    }
+
+    const page = (data ?? []) as CourseRecordRow[];
+    rows.push(...page);
+
+    if (page.length < PAGINATED_FETCH_SIZE) {
+      break;
+    }
   }
 
-  return (data ?? []) as CourseRecordRow[];
+  return rows;
 }
 
 export async function replaceActiveSegmentCalibration(row: SegmentCalibrationRow) {

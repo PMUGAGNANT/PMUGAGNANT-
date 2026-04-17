@@ -18,7 +18,10 @@ import type {
 } from "@/lib/types";
 import {
   BANKROLL_BASE_EUROS,
+  LOW_CONFIDENCE_VALIDATION_FLOOR_V92,
+  STRONG_SIGNAL_MIN_V92,
   clamp,
+  getValueConfirmationMultiplier,
   kellyFraction,
   marketProbabilityFromOdds,
   round1,
@@ -206,9 +209,9 @@ export function determineHorseDecision(
     }
   }
 
-  if (candidate.confiance < 5.5 && decision === "VALIDE") { // v9.3
-    decision = "SURVEILLANCE"; // v9.3
-  } // v9.3
+  if (candidate.confiance < LOW_CONFIDENCE_VALIDATION_FLOOR_V92 && decision === "VALIDE") {
+    decision = "SURVEILLANCE";
+  }
 
   return { decision, typePariConseille, miseConseillee };
 }
@@ -220,9 +223,9 @@ export function buildValue(
 ): ValueAnalysis {
   const cotePMU = runner.cote ?? runner.coteDepart ?? runner.coteMatin ?? 0;
   const probabiliteImplicite = marketProbabilityFromOdds(cotePMU);
-  const valueConfirmationMultiplier = lisibilite === "LISIBLE" ? 1.1 : 1.25; // v9.3
+  const valueConfirmationMultiplier = getValueConfirmationMultiplier(lisibilite);
   const probabiliteValueSeuil = clamp(
-    probabiliteImplicite * valueConfirmationMultiplier, // v9.3
+    probabiliteImplicite * valueConfirmationMultiplier,
     0,
     1
   );
@@ -742,7 +745,7 @@ export function computeConfidence(
   scoreFinalPari: number,
   marketEdge: number
 ) {
-  const confianceActuelle = round1( // v9.3
+  const confianceActuelle = round1(
     clamp(
       scoreFinalPari / 10 +
         runner.signaux.marche / 10 -
@@ -758,16 +761,16 @@ export function computeConfidence(
       10
     )
   );
-  const signauxForts = [ // v9.3
-    runner.signaux.forme, // v9.3
-    runner.signaux.regularite, // v9.3
-    runner.signaux.victoire, // v9.3
-    runner.signaux.podium, // v9.3
-    runner.signaux.humain, // v9.3
-    runner.signaux.marche, // v9.3
-  ].filter((signal) => signal > 6).length; // v9.3
+  const signauxForts = [
+    runner.signaux.forme,
+    runner.signaux.regularite,
+    runner.signaux.victoire,
+    runner.signaux.podium,
+    runner.signaux.humain,
+    runner.signaux.marche,
+  ].filter((signal) => signal > STRONG_SIGNAL_MIN_V92).length;
 
-  return signauxForts < 2 ? Math.min(confianceActuelle, 5.8) : confianceActuelle; // v9.3
+  return signauxForts < 2 ? Math.min(confianceActuelle, 5.8) : confianceActuelle;
 }
 
 export function computeKellyMetrics(

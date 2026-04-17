@@ -17,10 +17,13 @@ import {
 import {
   PERFORMANCE_SEGMENTS,
   normalizePerformanceBetType,
+  normalizePerformanceDistance,
+  normalizePerformanceHippodrome,
   normalizePerformancePeriod,
   normalizePerformanceSegment,
   type PerformanceBetType,
   type PerformanceDashboard,
+  type PerformanceDistanceFilter,
   type PerformancePeriod,
   type PerformanceSegmentFilter,
 } from "@/features/performance/performance-model";
@@ -40,6 +43,13 @@ const BET_TYPE_OPTIONS: Array<{ value: PerformanceBetType; label: string }> = [
   { value: "ALL", label: "Tous" },
   { value: "GAGNANT", label: "Gagnant" },
   { value: "PLACE", label: "Place" },
+];
+
+const DISTANCE_OPTIONS: Array<{ value: PerformanceDistanceFilter; label: string }> = [
+  { value: "ALL", label: "Toutes" },
+  { value: "SPRINT", label: "Sprint <= 1600m" },
+  { value: "MILE", label: "Mile 1601-2200m" },
+  { value: "LONG", label: "Long 2200m+" },
 ];
 
 function formatPercent(value: number) {
@@ -71,6 +81,13 @@ function formatShortDate(value: string | null) {
 function segmentLabel(segment: PerformanceSegmentFilter) {
   if (segment === "ALL") return "Tous segments";
   return segment.replaceAll("_", " ");
+}
+
+function formatResult(value: string) {
+  if (value === "EN_ATTENTE") return "En attente";
+  if (value === "GAGNANT") return "Gagnant";
+  if (value === "PLACE") return "Place";
+  return "Perdu";
 }
 
 function KpiCard({
@@ -146,6 +163,8 @@ function BilanPageContent() {
   const period = normalizePerformancePeriod(searchParams.get("period"));
   const segment = normalizePerformanceSegment(searchParams.get("segment"));
   const betType = normalizePerformanceBetType(searchParams.get("bet_type"));
+  const hippodrome = normalizePerformanceHippodrome(searchParams.get("hippodrome"));
+  const distance = normalizePerformanceDistance(searchParams.get("distance"));
 
   const [data, setData] = useState<PerformanceDashboard | null>(null);
   const [loading, setLoading] = useState(true);
@@ -165,6 +184,8 @@ function BilanPageContent() {
           period,
           segment,
           bet_type: betType,
+          hippodrome,
+          distance,
         });
         const response = await fetch(`/api/bilan?${qs.toString()}`, {
           cache: "no-store",
@@ -199,7 +220,7 @@ function BilanPageContent() {
       cancelled = true;
       ac.abort();
     };
-  }, [period, segment, betType]);
+  }, [period, segment, betType, hippodrome, distance]);
 
   const segmentOptions = useMemo(
     () => [
@@ -211,18 +232,36 @@ function BilanPageContent() {
     ],
     []
   );
+  const hippodromeOptions = useMemo(
+    () => [
+      { value: "ALL", label: "Tous" },
+      ...(data?.availableHippodromes ?? []).map((value) => ({
+        value,
+        label: value,
+      })),
+    ],
+    [data?.availableHippodromes]
+  );
 
   function updateFilters(next: Partial<{
     period: PerformancePeriod;
     segment: PerformanceSegmentFilter;
     betType: PerformanceBetType;
+    hippodrome: string;
+    distance: PerformanceDistanceFilter;
   }>) {
     const qs = new URLSearchParams({
       period: next.period ?? period,
       segment: next.segment ?? segment,
       bet_type: next.betType ?? betType,
+      hippodrome: next.hippodrome ?? hippodrome,
+      distance: next.distance ?? distance,
     });
     router.replace(`/bilan?${qs.toString()}`, { scroll: false });
+  }
+
+  function exportMonthlyPdf() {
+    window.print();
   }
 
   const kpis = data?.kpis;
@@ -244,7 +283,7 @@ function BilanPageContent() {
             </p>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-5">
             <FilterSelect
               label="Periode"
               value={period}
@@ -262,6 +301,18 @@ function BilanPageContent() {
               value={betType}
               options={BET_TYPE_OPTIONS}
               onChange={(value) => updateFilters({ betType: value })}
+            />
+            <FilterSelect
+              label="Hippodrome"
+              value={hippodrome}
+              options={hippodromeOptions}
+              onChange={(value) => updateFilters({ hippodrome: value })}
+            />
+            <FilterSelect
+              label="Distance"
+              value={distance}
+              options={DISTANCE_OPTIONS}
+              onChange={(value) => updateFilters({ distance: value })}
             />
           </div>
 
@@ -286,6 +337,11 @@ function BilanPageContent() {
                 {data ? `${data.risk.calibrationSampleSize} lignes` : "--"}
               </p>
             </div>
+          </div>
+          <div className="flex justify-start xl:justify-end">
+            <button type="button" className="app-button-secondary w-full md:w-auto" onClick={exportMonthlyPdf}>
+              Export PDF mensuel
+            </button>
           </div>
         </div>
       </section>
@@ -313,6 +369,60 @@ function BilanPageContent() {
             <KpiCard label="Reussite place" value={formatRate(kpis.placeRate)} tone="warn" />
             <KpiCard label="Gain net" value={formatCurrency(kpis.netGain)} tone={gainTone} />
             <KpiCard label="Rendement" value={formatRate(kpis.paybackRate)} tone={kpis.paybackRate >= 100 ? "good" : "bad"} />
+          </section>
+
+          <section className="grid gap-4 md:grid-cols-3">
+            {data.rangeSummaries.map((summary) => (
+              <article key={summary.period} className="app-card p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="app-kicker">ROI {summary.label}</p>
+                    <p className="mt-2 text-3xl font-black" style={{ color: summary.roi >= 0 ? "var(--pmu-primary)" : "var(--pmu-red)" }}>
+                      {formatPercent(summary.roi)}
+                    </p>
+                  </div>
+                  <span className="app-pill text-xs">{summary.bets} paris</span>
+                </div>
+                <div className="mt-4 h-24">
+                  {summary.timeline.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={summary.timeline}>
+                        <Line
+                          type="monotone"
+                          dataKey="cumulativeRoi"
+                          stroke={summary.roi >= 0 ? "var(--pmu-primary)" : "var(--pmu-red)"}
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            background: "var(--pmu-surface)",
+                            border: "1px solid var(--pmu-border)",
+                            color: "var(--pmu-text)",
+                          }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex h-full items-center text-sm text-[var(--pmu-text-soft)]">
+                      Aucun ticket regle
+                    </div>
+                  )}
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="app-card-muted px-3 py-2">
+                    <p className="app-label">Mises</p>
+                    <p className="font-black text-[var(--pmu-text)]">{formatCurrency(summary.stake)}</p>
+                  </div>
+                  <div className="app-card-muted px-3 py-2">
+                    <p className="app-label">Net</p>
+                    <p className="font-black" style={{ color: summary.netGain >= 0 ? "var(--pmu-primary)" : "var(--pmu-red)" }}>
+                      {formatCurrency(summary.netGain)}
+                    </p>
+                  </div>
+                </div>
+              </article>
+            ))}
           </section>
 
           <section className="grid gap-5 xl:grid-cols-[1.05fr,0.95fr]">
@@ -488,6 +598,61 @@ function BilanPageContent() {
                 </tbody>
               </table>
             </div>
+          </section>
+
+          <section className="app-card overflow-hidden p-0">
+            <div className="app-section-heading p-5 md:p-6">
+              <div>
+                <p className="app-kicker">Mises et resultats</p>
+                <h2 className="app-section-title">Conseil moteur vs ticket joue</h2>
+              </div>
+              <span className="app-pill text-xs">{data.comparisonRows.length} lignes</span>
+            </div>
+            {data.comparisonRows.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[70rem] text-left text-sm">
+                  <thead className="border-y border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] text-[var(--pmu-text-muted)]">
+                    <tr>
+                      <th className="px-5 py-3">Date</th>
+                      <th className="px-5 py-3">Course</th>
+                      <th className="px-5 py-3">Cheval</th>
+                      <th className="px-5 py-3">Pari</th>
+                      <th className="px-5 py-3">Decision</th>
+                      <th className="px-5 py-3">Mise conseillee</th>
+                      <th className="px-5 py-3">Mise jouee</th>
+                      <th className="px-5 py-3">Gain</th>
+                      <th className="px-5 py-3">Net</th>
+                      <th className="px-5 py-3">Resultat</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.comparisonRows.map((row) => (
+                      <tr key={row.id} className="border-b border-[var(--pmu-border)] last:border-b-0">
+                        <td className="px-5 py-4 text-[var(--pmu-text-soft)]">{formatShortDate(row.date)}</td>
+                        <td className="px-5 py-4">
+                          <p className="font-black text-[var(--pmu-text)]">{row.raceLabel}</p>
+                          <p className="text-xs text-[var(--pmu-text-muted)]">{row.hippodrome}</p>
+                        </td>
+                        <td className="px-5 py-4 font-black text-[var(--pmu-text)]">{row.cheval}</td>
+                        <td className="px-5 py-4 text-[var(--pmu-text-soft)]">{row.betType ?? "--"}</td>
+                        <td className="px-5 py-4 text-[var(--pmu-text-soft)]">{row.decision}</td>
+                        <td className="px-5 py-4 text-[var(--pmu-text-soft)]">{formatCurrency(row.suggestedStake)}</td>
+                        <td className="px-5 py-4 font-black text-[var(--pmu-text)]">{formatCurrency(row.actualStake)}</td>
+                        <td className="px-5 py-4 text-[var(--pmu-text-soft)]">{formatCurrency(row.gain)}</td>
+                        <td className="px-5 py-4 font-black" style={{ color: row.netGain >= 0 ? "var(--pmu-primary)" : "var(--pmu-red)" }}>
+                          {formatCurrency(row.netGain)}
+                        </td>
+                        <td className="px-5 py-4 text-[var(--pmu-text-soft)]">{formatResult(row.result)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-5 md:p-6">
+                <EmptyState text="Aucune mise a comparer sur cette fenetre." />
+              </div>
+            )}
           </section>
         </>
       ) : null}

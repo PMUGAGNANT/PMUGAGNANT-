@@ -38,8 +38,8 @@ import {
   getProbabilityCalibrationMultiplier,
 } from "@/lib/predictions/strategy";
 import {
-  VALUE_CONFIRMATION_MULTIPLIER,
   clamp,
+  getValueConfirmationMultiplier,
   marketProbabilityFromOdds,
   round1,
   round2,
@@ -156,7 +156,7 @@ export function analyzeRaceWithParameters(
       runner.cote ?? runner.coteDepart ?? runner.coteMatin
     );
     const probabiliteValueSeuil = clamp(
-      probabiliteImplicite * VALUE_CONFIRMATION_MULTIPLIER,
+      probabiliteImplicite * getValueConfirmationMultiplier(lisibilite),
       0,
       1
     );
@@ -196,19 +196,18 @@ export function analyzeRaceWithParameters(
     );
 
     let decision = decisionState.decision;
-    let miseConseillee = confirmedValueBet
-      ? Math.max(0, Math.round(miseBase100))
-      : decisionState.miseConseillee;
+    let miseConseillee =
+      decision === "REJET"
+        ? 0
+        : confirmedValueBet
+          ? Math.max(1, Math.round(miseBase100))
+          : decisionState.miseConseillee;
     if (outsider) {
       outsiderCount += 1;
       if (outsiderCount > parameters.outsiders.maxPerReunion) {
         decision = "REJET";
         miseConseillee = 0;
       }
-    }
-
-    if (!confirmedValueBet) {
-      miseConseillee = 0;
     }
 
     const topFacteurs = buildTopFactors(runner);
@@ -272,13 +271,13 @@ export function analyzeRaceWithParameters(
     ranked.find((runner) => runner.prediction.decision === "SURVEILLANCE") ??
     ranked[0] ??
     null;
-  const pepiteDuJour = // v9.3
+  const pepiteDuJour =
     ranked
       .filter(
         (runner) =>
           (runner.cote ?? 0) >= 5.0 &&
-          (runner.prediction.scoreBlended ?? runner.prediction.scoreCheval) >= 58 && // v9.3
-          runner.prediction.confiance >= 6.0 && // v9.3
+          (runner.prediction.scoreBlended ?? runner.prediction.scoreCheval) >= 58 &&
+          runner.prediction.confiance >= 6.0 &&
           runner.signaux.valueIntrinseque >= 2 &&
           runner.prediction.decision !== "REJET" &&
           runner.numPmu !== (favori?.numPmu ?? -1)

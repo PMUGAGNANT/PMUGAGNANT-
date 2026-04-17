@@ -9,7 +9,12 @@ import type {
   ScoredParticipant,
 } from "@/lib/types";
 import { countEncodedRuns } from "@/lib/predictions/music";
-import { clamp, normalizeKey, safeRate } from "@/lib/predictions/shared";
+import {
+  BASE_HORSE_SCORE_WEIGHTS_V92,
+  clamp,
+  normalizeKey,
+  safeRate,
+} from "@/lib/predictions/shared";
 import { logger } from "@/lib/server-logger";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 
@@ -526,9 +531,19 @@ export function computeBaseHorseScore(signaux: RunnerSignals) {
     signaux.repos +
     signaux.valueIntrinseque;
 
-  const negatives = signaux.risque + signaux.faute; // v9.3
-  const risqueMultiplier = signaux.risque > 12 ? 0.7 : signaux.risque > 8 ? 0.85 : 1; // v9.3
-  return clamp((32 + positives) * risqueMultiplier - negatives, 0, 100); // v9.3
+  const negatives = signaux.risque + signaux.faute;
+  const risqueMultiplier =
+    signaux.risque > BASE_HORSE_SCORE_WEIGHTS_V92.highRiskThreshold
+      ? BASE_HORSE_SCORE_WEIGHTS_V92.highRiskMultiplier
+      : signaux.risque > BASE_HORSE_SCORE_WEIGHTS_V92.elevatedRiskThreshold
+        ? BASE_HORSE_SCORE_WEIGHTS_V92.elevatedRiskMultiplier
+        : 1;
+
+  return clamp(
+    (BASE_HORSE_SCORE_WEIGHTS_V92.baseScore + positives) * risqueMultiplier - negatives,
+    0,
+    100
+  );
 }
 
 function getTerrainReadabilitySignal(race: RaceSummary) {

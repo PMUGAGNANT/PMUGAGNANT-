@@ -101,6 +101,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error);
+  process.stderr.write(`${error instanceof Error ? error.stack ?? error.message : String(error)}\n`);
   process.exit(1);
 });

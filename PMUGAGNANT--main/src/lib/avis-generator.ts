@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { logger } from "@/lib/server-logger";
 
 export type AvisVerdict = "MISER" | "SURVEILLER" | "EVITER";
 export type AvisPariType = "GAGNANT" | "PLACE";
@@ -129,7 +130,10 @@ Reponds UNIQUEMENT avec le texte de l'avis, sans guillemets ni ponctuation final
 
     return stripFinalPunctuation(text).slice(0, 180) || null;
   } catch (error) {
-    console.error("Erreur generation avis OpenAI:", error);
+    logger.error("avis.openai_generation_failed", error, {
+      cheval: cheval.cheval_nom,
+      numero: cheval.cheval_num,
+    });
     return null;
   }
 }

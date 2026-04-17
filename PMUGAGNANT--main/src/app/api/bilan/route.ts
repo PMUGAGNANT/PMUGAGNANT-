@@ -13,6 +13,8 @@ import {
   buildPerformanceDashboard,
   getPerformanceDateRange,
   normalizePerformanceBetType,
+  normalizePerformanceDistance,
+  normalizePerformanceHippodrome,
   normalizePerformancePeriod,
   normalizePerformanceSegment,
 } from "@/features/performance/performance-model";
@@ -273,28 +275,35 @@ export async function GET(request: Request) {
     const period = normalizePerformancePeriod(searchParams.get("period"));
     const segment = normalizePerformanceSegment(searchParams.get("segment"));
     const betType = normalizePerformanceBetType(searchParams.get("bet_type"));
-    const { startIso, endIso } = getPerformanceDateRange(period);
+    const hippodrome = normalizePerformanceHippodrome(searchParams.get("hippodrome"));
+    const distance = normalizePerformanceDistance(searchParams.get("distance"));
+    const displayRange = getPerformanceDateRange(period);
+    const fetchRange = getPerformanceDateRange(period === "all" ? "all" : "90j");
 
     try {
       const [predictions, courses] = await Promise.all([
-        listPredictionsBetween(startIso, endIso),
-        listCourseRecordsBetween(startIso, endIso),
+        listPredictionsBetween(fetchRange.startIso, fetchRange.endIso),
+        listCourseRecordsBetween(fetchRange.startIso, fetchRange.endIso),
       ]);
 
       return NextResponse.json({
         success: true,
-        range: { startIso, endIso },
+        range: displayRange,
         performance: buildPerformanceDashboard(predictions, courses, {
           period,
           segment,
           betType,
-        }, new Date().toISOString(), { startIso, endIso }),
+          hippodrome,
+          distance,
+        }, new Date().toISOString(), displayRange),
       });
     } catch (error) {
       return serverError("Echec du chargement du cockpit performance.", error, {
         period,
         segment,
         betType,
+        hippodrome,
+        distance,
       });
     }
   }
