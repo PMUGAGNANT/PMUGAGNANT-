@@ -217,7 +217,11 @@ function RaceDetailsContent({
               previewRecommendation={data.paywall?.preview?.recommendation ?? null}
             />
           ) : pronostic ? (
-            <CoursePronostic pronostic={pronostic} participants={participants} />
+            <CoursePronostic
+              pronostic={pronostic}
+              participants={participants}
+              courseInfo={courseInfo}
+            />
           ) : (
             <AnalysisPendingCard />
           )}

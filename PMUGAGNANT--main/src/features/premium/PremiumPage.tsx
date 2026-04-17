@@ -89,8 +89,10 @@ const COMPARE_ROWS = [
   { feature: "Cheval conseille par course", free: false, premium: true },
   { feature: "Mise conseillee et gain potentiel", free: false, premium: true },
   { feature: "Explication des signaux positifs", free: false, premium: true },
-  { feature: "Alertes T-10 avant depart", free: false, premium: true },
+  { feature: "Alertes T-30 avant depart", free: false, premium: true },
   { feature: "Bilan ROI 7j / 30j / 90j", free: false, premium: true },
+  { feature: "Garantie satisfait ou rembourse 7 jours", free: false, premium: true },
+  { feature: "Prix mensuel", free: "0 EUR", premium: "offre fondateur" },
 ];
 
 const FAQ_ITEMS = [
@@ -156,16 +158,19 @@ export default function PremiumPage() {
   const premiumCheckoutRedirect = encodeURIComponent("/mes-paris?billing=checkout");
   const premiumCheckoutHref = `/login?redirect=${premiumCheckoutRedirect}`;
   const priceLabel = `${PREMIUM_MONTHLY_PRICE_DISPLAY_MAIN} ${PREMIUM_MONTHLY_PRICE_CURRENCY_SUFFIX}`;
+  const crossedPriceLabel = "29 EUR / mois";
+  const activeSubscribers = liveStats.data.activeSubscribersThisMonth;
+  const activeSubscribersLabel = String(activeSubscribers);
   const statCards = hasStats
     ? [
         { value: formatLiveRoi(liveStats.data.roi30d), label: "ROI reel 30 jours" },
+        { value: activeSubscribersLabel, label: "abonnes actifs ce mois" },
         { value: String(liveStats.data.totalPredictions), label: "tickets mesures 30j" },
-        { value: `${liveStats.data.winRate.toFixed(0)}%`, label: "reussite place/gagnant" },
       ]
     : [
         { value: "--", label: "ROI reel 30 jours" },
+        { value: activeSubscribersLabel, label: "abonnes actifs ce mois" },
         { value: "--", label: "tickets mesures 30j" },
-        { value: "--", label: "reussite place/gagnant" },
       ];
   const premiumExamples = PREMIUM_EXAMPLES.map((example) => {
     if (example.title !== "Semaine suivie") {
@@ -194,9 +199,9 @@ export default function PremiumPage() {
                 Offre fondateur limitee
               </span>
             </div>
-            <p className="app-kicker mt-6">TurfEdge Premium - {priceLabel}</p>
+            <p className="app-kicker mt-6">TurfEdge Premium - {activeSubscribersLabel} abonnes actifs ce mois</p>
             <h1 className="mt-3 max-w-3xl text-[2.45rem] font-black leading-[0.95] text-[var(--pmu-text)] md:text-[4.25rem]">
-              Passe du programme PMU au ticket clair en 30 secondes.
+              Les parieurs qui gagnent utilisent TurfEdge.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-[var(--pmu-text-soft)]">
               Premium debloque la decision JOUER / PASSER, le cheval conseille,
@@ -213,7 +218,7 @@ export default function PremiumPage() {
             </div>
 
             <p className="mt-4 text-xs font-semibold text-[var(--pmu-text-muted)]">
-              Paiement securise Stripe. Annulable a tout moment. 50 places fondateur a ce tarif cette semaine.
+              Prix public <span className="line-through">{crossedPriceLabel}</span>. Offre fondateur {priceLabel}. Garantie satisfait ou rembourse 7 jours.
             </p>
           </div>
           <div className="border-t border-[var(--pmu-border)] bg-[var(--pmu-primary-fade)] p-4 lg:border-l lg:border-t-0">
@@ -317,6 +322,9 @@ export default function PremiumPage() {
           Premium est fait pour les parieurs qui veulent une decision nette avant
           le depart : JOUER, PASSER, mise, gain potentiel.
         </p>
+        <div className="mx-auto mt-5 max-w-xl rounded-[8px] border border-[var(--pmu-gold)] bg-[var(--pmu-gold-light)] px-5 py-4 text-sm font-black text-[var(--pmu-text)]">
+          Garantie 7 jours : si TurfEdge ne t&apos;aide pas a mieux trier tes courses, remboursement simple.
+        </div>
         <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
           <Link href={premiumCheckoutHref} className="app-button-primary min-h-12">
             Prendre Premium - {priceLabel}

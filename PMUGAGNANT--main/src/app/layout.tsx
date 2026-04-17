@@ -4,6 +4,7 @@ import { ComboPanel, ComboProvider } from "@/components/ComboBuilder";
 import { AppShell } from "@/features/layout/components/AppShell";
 import { GlossaryPanel } from "@/components/ui/Glossary";
 import { OnboardingModal } from "@/components/ui/OnboardingModal";
+import { PriorityRacePushScheduler } from "@/components/ui/PriorityRacePushScheduler";
 import { PushNotificationPrompt } from "@/components/ui/PushNotificationPrompt";
 import { ServiceWorkerRegistration } from "@/components/ui/ServiceWorkerRegistration";
 import { ThemeMetaColor } from "@/components/ui/ThemeMetaColor";
@@ -89,6 +90,7 @@ export default function RootLayout({
           <ComboProvider>
             <ThemeMetaColor />
             <ServiceWorkerRegistration />
+            <PriorityRacePushScheduler />
             <AppShell>{children}</AppShell>
             <OnboardingModal />
             <GlossaryPanel />

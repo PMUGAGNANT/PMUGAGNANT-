@@ -1,11 +1,15 @@
 "use client";
 
+import { useState } from "react";
+import { FavoriteFormChart } from "@/features/race/components/FavoriteFormChart";
 import type { CourseParticipantRow } from "@/features/race/components/ParticipantsTable";
-import type { PronosticCardData } from "@/features/race/lib/race-page-model";
+import type { PronosticCardData, RaceCourseInfo } from "@/features/race/lib/race-page-model";
+import { getBrowserAuthorizationHeader } from "@/features/races/api/client";
 
 interface CoursePronosticProps {
   pronostic: PronosticCardData;
   participants: CourseParticipantRow[] | null | undefined;
+  courseInfo: RaceCourseInfo;
 }
 
 function normalizeKey(value: string) {
@@ -39,6 +43,13 @@ function formatEuros(value: number) {
     currency: "EUR",
     maximumFractionDigits: 0,
   }).format(value);
+}
+
+function normalizeBetCode(value?: string | null): "GAGNANT" | "PLACE" {
+  const normalized = normalizeKey(value ?? "");
+  return normalized.includes("place") || normalized.includes("surveill")
+    ? "PLACE"
+    : "GAGNANT";
 }
 
 function getVisibleStake(pronostic: PronosticCardData, betType: string, confidence: number) {
@@ -130,9 +141,11 @@ function buildReasons(
   return [...reasons].slice(0, 4);
 }
 
-export function CoursePronostic({ pronostic, participants }: CoursePronosticProps) {
+export function CoursePronostic({ pronostic, participants, courseInfo }: CoursePronosticProps) {
   const safeParticipants = Array.isArray(participants) ? participants : [];
   const selectedHorse = getSelectedHorse(pronostic, safeParticipants);
+  const [betState, setBetState] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [betMessage, setBetMessage] = useState("");
 
   if (!selectedHorse) {
     return null;
@@ -162,6 +175,64 @@ export function CoursePronostic({ pronostic, participants }: CoursePronosticProp
   const confidenceText = shouldPlay
     ? `L'algo est tres confiant sur cette course car ${positiveSignals} signaux positifs sur 7 vont dans le meme sens.`
     : "Le moteur ne conseille pas de mise forte sur cette course.";
+  const betCode = normalizeBetCode(pronostic.betType ?? pronostic.recommandation);
+  const canPlaceBet =
+    shouldPlay &&
+    Boolean(courseInfo.dateStr) &&
+    typeof courseInfo.reunion === "number" &&
+    typeof courseInfo.course === "number" &&
+    typeof selectedHorse.numero !== "undefined" &&
+    selectedHorse.numero !== null &&
+    odds !== null;
+
+  async function handlePlaceBet() {
+    if (!canPlaceBet || odds === null) {
+      setBetState("error");
+      setBetMessage("Cote ou identifiant de course manquant pour enregistrer ce ticket.");
+      return;
+    }
+
+    setBetState("loading");
+    setBetMessage("");
+
+    try {
+      const headers = await getBrowserAuthorizationHeader();
+      const response = await fetch("/api/bets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(headers ?? {}),
+        },
+        body: JSON.stringify({
+          date_str: courseInfo.dateStr,
+          reunion: courseInfo.reunion,
+          course: courseInfo.course,
+          hippodrome: courseInfo.hippodrome ?? "",
+          heure_depart: courseInfo.heureDepart ?? "",
+          cheval_num: Number(selectedHorse.numero),
+          cheval_nom: selectedHorse.nom ?? "",
+          type_pari: betCode,
+          mise: Math.max(1, Math.round(stake)),
+          cote: odds,
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Impossible d'enregistrer ce ticket.");
+      }
+
+      setBetState("success");
+      setBetMessage("Ticket enregistre dans Mes paris.");
+    } catch (error) {
+      setBetState("error");
+      setBetMessage(
+        error instanceof Error
+          ? error.message
+          : "Impossible d'enregistrer ce ticket."
+      );
+    }
+  }
 
   return (
     <section className="premium-ticket-shell">
@@ -242,7 +313,31 @@ export function CoursePronostic({ pronostic, participants }: CoursePronosticProp
             <p className="mt-2 text-xs leading-5 text-[var(--pmu-text-soft)]">
               Le resultat reel sera rapproche de l&apos;arrivee officielle apres validation.
             </p>
+            <button
+              type="button"
+              className="app-button-primary mt-4 w-full justify-center"
+              disabled={betState === "loading" || !canPlaceBet}
+              onClick={() => void handlePlaceBet()}
+              style={{
+                opacity: betState === "loading" || !canPlaceBet ? 0.62 : 1,
+              }}
+            >
+              {betState === "loading" ? "Enregistrement..." : "Je joue ce ticket"}
+            </button>
+            {betMessage ? (
+              <p
+                className={`mt-3 text-xs font-bold ${
+                  betState === "success" ? "text-[var(--pmu-primary)]" : "text-[var(--pmu-red)]"
+                }`}
+              >
+                {betMessage}
+              </p>
+            ) : null}
           </div>
+        </div>
+
+        <div className="mt-5">
+          <FavoriteFormChart musique={selectedHorse.musique} />
         </div>
 
         <div className="mt-5 grid gap-2 sm:grid-cols-4">
