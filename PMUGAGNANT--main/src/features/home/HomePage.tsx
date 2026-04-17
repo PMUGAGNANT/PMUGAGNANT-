@@ -14,6 +14,7 @@ import { BIG_ALLOCATION_LIMIT, QUICK_FILTER_STORAGE_KEY, URGENT_MINUTES_LIMIT, i
 import { addDays, buildFeaturedRaces, coerceRaceSummaries, formatRaceCode, getRadarRace, getTopParisItems, normalizeDateParam, normalizeFocusParticipants, sortFeaturedRaces, type FocusDetailResponse, type FocusParticipant, type RaceScore, type RacesResponse, type ScoresResponse, type SortMode } from "@/features/home/lib/home-page-model";
 import { fetchRaceDetails, fetchRaceScoresForDate, fetchRacesForDate, normalizeRaceScoresPayload } from "@/features/races/api/client";
 import { getTodayDateStr } from "@/lib/date-utils";
+import { useLiveStats } from "@/lib/use-live-stats";
 import type { RaceSummary } from "@/lib/types";
 
 function PageContent() {
@@ -29,6 +30,7 @@ function PageContent() {
   const [error, setError] = useState<string | null>(null);
   const [fetchRevision, setFetchRevision] = useState(0);
   const [focusDetail, setFocusDetail] = useState<FocusDetailResponse | null>(null);
+  const liveStats = useLiveStats();
 
   const navigateToRace = useCallback(
     (race: RaceSummary) => router.push(`/course/${race.reunion}/${race.course}?date=${race.dateStr}`),
@@ -175,6 +177,7 @@ function PageContent() {
     <div className="turf-home-page mx-auto flex w-full max-w-[96rem] flex-col gap-6 lg:gap-8">
       <HomeHero
         stats={stats}
+        liveStats={liveStats.data}
         focusRace={focusRace}
         proofItems={topParisItems}
         onOpenPremium={() => router.push("/premium")}

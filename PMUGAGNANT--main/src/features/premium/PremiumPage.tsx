@@ -8,6 +8,8 @@ import {
   PREMIUM_MONTHLY_PRICE_CURRENCY_SUFFIX,
   PREMIUM_MONTHLY_PRICE_DISPLAY_MAIN,
 } from "@/lib/billing-display";
+import { formatLiveRoi, hasLiveStatsData } from "@/lib/live-stats";
+import { useLiveStats } from "@/lib/use-live-stats";
 
 const FEATURES = [
   {
@@ -61,7 +63,7 @@ const PREMIUM_EXAMPLES = [
     title: "Semaine suivie",
     horse: "Tickets valides uniquement",
     stake: "Mises conseillees",
-    gain: "+127 EUR exemple",
+    gain: "Gain reel Supabase",
     detail: "Une lecture simple : argent engage, gain, ROI, resultat.",
   },
 ];
@@ -140,10 +142,44 @@ function AvailabilityCell({ value }: { value: boolean | string }) {
   return <span className="text-xs font-bold uppercase text-[var(--pmu-gold)]">{value}</span>;
 }
 
+function formatEuros(value: number) {
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 export default function PremiumPage() {
+  const liveStats = useLiveStats();
+  const hasStats = hasLiveStatsData(liveStats.data);
   const premiumCheckoutRedirect = encodeURIComponent("/mes-paris?billing=checkout");
   const premiumCheckoutHref = `/login?redirect=${premiumCheckoutRedirect}`;
   const priceLabel = `${PREMIUM_MONTHLY_PRICE_DISPLAY_MAIN} ${PREMIUM_MONTHLY_PRICE_CURRENCY_SUFFIX}`;
+  const statCards = hasStats
+    ? [
+        { value: formatLiveRoi(liveStats.data.roi30d), label: "ROI reel 30 jours" },
+        { value: String(liveStats.data.totalPredictions), label: "tickets mesures 30j" },
+        { value: `${liveStats.data.winRate.toFixed(0)}%`, label: "reussite place/gagnant" },
+      ]
+    : [
+        { value: "--", label: "ROI reel 30 jours" },
+        { value: "--", label: "tickets mesures 30j" },
+        { value: "--", label: "reussite place/gagnant" },
+      ];
+  const premiumExamples = PREMIUM_EXAMPLES.map((example) => {
+    if (example.title !== "Semaine suivie") {
+      return example;
+    }
+
+    return {
+      ...example,
+      gain: hasStats ? `${liveStats.data.netGain7d >= 0 ? "+" : ""}${formatEuros(liveStats.data.netGain7d)}` : "Bilan en cours",
+      detail: hasStats
+        ? `Calcule sur ${liveStats.data.predictions7d} tickets mesures ces 7 derniers jours.`
+        : "Les gains se remplissent automatiquement avec l'historique Supabase.",
+    };
+  });
 
   return (
     <div className="mx-auto flex w-full max-w-[70rem] flex-col gap-6 px-4 pb-16">
@@ -183,11 +219,7 @@ export default function PremiumPage() {
           <div className="border-t border-[var(--pmu-border)] bg-[var(--pmu-primary-fade)] p-4 lg:border-l lg:border-t-0">
             <PromoVideo />
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              {[
-                { value: "+8.3%", label: "ROI moyen semaine" },
-                { value: "13", label: "tickets valides aujourd'hui" },
-                { value: "0", label: "jargon a decoder" },
-              ].map((stat) => (
+              {statCards.map((stat) => (
                 <div key={stat.label} className="result-chip px-4 py-3 text-center">
                   <p className="text-2xl font-black text-[var(--pmu-primary)]">{stat.value}</p>
                   <p className="mt-1 text-xs font-semibold text-[var(--pmu-text-muted)]">{stat.label}</p>
@@ -199,7 +231,7 @@ export default function PremiumPage() {
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
-        {PREMIUM_EXAMPLES.map((example) => (
+        {premiumExamples.map((example) => (
           <article key={example.title} className="app-card p-5">
             <p className="app-kicker">{example.title}</p>
             <h2 className="mt-2 text-2xl font-black text-[var(--pmu-text)]">{example.horse}</h2>

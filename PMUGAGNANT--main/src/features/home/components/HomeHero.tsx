@@ -3,9 +3,11 @@ import Image from "next/image";
 import type { HomeStats } from "@/features/home/components/home-page-types";
 import type { TopParisItem } from "@/features/home/components/TopParisStrip";
 import { formatStake, type FeaturedRace } from "@/features/home/lib/home-page-model";
+import { formatLiveRoi, hasLiveStatsData, type LiveStatsSnapshot } from "@/lib/live-stats";
 
 type HomeHeroProps = {
   stats: HomeStats;
+  liveStats: LiveStatsSnapshot;
   focusRace: FeaturedRace | null;
   proofItems: TopParisItem[];
   onOpenPremium: () => void;
@@ -46,12 +48,22 @@ function getHeroDecision(focusRace: FeaturedRace | null) {
 
 export function HomeHero({
   stats,
+  liveStats,
   focusRace,
   proofItems,
   onOpenPremium,
   onOpenFocus,
 }: HomeHeroProps) {
   const decision = getHeroDecision(focusRace);
+  const hasStats = hasLiveStatsData(liveStats);
+  const performanceValue = hasStats ? formatLiveRoi(liveStats.roi30d) : "--";
+  const performanceLabel = hasStats
+    ? `${liveStats.totalPredictions} tickets mesures sur 30 jours`
+    : "Stats Supabase en cours";
+  const weeklyGain =
+    hasStats && liveStats.predictions7d > 0
+      ? `${liveStats.netGain7d >= 0 ? "+" : ""}${Math.round(liveStats.netGain7d)} EUR`
+      : "--";
   const focusPick = focusRace?.score?.pick;
   const focusStake = formatStake(
     focusPick?.confidence ? Math.max(6, Math.round(focusPick.confidence * 2.5)) : 8
@@ -87,12 +99,12 @@ export function HomeHero({
 
             <div className="mt-7 grid gap-3 sm:grid-cols-3">
               <div className="app-card-muted px-4 py-3">
-                <p className="app-label">Performance suivie</p>
+                <p className="app-label">ROI reel 30 jours</p>
                 <p className="mt-1 text-3xl font-black text-[var(--pmu-primary)]">
-                  +8.3%
+                  {performanceValue}
                 </p>
                 <span className="text-xs font-semibold text-[var(--pmu-text-muted)]">
-                  ROI moyen semaine
+                  {performanceLabel}
                 </span>
               </div>
               <div className="app-card-muted px-4 py-3">
@@ -105,12 +117,12 @@ export function HomeHero({
                 </span>
               </div>
               <div className="app-card-muted px-4 py-3">
-                <p className="app-label">Decision</p>
+                <p className="app-label">Gain 7 jours</p>
                 <p className="mt-1 text-3xl font-black text-[var(--pmu-gold)]">
-                  {decision.label}
+                  {weeklyGain}
                 </p>
                 <span className="text-xs font-semibold text-[var(--pmu-text-muted)]">
-                  {decision.text}
+                  {hasStats ? `${liveStats.predictions7d} tickets mesures` : decision.text}
                 </span>
               </div>
             </div>
