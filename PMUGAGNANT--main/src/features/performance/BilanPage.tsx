@@ -267,19 +267,22 @@ function BilanPageContent() {
   const kpis = data?.kpis;
   const roiTone = (kpis?.globalRoi ?? 0) >= 0 ? "good" : "bad";
   const gainTone = (kpis?.netGain ?? 0) >= 0 ? "good" : "bad";
+  const weeklySummary = data?.rangeSummaries.find((summary) => summary.period === "7j") ?? null;
+  const weeklyNetGain = weeklySummary?.netGain ?? 0;
+  const weeklyStake = weeklySummary?.stake ?? 0;
 
   return (
     <div className="mx-auto flex w-full max-w-[96rem] flex-col gap-6 lg:gap-8">
       <section className="app-page-hero p-6 md:p-8">
         <div className="relative z-[1] grid gap-5 xl:grid-cols-[1.05fr,0.95fr] xl:items-end">
           <div>
-            <p className="app-kicker">Cockpit ROI</p>
+            <p className="app-kicker">Bilan des gains</p>
             <h1 className="max-w-4xl text-4xl font-black leading-[0.93] text-[var(--pmu-text)] md:text-6xl">
-              Performance moteur, calibration et segments en un seul poste.
+              Ce que TurfEdge aurait change sur tes tickets.
             </h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
-              Les tickets valides, le ROI cumule, la frequence reelle de victoire
-              et les segments se lisent ici sans refaire le calcul a la main.
+              Lis d&apos;abord les gains reels, puis le ROI. Le cockpit garde les
+              details pour comprendre quand l&apos;algo est fort, prudent ou a eviter.
             </p>
           </div>
 
@@ -369,6 +372,66 @@ function BilanPageContent() {
             <KpiCard label="Reussite place" value={formatRate(kpis.placeRate)} tone="warn" />
             <KpiCard label="Gain net" value={formatCurrency(kpis.netGain)} tone={gainTone} />
             <KpiCard label="Rendement" value={formatRate(kpis.paybackRate)} tone={kpis.paybackRate >= 100 ? "good" : "bad"} />
+          </section>
+
+          <section className="grid gap-4 lg:grid-cols-[1.1fr,0.9fr]">
+            <article className="app-page-hero p-5 md:p-7">
+              <p className="app-kicker">Cette semaine</p>
+              <h2 className="mt-2 text-3xl font-black leading-tight text-[var(--pmu-text)] md:text-5xl">
+                Si tu avais suivi nos conseils :{" "}
+                <span style={{ color: weeklyNetGain >= 0 ? "var(--pmu-primary)" : "var(--pmu-red)" }}>
+                  {formatCurrency(weeklyNetGain)}
+                </span>
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--pmu-text-soft)]">
+                Calcul base sur les tickets valides, les mises conseillees et les
+                resultats officiels deja rapproches dans l&apos;historique.
+              </p>
+              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                <div className="result-chip px-4 py-3">
+                  <p className="app-label">Mises conseillees</p>
+                  <p className="mt-1 text-xl font-black text-[var(--pmu-text)]">
+                    {formatCurrency(weeklyStake)}
+                  </p>
+                </div>
+                <div className="result-chip px-4 py-3">
+                  <p className="app-label">Tickets valides</p>
+                  <p className="mt-1 text-xl font-black text-[var(--pmu-text)]">
+                    {weeklySummary?.bets ?? 0}
+                  </p>
+                </div>
+                <div className="result-chip px-4 py-3">
+                  <p className="app-label">ROI 7 jours</p>
+                  <p className="mt-1 text-xl font-black text-[var(--pmu-primary)]">
+                    {formatPercent(weeklySummary?.roi ?? 0)}
+                  </p>
+                </div>
+              </div>
+            </article>
+
+            <article className="app-card p-5 md:p-6">
+              <p className="app-kicker">Sans TurfEdge vs avec TurfEdge</p>
+              <div className="mt-4 grid gap-3">
+                <div className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] p-4">
+                  <p className="app-label">Sans TurfEdge</p>
+                  <p className="mt-1 text-2xl font-black text-[var(--pmu-text-muted)]">
+                    0,00 EUR suivi
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-[var(--pmu-text-soft)]">
+                    Pas de filtre, pas de mise calculee, pas de bilan mesure.
+                  </p>
+                </div>
+                <div className="rounded-lg border border-[color-mix(in_srgb,var(--pmu-primary)_28%,transparent)] bg-[var(--pmu-primary-fade)] p-4">
+                  <p className="app-label">Avec TurfEdge</p>
+                  <p className="mt-1 text-2xl font-black text-[var(--pmu-primary)]">
+                    {formatCurrency(weeklyNetGain)}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-[var(--pmu-text-soft)]">
+                    Des courses filtrees, une mise conseillee, un resultat verifie.
+                  </p>
+                </div>
+              </div>
+            </article>
           </section>
 
           <section className="grid gap-4 md:grid-cols-3">

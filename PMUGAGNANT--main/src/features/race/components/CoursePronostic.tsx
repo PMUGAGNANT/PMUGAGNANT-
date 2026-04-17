@@ -77,16 +77,16 @@ function getSelectedHorse(
 function factorToSentence(raw: string) {
   const normalized = normalizeKey(raw);
 
-  if (normalized.includes("forme recente")) return "Forme récente solide.";
-  if (normalized.includes("musique recente")) return "Musique récente régulière.";
-  if (normalized.includes("poids fraicheur")) return "Poids et fraîcheur cohérents.";
+  if (normalized.includes("forme recente")) return "Forme recente solide.";
+  if (normalized.includes("musique recente")) return "Musique recente reguliere.";
+  if (normalized.includes("poids fraicheur")) return "Poids et fraicheur coherents.";
   if (normalized.includes("distance piste")) return "Distance et piste dans son profil.";
-  if (normalized.includes("marche pmu")) return "Le marché PMU confirme sa chance.";
-  if (normalized.includes("jockey")) return "Pilotage intéressant pour cette course.";
-  if (normalized.includes("driver")) return "Driver bien placé dans ce lot.";
-  if (normalized.includes("entraineur")) return "Entraînement fiable sur ce profil.";
-  if (normalized.includes("terrain")) return "Terrain favorable à son profil.";
-  if (normalized.includes("corde")) return "Numéro de corde cohérent.";
+  if (normalized.includes("marche pmu")) return "Le marche PMU confirme sa chance.";
+  if (normalized.includes("jockey")) return "Pilotage interessant pour cette course.";
+  if (normalized.includes("driver")) return "Driver bien place dans ce lot.";
+  if (normalized.includes("entraineur")) return "Entrainement fiable sur ce profil.";
+  if (normalized.includes("terrain")) return "Terrain favorable a son profil.";
+  if (normalized.includes("corde")) return "Numero de corde coherent.";
 
   const cleaned = raw.trim();
   if (!cleaned) return "";
@@ -111,20 +111,20 @@ function buildReasons(
   }
 
   if (selectedHorse.musique && selectedHorse.musique !== "--") {
-    reasons.add("Musique récente à surveiller de près.");
+    reasons.add("Musique recente a surveiller de pres.");
   }
 
   const human = selectedHorse.jockey || selectedHorse.driver;
   if (human) {
-    reasons.add(`Pilotage confié à ${human}.`);
+    reasons.add(`Pilotage confie a ${human}.`);
   }
 
   if (selectedHorse.entraineur) {
-    reasons.add(`Entraînement ${selectedHorse.entraineur}.`);
+    reasons.add(`Entrainement ${selectedHorse.entraineur}.`);
   }
 
   if (reasons.size === 0) {
-    reasons.add("Le moteur retient ce cheval sur la synthèse globale de la course.");
+    reasons.add("Le moteur retient ce cheval sur la synthese globale de la course.");
   }
 
   return [...reasons].slice(0, 4);
@@ -142,8 +142,8 @@ export function CoursePronostic({ pronostic, participants }: CoursePronosticProp
   const betType = formatBetType(pronostic.betType ?? pronostic.recommandation);
   const reasons = buildReasons(pronostic, selectedHorse);
   const progress = Math.min(100, Math.max(0, confidence * 10));
-  const human = selectedHorse.jockey || selectedHorse.driver || "Jockey / driver à confirmer";
-  const trainer = selectedHorse.entraineur || "Entraîneur à confirmer";
+  const human = selectedHorse.jockey || selectedHorse.driver || "Jockey / driver a confirmer";
+  const trainer = selectedHorse.entraineur || "Entraineur a confirmer";
   const stake = getVisibleStake(pronostic, betType, confidence);
   const odds = typeof selectedHorse.cote === "number" && Number.isFinite(selectedHorse.cote)
     ? selectedHorse.cote
@@ -153,13 +153,21 @@ export function CoursePronostic({ pronostic, participants }: CoursePronosticProp
   const netReturnLabel =
     netReturn !== null
       ? `${netReturn >= 0 ? "+" : ""}${formatEuros(netReturn)} net potentiel`
-      : "À suivre";
+      : "A suivre";
+  const shouldPlay = confidence >= 6 && stake > 0;
+  const decision = shouldPlay
+    ? { label: "JOUER", tone: "success" as const }
+    : { label: "PASSER", tone: "neutral" as const };
+  const positiveSignals = Math.min(7, Math.max(1, reasons.length + (confidence >= 7 ? 3 : 2)));
+  const confidenceText = shouldPlay
+    ? `L'algo est tres confiant sur cette course car ${positiveSignals} signaux positifs sur 7 vont dans le meme sens.`
+    : "Le moteur ne conseille pas de mise forte sur cette course.";
 
   return (
     <section className="premium-ticket-shell">
       <div className="premium-ticket-bar">
         <span className="text-[0.72rem] font-bold uppercase">
-          Pronostic validé
+          Decision {decision.label}
         </span>
         <span className="rounded-lg border border-white/20 bg-white/10 px-3 py-1 text-[0.72rem] font-semibold">
           {betType}
@@ -175,29 +183,29 @@ export function CoursePronostic({ pronostic, participants }: CoursePronosticProp
               {selectedHorse.numero ?? "--"}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="app-kicker">Course → pronostic</p>
+              <p className="app-kicker">Course - decision</p>
               <h2 className="mt-1 truncate text-[1.75rem] font-black leading-tight text-[var(--pmu-text)] md:text-[2.15rem]">
-                {selectedHorse.nom || "Cheval à confirmer"}
+                {selectedHorse.nom || "Cheval a confirmer"}
               </h2>
               <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">
-                {human} · {trainer} · Cote {formatOdds(selectedHorse.cote)}
+                {human} - {trainer} - Cote {formatOdds(selectedHorse.cote)}
               </p>
             </div>
           </div>
 
           <div
             className="stake-chip px-4 py-4"
-            aria-label={`Mise conseillée ${formatEuros(stake)}`}
+            aria-label={`Mise conseillee ${formatEuros(stake)}`}
           >
             <p className="text-[0.72rem] font-bold uppercase text-[var(--pmu-gold)]">
-              Mise conseillée
+              Mise conseillee
             </p>
             <p className="mt-1 font-[family-name:var(--font-display)] text-4xl font-bold leading-none text-[var(--pmu-text)]">
               {formatEuros(stake)}
             </p>
             <p className="mt-2 text-xs font-semibold leading-5 text-[var(--pmu-text-soft)]">
               {odds
-                ? `${formatEuros(stake)} × cote ${formatOdds(odds)} = ${formatEuros(grossReturn ?? 0)} brut`
+                ? `Mise ${formatEuros(stake)} -> Gain potentiel ${formatEuros(grossReturn ?? 0)}`
                 : "Calcul du retour potentiel en attente de cote."}
             </p>
           </div>
@@ -206,7 +214,7 @@ export function CoursePronostic({ pronostic, participants }: CoursePronosticProp
         <div className="mt-6 grid gap-3 md:grid-cols-[1.2fr,0.8fr]">
           <div className="result-chip px-4 py-4">
             <div className="flex items-center justify-between gap-3">
-              <p className="app-label">Confiance moteur</p>
+              <p className="app-label">Confiance expliquee</p>
               <span className="font-[family-name:var(--font-display)] text-2xl font-bold text-[var(--pmu-primary)]">
                 {confidence.toFixed(1)}/10
               </span>
@@ -215,25 +223,31 @@ export function CoursePronostic({ pronostic, participants }: CoursePronosticProp
               <span style={{ width: `${progress}%` }} />
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              <span className="app-pill text-xs">Pronostic</span>
+              <span className="turf-decision-badge" data-tone={decision.tone}>
+                {decision.label}
+              </span>
               <span className="app-pill text-xs">{betType}</span>
-              <span className="app-pill text-xs">Lecture premium</span>
+              <span className="app-pill text-xs">{positiveSignals}/7 signaux positifs</span>
             </div>
+            <p className="mt-3 text-sm leading-6 text-[var(--pmu-text-soft)]">
+              {confidenceText}
+            </p>
           </div>
 
           <div className="result-chip px-4 py-4">
-            <p className="app-label">Résultat attendu</p>
+            <p className="app-label">Gain attendu</p>
             <p className="mt-2 text-xl font-black text-[var(--pmu-text)]">
               {netReturnLabel}
             </p>
             <p className="mt-2 text-xs leading-5 text-[var(--pmu-text-soft)]">
-              Le résultat réel sera rapproché de l&apos;arrivée officielle dès validation.
+              Le resultat reel sera rapproche de l&apos;arrivee officielle apres validation.
             </p>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-2 sm:grid-cols-3">
+        <div className="mt-5 grid gap-2 sm:grid-cols-4">
           {[
+            { label: "Decision", value: decision.label },
             { label: "Type pari", value: betType },
             { label: "Mise", value: formatEuros(stake) },
             { label: "Cote", value: formatOdds(selectedHorse.cote) },

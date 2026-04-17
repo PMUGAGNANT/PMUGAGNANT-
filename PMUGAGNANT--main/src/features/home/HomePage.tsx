@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { DayRadar } from "@/features/home/components/DayRadar";
 import { HomeControlBar } from "@/features/home/components/HomeControlBar";
+import { HomeHero } from "@/features/home/components/HomeHero";
 import { HomeLoadingSkeleton } from "@/features/home/components/HomeLoadingSkeleton";
 import { PriorityTickets } from "@/features/home/components/PriorityTickets";
 import { ProgrammeTable } from "@/features/home/components/ProgrammeTable";
@@ -172,6 +173,13 @@ function PageContent() {
 
   return (
     <div className="turf-home-page mx-auto flex w-full max-w-[96rem] flex-col gap-6 lg:gap-8">
+      <HomeHero
+        stats={stats}
+        focusRace={focusRace}
+        proofItems={topParisItems}
+        onOpenPremium={() => router.push("/premium")}
+        onOpenFocus={() => (focusRace ? navigateToRace(focusRace.race) : router.push("/premium"))}
+      />
       <HomeControlBar selectedDate={selectedDate} sortMode={sortMode} stats={stats} focusRace={focusRace} onPrevDay={() => setSelectedDate(addDays(selectedDate, -1))} onToday={() => setSelectedDate(getTodayDateStr())} onNextDay={() => setSelectedDate(addDays(selectedDate, 1))} onDateChange={setSelectedDate} onSortChange={setSortMode} />
       <div className="turf-main-layout">
         <div className="turf-main-column">
@@ -188,7 +196,7 @@ function PageContent() {
             </section>
           ) : (
             <>
-              <PriorityTickets focusRace={focusRace} focusDetail={focusDetail} focusParticipants={focusParticipants} isFocusLoading={isFocusLoading} stats={stats} sortMode={sortMode} onOpenRace={navigateToRace} onOpenPremium={() => router.push("/premium")} />
+              <PriorityTickets focusRace={focusRace} focusDetail={focusDetail} focusParticipants={focusParticipants} isFocusLoading={isFocusLoading} sortMode={sortMode} onOpenRace={navigateToRace} onOpenPremium={() => router.push("/premium")} />
               {topParisItems.length > 0 ? <TopParisStrip items={topParisItems} /> : null}
               <ProgrammeTable quickFilter={quickFilter} quickFilterOptions={quickFilterOptions} lanes={lanes} playableCount={stats.playable} onQuickFilterChange={setQuickFilter} onOpenRace={navigateToRace} />
             </>
