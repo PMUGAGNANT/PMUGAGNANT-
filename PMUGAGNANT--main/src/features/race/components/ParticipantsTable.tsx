@@ -360,6 +360,7 @@ export function ParticipantsTable({
             {courseFinished ? <col className="w-[72px]" /> : null}
             <col className="w-[72px]" />
             <col />
+            <col className="w-[150px]" />
             <col className="w-[122px]" />
             <col className="w-[98px]" />
             <col className="w-[82px]" />
@@ -369,6 +370,7 @@ export function ParticipantsTable({
               {courseFinished ? <th>Arr.</th> : null}
               <th>N°</th>
               <th>Cheval</th>
+              <th>Jockey / driver</th>
               <th>Musique</th>
               <th>Score</th>
               <th>Cote</th>
@@ -420,11 +422,16 @@ export function ParticipantsTable({
                       <p className={`truncate font-bold text-[var(--pmu-text)] ${struck}`}>
                         {participant.nom || "--"}
                       </p>
-                      <p className="truncate text-xs text-[var(--pmu-text-soft)]">
-                        {getHumanLead(participant, estPlat)}
-                      </p>
                       <RunnerTags role={role} />
                     </div>
+                  </td>
+                  <td>
+                    <p className="truncate text-sm font-bold text-[var(--pmu-text)]">
+                      {getHumanLead(participant, estPlat)}
+                    </p>
+                    <p className="truncate text-xs text-[var(--pmu-text-soft)]">
+                      {participant.entraineur || "Entraineur --"}
+                    </p>
                   </td>
                   <td className="font-mono text-[0.65rem] text-[var(--pmu-text-soft)]">
                     {participant.musique || "--"}

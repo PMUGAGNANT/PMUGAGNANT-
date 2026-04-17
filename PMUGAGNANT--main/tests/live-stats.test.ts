@@ -83,6 +83,7 @@ test("buildLiveStatsSnapshotFromPredictions calcule les preuves marketing depuis
   assert.equal(snapshot.totalStake30d, 25);
   assert.equal(snapshot.totalGain30d, 55);
   assert.equal(snapshot.predictions7d, 2);
+  assert.equal(snapshot.activeSubscribersThisMonth, 0);
   assert.equal(snapshot.roi7d, 100);
   assert.equal(snapshot.netGain7d, 20);
   assert.equal(snapshot.todayPredictions, 1);

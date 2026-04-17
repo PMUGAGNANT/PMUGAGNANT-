@@ -14,6 +14,7 @@ export interface LiveStatsSnapshot {
   totalStake30d: number;
   totalGain30d: number;
   predictions7d: number;
+  activeSubscribersThisMonth: number;
   todayPredictions: number;
   todayWins: number;
   lastUpdated: string | null;
@@ -33,6 +34,7 @@ export const EMPTY_LIVE_STATS: LiveStatsSnapshot = {
   totalStake30d: 0,
   totalGain30d: 0,
   predictions7d: 0,
+  activeSubscribersThisMonth: 0,
   todayPredictions: 0,
   todayWins: 0,
   lastUpdated: null,
