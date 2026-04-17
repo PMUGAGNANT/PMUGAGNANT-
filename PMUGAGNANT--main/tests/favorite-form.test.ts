@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { parseFavoriteForm } from "../src/features/race/lib/favorite-form";
+import {
+  getFavoriteFormTrend,
+  parseFavoriteForm,
+} from "../src/features/race/lib/favorite-form";
 
 test("parseFavoriteForm converts recent PMU music into five form bars", () => {
   const points = parseFavoriteForm("1p2pDa4p9p");
@@ -20,4 +23,12 @@ test("parseFavoriteForm returns neutral placeholders without music", () => {
   assert.equal(points.length, 5);
   assert.equal(points[0]?.label, "C1");
   assert.equal(points.every((point) => point.tone === "neutral"), true);
+});
+
+test("getFavoriteFormTrend detects improving and declining form", () => {
+  const improving = getFavoriteFormTrend(parseFavoriteForm("1p2p8p9p0p"));
+  const declining = getFavoriteFormTrend(parseFavoriteForm("8p9p1p2p3p"));
+
+  assert.equal(improving.direction, "up");
+  assert.equal(declining.direction, "down");
 });

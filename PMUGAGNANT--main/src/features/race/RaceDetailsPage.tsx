@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { AvisExpert } from "@/components/AvisExpert";
 import { CourseRoles } from "@/components/CourseRoles";
@@ -179,17 +179,6 @@ function RaceDetailsContent({
 
   return (
     <>
-      <RaceHeroSection
-        courseInfo={courseInfo}
-        selectedDate={selectedDate}
-        minutesUntilStart={data.minutesUntilStart}
-        paywallRequired={paywallRequired}
-        isFinished={isFinished}
-        refreshPriority={data.refreshPriority ?? null}
-        meteo={data.meteo ?? null}
-        lisibilite={roleLisibilite}
-      />
-
       <div className="space-y-6">
         {isFinished && pronostic && officialArrival.length > 0 ? (
           <section>
@@ -209,7 +198,7 @@ function RaceDetailsContent({
         ) : null}
 
         <section>
-          <SectionKicker>Ticket algo</SectionKicker>
+          <SectionKicker>Decision TurfEdge</SectionKicker>
           {paywallRequired ? (
             <LockedTicketCard
               previewLabel={data.paywall?.preview?.favori?.nom ?? null}
@@ -226,6 +215,17 @@ function RaceDetailsContent({
             <AnalysisPendingCard />
           )}
         </section>
+
+        <RaceHeroSection
+          courseInfo={courseInfo}
+          selectedDate={selectedDate}
+          minutesUntilStart={data.minutesUntilStart}
+          paywallRequired={paywallRequired}
+          isFinished={isFinished}
+          refreshPriority={data.refreshPriority ?? null}
+          meteo={data.meteo ?? null}
+          lisibilite={roleLisibilite}
+        />
 
         {roles.length > 0 ? (
           <section>
@@ -260,7 +260,7 @@ function RaceDetailsContent({
         ) : null}
 
         <section>
-          <SectionKicker>Tableau des partants</SectionKicker>
+          <SectionKicker>Pour les experts</SectionKicker>
           <ParticipantsTable
             participants={participants}
             favoriNum={pronostic?.favoris?.[0] ?? null}
@@ -277,17 +277,54 @@ function RaceDetailsContent({
 
 export default function RaceDetailsPage() {
   const params = useParams<{ reunion: string; course: string }>();
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   const [data, setData] = useState<RaceApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fetchRevision, setFetchRevision] = useState(0);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
 
   const reunion = params?.reunion ?? "";
   const course = params?.course ?? "";
   const selectedDate = searchParams.get("date");
   const backHref = selectedDate ? `/?date=${selectedDate}` : "/";
+  const currentCourseNumber = Number.parseInt(course, 10);
+
+  function navigateToSiblingCourse(direction: "next" | "previous") {
+    if (!reunion || !Number.isFinite(currentCourseNumber)) {
+      return;
+    }
+
+    const nextCourse =
+      direction === "next"
+        ? currentCourseNumber + 1
+        : Math.max(1, currentCourseNumber - 1);
+
+    if (nextCourse === currentCourseNumber) {
+      return;
+    }
+
+    const dateQuery = selectedDate ? `?date=${encodeURIComponent(selectedDate)}` : "";
+    router.push(`/course/${encodeURIComponent(reunion)}/${nextCourse}${dateQuery}`);
+  }
+
+  function handleTouchEnd(clientX: number | null | undefined) {
+    if (touchStartX === null || typeof clientX !== "number") {
+      setTouchStartX(null);
+      return;
+    }
+
+    const delta = touchStartX - clientX;
+    setTouchStartX(null);
+
+    if (Math.abs(delta) < 70) {
+      return;
+    }
+
+    navigateToSiblingCourse(delta > 0 ? "next" : "previous");
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -332,7 +369,11 @@ export default function RaceDetailsPage() {
   const paywallRequired = data?.paywall?.required === true;
 
   return (
-    <main className="mx-auto flex w-full max-w-[60rem] flex-col gap-6 px-4 py-5 md:px-6">
+    <main
+      className="mx-auto flex w-full max-w-[64rem] flex-col gap-6 px-4 py-5 md:px-6"
+      onTouchStart={(event) => setTouchStartX(event.changedTouches[0]?.clientX ?? null)}
+      onTouchEnd={(event) => handleTouchEnd(event.changedTouches[0]?.clientX)}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link href={backHref} className="app-button-secondary inline-flex">
           Retour aux courses

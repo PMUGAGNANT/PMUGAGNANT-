@@ -1,50 +1,71 @@
 "use client";
 
-import { parseFavoriteForm } from "@/features/race/lib/favorite-form";
+import {
+  getFavoriteFormTrend,
+  parseFavoriteForm,
+  type FavoriteFormPoint,
+} from "@/features/race/lib/favorite-form";
 
-const TONE_CLASS = {
-  strong: "bg-emerald-600",
-  good: "bg-lime-500",
-  neutral: "bg-amber-300",
-  weak: "bg-rose-400",
+const MEDALS = {
+  gold: "\u{1F947}",
+  silver: "\u{1F948}",
+  bronze: "\u{1F949}",
+  neutral: "\u26AB",
+  up: "\u2197",
+  down: "\u2198",
+  flat: "\u2192",
 } as const;
+
+function getMedal(point: FavoriteFormPoint) {
+  const position = Number.parseInt(point.label, 10);
+  if (position === 1) return MEDALS.gold;
+  if (position === 2) return MEDALS.silver;
+  if (position === 3) return MEDALS.bronze;
+  return MEDALS.neutral;
+}
 
 export function FavoriteFormChart({ musique }: { musique?: string | null }) {
   const points = parseFavoriteForm(musique);
+  const trend = getFavoriteFormTrend(points);
+  const trendIcon =
+    trend.direction === "up"
+      ? MEDALS.up
+      : trend.direction === "down"
+        ? MEDALS.down
+        : MEDALS.flat;
 
   return (
-    <div className="result-chip px-4 py-4">
-      <div className="flex items-center justify-between gap-3">
+    <div className="turf-form-timeline">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="app-label">Forme recente</p>
+          <p className="app-label">Forme du cheval</p>
           <h3 className="mt-1 text-lg font-black text-[var(--pmu-text)]">
-            5 dernieres courses
+            Les 5 derni\u00E8res sorties
           </h3>
         </div>
-        <span className="rounded-full bg-[var(--pmu-primary-fade)] px-3 py-1 text-xs font-black text-[var(--pmu-primary)]">
-          favori
+        <span className={`turf-trend-pill is-${trend.direction}`}>
+          {trendIcon} {trend.label}
         </span>
       </div>
 
-      <div className="mt-5 flex h-28 items-end gap-2">
+      <div
+        className="mt-4 grid grid-cols-5 gap-2"
+        aria-label="Forme recente du cheval favori"
+      >
         {points.map((point, index) => (
-          <div key={`${point.label}-${index}`} className="flex flex-1 flex-col items-center gap-2">
-            <div className="flex h-20 w-full items-end rounded-[8px] bg-white/70 p-1">
-              <span
-                className={`block w-full rounded-[6px] ${TONE_CLASS[point.tone]}`}
-                style={{ height: `${Math.max(12, point.score)}%` }}
-                aria-label={`${point.label} score forme ${point.score}`}
-              />
-            </div>
-            <span className="text-[0.7rem] font-black text-[var(--pmu-text-soft)]">
-              {point.label}
-            </span>
+          <div
+            key={`${point.label}-${index}`}
+            className="turf-form-medal"
+            data-tone={point.tone}
+          >
+            <span aria-hidden>{getMedal(point)}</span>
+            <strong>{point.label}</strong>
           </div>
         ))}
       </div>
 
       <p className="mt-3 text-xs leading-5 text-[var(--pmu-text-soft)]">
-        Plus la barre est haute, plus la derniere performance renforce le pronostic.
+        M\u00E9dailles = podium r\u00E9cent. Pastilles noires = sortie moins convaincante.
       </p>
     </div>
   );
