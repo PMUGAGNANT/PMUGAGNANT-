@@ -1,6 +1,8 @@
 import { parseFavoriteForm } from "@/features/race/lib/favorite-form";
 import {
   formatOdds,
+  formatStakeEuro,
+  getScoreBadgeLabel,
   formatStakeLabel,
   getRunnerNumberClass,
   getScoreTierClass,
@@ -78,11 +80,16 @@ export default function ParticipantsTable({ rows, selectedNumber }: Participants
                 </td>
                 <td className="px-4 py-3">
                   <span
-                    className={`inline-flex min-w-12 justify-center rounded-full border px-3 py-1 font-[var(--font-display)] text-base font-black ${getScoreTierClass(row.scoreIa)}`}
+                    className={`inline-flex min-w-24 flex-col items-center justify-center rounded-lg border px-3 py-1 font-[var(--font-display)] text-base font-black leading-none ${getScoreTierClass(row.scoreIa)}`}
                   >
-                    {typeof row.scoreIa === "number" && Number.isFinite(row.scoreIa)
-                      ? Math.round(row.scoreIa)
-                      : "--"}
+                    <span>
+                      {typeof row.scoreIa === "number" && Number.isFinite(row.scoreIa)
+                        ? Math.round(row.scoreIa)
+                        : "--"}
+                    </span>
+                    <small className="mt-1 text-[0.62rem] font-black uppercase tracking-[0.08em]">
+                      {getScoreBadgeLabel(row.scoreIa)}
+                    </small>
                   </span>
                 </td>
                 <td className="px-4 py-3">
@@ -106,7 +113,7 @@ export default function ParticipantsTable({ rows, selectedNumber }: Participants
                     className={`inline-flex min-w-28 justify-center rounded-lg px-3 py-2 text-sm font-black ${getStakeToneClass(row.mise)}`}
                     title="Basé sur bankroll de 100€ et Kelly 25%"
                   >
-                    {formatStakeLabel(row.mise)}
+                    {row.mise === null ? formatStakeLabel(row.mise) : formatStakeEuro(row.mise)}
                   </span>
                 </td>
               </tr>

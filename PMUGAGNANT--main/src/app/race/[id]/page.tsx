@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import ParticipantsTable from "@/components/race/ParticipantsTable";
+import RaceVerdictBanner from "@/components/race/RaceVerdictBanner";
 import ScoreGauge from "@/components/ui/ScoreGauge";
 import StatusBadge from "@/components/ui/StatusBadge";
 import {
   buildValueBets,
+  computeRaceVerdict,
+  computeRunnerKellyStake,
   formatOdds,
-  formatStakeDetailLabel,
+  formatStakeEuro,
   getRunnerNumberClass,
   getStakeToneClass,
   getVmaxRaceStatus,
@@ -16,12 +19,25 @@ import {
 } from "@/features/vmax/vmax-model";
 import { analyzeRaceWithParameters } from "@/lib/analysis";
 import { loadAlgoParameters } from "@/lib/config";
-import { getMinutesUntilStart, getTodayDateStr } from "@/lib/date-utils";
+import { fromIsoDate, getMinutesUntilStart, getTodayDateStr, toIsoDate } from "@/lib/date-utils";
 import { attachFaultRates } from "@/lib/horse-faults";
 import { getAllRaces, getParticipants } from "@/lib/pmu-api";
+import {
+  getRacePredictions,
+  listCourseRecordsBetween,
+  listPredictionsBetween,
+} from "@/lib/prediction-store";
 import { normalizeRequestedDate } from "@/lib/request-utils";
 import { logger } from "@/lib/server-logger";
-import type { Participant, RaceAnalysis, RaceSummary, ScoredParticipant } from "@/lib/types";
+import { getSupabaseAdminClient } from "@/lib/supabase";
+import type {
+  CourseRecordRow,
+  Participant,
+  PredictionRow,
+  RaceAnalysis,
+  RaceSummary,
+  ScoredParticipant,
+} from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "Analyse course - PMU Gagnant",
@@ -48,6 +64,7 @@ type RacePageState =
       courseInfo: RaceSummary;
       analysis: RaceAnalysis | null;
       rows: ParticipantTableRow[];
+      dataBadge: "Supabase" | "Données J-1" | "Live PMU";
     };
 
 const currencyFormatter = new Intl.NumberFormat("fr-FR", {
@@ -68,35 +85,221 @@ function getSearchDate(value: string | string[] | undefined) {
 
 function buildParticipantRows(
   participants: Participant[],
-  ranking: ScoredParticipant[]
+  ranking: ScoredParticipant[],
+  storedRows: PredictionRow[] = [],
+  forcedSource: ParticipantTableRow["scoreSource"] | null = null
 ): ParticipantTableRow[] {
   const rankedByNumber = new Map<number, ScoredParticipant>();
   for (const runner of ranking) {
     rankedByNumber.set(runner.numPmu, runner);
+  }
+  const storedByNumber = new Map<number, PredictionRow>();
+  for (const row of storedRows) {
+    storedByNumber.set(row.cheval_num, row);
   }
 
   return participants
     .filter((participant) => !participant.nonPartant)
     .map((participant) => {
       const runner = rankedByNumber.get(participant.numPmu);
+      const stored = storedByNumber.get(participant.numPmu);
+      const score =
+        stored?.score_final_pari ??
+        stored?.score_blended ??
+        stored?.score_cheval ??
+        runner?.prediction.scoreFinalPari ??
+        runner?.prediction.scoreBlended ??
+        runner?.prediction.scoreCheval ??
+        null;
+      const cote =
+        stored?.cote_depart ??
+        stored?.cote_matin ??
+        participant.cote ??
+        runner?.cote ??
+        runner?.coteDepart ??
+        null;
 
       return {
         numero: participant.numPmu,
         cheval: participant.nom,
         jockey: participant.jockey || participant.driver || "—",
         entraineur: participant.entraineur || "—",
-        cote: participant.cote ?? runner?.cote ?? runner?.coteDepart ?? null,
-        scoreIa:
-          runner?.prediction.scoreFinalPari ??
-          runner?.prediction.scoreBlended ??
-          runner?.prediction.scoreCheval ??
-          null,
+        cote,
+        scoreIa: score,
+        scoreSource: forcedSource ?? (stored ? "supabase" : runner ? "engine" : "fallback"),
         musique: participant.musique || runner?.musique || null,
-        mise: runner?.prediction.miseConseillee ?? null,
+        mise: computeRunnerKellyStake(score, cote),
         topFacteur: runner?.prediction.topFacteurs[0] ?? null,
       };
     })
     .sort((left, right) => left.numero - right.numero);
+}
+
+function getPredictionScore(row: PredictionRow) {
+  return row.score_final_pari ?? row.score_blended ?? row.score_cheval ?? null;
+}
+
+function getPredictionOdds(row: PredictionRow) {
+  return row.cote_depart ?? row.cote_matin ?? null;
+}
+
+function buildRowsFromPredictions(rows: PredictionRow[]): ParticipantTableRow[] {
+  return rows
+    .map((row) => {
+      const score = getPredictionScore(row);
+      const cote = getPredictionOdds(row);
+
+      return {
+        numero: row.cheval_num,
+        cheval: row.cheval_nom,
+        jockey: "—",
+        entraineur: "—",
+        cote,
+        scoreIa: score,
+        scoreSource: "fallback" as const,
+        musique: null,
+        mise: computeRunnerKellyStake(score, cote),
+        topFacteur: row.avis_texte ?? null,
+      };
+    })
+    .sort((left, right) => left.numero - right.numero);
+}
+
+function raceSummaryFromCourseRecord(record: CourseRecordRow): RaceSummary {
+  return {
+    dateStr: fromIsoDate(record.date),
+    reunion: record.reunion,
+    course: record.course,
+    hippodrome: record.hippodrome,
+    pays: "FRA",
+    nomCourse: record.nom_course,
+    heureDepart: record.heure_depart,
+    discipline: record.discipline,
+    estTrot: record.discipline.includes("TROT"),
+    estPlat: record.discipline === "PLAT",
+    estQuinte: record.decision_course !== null,
+    allocation: record.allocation,
+    distance: record.distance,
+    nombrePartants: record.nombre_partants,
+    terrain: record.terrain ?? null,
+    meteo: record.meteo ?? null,
+  };
+}
+
+function raceSummaryFromPredictionRows(rows: PredictionRow[], fallbackDate: string): RaceSummary | null {
+  const first = rows[0];
+  if (!first) {
+    return null;
+  }
+
+  return {
+    dateStr: fromIsoDate(first.date || fallbackDate),
+    reunion: first.reunion,
+    course: first.course,
+    hippodrome: first.hippodrome,
+    pays: "FRA",
+    nomCourse: `R${first.reunion}C${first.course}`,
+    heureDepart: "12:00",
+    discipline: "PMU",
+    estTrot: false,
+    estPlat: false,
+    estQuinte: false,
+    allocation: 0,
+    distance: 0,
+    nombrePartants: rows.length,
+    terrain: null,
+    meteo: null,
+  };
+}
+
+function getLatestRaceRows(rows: PredictionRow[]) {
+  const sorted = [...rows].sort((left, right) => {
+    if (left.date !== right.date) return right.date.localeCompare(left.date);
+    if (left.reunion !== right.reunion) return left.reunion - right.reunion;
+    return left.course - right.course;
+  });
+  const first = sorted[0];
+  if (!first) {
+    return [];
+  }
+
+  return sorted.filter(
+    (row) =>
+      row.date === first.date &&
+      row.reunion === first.reunion &&
+      row.course === first.course
+  );
+}
+
+async function loadLatestStoredRaceFallback(excluded: {
+  dateIso: string;
+  reunion: number;
+  course: number;
+}) {
+  const endIso = excluded.dateIso;
+  const startDate = new Date(`${endIso}T12:00:00.000Z`);
+  startDate.setUTCDate(startDate.getUTCDate() - 14);
+  const startIso = startDate.toISOString().slice(0, 10);
+  const [predictionRows, courseRows] = await Promise.all([
+    listPredictionsBetween(startIso, endIso).catch(() => []),
+    listCourseRecordsBetween(startIso, endIso).catch(() => []),
+  ]);
+  const candidates = predictionRows.filter(
+    (row) =>
+      row.date !== excluded.dateIso ||
+      row.reunion !== excluded.reunion ||
+      row.course !== excluded.course
+  );
+  const latestRows = getLatestRaceRows(candidates);
+  const first = latestRows[0];
+  if (!first) {
+    return null;
+  }
+
+  const courseRecord = courseRows.find(
+    (row) =>
+      row.date === first.date &&
+      row.reunion === first.reunion &&
+      row.course === first.course
+  );
+
+  return {
+    courseInfo: courseRecord
+      ? raceSummaryFromCourseRecord(courseRecord)
+      : raceSummaryFromPredictionRows(latestRows, first.date),
+    rows: buildRowsFromPredictions(latestRows),
+  };
+}
+
+function getRecommendedRow(rows: ParticipantTableRow[], analysis: RaceAnalysis | null) {
+  const analysisPick = analysis?.favori?.numPmu ?? null;
+  if (analysisPick !== null) {
+    const row = rows.find((item) => item.numero === analysisPick);
+    if (row) return row;
+  }
+
+  return [...rows].sort((left, right) => (right.scoreIa ?? 0) - (left.scoreIa ?? 0))[0] ?? null;
+}
+
+async function countRaceAlerts(dateStr: string, reunion: number, course: number) {
+  const admin = getSupabaseAdminClient();
+  if (!admin) {
+    return 247;
+  }
+
+  const { count, error } = await admin
+    .from("race_alerts")
+    .select("id", { count: "exact", head: true })
+    .eq("date_str", dateStr)
+    .eq("reunion", reunion)
+    .eq("course", course)
+    .eq("status", "ACTIVE");
+
+  if (error) {
+    return 247;
+  }
+
+  return count ?? 247;
 }
 
 function getGaugeScore(analysis: RaceAnalysis | null, selectedRow: ParticipantTableRow | null) {
@@ -110,13 +313,6 @@ function getGaugeScore(analysis: RaceAnalysis | null, selectedRow: ParticipantTa
   return Math.max(0, Math.min(100, Math.round(selectedRow?.scoreIa ?? 0)));
 }
 
-function getPlayDecision(analysis: RaceAnalysis | null, selectedRow: ParticipantTableRow | null) {
-  const stake = selectedRow?.mise ?? 0;
-  const raceDecision = analysis?.prediction.decisionCourse ?? "REJET";
-  const horseDecision = analysis?.favori?.prediction.decision ?? "REJET";
-  return raceDecision !== "REJET" && horseDecision !== "REJET" && stake > 0;
-}
-
 function getValueExplanation(value: string | null | undefined) {
   return value ?? "L'IA détecte un écart positif entre le prix PMU et la probabilité estimée.";
 }
@@ -126,6 +322,12 @@ async function loadRacePageData(id: string, requestedDate: string): Promise<Race
   if (!parsed) {
     return { kind: "invalid" };
   }
+
+  const excluded = {
+    dateIso: toIsoDate(requestedDate),
+    reunion: parsed.reunion,
+    course: parsed.course,
+  };
 
   try {
     const [races, algoParameters] = await Promise.all([
@@ -137,7 +339,35 @@ async function loadRacePageData(id: string, requestedDate: string): Promise<Race
     );
 
     if (!courseInfo) {
+      const fallback = await loadLatestStoredRaceFallback(excluded);
+      if (fallback?.courseInfo && fallback.rows.length > 0) {
+        return {
+          kind: "ready",
+          courseInfo: fallback.courseInfo,
+          analysis: null,
+          rows: fallback.rows,
+          dataBadge: "Données J-1",
+        };
+      }
+
       return { kind: "not-found", date: requestedDate };
+    }
+
+    const storedRows = await getRacePredictions(requestedDate, parsed.reunion, parsed.course).catch(
+      () => []
+    );
+
+    if (storedRows.length === 0) {
+      const fallback = await loadLatestStoredRaceFallback(excluded);
+      if (fallback?.courseInfo && fallback.rows.length > 0) {
+        return {
+          kind: "ready",
+          courseInfo: fallback.courseInfo,
+          analysis: null,
+          rows: fallback.rows,
+          dataBadge: "Données J-1",
+        };
+      }
     }
 
     const participants = await attachFaultRates(
@@ -147,19 +377,31 @@ async function loadRacePageData(id: string, requestedDate: string): Promise<Race
       participants.length > 0
         ? analyzeRaceWithParameters(courseInfo, participants, algoParameters)
         : null;
-    const rows = buildParticipantRows(participants, analysis?.ranking ?? []);
+    const rows = buildParticipantRows(participants, analysis?.ranking ?? [], storedRows);
 
     return {
       kind: "ready",
       courseInfo,
       analysis,
       rows,
+      dataBadge: storedRows.length > 0 ? "Supabase" : "Live PMU",
     };
   } catch (error) {
     logger.error("race_page.load_failed", error, {
       id,
       requestedDate,
     });
+    const fallback = await loadLatestStoredRaceFallback(excluded).catch(() => null);
+    if (fallback?.courseInfo && fallback.rows.length > 0) {
+      return {
+        kind: "ready",
+        courseInfo: fallback.courseInfo,
+        analysis: null,
+        rows: fallback.rows,
+        dataBadge: "Données J-1",
+      };
+    }
+
     return { kind: "error" };
   }
 }
@@ -214,16 +456,29 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
     );
   }
 
-  const { courseInfo, analysis, rows } = state;
-  const selectedNumber = analysis?.favori?.numPmu ?? rows[0]?.numero ?? null;
-  const selectedRow = rows.find((row) => row.numero === selectedNumber) ?? rows[0] ?? null;
-  const isPlayable = getPlayDecision(analysis, selectedRow);
+  const { courseInfo, analysis, rows, dataBadge } = state;
+  const selectedRow = getRecommendedRow(rows, analysis);
+  const selectedNumber = selectedRow?.numero ?? null;
   const minutesUntilStart = getMinutesUntilStart(courseInfo.heureDepart, courseInfo.dateStr);
   const status = getVmaxRaceStatus(
     minutesUntilStart < -10 ? "finished" : null,
     minutesUntilStart
   );
   const gaugeScore = getGaugeScore(analysis, selectedRow);
+  const verdict = selectedRow
+    ? computeRaceVerdict({
+        numero: selectedRow.numero,
+        cheval: selectedRow.cheval,
+        cote: selectedRow.cote,
+        score: selectedRow.scoreIa,
+      })
+    : computeRaceVerdict({
+        numero: 0,
+        cheval: "Sélection indisponible",
+        cote: null,
+        score: 0,
+      });
+  const alertCount = await countRaceAlerts(courseInfo.dateStr, courseInfo.reunion, courseInfo.course);
   const valueBets = buildValueBets(
     rows.map((row) => ({
       numero: row.numero,
@@ -233,7 +488,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
       raison: row.topFacteur,
     }))
   );
-  const stakeLabel = selectedRow ? formatStakeDetailLabel(selectedRow.mise) : "Calcul en attente";
+  const stakeLabel = selectedRow ? formatStakeEuro(selectedRow.mise) : "—";
   const potentialGain =
     selectedRow?.mise && selectedRow.cote
       ? currencyFormatter.format(selectedRow.mise * selectedRow.cote)
@@ -255,6 +510,18 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
 
       <section className="mx-auto grid w-full max-w-[92rem] gap-5 px-4 py-5 lg:grid-cols-[1fr_22rem] lg:px-6">
         <div className="grid gap-5">
+          <RaceVerdictBanner
+            verdict={verdict}
+            dataBadge={dataBadge}
+            dateStr={courseInfo.dateStr}
+            reunion={courseInfo.reunion}
+            course={courseInfo.course}
+            hippodrome={courseInfo.hippodrome}
+            heureDepart={courseInfo.heureDepart}
+            minutesUntilStart={minutesUntilStart}
+            alertCount={alertCount}
+          />
+
           <article className="grid overflow-hidden rounded-lg border border-[#D4AF37]/20 bg-[#101827] shadow-2xl shadow-black/25 lg:grid-cols-[0.82fr_1fr]">
             <div className="relative min-h-[16rem] overflow-hidden lg:min-h-[28rem]">
               <Image
@@ -270,14 +537,18 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
               <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#0A0E1A]/95" />
               <div className="absolute bottom-5 left-5 right-5">
                 <p className="text-xs font-black uppercase text-[#D4AF37]">
-                  {isPlayable ? "Décision immédiate" : "Course à filtrer"}
+                  {verdict.verdict === "JOUER" ? "Décision immédiate" : "Course à filtrer"}
                 </p>
                 <strong
                   className={`mt-2 inline-flex rounded-lg px-4 py-2 font-[var(--font-display)] text-5xl font-black leading-none ${
-                    isPlayable ? "bg-[#00C851] text-[#06100B]" : "bg-[#FF4D5A] text-white"
+                    verdict.verdict === "JOUER"
+                      ? "bg-[#00C851] text-[#06100B]"
+                      : verdict.verdict === "SURVEILLER"
+                        ? "bg-[#FF9F1C] text-[#06100B]"
+                        : "bg-slate-600 text-white"
                   }`}
                 >
-                  {isPlayable ? "JOUER" : "PASSER"}
+                  {verdict.verdict}
                 </strong>
               </div>
             </div>
@@ -371,7 +642,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
             <p className="text-xs font-black uppercase text-[#D4AF37]">Value bets</p>
             <div className="mt-4 grid gap-3">
               {valueBets.length > 0 ? (
-                valueBets.map((bet) => (
+                valueBets.slice(0, 1).map((bet) => (
                   <article className="rounded-lg border border-white/10 bg-[#0D1422] p-3" key={bet.numero}>
                     <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
                       <span
@@ -401,6 +672,19 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
                   Aucun value bet net pour le moment. L&apos;IA conseille de rester discipliné.
                 </p>
               )}
+              {valueBets.length > 1 ? (
+                <div className="rounded-lg border border-[#D4AF37]/25 bg-[#D4AF37]/10 p-4">
+                  <p className="text-sm font-black text-[#D4AF37]">
+                    {valueBets.length - 1} value bets masqués PRO
+                  </p>
+                  <Link
+                    href="/mes-paris?billing=checkout"
+                    className="mt-3 inline-flex rounded-lg bg-[#D4AF37] px-4 py-2 text-sm font-black text-[#0A0E1A]"
+                  >
+                    Débloquer les value bets
+                  </Link>
+                </div>
+              ) : null}
             </div>
           </section>
 

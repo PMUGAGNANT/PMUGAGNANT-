@@ -3,6 +3,8 @@ import test from "node:test";
 
 import {
   buildValueBets,
+  computeRaceVerdict,
+  computeRunnerKellyStake,
   formatStakeDetailLabel,
   formatStakeLabel,
   getScoreTier,
@@ -27,6 +29,22 @@ test("score and stake helpers expose stable UI tiers", () => {
   assert.equal(getStakeTone(3.5), "low");
   assert.equal(getStakeTone(9), "medium");
   assert.equal(getStakeTone(22), "high");
+});
+
+test("computeRunnerKellyStake applique Kelly 25% pour les scores jouables", () => {
+  assert.equal(computeRunnerKellyStake(80, 3), 18);
+  assert.equal(computeRunnerKellyStake(69, 4), null);
+  assert.equal(computeRunnerKellyStake(80, 1.1), null);
+});
+
+test("computeRaceVerdict transforme edge et cote en verdict immédiat", () => {
+  const play = computeRaceVerdict({ numero: 7, cheval: "Reine Esther", cote: 8, score: 92 });
+  assert.equal(play.verdict, "JOUER");
+  assert.ok(play.stake > 0);
+
+  const pass = computeRaceVerdict({ numero: 3, cheval: "Beta", cote: 1.2, score: 50 });
+  assert.equal(pass.verdict, "PASSER");
+  assert.equal(pass.stake, 0);
 });
 
 test("buildValueBets keeps only positive PMU edge opportunities", () => {

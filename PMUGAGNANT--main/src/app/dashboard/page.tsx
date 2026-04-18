@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import CountdownTimer from "@/components/race/CountdownTimer";
+import DashboardBestRaceRedirect from "@/components/race/DashboardBestRaceRedirect";
 import ScoreGauge from "@/components/ui/ScoreGauge";
 import StatusBadge from "@/components/ui/StatusBadge";
 import {
@@ -178,6 +180,9 @@ export default async function DashboardPage() {
   const hero = getHeroRace(races);
   const visibleRaces = races.slice(0, 6);
   const liveActive = races.some((item) => item.status === "live");
+  const heroHref = hero
+    ? `/race/${formatRaceAnalysisId(hero.race.reunion, hero.race.course)}?date=${hero.race.dateStr}`
+    : null;
   const roi = getRoi(history);
   const latestPerformances: PerformanceRow[] =
     getLatestPerformances(history).length > 0
@@ -198,6 +203,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-[#F6F2E8]">
+      <DashboardBestRaceRedirect href={heroHref} />
       <header className="sticky top-0 z-50 grid grid-cols-[1fr_auto] items-center gap-4 border-b border-[#D4AF37]/15 bg-[#0A0E1A]/90 px-4 py-3 backdrop-blur-xl md:grid-cols-[auto_auto_1fr_auto] md:px-8">
         <Link
           href="/dashboard"
@@ -289,11 +295,7 @@ export default async function DashboardPage() {
 
               <Link
                 className="inline-flex w-full justify-center rounded-lg border border-[#D4AF37]/70 bg-gradient-to-br from-[#D4AF37] to-[#A47D18] px-5 py-4 font-black text-[#0A0E1A] shadow-lg shadow-[#D4AF37]/10"
-                href={
-                  hero
-                    ? `/race/${formatRaceAnalysisId(hero.race.reunion, hero.race.course)}?date=${hero.race.dateStr}`
-                    : "/premium"
-                }
+                href={heroHref ?? "/premium"}
               >
                 Voir l&apos;analyse complète
               </Link>
@@ -323,6 +325,7 @@ export default async function DashboardPage() {
                   <p className="text-sm font-bold text-slate-400">
                     {item.race.discipline} · {item.race.heureDepart} · {item.race.nombrePartants} partants
                   </p>
+                  <CountdownTimer dateStr={item.race.dateStr} heureDepart={item.race.heureDepart} />
                   <div className="flex items-center gap-2 opacity-90 transition group-hover:opacity-100">
                     {item.topNumbers.slice(0, 3).map((num) => (
                       <i

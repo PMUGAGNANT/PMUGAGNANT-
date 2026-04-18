@@ -3,7 +3,7 @@ import { Barlow_Condensed, DM_Sans, Roboto_Mono } from "next/font/google";
 import { ComboPanel, ComboProvider } from "@/components/ComboBuilder";
 import { AppShell } from "@/features/layout/components/AppShell";
 import { GlossaryPanel } from "@/components/ui/Glossary";
-import { OnboardingModal } from "@/components/ui/OnboardingModal";
+import OnboardingModal from "@/components/ui/OnboardingModal";
 import { PriorityRacePushScheduler } from "@/components/ui/PriorityRacePushScheduler";
 import { PushNotificationPrompt } from "@/components/ui/PushNotificationPrompt";
 import { ServiceWorkerRegistration } from "@/components/ui/ServiceWorkerRegistration";
