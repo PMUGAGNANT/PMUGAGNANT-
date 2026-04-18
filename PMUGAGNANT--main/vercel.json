@@ -2,19 +2,19 @@
   "crons": [
     {
       "path": "/api/cron/morning",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/health",
       "schedule": "0 6 * * *"
     },
     {
-      "path": "/api/cron/update",
-      "schedule": "0 10 * * *"
-    },
-    {
       "path": "/api/cron/results",
-      "schedule": "0 20 * * *"
+      "schedule": "0 19 * * *"
     },
     {
       "path": "/api/cron/recap",
-      "schedule": "45 21 * * *"
+      "schedule": "45 19 * * *"
     }
   ]
 }

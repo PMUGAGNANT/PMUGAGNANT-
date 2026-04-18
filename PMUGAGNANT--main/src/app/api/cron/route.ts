@@ -1,32 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
-import { ensureCronAuthorized } from "@/lib/cron-auth";
+import { NextRequest } from "next/server";
+import { runCronRoute } from "@/lib/cron-execution";
+import { runCronMorningJob, runCronPreRaceJob, runCronResultsJob } from "@/lib/cron-jobs";
 import { runEngineLearning } from "@/lib/engine-learning";
 import { runEnginePromotion } from "@/lib/engine-promotion";
 import { getTodayDateStr } from "@/lib/pmu-api";
-import { runMorningAnalysis, runPreRaceSecondPass, runResultSync } from "@/lib/prediction-pipeline";
 import { runWeeklyReport } from "@/lib/weekly-reports";
 import { logger } from "@/lib/server-logger";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300;
+export const maxDuration = 60;
 
-/**
- * Unified cron dispatcher — runs every 5 minutes.
- * Decides which tasks to execute based on the current time (Europe/Paris).
- *
- * Schedule logic:
- *   - morning   : once at ~07:00
- *   - prerace   : every 5 min (always)
- *   - results   : every 10 min (on the :00, :10, :20, :30, :40, :50)
- *   - learning+promotion : once at ~04:00 in sequence
- *   - weekly    : Sunday at ~19:00
- */
-export async function GET(request: NextRequest) {
-  const unauthorized = ensureCronAuthorized(request);
-  if (unauthorized) return unauthorized;
-
-  const now = new Date();
-  const paris = new Intl.DateTimeFormat("en-US", {
+function getParisScheduleParts(now: Date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Europe/Paris",
     hour: "numeric",
     minute: "numeric",
@@ -34,73 +19,76 @@ export async function GET(request: NextRequest) {
     hour12: false,
   }).formatToParts(now);
 
-  const hour = Number(paris.find((p) => p.type === "hour")?.value ?? 0);
-  const minute = Number(paris.find((p) => p.type === "minute")?.value ?? 0);
-  const weekday = paris.find((p) => p.type === "weekday")?.value ?? "";
+  return {
+    hour: Number(parts.find((part) => part.type === "hour")?.value ?? 0),
+    minute: Number(parts.find((part) => part.type === "minute")?.value ?? 0),
+    weekday: parts.find((part) => part.type === "weekday")?.value ?? "",
+  };
+}
 
-  const date = getTodayDateStr();
-  const results: Record<string, unknown> = { dispatched_at: now.toISOString(), paris_time: `${hour}:${String(minute).padStart(2, "0")}` };
-
-  // --- Morning scan: 07:00–07:04 window ---
-  if (hour === 7 && minute < 5) {
-    try {
-      results.morning = await runMorningAnalysis(date);
-    } catch (e) {
-      logger.error("cron.dispatch.morning_failed", e, { date });
-      results.morning = { error: e instanceof Error ? e.message : "morning failed" };
-    }
-  }
-
-  // --- Pre-race: every call (every 5 min) ---
+async function captureStep<T>(
+  name: string,
+  results: Record<string, unknown>,
+  worker: () => Promise<T>
+) {
   try {
-    results.prerace = await runPreRaceSecondPass(date, { reunion: null, course: null });
-  } catch (e) {
-    logger.error("cron.dispatch.prerace_failed", e, { date });
-    results.prerace = { error: e instanceof Error ? e.message : "prerace failed" };
+    results[name] = await worker();
+  } catch (error) {
+    logger.error(`cron.dispatch.${name}_failed`, error);
+    results[name] = {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
+}
 
-  // --- Results sync: every 10 min (minute divisible by 10) ---
-  if (minute % 10 < 5) {
-    try {
-      results.results = await runResultSync(date, { reunion: null, course: null });
-    } catch (e) {
-      logger.error("cron.dispatch.results_failed", e, { date });
-      results.results = { error: e instanceof Error ? e.message : "results failed" };
-    }
-  }
+export async function GET(request: NextRequest) {
+  return runCronRoute(request, "/api/cron", async () => {
+    const now = new Date();
+    const { hour, minute, weekday } = getParisScheduleParts(now);
+    const date = getTodayDateStr();
+    const results: Record<string, unknown> = {
+      dispatchedAt: now.toISOString(),
+      parisTime: `${hour}:${String(minute).padStart(2, "0")}`,
+    };
 
-  // --- Weekly report: Sunday 19:00–19:04 window ---
-  if (hour === 4 && minute < 5) {
-    try {
-      results.learning = await runEngineLearning(now);
-    } catch (e) {
-      logger.error("cron.dispatch.learning_failed", e, { date });
-      results.learning = { error: e instanceof Error ? e.message : "learning failed" };
-      results.promotion = {
-        skipped: true,
-        reason: "learning-failed",
-      };
-      return NextResponse.json({ success: true, ...results });
+    if (hour === 7 && minute < 5) {
+      await captureStep("morning", results, () => runCronMorningJob(date));
     }
 
-    try {
-      results.promotion = await runEnginePromotion(now);
-    } catch (e) {
-      logger.error("cron.dispatch.promotion_failed", e, { date });
-      results.promotion = {
-        error: e instanceof Error ? e.message : "promotion failed",
-      };
-    }
-  }
+    await captureStep("preRace", results, () => runCronPreRaceJob(date));
 
-  if (weekday === "Sun" && hour === 19 && minute < 5) {
-    try {
-      results.weekly = await runWeeklyReport();
-    } catch (e) {
-      logger.error("cron.dispatch.weekly_failed", e, { date });
-      results.weekly = { error: e instanceof Error ? e.message : "weekly failed" };
+    if (minute % 10 < 5) {
+      await captureStep("results", results, () => runCronResultsJob(date));
     }
-  }
 
-  return NextResponse.json({ success: true, ...results });
+    if (hour === 4 && minute < 5) {
+      await captureStep("learning", results, () => runEngineLearning(now));
+      if (
+        typeof results.learning === "object" &&
+        results.learning !== null &&
+        (results.learning as Record<string, unknown>).success === false
+      ) {
+        results.promotion = {
+          skipped: true,
+          reason: "learning-failed",
+        };
+      } else {
+        await captureStep("promotion", results, () => runEnginePromotion(now));
+      }
+    }
+
+    if (weekday === "Sun" && hour === 19 && minute < 5) {
+      await captureStep("weekly", results, () => runWeeklyReport());
+    }
+
+    return {
+      coursesProcessed:
+        typeof (results.preRace as Record<string, unknown> | undefined)?.coursesProcessed ===
+        "number"
+          ? ((results.preRace as Record<string, unknown>).coursesProcessed as number)
+          : 0,
+      results,
+    };
+  });
 }

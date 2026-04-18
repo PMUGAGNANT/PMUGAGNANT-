@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function GET(request: NextRequest) {
-  return runCronRoute(request, "/api/cron/update", async () => {
+  return runCronRoute(request, "/api/cron/pre-race", async () => {
     const url = new URL(request.url);
     const date = normalizeRequestedDate(url.searchParams.get("date"), getTodayDateStr());
 

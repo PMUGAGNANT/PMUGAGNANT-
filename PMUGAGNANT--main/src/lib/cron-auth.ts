@@ -64,8 +64,8 @@ export function ensureCronAuthorized(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: "Unauthorized cron request",
-        hint: "Provide CRON_SECRET with Authorization Bearer, x-cron-secret, or ?token=.",
+        error: "CRON_SECRET invalide ou manquant.",
+        hint: "Envoyez le secret unique via Authorization: Bearer <CRON_SECRET>, x-cron-secret ou ?token=<CRON_SECRET>.",
       },
       { status: 401 }
     );
@@ -82,8 +82,8 @@ export function ensureCronAuthorized(request: NextRequest) {
   return NextResponse.json(
     {
       success: false,
-      error: "Unauthorized cron request",
-      hint: "Provide CRON_SECRET with Authorization Bearer, x-cron-secret, or ?token=.",
+      error: "CRON_SECRET invalide ou manquant.",
+      hint: "Envoyez le secret unique via Authorization: Bearer <CRON_SECRET>, x-cron-secret ou ?token=<CRON_SECRET>.",
     },
     { status: 401 }
   );

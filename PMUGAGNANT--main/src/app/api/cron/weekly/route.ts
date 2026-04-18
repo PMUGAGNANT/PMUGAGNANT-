@@ -1,27 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
-import { ensureCronAuthorized } from "@/lib/cron-auth";
+import { NextRequest } from "next/server";
+import { runCronRoute } from "@/lib/cron-execution";
 import { runWeeklyReport } from "@/lib/weekly-reports";
-import { badRequest, serverError } from "@/lib/api-response";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export async function GET(request: NextRequest) {
-  const unauthorized = ensureCronAuthorized(request);
-  if (unauthorized) {
-    return unauthorized;
-  }
+  return runCronRoute(request, "/api/cron/weekly", async () => {
+    const url = new URL(request.url);
+    const date = url.searchParams.get("date");
+    const parsedDate = date ? new Date(date) : undefined;
 
-  const url = new URL(request.url);
-  const date = url.searchParams.get("date");
-  const parsedDate = date ? new Date(date) : undefined;
-  if (parsedDate && Number.isNaN(parsedDate.getTime())) {
-    return badRequest("Invalid date format. Expected ISO date.");
-  }
+    if (parsedDate && Number.isNaN(parsedDate.getTime())) {
+      throw new Error("Invalid date format. Expected ISO date.");
+    }
 
-  try {
-    const summary = await runWeeklyReport(parsedDate);
-    return NextResponse.json(summary);
-  } catch (error) {
-    return serverError("Weekly cron failed", error, { date });
-  }
+    return runWeeklyReport(parsedDate);
+  });
 }
