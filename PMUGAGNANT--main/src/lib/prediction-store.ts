@@ -62,7 +62,6 @@ export function buildPredictionRows(
     cheval_num: runner.numPmu,
     cheval_nom: runner.nom,
     score_cheval: runner.prediction.scoreCheval,
-    score_blended: runner.prediction.scoreBlended ?? runner.prediction.scoreCheval,
     score_final_pari: runner.prediction.scoreFinalPari,
     coefficient_lisibilite: analysis.prediction.coefficientLisibilite,
     confiance: runner.prediction.confiance,
@@ -523,9 +522,14 @@ export async function upsertPredictions(rows: PredictionRow[]) {
   if (rows.length === 0) return;
 
   const admin = getAdmin();
+  const dbRows = rows.map((row) => {
+    const dbRow = { ...row };
+    delete dbRow.score_blended;
+    return dbRow;
+  });
   const { error } = await admin
     .from("predictions")
-    .upsert(rows, { onConflict: "date,reunion,course,cheval_num" });
+    .upsert(dbRows, { onConflict: "date,reunion,course,cheval_num" });
 
   if (error) {
     throw new Error(`Prediction upsert failed: ${error.message}`);
