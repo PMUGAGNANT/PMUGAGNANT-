@@ -179,6 +179,20 @@ Workflow déjà présent :
 
 - `.github/workflows/cron-jobs.yml`
 
+### Configuration cron-job.org
+
+Les routes cron sont protegees par `CRON_SECRET`. Pour cron-job.org, utiliser
+un secret sans caracteres speciaux, par exemple `TurfEdge2026PMUSecret123`, puis
+configurer les appels avec une des deux options :
+
+- URL : `https://votre-domaine.com/api/cron/morning?token=TurfEdge2026PMUSecret123`
+- Header : `Authorization: Bearer TurfEdge2026PMUSecret123`
+
+Les alias `?secret=`, `?cron_secret=`, `x-cron-secret` et `x-api-key` sont aussi
+acceptes pour eviter les erreurs de configuration. Si un ancien secret contient
+un `+`, il faut l'encoder en `%2B` dans l'URL ou le remplacer par un secret
+lettres/chiffres.
+
 ## Déploiement Vercel
 
 ### Variables à définir dans Vercel
