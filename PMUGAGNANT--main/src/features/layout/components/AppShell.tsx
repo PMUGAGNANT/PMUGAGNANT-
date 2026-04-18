@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { BottomNav } from "./BottomNav";
 import { TopNav } from "./TopNav";
 
-const shellDisabledRoutes = new Set(["/login", "/admin"]);
+const shellDisabledRoutes = new Set(["/login", "/admin", "/dashboard"]);
 
 type AppShellProps = {
   children: ReactNode;
@@ -13,7 +13,7 @@ type AppShellProps = {
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
-  const shellDisabled = shellDisabledRoutes.has(pathname);
+  const shellDisabled = shellDisabledRoutes.has(pathname) || pathname.startsWith("/race/");
 
   if (shellDisabled) {
     return (
