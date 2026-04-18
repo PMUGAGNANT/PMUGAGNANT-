@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Jost, Roboto_Mono } from "next/font/google";
+import { Barlow_Condensed, DM_Sans, Roboto_Mono } from "next/font/google";
 import { ComboPanel, ComboProvider } from "@/components/ComboBuilder";
 import { AppShell } from "@/features/layout/components/AppShell";
 import { GlossaryPanel } from "@/components/ui/Glossary";
@@ -11,18 +11,18 @@ import { ThemeMetaColor } from "@/components/ui/ThemeMetaColor";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import "./globals.css";
 
-const uiFont = Jost({
+const uiFont = DM_Sans({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-ui",
-  weight: ["300", "400", "500"],
+  weight: ["400", "500", "700", "800"],
 });
 
-const displayFont = Cormorant_Garamond({
+const displayFont = Barlow_Condensed({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-display",
-  weight: ["500", "600", "700"],
+  weight: ["600", "700", "800"],
 });
 
 const monoFont = Roboto_Mono({

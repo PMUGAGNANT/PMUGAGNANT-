@@ -7,6 +7,18 @@ export type ScoreTier = "gold" | "green" | "neutral";
 export type StakeTone = "waiting" | "low" | "medium" | "high";
 export type VmaxRaceStatus = "ready" | "live" | "finished";
 
+export type ParticipantTableRow = {
+  numero: number;
+  cheval: string;
+  jockey: string;
+  entraineur: string;
+  cote: number | null;
+  scoreIa: number | null;
+  musique: string | null;
+  mise: number | null;
+  topFacteur: string | null;
+};
+
 export type ValueBetInput = {
   numero: number;
   cheval: string;
@@ -84,6 +96,38 @@ export function getRunnerNumberColor(numero: number | string | null | undefined)
   return RUNNER_COLORS[(numeric - 1) % RUNNER_COLORS.length];
 }
 
+const RUNNER_COLOR_CLASSES = [
+  "bg-[#D4AF37] text-[#06100B]",
+  "bg-[#00C851] text-[#06100B]",
+  "bg-[#2F80ED] text-white",
+  "bg-[#FF8A00] text-[#06100B]",
+  "bg-[#D84C5F] text-white",
+  "bg-[#9B5DE5] text-white",
+  "bg-[#00B8A9] text-[#06100B]",
+  "bg-[#F15BB5] text-white",
+  "bg-[#6C8EAD] text-white",
+  "bg-[#F9C74F] text-[#06100B]",
+  "bg-[#43AA8B] text-[#06100B]",
+  "bg-[#577590] text-white",
+  "bg-[#F3722C] text-[#06100B]",
+  "bg-[#90BE6D] text-[#06100B]",
+  "bg-[#C77DFF] text-[#06100B]",
+  "bg-[#4D96FF] text-white",
+  "bg-[#EF476F] text-white",
+  "bg-[#06D6A0] text-[#06100B]",
+  "bg-[#FFD166] text-[#06100B]",
+  "bg-[#A8DADC] text-[#06100B]",
+] as const;
+
+export function getRunnerNumberClass(numero: number | string | null | undefined) {
+  const numeric = Number(numero);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return "bg-slate-600 text-white";
+  }
+
+  return RUNNER_COLOR_CLASSES[(numeric - 1) % RUNNER_COLOR_CLASSES.length];
+}
+
 export function getScoreTier(score: number | null | undefined): ScoreTier {
   if (typeof score !== "number" || !Number.isFinite(score)) {
     return "neutral";
@@ -96,7 +140,7 @@ export function getScoreTier(score: number | null | undefined): ScoreTier {
 
 export function formatStakeLabel(value: number | null | undefined) {
   if (typeof value !== "number" || !Number.isFinite(value)) {
-    return "Calcul en attente";
+    return "—";
   }
 
   return new Intl.NumberFormat("fr-FR", {
@@ -105,6 +149,29 @@ export function formatStakeLabel(value: number | null | undefined) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+export function formatStakeDetailLabel(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return "Calcul en attente";
+  }
+
+  return formatStakeLabel(value);
+}
+
+export function getScoreTierClass(score: number | null | undefined) {
+  const tier = getScoreTier(score);
+  if (tier === "gold") return "border-[#D4AF37]/40 bg-[#D4AF37]/15 text-[#D4AF37]";
+  if (tier === "green") return "border-[#00C851]/40 bg-[#00C851]/15 text-[#00C851]";
+  return "border-white/10 bg-white/10 text-slate-300";
+}
+
+export function getStakeToneClass(value: number | null | undefined) {
+  const tone = getStakeTone(value);
+  if (tone === "low") return "bg-[#00C851]/15 text-[#00C851]";
+  if (tone === "medium") return "bg-[#FF9F1C]/15 text-[#FF9F1C]";
+  if (tone === "high") return "bg-[#FF4D5A]/15 text-[#FF4D5A]";
+  return "bg-white/[0.08] text-slate-400";
 }
 
 export function getStakeTone(value: number | null | undefined): StakeTone {

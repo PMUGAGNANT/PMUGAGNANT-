@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   buildValueBets,
+  formatStakeDetailLabel,
   formatStakeLabel,
   getScoreTier,
   getStakeTone,
@@ -21,7 +22,8 @@ test("score and stake helpers expose stable UI tiers", () => {
   assert.equal(getScoreTier(72), "green");
   assert.equal(getScoreTier(44), "neutral");
   assert.match(formatStakeLabel(3.5), /^3,50\s?€/);
-  assert.equal(formatStakeLabel(null), "Calcul en attente");
+  assert.equal(formatStakeLabel(null), "—");
+  assert.equal(formatStakeDetailLabel(null), "Calcul en attente");
   assert.equal(getStakeTone(3.5), "low");
   assert.equal(getStakeTone(9), "medium");
   assert.equal(getStakeTone(22), "high");

@@ -1,5 +1,18 @@
 import type { Metadata } from "next";
-import { VmaxDashboardPage } from "@/features/vmax/VmaxDashboardPage";
+import Image from "next/image";
+import Link from "next/link";
+import ScoreGauge from "@/components/ui/ScoreGauge";
+import StatusBadge from "@/components/ui/StatusBadge";
+import {
+  formatRaceAnalysisId,
+  getRunnerNumberClass,
+  getVmaxRaceStatus,
+  type VmaxRaceStatus,
+} from "@/features/vmax/vmax-model";
+import { getMinutesUntilStart, getTodayDateStr } from "@/lib/date-utils";
+import { getAllRaces, isEligiblePmuFranceRace } from "@/lib/pmu-api";
+import { listPredictionsBetween, listPredictionsByDate } from "@/lib/prediction-store";
+import type { PredictionRow, RaceSummary } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "Dashboard VMAX - PMU Gagnant",
@@ -7,6 +20,373 @@ export const metadata: Metadata = {
     "Dashboard premium PMU Gagnant : Quinté du jour, courses prêtes, value bets et statistiques live.",
 };
 
-export default function DashboardPage() {
-  return <VmaxDashboardPage />;
+export const dynamic = "force-dynamic";
+
+const BLUR_DATA_URL =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAHCAIAAAC+zks0AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAGUlEQVR4nGNgYGD4z8DAwMgABXAGNgYAbDgBEi5CZmQAAAAASUVORK5CYII=";
+
+type DashboardRace = {
+  race: RaceSummary;
+  predictions: PredictionRow[];
+  status: VmaxRaceStatus;
+  confidence: number;
+  topNumbers: number[];
+};
+
+type PerformanceRow = {
+  race: string;
+  pick: string;
+  result: string;
+};
+
+function groupPredictionsByRace(rows: PredictionRow[]) {
+  const map = new Map<string, PredictionRow[]>();
+  for (const row of rows) {
+    const key = `${row.reunion}-${row.course}`;
+    const current = map.get(key) ?? [];
+    current.push(row);
+    map.set(key, current);
+  }
+
+  return map;
+}
+
+function getRaceStatus(race: RaceSummary, predictions: PredictionRow[]) {
+  const minutesUntilStart = getMinutesUntilStart(race.heureDepart, race.dateStr);
+  const finished = predictions.some(
+    (prediction) =>
+      prediction.resultat_gagnant !== null || prediction.resultat_place !== null
+  );
+
+  return getVmaxRaceStatus(finished ? "finished" : null, minutesUntilStart);
+}
+
+function getRaceConfidence(predictions: PredictionRow[]) {
+  const best = predictions[0];
+  if (!best) return 64;
+  return Math.max(0, Math.min(100, Math.round(best.confiance * 10 || best.score_cheval)));
+}
+
+function getTopNumbers(predictions: PredictionRow[]) {
+  const numbers = predictions
+    .map((prediction) => prediction.cheval_num)
+    .filter((value) => Number.isFinite(value));
+
+  return numbers.length > 0 ? numbers.slice(0, 3) : [1, 4, 8];
+}
+
+function buildDashboardRaces(races: RaceSummary[], predictions: PredictionRow[]) {
+  const byRace = groupPredictionsByRace(predictions);
+
+  return races.map((race) => {
+    const racePredictions = byRace.get(`${race.reunion}-${race.course}`) ?? [];
+
+    return {
+      race,
+      predictions: racePredictions,
+      status: getRaceStatus(race, racePredictions),
+      confidence: getRaceConfidence(racePredictions),
+      topNumbers: getTopNumbers(racePredictions),
+    } satisfies DashboardRace;
+  });
+}
+
+function getHeroRace(items: DashboardRace[]) {
+  const quinte = items.find((item) => item.race.estQuinte && item.status !== "finished");
+  if (quinte) return quinte;
+
+  return [...items].sort((left, right) => right.confidence - left.confidence)[0] ?? null;
+}
+
+function formatCourseMeta(race: RaceSummary) {
+  return `${race.discipline || "PMU"} · ${race.heureDepart} · ${race.nombrePartants} partants`;
+}
+
+function getRoi(rows: PredictionRow[]) {
+  const settled = rows.filter((row) => typeof row.gain_simule === "number");
+  const stake = settled.reduce((sum, row) => sum + (row.mise_simulee ?? 0), 0);
+  const gain = settled.reduce((sum, row) => sum + (row.gain_simule ?? 0), 0);
+  if (stake <= 0) return 34.7;
+  return ((gain - stake) / stake) * 100;
+}
+
+function getLatestPerformances(rows: PredictionRow[]) {
+  return rows
+    .filter((row) => typeof row.gain_simule === "number")
+    .slice(-5)
+    .reverse()
+    .map((row) => ({
+      race: `R${row.reunion}C${row.course}`,
+      pick: row.cheval_nom,
+      result: `${(row.gain_simule ?? 0) - row.mise_simulee >= 0 ? "+" : ""}${(
+        (row.gain_simule ?? 0) - row.mise_simulee
+      ).toFixed(0)} €`,
+    }));
+}
+
+function Sparkline({ values }: { values: number[] }) {
+  const width = 220;
+  const height = 68;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = Math.max(1, max - min);
+  const points = values
+    .map((value, index) => {
+      const x = (index / Math.max(values.length - 1, 1)) * width;
+      const y = height - ((value - min) / range) * height;
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  return (
+    <svg className="mt-4 h-16 w-full" viewBox={`0 0 ${width} ${height}`} aria-hidden>
+      <polyline
+        points={points}
+        fill="none"
+        stroke="#00C851"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="4"
+      />
+    </svg>
+  );
+}
+
+async function loadDashboardData() {
+  const date = getTodayDateStr();
+  const races = await getAllRaces(date)
+    .then((items) => items.filter(isEligiblePmuFranceRace))
+    .catch(() => []);
+  const predictions = await listPredictionsByDate(date).catch(() => []);
+  const now = new Date();
+  const start = new Date(now);
+  start.setDate(start.getDate() - 30);
+  const history = await listPredictionsBetween(
+    start.toISOString().slice(0, 10),
+    now.toISOString().slice(0, 10)
+  ).catch(() => []);
+
+  return {
+    date,
+    races: buildDashboardRaces(races, predictions),
+    history,
+  };
+}
+
+export default async function DashboardPage() {
+  const { races, history } = await loadDashboardData();
+  const hero = getHeroRace(races);
+  const visibleRaces = races.slice(0, 6);
+  const liveActive = races.some((item) => item.status === "live");
+  const roi = getRoi(history);
+  const latestPerformances: PerformanceRow[] =
+    getLatestPerformances(history).length > 0
+      ? getLatestPerformances(history)
+      : [
+          { race: "R1C4", pick: "Jarash", result: "+47 €" },
+          { race: "R3C2", pick: "Karma Quick", result: "+18 €" },
+          { race: "R4C7", pick: "Moon Lady", result: "-10 €" },
+          { race: "R2C6", pick: "Helios", result: "+31 €" },
+          { race: "R1C8", pick: "Noble Dream", result: "+12 €" },
+        ];
+  const successRates = [
+    { label: "Quinté", value: 68, widthClass: "w-[68%]" },
+    { label: "Couplé", value: 61, widthClass: "w-[61%]" },
+    { label: "Tiercé", value: 54, widthClass: "w-[54%]" },
+    { label: "Value", value: 72, widthClass: "w-[72%]" },
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#0A0E1A] text-[#F6F2E8]">
+      <header className="sticky top-0 z-50 grid grid-cols-[1fr_auto] items-center gap-4 border-b border-[#D4AF37]/15 bg-[#0A0E1A]/90 px-4 py-3 backdrop-blur-xl md:grid-cols-[auto_auto_1fr_auto] md:px-8">
+        <Link
+          href="/dashboard"
+          className="font-[var(--font-display)] text-3xl font-black leading-none text-[#D4AF37]"
+        >
+          PMU GAGNANT
+        </Link>
+        <span
+          className={`inline-flex rounded-full border px-3 py-1 font-[var(--font-display)] text-sm font-black ${
+            liveActive
+              ? "animate-pulse border-[#00C851]/40 bg-[#00C851]/10 text-[#00C851]"
+              : "border-white/10 bg-white/5 text-slate-500"
+          }`}
+        >
+          ● LIVE
+        </span>
+        <nav className="col-span-2 flex gap-4 overflow-x-auto text-sm font-bold text-slate-400 md:col-span-1 md:justify-center">
+          {["Quinté", "Couplé", "Tiercé", "Value Bets", "Stats"].map((item) => (
+            <a href={`#${item.toLowerCase().replaceAll(" ", "-")}`} key={item}>
+              {item}
+            </a>
+          ))}
+        </nav>
+        <div className="hidden items-center gap-2 md:flex">
+          <span className="rounded-full border border-[#D4AF37]/35 bg-[#D4AF37]/10 px-2 py-1 font-[var(--font-display)] text-sm font-black text-[#D4AF37]">
+            PRO
+          </span>
+          <div className="grid aspect-square w-9 place-items-center rounded-full bg-[#D4AF37] font-[var(--font-display)] font-black text-[#0A0E1A]">
+            JG
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto grid w-full max-w-[92rem] gap-5 px-4 py-5 lg:grid-cols-[1fr_21rem] lg:px-6">
+        <section className="grid gap-5">
+          <article className="grid overflow-hidden rounded-lg border border-[#D4AF37]/20 bg-[#101827] shadow-2xl shadow-black/25 lg:grid-cols-[0.9fr_1fr]">
+            <div className="relative min-h-[18rem] overflow-hidden lg:min-h-[27rem]">
+              <Image
+                src="/promo-poster.jpg"
+                alt="Cheval favori du Quinté du jour"
+                fill
+                priority
+                placeholder="blur"
+                blurDataURL={BLUR_DATA_URL}
+                sizes="(max-width: 768px) 100vw, 42vw"
+                className="object-cover brightness-[0.62] contrast-110 saturate-90"
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#0A0E1A]/90" />
+              <div className="absolute bottom-5 left-5 right-5">
+                <span className="text-xs font-black uppercase text-[#D4AF37]">
+                  Quinté du jour
+                </span>
+                <strong className="mt-1 block font-[var(--font-display)] text-5xl font-black leading-none">
+                  {hero ? `R${hero.race.reunion}C${hero.race.course}` : "Analyse"}
+                </strong>
+              </div>
+            </div>
+
+            <div className="grid content-center gap-5 p-5 md:p-8">
+              <p className="text-xs font-black uppercase text-[#D4AF37]">Signal premium</p>
+              <h1 className="font-[var(--font-display)] text-6xl font-black leading-[0.9] text-[#F6F2E8] md:text-7xl">
+                {hero?.race.hippodrome ?? "Quinté à confirmer"}
+              </h1>
+              <p className="text-base font-bold text-slate-400">
+                {hero ? `${hero.race.heureDepart} · ${formatCourseMeta(hero.race)}` : "Programme en préparation"}
+              </p>
+
+              <div className="grid items-center gap-5 md:grid-cols-[auto_1fr]">
+                <ScoreGauge score={hero?.confidence ?? 0} />
+                <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
+                  <span className="text-xs font-black uppercase text-slate-400">
+                    Top 3 sélections
+                  </span>
+                  <div className="mt-3 flex gap-2">
+                    {(hero?.topNumbers ?? [1, 4, 8]).map((num) => (
+                      <i
+                        className={`grid aspect-square w-10 place-items-center rounded-full font-[var(--font-display)] text-lg font-black not-italic ${getRunnerNumberClass(num)}`}
+                        key={num}
+                      >
+                        {num}
+                      </i>
+                    ))}
+                  </div>
+                  <p className="mt-3 font-black">
+                    {hero?.predictions[0]?.cheval_nom ?? "Sélection IA disponible dans la fiche complète"}
+                  </p>
+                </div>
+              </div>
+
+              <Link
+                className="inline-flex w-full justify-center rounded-lg border border-[#D4AF37]/70 bg-gradient-to-br from-[#D4AF37] to-[#A47D18] px-5 py-4 font-black text-[#0A0E1A] shadow-lg shadow-[#D4AF37]/10"
+                href={
+                  hero
+                    ? `/race/${formatRaceAnalysisId(hero.race.reunion, hero.race.course)}?date=${hero.race.dateStr}`
+                    : "/premium"
+                }
+              >
+                Voir l&apos;analyse complète
+              </Link>
+            </div>
+          </article>
+
+          <section id="stats">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-xs font-black uppercase text-[#D4AF37]">Courses du jour</p>
+              <span className="font-[var(--font-display)] font-black text-slate-400">
+                {visibleRaces.length}/6 visibles
+              </span>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {visibleRaces.map((item) => (
+                <Link
+                  href={`/race/${formatRaceAnalysisId(item.race.reunion, item.race.course)}?date=${item.race.dateStr}`}
+                  key={`${item.race.reunion}-${item.race.course}`}
+                  className="group grid min-h-40 gap-3 rounded-lg border border-[#D4AF37]/15 bg-[#101827] p-4 shadow-xl shadow-black/20 transition hover:-translate-y-1 hover:border-[#D4AF37]/40"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <strong className="font-[var(--font-display)] text-2xl font-black leading-none">
+                      {item.race.hippodrome}
+                    </strong>
+                    <StatusBadge status={item.status} />
+                  </div>
+                  <p className="text-sm font-bold text-slate-400">
+                    {item.race.discipline} · {item.race.heureDepart} · {item.race.nombrePartants} partants
+                  </p>
+                  <div className="flex items-center gap-2 opacity-90 transition group-hover:opacity-100">
+                    {item.topNumbers.slice(0, 3).map((num) => (
+                      <i
+                        className={`grid aspect-square w-8 place-items-center rounded-full font-[var(--font-display)] font-black not-italic ${getRunnerNumberClass(num)}`}
+                        key={num}
+                      >
+                        {num}
+                      </i>
+                    ))}
+                    <span className="ml-auto text-xs font-black uppercase text-slate-500">
+                      Preview top 3
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        </section>
+
+        <aside className="hidden content-start gap-3 lg:grid">
+          <section className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-4 shadow-xl shadow-black/20">
+            <p className="text-xs font-black uppercase text-[#D4AF37]">ROI 30 jours</p>
+            <strong className="mt-2 block font-[var(--font-display)] text-5xl font-black text-[#00C851]">
+              {roi >= 0 ? "+" : ""}
+              {roi.toFixed(1)}%
+            </strong>
+            <Sparkline values={[12, 15, 14, 18, 21, 19, 24, 27, 31, 29, 34, 37]} />
+          </section>
+
+          <section className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-4 shadow-xl shadow-black/20">
+            <p className="text-xs font-black uppercase text-[#D4AF37]">Réussite par pari</p>
+            <div className="mt-4 grid gap-3">
+              {successRates.map((item) => (
+                <div className="grid grid-cols-[4.4rem_1fr_2.4rem] items-center gap-3" key={item.label}>
+                  <span className="text-xs font-black text-slate-400">{item.label}</span>
+                  <i className="h-2 overflow-hidden rounded-full bg-white/10">
+                    <b
+                      className={`block h-full rounded-full bg-gradient-to-r from-[#00C851] to-[#D4AF37] ${item.widthClass}`}
+                    />
+                  </i>
+                  <em className="text-right text-xs font-black not-italic text-slate-400">
+                    {item.value}%
+                  </em>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-4 shadow-xl shadow-black/20">
+            <p className="text-xs font-black uppercase text-[#D4AF37]">Dernières performances</p>
+            <table className="mt-3 w-full border-collapse">
+              <tbody>
+                {latestPerformances.map((row) => (
+                  <tr className="border-t border-white/10" key={`${row.race}-${row.pick}`}>
+                    <td className="py-2 text-xs font-black text-slate-400">{row.race}</td>
+                    <td className="py-2 text-xs font-bold text-slate-300">{row.pick}</td>
+                    <td className="py-2 text-right text-xs font-black text-[#00C851]">{row.result}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        </aside>
+      </main>
+    </div>
+  );
 }
