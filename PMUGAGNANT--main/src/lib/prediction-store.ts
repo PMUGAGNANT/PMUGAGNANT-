@@ -417,12 +417,12 @@ export async function createRaceEngineRun(row: RaceEngineRunRow) {
   const admin = getAdmin();
   const { data, error } = await admin
     .from("race_engine_runs")
-    .insert(row)
+    .upsert(row, { onConflict: "date,reunion,course,stage,engine_version" })
     .select("*")
     .single();
 
   if (error || !data) {
-    throw new Error(`Race engine run insert failed: ${error?.message ?? "unknown error"}`);
+    throw new Error(`Race engine run upsert failed: ${error?.message ?? "unknown error"}`);
   }
 
   return data as RaceEngineRunRow;
