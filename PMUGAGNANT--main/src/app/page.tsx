@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
+import { VmaxDashboardPage } from "@/features/vmax/VmaxDashboardPage";
 
 export const metadata: Metadata = {
-  title: "TurfEdge - Pronostics PMU IA avec mises conseillees",
+  title: "PMU Gagnant - Dashboard IA VMAX",
   description:
-    "TurfEdge analyse les courses PMU avec l'IA, affiche le cheval a jouer, la confiance, la mise conseillee et le gain potentiel.",
+    "Dashboard premium PMU Gagnant : Quinté du jour, courses prêtes, value bets et statistiques live.",
   openGraph: {
-    title: "TurfEdge - L'IA qui transforme les courses PMU en decisions claires",
+    title: "PMU Gagnant - Dashboard IA VMAX",
     description:
-      "Pronostics PMU lisibles, mise conseillee, ROI suivi et signaux de confiance pour jouer moins au hasard.",
+      "Une interface premium pour lire les courses PMU, repérer les value bets et agir vite.",
   },
 };
 
-export { default } from "@/features/home/HomePage";
+export default function HomePage() {
+  return <VmaxDashboardPage />;
+}
