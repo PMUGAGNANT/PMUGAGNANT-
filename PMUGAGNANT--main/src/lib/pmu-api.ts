@@ -374,11 +374,6 @@ function asNumber(value: unknown, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function asNullableNumber(value: unknown) {
-  const parsed = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
 function asString(value: unknown, fallback = "") {
   return typeof value === "string" ? value : fallback;
 }
@@ -428,60 +423,6 @@ async function getStoredRaces(dateStr: string): Promise<RaceSummary[]> {
       nombrePartants: asNumber(record.nombre_partants),
       terrain: asString(record.terrain, "") || null,
       meteo: asString(record.meteo, "") || null,
-    };
-  });
-}
-
-async function getStoredParticipants(
-  dateStr: string,
-  reunion: number,
-  course: number
-): Promise<Participant[]> {
-  const admin = getSupabaseAdminClient();
-  if (!admin) {
-    return [];
-  }
-
-  const { data, error } = await admin
-    .from("runners")
-    .select("*")
-    .eq("race_date", toIsoDate(dateStr))
-    .eq("reunion", reunion)
-    .eq("course", course)
-    .order("cheval_num", { ascending: true });
-
-  if (error) {
-    logger.warn("pmu_api.fallback_runners_unavailable", {
-      error: error.message,
-      dateStr,
-      reunion,
-      course,
-    });
-    return [];
-  }
-
-  return ((data ?? []) as unknown[]).map((row) => {
-    const record = asRecord(row);
-    return {
-      numPmu: asNumber(record.cheval_num),
-      nom: asString(record.cheval_nom),
-      driver: asString(record.driver),
-      entraineur: asString(record.entraineur),
-      jockey: asString(record.jockey),
-      age: asNumber(record.age),
-      sexe: asString(record.sexe),
-      cote: asNullableNumber(record.cote),
-      coteMatin: asNullableNumber(record.cote_matin),
-      coteDepart: asNullableNumber(record.cote),
-      musique: asString(record.musique),
-      nombreCourses: 0,
-      nombreVictoires: 0,
-      nombrePlaces: 0,
-      gainCarriere: 0,
-      nombreSuiveurs: 0,
-      ordreArrivee: null,
-      statut: asString(record.statut, "PARTANT"),
-      nonPartant: Boolean(record.non_partant),
     };
   });
 }
@@ -580,17 +521,6 @@ export async function getParticipants(
       `/programme/${dateStr}/R${reunion}/C${course}/participants`
     );
   } catch (error) {
-    const fallback = await getStoredParticipants(dateStr, reunion, course);
-    if (fallback.length > 0) {
-      logger.warn("pmu_api.participants_fallback_supabase", {
-        dateStr,
-        reunion,
-        course,
-        runners: fallback.length,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return fallback;
-    }
     throw error;
   }
   const participants = ((data.participants ?? []) as Record<string, unknown>[])

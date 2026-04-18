@@ -16,35 +16,6 @@ create index if not exists idx_cron_logs_status_created_at
 
 alter table public.cron_logs enable row level security;
 
-create table if not exists public.runners (
-  id uuid default gen_random_uuid() primary key,
-  race_date date not null,
-  date_str text not null,
-  reunion integer not null,
-  course integer not null,
-  cheval_num integer not null,
-  cheval_nom text not null,
-  jockey text,
-  driver text,
-  entraineur text,
-  age integer,
-  sexe text,
-  cote numeric,
-  cote_matin numeric,
-  musique text,
-  statut text,
-  non_partant boolean not null default false,
-  updated_at timestamptz default now()
-);
-
-create unique index if not exists idx_runners_unique_runner
-  on public.runners (race_date, reunion, course, cheval_num);
-
-create index if not exists idx_runners_race_lookup
-  on public.runners (race_date, reunion, course);
-
-alter table public.runners enable row level security;
-
 create table if not exists public.bet_results (
   id uuid default gen_random_uuid() primary key,
   race_date date not null,
