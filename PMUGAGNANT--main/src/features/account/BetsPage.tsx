@@ -47,7 +47,7 @@ function MesParisContent() {
   const [fetchRevision, setFetchRevision] = useState(0);
   const [autoCheckoutStarted, setAutoCheckoutStarted] = useState(false);
 
-  const autoCheckoutRequested = searchParams.get("billing") === "checkout";
+  const autoCheckoutRequested = false;
 
   const fetchBets = useCallback(
     async (signal?: AbortSignal) => {
@@ -71,9 +71,7 @@ function MesParisContent() {
         }
 
         if (!session) {
-          const redirectTarget = autoCheckoutRequested
-            ? "/mes-paris?billing=checkout"
-            : "/mes-paris";
+          const redirectTarget = autoCheckoutRequested ? "/premium" : "/mes-paris";
           router.push(`/login?redirect=${encodeURIComponent(redirectTarget)}`);
           return;
         }
@@ -318,8 +316,7 @@ function MesParisContent() {
       } = await supabase.auth.getSession();
 
       if (!session) {
-        const redirectTarget =
-          action === "checkout" ? "/mes-paris?billing=checkout" : "/mes-paris";
+        const redirectTarget = action === "checkout" ? "/premium" : "/mes-paris";
         router.push(`/login?redirect=${encodeURIComponent(redirectTarget)}`);
         setBillingLoading(false);
         return;
@@ -503,20 +500,20 @@ function MesParisContent() {
                     : "Passe en premium pour debloquer les opportunites value filtrees, les mises Kelly et la lecture complete des tickets."}
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleBilling(isStripeSubscribed ? "portal" : "checkout")}
-                  disabled={billingLoading}
-                  className="app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {billingLoading
-                    ? "Ouverture..."
-                    : isStripeSubscribed
-                      ? "Gerer l'abonnement"
-                      : hasBonusAccess
-                        ? "Passer au premium mensuel"
-                        : "Debloquer le premium"}
-                </button>
+                {isStripeSubscribed ? (
+                  <button
+                    type="button"
+                    onClick={() => handleBilling("portal")}
+                    disabled={billingLoading}
+                    className="app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {billingLoading ? "Ouverture..." : "Gerer l'abonnement"}
+                  </button>
+                ) : (
+                  <Link href="/premium" className="app-button-primary">
+                    Passer PRO
+                  </Link>
+                )}
                 {!isStripeSubscribed ? (
                   <Link href="/premium" className="app-button-secondary">
                     Voir l&apos;offre

@@ -56,6 +56,10 @@ export type RaceVerdictSummary = {
   stake: number;
 };
 
+const DEFAULT_BANKROLL = 100;
+const DEFAULT_KELLY_FRACTION = 0.25;
+const MAX_KELLY_EDGE = 0.5;
+
 const RUNNER_COLORS = [
   "#D4AF37",
   "#00C851",
@@ -247,8 +251,8 @@ export function getFairOddsFromScore(score: number | null | undefined) {
 export function computeRunnerKellyStake(
   score: number | null | undefined,
   odds: number | null | undefined,
-  bankroll = 100,
-  kellyFraction = 0.25
+  bankroll = DEFAULT_BANKROLL,
+  kellyFraction = DEFAULT_KELLY_FRACTION
 ) {
   if (
     typeof score !== "number" ||
@@ -267,7 +271,9 @@ export function computeRunnerKellyStake(
     return null;
   }
 
-  return Math.max(1, Math.round((edge / (odds - 1)) * bankroll * kellyFraction));
+  const cappedEdge = Math.min(edge, MAX_KELLY_EDGE);
+
+  return Math.max(1, Math.round((cappedEdge / (odds - 1)) * bankroll * kellyFraction));
 }
 
 export function computeRaceVerdict(input: RaceVerdictInput): RaceVerdictSummary {
@@ -282,7 +288,8 @@ export function computeRaceVerdict(input: RaceVerdictInput): RaceVerdictSummary 
       : null;
   const edge =
     fairOdds !== null && pmuOdds !== null ? 1 / fairOdds - 1 / pmuOdds : -1;
-  const rawStake = edge > 0 ? edge * 100 * 0.25 : 0;
+  const cappedEdge = edge > 0 ? Math.min(edge, MAX_KELLY_EDGE) : 0;
+  const rawStake = cappedEdge * DEFAULT_BANKROLL * DEFAULT_KELLY_FRACTION;
   const stake = rawStake > 0 ? Math.max(1, Math.round(rawStake)) : 0;
   const verdict: RaceVerdict =
     edge <= 0 ? "PASSER" : edge < 0.1 ? "SURVEILLER" : "JOUER";
@@ -294,7 +301,7 @@ export function computeRaceVerdict(input: RaceVerdictInput): RaceVerdictSummary 
     cote: pmuOdds,
     scorePercent: Math.round(scorePercent),
     fairOdds,
-    edge,
+    edge: edge > 0 ? cappedEdge : edge,
     stake,
   };
 }
@@ -315,13 +322,14 @@ export function buildValueBets(rows: ValueBetInput[], limit = 4): ValueBet[] {
       if (edgePct <= 0) {
         return [];
       }
+      const cappedEdgePct = Math.min(edgePct, MAX_KELLY_EDGE * 100);
 
       return [{
         numero: row.numero,
         cheval: row.cheval,
         coteActuelle: row.cote,
         coteFair: fairOdds,
-        edgePct,
+        edgePct: cappedEdgePct,
         explanation:
           row.raison ??
           "L'IA estime une probabilite superieure a ce que le marche PMU implique.",

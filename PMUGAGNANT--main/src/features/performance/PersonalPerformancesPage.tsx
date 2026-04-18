@@ -131,10 +131,10 @@ export default function PersonalPerformancesPage() {
                 Compte gratuit: historique limité aux 7 derniers jours.
               </p>
               <Link
-                href="/mes-paris?billing=checkout"
+                href="/premium"
                 className="mt-3 inline-flex rounded-lg bg-[#D4AF37] px-4 py-2 text-sm font-black text-[#0A0E1A]"
               >
-                Débloquer tout l&apos;historique
+                Passer PRO
               </Link>
             </div>
           ) : null}

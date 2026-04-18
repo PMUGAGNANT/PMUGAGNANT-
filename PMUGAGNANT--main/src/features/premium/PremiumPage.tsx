@@ -155,8 +155,6 @@ function formatEuros(value: number) {
 export default function PremiumPage() {
   const liveStats = useLiveStats();
   const hasStats = hasLiveStatsData(liveStats.data);
-  const premiumCheckoutRedirect = encodeURIComponent("/mes-paris?billing=checkout");
-  const premiumCheckoutHref = `/login?redirect=${premiumCheckoutRedirect}`;
   const priceLabel = `${PREMIUM_MONTHLY_PRICE_DISPLAY_MAIN} ${PREMIUM_MONTHLY_PRICE_CURRENCY_SUFFIX}`;
   const crossedPriceLabel = "29 EUR / mois";
   const activeSubscribers = liveStats.data.activeSubscribersThisMonth;
@@ -209,8 +207,8 @@ export default function PremiumPage() {
             </p>
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <Link href={premiumCheckoutHref} className="app-button-primary min-h-12">
-                Debloquer Premium - {priceLabel}
+              <Link href="/premium" className="app-button-primary min-h-12">
+                Passer PRO
               </Link>
               <Link href="/bilan" className="app-button-secondary min-h-12">
                 Voir les gains suivis
@@ -326,8 +324,8 @@ export default function PremiumPage() {
           Garantie 7 jours : si TurfEdge ne t&apos;aide pas a mieux trier tes courses, remboursement simple.
         </div>
         <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-          <Link href={premiumCheckoutHref} className="app-button-primary min-h-12">
-            Prendre Premium - {priceLabel}
+          <Link href="/premium" className="app-button-primary min-h-12">
+            Passer PRO
           </Link>
           <Link href="/" className="app-button-secondary min-h-12">
             Voir les courses du jour
