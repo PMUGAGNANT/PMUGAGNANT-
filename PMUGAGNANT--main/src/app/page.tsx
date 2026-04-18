@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { VmaxDashboardPage } from "@/features/vmax/VmaxDashboardPage";
 
 export const metadata: Metadata = {
   title: "PMU Gagnant - Dashboard IA VMAX",
@@ -12,6 +11,6 @@ export const metadata: Metadata = {
   },
 };
 
-export default function HomePage() {
-  return <VmaxDashboardPage />;
-}
+export const dynamic = "force-dynamic";
+
+export { default } from "./dashboard/page";

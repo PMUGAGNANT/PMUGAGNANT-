@@ -3,6 +3,9 @@ import test from "node:test";
 
 import {
   buildValueBets,
+  computeRaceVerdict,
+  computeRunnerKellyStake,
+  formatStakeDetailLabel,
   formatStakeLabel,
   getScoreTier,
   getStakeTone,
@@ -21,10 +24,27 @@ test("score and stake helpers expose stable UI tiers", () => {
   assert.equal(getScoreTier(72), "green");
   assert.equal(getScoreTier(44), "neutral");
   assert.match(formatStakeLabel(3.5), /^3,50\s?€/);
-  assert.equal(formatStakeLabel(null), "Calcul en attente");
+  assert.equal(formatStakeLabel(null), "—");
+  assert.equal(formatStakeDetailLabel(null), "Calcul en attente");
   assert.equal(getStakeTone(3.5), "low");
   assert.equal(getStakeTone(9), "medium");
   assert.equal(getStakeTone(22), "high");
+});
+
+test("computeRunnerKellyStake applique Kelly 25% pour les scores jouables", () => {
+  assert.equal(computeRunnerKellyStake(80, 3), 18);
+  assert.equal(computeRunnerKellyStake(69, 4), null);
+  assert.equal(computeRunnerKellyStake(80, 1.1), null);
+});
+
+test("computeRaceVerdict transforme edge et cote en verdict immédiat", () => {
+  const play = computeRaceVerdict({ numero: 7, cheval: "Reine Esther", cote: 8, score: 92 });
+  assert.equal(play.verdict, "JOUER");
+  assert.ok(play.stake > 0);
+
+  const pass = computeRaceVerdict({ numero: 3, cheval: "Beta", cote: 1.2, score: 50 });
+  assert.equal(pass.verdict, "PASSER");
+  assert.equal(pass.stake, 0);
 });
 
 test("buildValueBets keeps only positive PMU edge opportunities", () => {

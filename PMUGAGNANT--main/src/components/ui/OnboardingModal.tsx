@@ -16,28 +16,28 @@ interface Step {
 const STEPS: Step[] = [
   {
     label: "Etape 1",
-    title: "TurfEdge lit le programme PMU",
-    body: "Chaque course est transformee en decision simple : JOUER, SURVEILLER ou PASSER.",
-    target: "Page Courses",
-    tips: ["Ouvre d'abord les cartes vertes.", "Les courses rouges protegent ta bankroll."],
+    title: "Ouvre une course",
+    body: "Le dashboard classe les courses du jour et te montre celles qui méritent ton attention.",
+    target: "Dashboard",
+    tips: ["Repère le badge Analyse prête.", "Ouvre d'abord le Quinté ou le meilleur score."],
   },
   {
     label: "Etape 2",
-    title: "Tu ouvres la fiche course",
-    body: "La fiche detaillee affiche le cheval retenu, la cote, le score algo, la confiance et les partants.",
+    title: "Vois le verdict",
+    body: "La fiche affiche immédiatement JOUER, SURVEILLER ou PASSER avec le cheval, la cote et la mise.",
     target: "Fiche Course",
-    tips: ["Regarde la mise conseillee.", "Lis les raisons avant de jouer."],
+    tips: ["Lis le bandeau Verdict IA.", "La mise suit Kelly 25% sur 100€."],
   },
   {
     label: "Etape 3",
-    title: "Tu suis le ticket et le bilan",
-    body: "Un clic sur Je joue ce ticket enregistre le pari. Le bilan suit ensuite mise, gain et ROI.",
-    target: "Mes paris + Bilan",
-    tips: ["Active les alertes T-30.", "Passe premium pour tout debloquer."],
+    title: "Joue ou passe",
+    body: "Tu restes discipliné: tu joues seulement les edges positifs et tu suis tout dans Performances.",
+    target: "Performances",
+    tips: ["Active l'alerte T-30.", "Passe PRO pour voir les sélections masquées."],
   },
 ];
 
-export function OnboardingModal() {
+export default function OnboardingModal() {
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState(0);
 
@@ -86,18 +86,16 @@ export function OnboardingModal() {
   return (
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-      style={{ background: "rgba(24, 22, 15, 0.62)", backdropFilter: "blur(6px)" }}
     >
+      <div className="absolute inset-0 bg-[#0A0E1A]/75 backdrop-blur-md" />
       <section className="app-card w-full max-w-xl overflow-hidden p-0" role="dialog" aria-modal="true">
         <div className="flex gap-1.5 px-6 pt-6">
           {STEPS.map((item, index) => (
             <div
               key={item.title}
-              className="h-1 flex-1 rounded-full transition-colors duration-200"
-              style={{
-                background:
-                  index <= step ? "var(--pmu-primary)" : "var(--pmu-surface-2)",
-              }}
+              className={`h-1 flex-1 rounded-full transition-colors duration-200 ${
+                index <= step ? "bg-[var(--pmu-primary)]" : "bg-[var(--pmu-surface-2)]"
+              }`}
             />
           ))}
         </div>
@@ -159,9 +157,19 @@ export function OnboardingModal() {
             <Link href="/login" onClick={close} className="app-button-secondary justify-center px-5 py-3 text-sm">
               Creer un compte
             </Link>
-            <button type="button" onClick={next} className="app-button-primary justify-center px-6 py-3 text-sm">
-              {step < STEPS.length - 1 ? "Suivant" : "C'est parti"}
-            </button>
+            {step < STEPS.length - 1 ? (
+              <button type="button" onClick={next} className="app-button-primary justify-center px-6 py-3 text-sm">
+                Suivant
+              </button>
+            ) : (
+              <Link
+                href="/dashboard?openBest=1"
+                onClick={close}
+                className="app-button-primary justify-center px-6 py-3 text-sm"
+              >
+                J&apos;ai compris, montrez-moi une course
+              </Link>
+            )}
           </div>
         </div>
       </section>
