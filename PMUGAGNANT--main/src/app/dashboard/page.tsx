@@ -295,7 +295,7 @@ export default async function DashboardPage() {
       <header className="sticky top-0 z-50 grid grid-cols-[1fr_auto] items-center gap-4 border-b border-[#D4AF37]/15 bg-[#0A0E1A]/90 px-4 py-3 backdrop-blur-xl md:grid-cols-[auto_auto_1fr_auto] md:px-8">
         <Link
           href="/dashboard"
-          className="font-[var(--font-display)] text-3xl font-black leading-none text-[#D4AF37]"
+          className="font-[var(--font-display)] text-2xl font-black leading-none text-[#D4AF37] sm:text-3xl"
         >
           PMU GAGNANT
         </Link>
@@ -352,7 +352,7 @@ export default async function DashboardPage() {
 
             <div className="grid content-center gap-5 p-5 md:p-8">
               <p className="text-xs font-black uppercase text-[#D4AF37]">Signal premium</p>
-              <h1 className="font-[var(--font-display)] text-6xl font-black leading-[0.9] text-[#F6F2E8] md:text-7xl">
+              <h1 className="break-words font-[var(--font-display)] text-5xl font-black leading-[0.9] text-[#F6F2E8] sm:text-6xl md:text-7xl">
                 {hero?.race.hippodrome ?? "Quinté à confirmer"}
               </h1>
               <p className="text-base font-bold text-slate-400">
@@ -405,10 +405,12 @@ export default async function DashboardPage() {
                   className="group grid min-h-40 gap-3 rounded-lg border border-[#D4AF37]/15 bg-[#101827] p-4 shadow-xl shadow-black/20 transition hover:-translate-y-1 hover:border-[#D4AF37]/40"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <strong className="font-[var(--font-display)] text-2xl font-black leading-none">
+                    <strong className="min-w-0 break-words font-[var(--font-display)] text-2xl font-black leading-none">
                       {item.race.hippodrome}
                     </strong>
-                    <StatusBadge status={item.status} />
+                    <span className="shrink-0">
+                      <StatusBadge status={item.status} />
+                    </span>
                   </div>
                   <p className="text-sm font-bold text-slate-400">
                     {item.race.discipline} · {item.race.heureDepart} · {item.race.nombrePartants} partants

@@ -616,7 +616,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
   return (
     <main className="min-h-screen bg-[#0A0E1A] text-[#F6F2E8]">
       <header className="sticky top-0 z-50 flex items-center justify-between gap-4 border-b border-[#D4AF37]/15 bg-[#0A0E1A]/90 px-4 py-3 backdrop-blur-xl md:px-8">
-        <Link href="/dashboard" className="font-[var(--font-display)] text-3xl font-black text-[#D4AF37]">
+        <Link href="/dashboard" className="font-[var(--font-display)] text-2xl font-black text-[#D4AF37] sm:text-3xl">
           PMU GAGNANT
         </Link>
         <StatusBadge status={status} />
@@ -639,7 +639,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
                   Verdict IA
                 </p>
                 <strong
-                  className={`inline-flex w-fit rounded-lg px-5 py-3 font-[var(--font-display)] text-6xl font-black leading-none ${getVerdictClass(verdict.verdict)}`}
+                  className={`inline-flex max-w-full break-words rounded-lg px-5 py-3 font-[var(--font-display)] text-4xl font-black leading-none sm:text-5xl md:text-6xl ${getVerdictClass(verdict.verdict)}`}
                 >
                   {verdict.verdict}
                 </strong>
@@ -663,7 +663,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
                       <p className="text-xs font-black uppercase text-slate-400">
                         Cheval recommandé
                       </p>
-                      <h1 className="break-words font-[var(--font-display)] text-5xl font-black leading-none text-[#F6F2E8] md:text-6xl">
+                      <h1 className="break-words font-[var(--font-display)] text-4xl font-black leading-none text-[#F6F2E8] sm:text-5xl md:text-6xl">
                         {verdict.cheval}
                       </h1>
                       {verdict.verdict === "JOUER" ? (
@@ -691,19 +691,19 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
                 <div className="grid min-w-0 gap-3 md:grid-cols-3">
                   <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-4">
                     <p className="text-xs font-black uppercase text-slate-400">Cote PMU</p>
-                    <strong className="mt-2 block whitespace-nowrap font-[var(--font-display)] text-4xl font-black leading-none text-[#D4AF37] sm:text-5xl">
+                    <strong className="mt-2 block whitespace-nowrap font-[var(--font-display)] text-4xl font-black leading-none text-[#D4AF37] md:text-5xl">
                       {formatOdds(verdict.cote)}
                     </strong>
                   </div>
                   <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-4">
                     <p className="text-xs font-black uppercase text-slate-400">Confiance IA</p>
-                    <strong className="mt-2 block whitespace-nowrap font-[var(--font-display)] text-4xl font-black leading-none text-[#00C851] sm:text-5xl">
+                    <strong className="mt-2 block whitespace-nowrap font-[var(--font-display)] text-4xl font-black leading-none text-[#00C851] md:text-5xl">
                       {verdict.scorePercent}%
                     </strong>
                   </div>
                   <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-4">
                     <p className="text-xs font-black uppercase text-slate-400">Mise Kelly</p>
-                    <strong className="mt-2 block whitespace-nowrap font-[var(--font-display)] text-4xl font-black leading-none text-[#F6F2E8] sm:text-5xl">
+                    <strong className="mt-2 block whitespace-nowrap font-[var(--font-display)] text-4xl font-black leading-none text-[#F6F2E8] md:text-5xl">
                       {formatStakeEuro(verdict.stake)}
                     </strong>
                   </div>
@@ -763,7 +763,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
                 <p className="text-xs font-black uppercase text-[#D4AF37]">
                   R{courseInfo.reunion}C{courseInfo.course} · {courseInfo.heureDepart}
                 </p>
-                <h1 className="font-[var(--font-display)] text-6xl font-black leading-[0.9] text-[#F6F2E8] md:text-7xl">
+                <h1 className="break-words font-[var(--font-display)] text-5xl font-black leading-[0.9] text-[#F6F2E8] sm:text-6xl md:text-7xl">
                   {courseInfo.hippodrome}
                 </h1>
                 <p className="text-sm font-bold text-slate-400">
