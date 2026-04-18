@@ -614,10 +614,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
   const selectedRow = getRecommendedRow(rows, analysis);
   const selectedNumber = selectedRow?.numero ?? null;
   const minutesUntilStart = getMinutesUntilStart(courseInfo.heureDepart, courseInfo.dateStr);
-  const status = getVmaxRaceStatus(
-    minutesUntilStart < -10 ? "finished" : null,
-    minutesUntilStart
-  );
+  const status = getVmaxRaceStatus(null, minutesUntilStart);
   const gaugeScore = getGaugeScore(analysis, selectedRow);
   const verdict = selectedRow
     ? computeRaceVerdict({

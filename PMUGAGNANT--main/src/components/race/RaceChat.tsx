@@ -728,7 +728,7 @@ export default function RaceChat({
         <div ref={bottomRef} />
       </div>
 
-      <div className="border-t border-white/10 bg-[#0A0E1A]/55 p-4 md:p-5">
+      <div className="sticky bottom-0 border-t border-white/10 bg-[#0A0E1A]/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur md:p-5">
         {canWrite ? (
           <form className="grid gap-3" onSubmit={handleSubmit}>
             <label className="sr-only" htmlFor="race-chat-message">

@@ -5,14 +5,16 @@ type StatusBadgeProps = {
 };
 
 const STATUS_LABELS: Record<VmaxRaceStatus, string> = {
-  ready: "Analyse prête",
-  live: "En cours",
-  finished: "Terminée",
+  ready: "ANALYSE PRETE",
+  soon: "BIENTOT",
+  live: "EN COURS",
+  finished: "TERMINEE",
 };
 
 const STATUS_CLASSES: Record<VmaxRaceStatus, string> = {
   ready: "border-[#00C851]/35 bg-[#00C851]/10 text-[#00C851]",
-  live: "animate-pulse border-[#FF9F1C]/40 bg-[#FF9F1C]/15 text-[#FF9F1C]",
+  soon: "animate-pulse border-[#FF9F1C]/40 bg-[#FF9F1C]/15 text-[#FF9F1C]",
+  live: "border-[#FF9F1C]/40 bg-[#FF9F1C]/15 text-[#FF9F1C]",
   finished: "border-white/10 bg-white/[0.08] text-slate-400",
 };
 
