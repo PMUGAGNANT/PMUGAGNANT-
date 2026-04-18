@@ -83,6 +83,14 @@ function getSearchDate(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+function normalizeHorseJoinKey(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "")
+    .toUpperCase();
+}
+
 function buildParticipantRows(
   participants: Participant[],
   ranking: ScoredParticipant[],
@@ -94,22 +102,26 @@ function buildParticipantRows(
     rankedByNumber.set(runner.numPmu, runner);
   }
   const storedByNumber = new Map<number, PredictionRow>();
+  const storedByName = new Map<string, PredictionRow>();
   for (const row of storedRows) {
     storedByNumber.set(row.cheval_num, row);
+    storedByName.set(normalizeHorseJoinKey(row.cheval_nom), row);
   }
 
   return participants
     .filter((participant) => !participant.nonPartant)
     .map((participant) => {
       const runner = rankedByNumber.get(participant.numPmu);
-      const stored = storedByNumber.get(participant.numPmu);
+      const stored =
+        storedByNumber.get(participant.numPmu) ??
+        storedByName.get(normalizeHorseJoinKey(participant.nom));
       const score =
-        stored?.score_final_pari ??
         stored?.score_blended ??
         stored?.score_cheval ??
-        runner?.prediction.scoreFinalPari ??
+        stored?.score_final_pari ??
         runner?.prediction.scoreBlended ??
         runner?.prediction.scoreCheval ??
+        runner?.prediction.scoreFinalPari ??
         null;
       const cote =
         stored?.cote_depart ??
@@ -136,7 +148,7 @@ function buildParticipantRows(
 }
 
 function getPredictionScore(row: PredictionRow) {
-  return row.score_final_pari ?? row.score_blended ?? row.score_cheval ?? null;
+  return row.score_blended ?? row.score_cheval ?? row.score_final_pari ?? null;
 }
 
 function getPredictionOdds(row: PredictionRow) {
