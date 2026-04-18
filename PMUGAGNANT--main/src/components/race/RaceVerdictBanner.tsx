@@ -180,10 +180,10 @@ export default function RaceVerdictBanner({
             {urgent ? ` Plus que ${Math.max(1, Math.round(minutesUntilStart))} min pour jouer.` : ""}
           </p>
           <Link
-            href="/mes-paris?billing=checkout"
+            href="/premium"
             className="mt-4 inline-flex rounded-lg bg-[#D4AF37] px-5 py-3 font-black text-[#0A0E1A]"
           >
-            Voir le cheval — 4,99€/mois
+            Passer PRO
           </Link>
         </div>
       ) : null}

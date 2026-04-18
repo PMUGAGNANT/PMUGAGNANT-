@@ -4,12 +4,14 @@ import Link from "next/link";
 import CountdownTimer from "@/components/race/CountdownTimer";
 import ParticipantsTable from "@/components/race/ParticipantsTable";
 import RaceAlertButton from "@/components/race/RaceAlertButton";
+import RaceChat from "@/components/race/RaceChat";
 import ScoreGauge from "@/components/ui/ScoreGauge";
 import StatusBadge from "@/components/ui/StatusBadge";
 import {
   buildValueBets,
   computeRaceVerdict,
   computeRunnerKellyStake,
+  formatRaceAnalysisId,
   formatOdds,
   formatStakeEuro,
   getRunnerNumberClass,
@@ -31,6 +33,7 @@ import {
 import { normalizeRequestedDate } from "@/lib/request-utils";
 import { logger } from "@/lib/server-logger";
 import { getSupabaseAdminClient } from "@/lib/supabase";
+import type { Database } from "@/types/supabase";
 import type {
   CourseRecordRow,
   Participant,
@@ -67,6 +70,17 @@ type RacePageState =
       rows: ParticipantTableRow[];
       dataBadge: "Supabase" | "Données J-1" | "Live PMU";
     };
+
+type RaceMessageRow = Database["public"]["Tables"]["race_messages"]["Row"];
+type RaceReactionRow = Database["public"]["Tables"]["race_message_reactions"]["Row"];
+type ReactionEmoji = RaceReactionRow["emoji"];
+type RaceChatMessage = RaceMessageRow & {
+  reactions: {
+    emoji: ReactionEmoji;
+    count: number;
+    reactedByMe: boolean;
+  }[];
+};
 
 const currencyFormatter = new Intl.NumberFormat("fr-FR", {
   style: "currency",
@@ -315,6 +329,81 @@ async function countRaceAlerts(dateStr: string, reunion: number, course: number)
   return count ?? 247;
 }
 
+function buildServerReactionSummaries(messageIds: string[], rows: RaceReactionRow[]) {
+  const emojis: ReactionEmoji[] = ["🔥", "👀", "❌"];
+  const grouped = new Map<RaceMessageRow["id"], RaceChatMessage["reactions"]>();
+
+  for (const id of messageIds) {
+    grouped.set(
+      id,
+      emojis.map((emoji) => ({ emoji, count: 0, reactedByMe: false }))
+    );
+  }
+
+  for (const row of rows) {
+    const reactions = grouped.get(row.message_id);
+    const reaction = reactions?.find((item) => item.emoji === row.emoji);
+    if (reaction) {
+      reaction.count += 1;
+    }
+  }
+
+  return grouped;
+}
+
+async function loadInitialRaceChatMessages(raceId: string, raceDate: string) {
+  const admin = getSupabaseAdminClient();
+  if (!admin) {
+    return [];
+  }
+
+  const { data: messageData, error: messageError } = await admin
+    .from("race_messages")
+    .select("*")
+    .eq("race_id", raceId)
+    .eq("race_date", raceDate)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (messageError) {
+    logger.warn("race_chat.initial_messages_failed", {
+      raceId,
+      raceDate,
+      error: messageError.message,
+    });
+    return [];
+  }
+
+  const messages = ((messageData ?? []) as RaceMessageRow[]).reverse();
+  const messageIds = messages.map((message) => message.id);
+  if (messageIds.length === 0) {
+    return [];
+  }
+
+  const { data: reactionData, error: reactionError } = await admin
+    .from("race_message_reactions")
+    .select("*")
+    .in("message_id", messageIds);
+
+  if (reactionError) {
+    logger.warn("race_chat.initial_reactions_failed", {
+      raceId,
+      raceDate,
+      error: reactionError.message,
+    });
+  }
+
+  const reactionsByMessage = buildServerReactionSummaries(
+    messageIds,
+    (reactionData ?? []) as RaceReactionRow[]
+  );
+
+  return messages.map((message) => ({
+    ...message,
+    reactions: reactionsByMessage.get(message.id) ?? [],
+  })) satisfies RaceChatMessage[];
+}
+
 function getGaugeScore(analysis: RaceAnalysis | null, selectedRow: ParticipantTableRow | null) {
   const confidence =
     analysis?.scoreConfiance?.score ?? analysis?.favori?.prediction.confiance ?? null;
@@ -497,7 +586,12 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
         cote: null,
         score: 0,
       });
-  const alertCount = await countRaceAlerts(courseInfo.dateStr, courseInfo.reunion, courseInfo.course);
+  const chatRaceId = formatRaceAnalysisId(courseInfo.reunion, courseInfo.course);
+  const chatRaceDate = toIsoDate(courseInfo.dateStr);
+  const [alertCount, initialChatMessages] = await Promise.all([
+    countRaceAlerts(courseInfo.dateStr, courseInfo.reunion, courseInfo.course),
+    loadInitialRaceChatMessages(chatRaceId, chatRaceDate),
+  ]);
   const valueBets = buildValueBets(
     rows.map((row) => ({
       numero: row.numero,
@@ -528,8 +622,9 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
         <StatusBadge status={status} />
       </header>
 
-      <section className="mx-auto grid w-full max-w-[92rem] gap-5 px-4 py-5 lg:grid-cols-[1fr_22rem] lg:px-6">
-        <div className="grid gap-5">
+      <section className="mx-auto w-full max-w-[92rem] px-4 py-5 lg:px-6">
+        <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
+          <div className="grid gap-5">
           <section className="relative overflow-hidden rounded-lg border border-[#D4AF37]/25 bg-[#101827] p-4 shadow-2xl shadow-black/25 md:p-6">
             <span
               className="pointer-events-none absolute -right-4 top-3 max-w-[88%] truncate font-[var(--font-display)] text-7xl font-black uppercase leading-none text-[#F6F2E8] opacity-[0.08] md:text-9xl"
@@ -596,19 +691,19 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
                 <div className="grid min-w-0 gap-3 md:grid-cols-3">
                   <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-4">
                     <p className="text-xs font-black uppercase text-slate-400">Cote PMU</p>
-                    <strong className="mt-2 block truncate font-[var(--font-display)] text-5xl font-black leading-none text-[#D4AF37]">
+                    <strong className="mt-2 block whitespace-nowrap font-[var(--font-display)] text-4xl font-black leading-none text-[#D4AF37] sm:text-5xl">
                       {formatOdds(verdict.cote)}
                     </strong>
                   </div>
                   <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-4">
                     <p className="text-xs font-black uppercase text-slate-400">Confiance IA</p>
-                    <strong className="mt-2 block truncate font-[var(--font-display)] text-5xl font-black leading-none text-[#00C851]">
+                    <strong className="mt-2 block whitespace-nowrap font-[var(--font-display)] text-4xl font-black leading-none text-[#00C851] sm:text-5xl">
                       {verdict.scorePercent}%
                     </strong>
                   </div>
                   <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-4">
                     <p className="text-xs font-black uppercase text-slate-400">Mise Kelly</p>
-                    <strong className="mt-2 block truncate font-[var(--font-display)] text-5xl font-black leading-none text-[#F6F2E8]">
+                    <strong className="mt-2 block whitespace-nowrap font-[var(--font-display)] text-4xl font-black leading-none text-[#F6F2E8] sm:text-5xl">
                       {formatStakeEuro(verdict.stake)}
                     </strong>
                   </div>
@@ -745,9 +840,9 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
             </div>
             <ParticipantsTable rows={rows} selectedNumber={selectedNumber} />
           </section>
-        </div>
+          </div>
 
-        <aside className="grid content-start gap-4">
+          <aside className="grid content-start gap-4">
           <section className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-4 shadow-xl shadow-black/20">
             <p className="text-xs font-black uppercase text-[#D4AF37]">Value bets</p>
             <div className="mt-4 grid gap-3">
@@ -788,10 +883,10 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
                     {valueBets.length - 1} value bets masqués PRO
                   </p>
                   <Link
-                    href="/mes-paris?billing=checkout"
+                    href="/premium"
                     className="mt-3 inline-flex rounded-lg bg-[#D4AF37] px-4 py-2 text-sm font-black text-[#0A0E1A]"
                   >
-                    Débloquer les value bets
+                    Passer PRO
                   </Link>
                 </div>
               ) : null}
@@ -819,7 +914,22 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
               </div>
             </dl>
           </section>
-        </aside>
+          </aside>
+        </div>
+
+        <div className="mt-5">
+          <RaceChat
+            raceId={chatRaceId}
+            raceDate={chatRaceDate}
+            initialMessages={initialChatMessages}
+            pinnedVerdict={{
+              verdict: verdict.verdict,
+              cheval: verdict.cheval,
+              cote: formatOdds(verdict.cote),
+              mise: formatStakeEuro(verdict.stake),
+            }}
+          />
+        </div>
       </section>
     </main>
   );
