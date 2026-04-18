@@ -1839,6 +1839,20 @@ img, svg { display: block; }
   to   { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes turfDecisionSweep {
+  0% { transform: translateX(-100%); opacity: 0; }
+  22% { opacity: 1; }
+  58% { opacity: 0.7; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+
+@keyframes turfPlayConfirm {
+  0% { opacity: 0; transform: translate(-50%, -0.7rem) scale(0.94); }
+  18% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  78% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -0.35rem) scale(0.98); }
+}
+
 .turf-main-column > *,
 .turf-home-aside > * { animation: turfFadeUp 0.28s ease both; }
 .turf-main-column > *:nth-child(2),
@@ -1849,6 +1863,40 @@ img, svg { display: block; }
 .turf-home-aside > *:nth-child(4) { animation-delay: 0.18s; }
 
 .turf-home-header { animation: turfFadeUp 0.24s ease both; }
+
+@media (max-width: 680px) {
+  .turf-decision-hero {
+    grid-template-columns: 1fr;
+    padding: 1rem;
+  }
+
+  .turf-confidence-ring {
+    justify-self: center;
+  }
+
+  .turf-star-horse {
+    padding: 1rem;
+  }
+
+  .turf-star-horse span {
+    min-height: 2.15rem;
+    font-size: 0.76rem;
+  }
+
+  .turf-reason-panel [data-tone] {
+    grid-template-columns: 1.9rem 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .turf-decision-hero::after,
+  .turf-confirmation-burst,
+  .turf-main-column > *,
+  .turf-home-aside > *,
+  .turf-home-header {
+    animation: none;
+  }
+}
 
 /* ═══════════════════════════════════════════════════════════
    REDUCED MOTION
