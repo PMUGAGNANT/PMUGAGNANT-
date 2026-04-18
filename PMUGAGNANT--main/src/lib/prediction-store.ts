@@ -575,6 +575,73 @@ export async function getRacePredictions(dateStr: string, reunion: number, cours
   return (data ?? []) as PredictionRow[];
 }
 
+const RACE_ENGINE_STAGE_PRIORITY: Record<ScoreStage, number> = {
+  MATIN: 1,
+  T10: 2,
+  RESULTAT: 3,
+};
+
+function getRunSortTimestamp(row: RaceEngineRunRow) {
+  return row.finished_at ?? row.created_at ?? row.started_at ?? "";
+}
+
+export async function listLatestRunnerScoreSnapshotsForRace(
+  dateStr: string,
+  reunion: number,
+  course: number
+) {
+  const admin = getAdmin();
+  const { data: runData, error: runError } = await admin
+    .from("race_engine_runs")
+    .select("*")
+    .eq("date", toIsoDate(dateStr))
+    .eq("reunion", reunion)
+    .eq("course", course)
+    .eq("status", "COMPLETED")
+    .order("created_at", { ascending: false })
+    .limit(12);
+
+  if (isMissingRelationError(runError)) {
+    return [] as RunnerScoreSnapshotRow[];
+  }
+
+  if (runError) {
+    throw new Error(`Latest race engine run fetch failed: ${runError.message}`);
+  }
+
+  const runs = ((runData ?? []) as RaceEngineRunRow[])
+    .filter((row) => Boolean(row.id))
+    .sort((left, right) => {
+      const stageDelta =
+        RACE_ENGINE_STAGE_PRIORITY[left.stage] - RACE_ENGINE_STAGE_PRIORITY[right.stage];
+      if (stageDelta !== 0) {
+        return stageDelta;
+      }
+
+      return getRunSortTimestamp(left).localeCompare(getRunSortTimestamp(right));
+    });
+  const latestRun = runs[runs.length - 1];
+  if (!latestRun?.id) {
+    return [] as RunnerScoreSnapshotRow[];
+  }
+
+  const { data: scoreData, error: scoreError } = await admin
+    .from("runner_score_snapshots")
+    .select("*")
+    .eq("run_id", latestRun.id)
+    .order("created_at", { ascending: true });
+
+  if (isMissingRelationError(scoreError)) {
+    return [] as RunnerScoreSnapshotRow[];
+  }
+
+  if (scoreError) {
+    throw new Error(`Latest runner score snapshots fetch failed: ${scoreError.message}`);
+  }
+
+  return (scoreData ?? []) as RunnerScoreSnapshotRow[];
+}
+
 export async function getCourseRecord(dateStr: string, reunion: number, course: number) {
   const admin = getAdmin();
   const { data, error } = await admin
