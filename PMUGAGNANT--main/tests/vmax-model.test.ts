@@ -9,6 +9,7 @@ import {
   formatStakeLabel,
   getScoreTier,
   getStakeTone,
+  getVmaxRaceStatus,
   parseRaceAnalysisId,
 } from "../src/features/vmax/vmax-model";
 
@@ -34,6 +35,7 @@ test("score and stake helpers expose stable UI tiers", () => {
 test("computeRunnerKellyStake applique Kelly 25% pour les scores jouables", () => {
   assert.equal(computeRunnerKellyStake(80, 3), 6);
   assert.equal(computeRunnerKellyStake(100, 100), 1);
+  assert.equal(computeRunnerKellyStake(100, 1.2), 25);
   assert.equal(computeRunnerKellyStake(69, 4), null);
   assert.equal(computeRunnerKellyStake(80, 1.1), null);
 });
@@ -46,6 +48,14 @@ test("computeRaceVerdict transforme edge et cote en verdict immédiat", () => {
   const pass = computeRaceVerdict({ numero: 3, cheval: "Beta", cote: 1.2, score: 50 });
   assert.equal(pass.verdict, "PASSER");
   assert.equal(pass.stake, 0);
+});
+
+test("getVmaxRaceStatus exposes ready soon live and finished windows", () => {
+  assert.equal(getVmaxRaceStatus(null, 45), "ready");
+  assert.equal(getVmaxRaceStatus(null, 20), "soon");
+  assert.equal(getVmaxRaceStatus(null, 0), "live");
+  assert.equal(getVmaxRaceStatus(null, -16), "finished");
+  assert.equal(getVmaxRaceStatus("finished", 20), "finished");
 });
 
 test("buildValueBets keeps only positive PMU edge opportunities", () => {

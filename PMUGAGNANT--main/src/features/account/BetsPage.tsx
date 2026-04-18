@@ -47,7 +47,7 @@ function MesParisContent() {
   const [fetchRevision, setFetchRevision] = useState(0);
   const [autoCheckoutStarted, setAutoCheckoutStarted] = useState(false);
 
-  const autoCheckoutRequested = false;
+  const autoCheckoutRequested = searchParams.get("billing") === "checkout";
 
   const fetchBets = useCallback(
     async (signal?: AbortSignal) => {
@@ -71,7 +71,7 @@ function MesParisContent() {
         }
 
         if (!session) {
-          const redirectTarget = autoCheckoutRequested ? "/premium" : "/mes-paris";
+          const redirectTarget = autoCheckoutRequested ? "/mes-paris?billing=checkout" : "/mes-paris";
           router.push(`/login?redirect=${encodeURIComponent(redirectTarget)}`);
           return;
         }
@@ -160,7 +160,7 @@ function MesParisContent() {
           message:
             "Le paiement a ete interrompu. Ton compte reste sur l'offre gratuite tant que l'abonnement n'est pas confirme.",
         });
-        router.replace("/mes-paris");
+        router.replace(searchParams.get("next") || "/dashboard");
         return;
       }
 

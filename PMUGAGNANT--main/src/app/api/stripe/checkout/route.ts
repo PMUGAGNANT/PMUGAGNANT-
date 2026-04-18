@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       mode: "subscription",
       customer: customerId,
       line_items: [{ price: getStripePriceId()!, quantity: 1 }],
-      success_url: `${getSiteUrl()}/mes-paris?subscription=success&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${getSiteUrl()}/mes-paris?subscription=success&session_id={CHECKOUT_SESSION_ID}&next=/dashboard`,
       cancel_url: `${getSiteUrl()}/mes-paris?subscription=cancel`,
       allow_promotion_codes: true,
       metadata: { userId: state.user.id },

@@ -5,7 +5,7 @@ export type RaceRouteParams = {
 
 export type ScoreTier = "gold" | "green" | "neutral";
 export type StakeTone = "waiting" | "low" | "medium" | "high";
-export type VmaxRaceStatus = "ready" | "live" | "finished";
+export type VmaxRaceStatus = "ready" | "soon" | "live" | "finished";
 export type RaceVerdict = "JOUER" | "SURVEILLER" | "PASSER";
 
 export type ParticipantTableRow = {
@@ -273,7 +273,10 @@ export function computeRunnerKellyStake(
 
   const cappedEdge = Math.min(edge, MAX_KELLY_EDGE);
 
-  return Math.max(1, Math.round((cappedEdge / (odds - 1)) * bankroll * kellyFraction));
+  return Math.min(
+    25,
+    Math.max(1, Math.round((cappedEdge / (odds - 1)) * bankroll * kellyFraction))
+  );
 }
 
 export function computeRaceVerdict(input: RaceVerdictInput): RaceVerdictSummary {
@@ -290,7 +293,7 @@ export function computeRaceVerdict(input: RaceVerdictInput): RaceVerdictSummary 
     fairOdds !== null && pmuOdds !== null ? 1 / fairOdds - 1 / pmuOdds : -1;
   const cappedEdge = edge > 0 ? Math.min(edge, MAX_KELLY_EDGE) : 0;
   const rawStake = cappedEdge * DEFAULT_BANKROLL * DEFAULT_KELLY_FRACTION;
-  const stake = rawStake > 0 ? Math.max(1, Math.round(rawStake)) : 0;
+  const stake = rawStake > 0 ? Math.min(25, Math.max(1, Math.round(rawStake))) : 0;
   const verdict: RaceVerdict =
     edge <= 0 ? "PASSER" : edge < 0.1 ? "SURVEILLER" : "JOUER";
 
@@ -344,8 +347,20 @@ export function getVmaxRaceStatus(stage: string | null | undefined, minutesUntil
     return "finished";
   }
 
-  if (typeof minutesUntilStart === "number" && Number.isFinite(minutesUntilStart) && minutesUntilStart <= 0) {
+  if (typeof minutesUntilStart !== "number" || !Number.isFinite(minutesUntilStart)) {
+    return "ready";
+  }
+
+  if (minutesUntilStart < -15) {
+    return "finished";
+  }
+
+  if (minutesUntilStart <= 15) {
     return "live";
+  }
+
+  if (minutesUntilStart <= 30) {
+    return "soon";
   }
 
   return "ready";
