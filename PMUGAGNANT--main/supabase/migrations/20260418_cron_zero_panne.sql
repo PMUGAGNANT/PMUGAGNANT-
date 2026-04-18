@@ -16,36 +16,6 @@ create index if not exists idx_cron_logs_status_created_at
 
 alter table public.cron_logs enable row level security;
 
-create table if not exists public.races (
-  id uuid default gen_random_uuid() primary key,
-  race_date date not null,
-  date_str text not null,
-  reunion integer not null,
-  course integer not null,
-  hippodrome text not null,
-  pays text,
-  nom_course text not null,
-  heure_depart text not null,
-  discipline text not null,
-  est_trot boolean not null default false,
-  est_plat boolean not null default false,
-  est_quinte boolean not null default false,
-  allocation numeric not null default 0,
-  distance integer not null default 0,
-  nombre_partants integer not null default 0,
-  terrain text,
-  meteo text,
-  updated_at timestamptz default now()
-);
-
-create unique index if not exists idx_races_unique_race
-  on public.races (race_date, reunion, course);
-
-create index if not exists idx_races_race_date_depart
-  on public.races (race_date, heure_depart);
-
-alter table public.races enable row level security;
-
 create table if not exists public.runners (
   id uuid default gen_random_uuid() primary key,
   race_date date not null,

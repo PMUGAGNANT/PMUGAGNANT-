@@ -391,31 +391,38 @@ async function getStoredRaces(dateStr: string): Promise<RaceSummary[]> {
 
   const isoDate = toIsoDate(dateStr);
   const { data, error } = await admin
-    .from("races")
+    .from("courses")
     .select("*")
-    .eq("race_date", isoDate)
+    .eq("date", isoDate)
     .order("heure_depart", { ascending: true });
 
   if (error) {
-    logger.warn("pmu_api.fallback_races_unavailable", { error: error.message, dateStr });
+    logger.warn("pmu_api.fallback_courses_unavailable", { error: error.message, dateStr });
     return [];
   }
 
   return ((data ?? []) as unknown[]).map((row) => {
     const record = asRecord(row);
     const discipline = asString(record.discipline);
+    const nomCourse = asString(record.nom_course);
     return {
       dateStr,
       reunion: asNumber(record.reunion),
       course: asNumber(record.course),
       hippodrome: asString(record.hippodrome),
-      pays: asString(record.pays, "FRA"),
-      nomCourse: asString(record.nom_course),
+      pays: "FRA",
+      nomCourse,
       heureDepart: asString(record.heure_depart),
       discipline,
       estTrot: Boolean(record.est_trot) || discipline.includes("TROT"),
       estPlat: Boolean(record.est_plat) || discipline === "PLAT",
-      estQuinte: Boolean(record.est_quinte),
+      estQuinte:
+        Boolean(record.est_quinte) ||
+        nomCourse
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toUpperCase()
+          .includes("QUINTE"),
       allocation: asNumber(record.allocation),
       distance: asNumber(record.distance),
       nombrePartants: asNumber(record.nombre_partants),

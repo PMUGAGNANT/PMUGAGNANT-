@@ -6,24 +6,23 @@ import type { Participant, RaceSummary } from "@/lib/types";
 
 const SYNC_BATCH_SIZE = 4;
 
-interface RaceMirrorRow {
-  race_date: string;
-  date_str: string;
+interface CourseMirrorRow {
+  date: string;
   reunion: number;
   course: number;
   hippodrome: string;
-  pays: string;
   nom_course: string;
   heure_depart: string;
   discipline: string;
-  est_trot: boolean;
-  est_plat: boolean;
-  est_quinte: boolean;
   allocation: number;
   distance: number;
   nombre_partants: number;
   terrain: string | null;
   meteo: string | null;
+  lisibilite: null;
+  score_lisibilite: null;
+  coefficient_lisibilite: null;
+  decision_course: null;
   updated_at: string;
 }
 
@@ -51,31 +50,35 @@ export interface ProgramSyncSummary {
   date: string;
   racesFetched: number;
   racesUpserted: number;
+  coursesUpserted: number;
   runnersFetched: number;
   runnersUpserted: number;
   runnerFetchErrors: number;
   supabaseSkipped: boolean;
 }
 
-function raceToRow(dateStr: string, race: RaceSummary, updatedAt: string): RaceMirrorRow {
+function raceToCourseRow(
+  dateStr: string,
+  race: RaceSummary,
+  updatedAt: string
+): CourseMirrorRow {
   return {
-    race_date: toIsoDate(dateStr),
-    date_str: dateStr,
+    date: toIsoDate(dateStr),
     reunion: race.reunion,
     course: race.course,
     hippodrome: race.hippodrome,
-    pays: race.pays,
     nom_course: race.nomCourse,
     heure_depart: race.heureDepart,
     discipline: race.discipline,
-    est_trot: race.estTrot,
-    est_plat: race.estPlat,
-    est_quinte: race.estQuinte,
     allocation: race.allocation,
     distance: race.distance,
     nombre_partants: race.nombrePartants,
     terrain: race.terrain ?? null,
     meteo: race.meteo ?? null,
+    lisibilite: null,
+    score_lisibilite: null,
+    coefficient_lisibilite: null,
+    decision_course: null,
     updated_at: updatedAt,
   };
 }
@@ -107,7 +110,7 @@ function runnerToRow(
   };
 }
 
-async function upsertRaceRows(rows: RaceMirrorRow[]) {
+async function upsertCourseRows(rows: CourseMirrorRow[]) {
   if (rows.length === 0) {
     return;
   }
@@ -117,12 +120,12 @@ async function upsertRaceRows(rows: RaceMirrorRow[]) {
     return;
   }
 
-  const { error } = await admin.from("races").upsert(rows, {
-    onConflict: "race_date,reunion,course",
+  const { error } = await admin.from("courses").upsert(rows, {
+    onConflict: "date,reunion,course",
   });
 
   if (error) {
-    throw new Error(`Race mirror upsert failed: ${error.message}`);
+    throw new Error(`Course upsert failed during cron program sync: ${error.message}`);
   }
 }
 
@@ -151,7 +154,7 @@ export async function syncProgramToSupabase(dateStr: string): Promise<ProgramSyn
   const races = await getAllRaces(dateStr);
 
   if (admin) {
-    await upsertRaceRows(races.map((race) => raceToRow(dateStr, race, updatedAt)));
+    await upsertCourseRows(races.map((race) => raceToCourseRow(dateStr, race, updatedAt)));
   }
 
   let runnersFetched = 0;
@@ -188,6 +191,7 @@ export async function syncProgramToSupabase(dateStr: string): Promise<ProgramSyn
     date: dateStr,
     racesFetched: races.length,
     racesUpserted: admin ? races.length : 0,
+    coursesUpserted: admin ? races.length : 0,
     runnersFetched,
     runnersUpserted: admin ? runnersFetched : 0,
     runnerFetchErrors,
