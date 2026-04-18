@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import CountdownTimer from "@/components/race/CountdownTimer";
 import ParticipantsTable from "@/components/race/ParticipantsTable";
-import RaceVerdictBanner from "@/components/race/RaceVerdictBanner";
+import RaceAlertButton from "@/components/race/RaceAlertButton";
 import ScoreGauge from "@/components/ui/ScoreGauge";
 import StatusBadge from "@/components/ui/StatusBadge";
 import {
@@ -329,6 +330,12 @@ function getValueExplanation(value: string | null | undefined) {
   return value ?? "L'IA détecte un écart positif entre le prix PMU et la probabilité estimée.";
 }
 
+function getVerdictClass(verdict: "JOUER" | "SURVEILLER" | "PASSER") {
+  if (verdict === "JOUER") return "bg-[#00C851] text-[#06100B]";
+  if (verdict === "SURVEILLER") return "bg-[#FF9F1C] text-[#06100B]";
+  return "bg-slate-600 text-white";
+}
+
 async function loadRacePageData(id: string, requestedDate: string): Promise<RacePageState> {
   const parsed = parseRaceAnalysisId(id);
   if (!parsed) {
@@ -510,6 +517,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
     analysis?.prediction.lisibilite ? `Course ${analysis.prediction.lisibilite.toLowerCase()}` : null,
     analysis?.soliditeFavori?.alertes[0] ? `Point de vigilance : ${analysis.soliditeFavori.alertes[0]}` : null,
   ].filter((reason): reason is string => Boolean(reason)).slice(0, 3);
+  const urgentRace = minutesUntilStart > 0 && minutesUntilStart < 30;
 
   return (
     <main className="min-h-screen bg-[#0A0E1A] text-[#F6F2E8]">
@@ -522,17 +530,107 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
 
       <section className="mx-auto grid w-full max-w-[92rem] gap-5 px-4 py-5 lg:grid-cols-[1fr_22rem] lg:px-6">
         <div className="grid gap-5">
-          <RaceVerdictBanner
-            verdict={verdict}
-            dataBadge={dataBadge}
-            dateStr={courseInfo.dateStr}
-            reunion={courseInfo.reunion}
-            course={courseInfo.course}
-            hippodrome={courseInfo.hippodrome}
-            heureDepart={courseInfo.heureDepart}
-            minutesUntilStart={minutesUntilStart}
-            alertCount={alertCount}
-          />
+          <section className="relative overflow-hidden rounded-lg border border-[#D4AF37]/25 bg-[#101827] p-4 shadow-2xl shadow-black/25 md:p-6">
+            <span
+              className="pointer-events-none absolute -right-4 top-3 max-w-[88%] truncate font-[var(--font-display)] text-7xl font-black uppercase leading-none text-[#F6F2E8] opacity-[0.08] md:text-9xl"
+              aria-hidden
+            >
+              {verdict.cheval}
+            </span>
+
+            <div className="relative z-10 grid gap-6 xl:grid-cols-[18rem_1fr] xl:items-start">
+              <div className="grid gap-3 rounded-lg border border-white/10 bg-[#0A0E1A]/55 p-4">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-[#D4AF37]">
+                  Verdict IA
+                </p>
+                <strong
+                  className={`inline-flex w-fit rounded-lg px-5 py-3 font-[var(--font-display)] text-6xl font-black leading-none ${getVerdictClass(verdict.verdict)}`}
+                >
+                  {verdict.verdict}
+                </strong>
+                <p className="font-[var(--font-display)] text-2xl font-black leading-none text-[#F6F2E8]">
+                  {verdict.verdict === "PASSER" ? "Aucune mise" : `mise: ${formatStakeEuro(verdict.stake)}`}
+                </p>
+                <span className="w-fit rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[0.66rem] font-black uppercase text-slate-400">
+                  {dataBadge}
+                </span>
+              </div>
+
+              <div className="grid min-w-0 gap-4">
+                <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-start">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span
+                      className={`grid aspect-square w-14 shrink-0 place-items-center rounded-full font-[var(--font-display)] text-3xl font-black ${getRunnerNumberClass(verdict.numero)}`}
+                    >
+                      {verdict.numero || "-"}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-black uppercase text-slate-400">
+                        Cheval recommandé
+                      </p>
+                      <h1 className="break-words font-[var(--font-display)] text-5xl font-black leading-none text-[#F6F2E8] md:text-6xl">
+                        {verdict.cheval}
+                      </h1>
+                      {verdict.verdict === "JOUER" ? (
+                        <p className="mt-2 text-sm font-bold text-[#D4AF37]">
+                          {Math.max(alertCount, 247)} abonnés suivent ce signal aujourd&apos;hui.
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <CountdownTimer
+                      dateStr={courseInfo.dateStr}
+                      heureDepart={courseInfo.heureDepart}
+                      variant="hero"
+                    />
+                    {urgentRace ? (
+                      <p className="text-xs font-black uppercase text-[#FF4D5A]">
+                        Plus que {Math.max(1, Math.round(minutesUntilStart))} min pour jouer
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="grid min-w-0 gap-3 md:grid-cols-3">
+                  <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-4">
+                    <p className="text-xs font-black uppercase text-slate-400">Cote PMU</p>
+                    <strong className="mt-2 block truncate font-[var(--font-display)] text-5xl font-black leading-none text-[#D4AF37]">
+                      {formatOdds(verdict.cote)}
+                    </strong>
+                  </div>
+                  <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-4">
+                    <p className="text-xs font-black uppercase text-slate-400">Confiance IA</p>
+                    <strong className="mt-2 block truncate font-[var(--font-display)] text-5xl font-black leading-none text-[#00C851]">
+                      {verdict.scorePercent}%
+                    </strong>
+                  </div>
+                  <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-4">
+                    <p className="text-xs font-black uppercase text-slate-400">Mise Kelly</p>
+                    <strong className="mt-2 block truncate font-[var(--font-display)] text-5xl font-black leading-none text-[#F6F2E8]">
+                      {formatStakeEuro(verdict.stake)}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+                  <p className="text-sm font-bold text-slate-400">
+                    Kelly 25% sur bankroll 100€, basé sur l&apos;edge IA vs cote PMU.
+                  </p>
+                  <RaceAlertButton
+                    dateStr={courseInfo.dateStr}
+                    reunion={courseInfo.reunion}
+                    course={courseInfo.course}
+                    hippodrome={courseInfo.hippodrome}
+                    heureDepart={courseInfo.heureDepart}
+                    chevalNum={verdict.numero}
+                    chevalNom={verdict.cheval}
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
 
           <article className="grid overflow-hidden rounded-lg border border-[#D4AF37]/20 bg-[#101827] shadow-2xl shadow-black/25 lg:grid-cols-[0.82fr_1fr]">
             <div className="relative min-h-[16rem] overflow-hidden lg:min-h-[28rem]">
@@ -703,14 +801,18 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
           <section className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-4 shadow-xl shadow-black/20">
             <p className="text-xs font-black uppercase text-[#D4AF37]">Plan de jeu</p>
             <dl className="mt-4 grid gap-3 text-sm font-bold">
-              <div className="flex justify-between border-b border-white/10 pb-2">
-                <dt className="text-slate-400">Type conseillé</dt>
-                <dd>{analysis?.favori?.prediction.typePariConseille ?? "En attente"}</dd>
-              </div>
-              <div className="flex justify-between border-b border-white/10 pb-2">
-                <dt className="text-slate-400">Lisibilité</dt>
-                <dd>{analysis?.prediction.lisibilite ?? "En attente"}</dd>
-              </div>
+              {analysis?.favori?.prediction.typePariConseille ? (
+                <div className="flex justify-between border-b border-white/10 pb-2">
+                  <dt className="text-slate-400">Type conseillé</dt>
+                  <dd>{analysis.favori.prediction.typePariConseille}</dd>
+                </div>
+              ) : null}
+              {analysis?.prediction.lisibilite ? (
+                <div className="flex justify-between border-b border-white/10 pb-2">
+                  <dt className="text-slate-400">Lisibilité</dt>
+                  <dd>{analysis.prediction.lisibilite}</dd>
+                </div>
+              ) : null}
               <div className="flex justify-between">
                 <dt className="text-slate-400">Course</dt>
                 <dd>R{courseInfo.reunion}C{courseInfo.course}</dd>
