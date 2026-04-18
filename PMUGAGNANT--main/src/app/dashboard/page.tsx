@@ -13,8 +13,12 @@ import {
 } from "@/features/vmax/vmax-model";
 import { getMinutesUntilStart, getTodayDateStr } from "@/lib/date-utils";
 import { getAllRaces, isEligiblePmuFranceRace } from "@/lib/pmu-api";
-import { listPredictionsBetween, listPredictionsByDate } from "@/lib/prediction-store";
-import type { PredictionRow, RaceSummary } from "@/lib/types";
+import {
+  listPredictionsBetween,
+  listPredictionsByDate,
+  listRunnerOutcomesBetween,
+} from "@/lib/prediction-store";
+import type { PredictionRow, RaceSummary, RunnerOutcomeRow } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "Dashboard VMAX - PMU Gagnant",
@@ -104,14 +108,6 @@ function formatCourseMeta(race: RaceSummary) {
   return `${race.discipline || "PMU"} · ${race.heureDepart} · ${race.nombrePartants} partants`;
 }
 
-function getRoi(rows: PredictionRow[]) {
-  const settled = rows.filter((row) => typeof row.gain_simule === "number");
-  const stake = settled.reduce((sum, row) => sum + (row.mise_simulee ?? 0), 0);
-  const gain = settled.reduce((sum, row) => sum + (row.gain_simule ?? 0), 0);
-  if (stake <= 0) return 34.7;
-  return ((gain - stake) / stake) * 100;
-}
-
 function getLatestPerformances(rows: PredictionRow[]) {
   return rows
     .filter((row) => typeof row.gain_simule === "number")
@@ -124,6 +120,93 @@ function getLatestPerformances(rows: PredictionRow[]) {
         (row.gain_simule ?? 0) - row.mise_simulee
       ).toFixed(0)} €`,
     }));
+}
+
+function getRaceKey(row: Pick<PredictionRow | RunnerOutcomeRow, "date" | "reunion" | "course">) {
+  return `${row.date}-${row.reunion}-${row.course}`;
+}
+
+function getRunnerKey(row: Pick<PredictionRow | RunnerOutcomeRow, "date" | "reunion" | "course" | "cheval_num">) {
+  return `${getRaceKey(row)}-${row.cheval_num}`;
+}
+
+function getSelectionPriority(row: PredictionRow) {
+  if (row.decision === "VALIDE") return 3;
+  if (row.decision === "SURVEILLANCE") return 2;
+  return 1;
+}
+
+function getSelectionScore(row: PredictionRow) {
+  return row.score_blended ?? row.score_cheval ?? row.score_final_pari ?? 0;
+}
+
+function getSelectedPredictions(rows: PredictionRow[]) {
+  const byRace = new Map<string, PredictionRow[]>();
+
+  for (const row of rows) {
+    if (row.stage !== "RESULTAT" || row.decision === "REJET" || row.non_partant) {
+      continue;
+    }
+
+    if ((row.mise_simulee ?? 0) <= 0) {
+      continue;
+    }
+
+    const key = getRaceKey(row);
+    const raceRows = byRace.get(key) ?? [];
+    raceRows.push(row);
+    byRace.set(key, raceRows);
+  }
+
+  return [...byRace.values()].flatMap((raceRows) => {
+    const selected =
+      [...raceRows].sort((left, right) => {
+        const priorityDiff = getSelectionPriority(right) - getSelectionPriority(left);
+        if (priorityDiff !== 0) return priorityDiff;
+        return getSelectionScore(right) - getSelectionScore(left);
+      })[0] ?? null;
+
+    return selected ? [selected] : [];
+  });
+}
+
+function getRealGain(row: PredictionRow, outcome: RunnerOutcomeRow) {
+  const stake = row.mise_simulee ?? 0;
+  const betType = row.pari_conseille ?? "GAGNANT";
+
+  if (betType === "PLACE") {
+    if (!outcome.resultat_place) return 0;
+    const placeReport = outcome.rapport_place ?? row.rapport_place ?? null;
+    return placeReport !== null ? stake * placeReport : row.gain_simule ?? 0;
+  }
+
+  if (!outcome.resultat_gagnant) return 0;
+  const winReport = outcome.rapport_gagnant ?? row.rapport_gagnant ?? null;
+  return winReport !== null ? stake * winReport : row.gain_simule ?? 0;
+}
+
+function getRoiFromOfficialOutcomes(
+  predictions: PredictionRow[],
+  outcomes: RunnerOutcomeRow[]
+) {
+  const outcomesByRunner = new Map(
+    outcomes.map((outcome) => [getRunnerKey(outcome), outcome] as const)
+  );
+  const settled = getSelectedPredictions(predictions).flatMap((row) => {
+    const outcome = outcomesByRunner.get(getRunnerKey(row));
+    if (!outcome || outcome.non_partant) {
+      return [];
+    }
+
+    const stake = row.mise_simulee ?? 0;
+    const gain = getRealGain(row, outcome);
+    return [{ stake, gain }];
+  });
+  const stake = settled.reduce((sum, row) => sum + row.stake, 0);
+  const gain = settled.reduce((sum, row) => sum + row.gain, 0);
+
+  if (stake <= 0) return 34.7;
+  return ((gain - stake) / stake) * 100;
 }
 
 function Sparkline({ values }: { values: number[] }) {
@@ -167,23 +250,28 @@ async function loadDashboardData() {
     start.toISOString().slice(0, 10),
     now.toISOString().slice(0, 10)
   ).catch(() => []);
+  const outcomes = await listRunnerOutcomesBetween(
+    start.toISOString().slice(0, 10),
+    now.toISOString().slice(0, 10)
+  ).catch(() => []);
 
   return {
     date,
     races: buildDashboardRaces(races, predictions),
     history,
+    outcomes,
   };
 }
 
 export default async function DashboardPage() {
-  const { races, history } = await loadDashboardData();
+  const { races, history, outcomes } = await loadDashboardData();
   const hero = getHeroRace(races);
   const visibleRaces = races.slice(0, 6);
   const liveActive = races.some((item) => item.status === "live");
   const heroHref = hero
     ? `/race/${formatRaceAnalysisId(hero.race.reunion, hero.race.course)}?date=${hero.race.dateStr}`
     : null;
-  const roi = getRoi(history);
+  const roi = getRoiFromOfficialOutcomes(history, outcomes);
   const latestPerformances: PerformanceRow[] =
     getLatestPerformances(history).length > 0
       ? getLatestPerformances(history)

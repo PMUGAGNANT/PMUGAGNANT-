@@ -202,6 +202,19 @@ function mergeIncomingMessage(messages: RaceChatMessage[], row: RaceMessageRow) 
   );
 }
 
+function createEmptyReactionSummaries() {
+  return REACTIONS.map((emoji) => ({ emoji, count: 0, reactedByMe: false }));
+}
+
+function replaceOptimisticMessage(
+  messages: RaceChatMessage[],
+  optimisticId: string,
+  row: RaceMessageRow
+) {
+  const withoutOptimistic = messages.filter((message) => message.id !== optimisticId);
+  return mergeIncomingMessage(withoutOptimistic, row);
+}
+
 function computeStatsFromBets(rows: BetForStats[]) {
   const settled = rows.filter((row) => row.statut !== "EN_ATTENTE" && row.gain !== null);
   const wins = settled.filter((row) => (row.gain ?? 0) > row.mise).length;
@@ -533,6 +546,28 @@ export default function RaceChat({
     }
 
     setSending(true);
+    const optimisticId = `local-${crypto.randomUUID()}`;
+    const optimisticMessage: RaceChatMessage = {
+      id: optimisticId,
+      race_id: raceId,
+      race_date: raceDate,
+      user_id: userState.id,
+      username: userState.username,
+      avatar_initials: userState.avatarInitials,
+      is_pro: userState.isPro,
+      win_rate: userState.winRate,
+      winning_streak: userState.winningStreak,
+      content,
+      created_at: new Date().toISOString(),
+      banned_until: null,
+      reactions: createEmptyReactionSummaries(),
+    };
+    setMessages((current) => mergeIncomingMessage(current, optimisticMessage));
+    setDraft("");
+    window.requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    });
+
     try {
       const supabase = getTypedSupabase();
       const payload: RaceMessageInsert = {
@@ -546,14 +581,24 @@ export default function RaceChat({
         winning_streak: userState.winningStreak,
         content,
       };
-      const { error: insertError } = await supabase.from("race_messages").insert(payload);
+      const { data, error: insertError } = await supabase
+        .from("race_messages")
+        .insert(payload)
+        .select("*")
+        .single();
 
       if (insertError) {
         throw new Error(insertError.message);
       }
 
-      setDraft("");
+      if (data) {
+        setMessages((current) =>
+          replaceOptimisticMessage(current, optimisticId, data as RaceMessageRow)
+        );
+      }
     } catch (submitError) {
+      setMessages((current) => current.filter((message) => message.id !== optimisticId));
+      setDraft(content);
       setError(getErrorMessage(submitError));
     } finally {
       setSending(false);
