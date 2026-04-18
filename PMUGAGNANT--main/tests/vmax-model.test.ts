@@ -32,7 +32,8 @@ test("score and stake helpers expose stable UI tiers", () => {
 });
 
 test("computeRunnerKellyStake applique Kelly 25% pour les scores jouables", () => {
-  assert.equal(computeRunnerKellyStake(80, 3), 18);
+  assert.equal(computeRunnerKellyStake(80, 3), 6);
+  assert.equal(computeRunnerKellyStake(100, 100), 1);
   assert.equal(computeRunnerKellyStake(69, 4), null);
   assert.equal(computeRunnerKellyStake(80, 1.1), null);
 });

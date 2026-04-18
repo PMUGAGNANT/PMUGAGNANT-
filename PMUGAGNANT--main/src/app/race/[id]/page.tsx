@@ -27,6 +27,7 @@ import { attachFaultRates } from "@/lib/horse-faults";
 import { getAllRaces, getParticipants } from "@/lib/pmu-api";
 import {
   getRacePredictions,
+  listLatestRunnerScoreSnapshotsForRace,
   listCourseRecordsBetween,
   listPredictionsBetween,
 } from "@/lib/prediction-store";
@@ -40,6 +41,7 @@ import type {
   PredictionRow,
   RaceAnalysis,
   RaceSummary,
+  RunnerScoreSnapshotRow,
   ScoredParticipant,
 } from "@/lib/types";
 
@@ -106,15 +108,35 @@ function normalizeHorseJoinKey(value: string) {
     .toUpperCase();
 }
 
+function getFiniteNumber(value: number | null | undefined) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function firstFiniteNumber(...values: Array<number | null | undefined>) {
+  for (const value of values) {
+    const numeric = getFiniteNumber(value);
+    if (numeric !== null) {
+      return numeric;
+    }
+  }
+
+  return null;
+}
+
 function buildParticipantRows(
   participants: Participant[],
   ranking: ScoredParticipant[],
   storedRows: PredictionRow[] = [],
+  scoreSnapshots: RunnerScoreSnapshotRow[] = [],
   forcedSource: ParticipantTableRow["scoreSource"] | null = null
 ): ParticipantTableRow[] {
   const rankedByNumber = new Map<number, ScoredParticipant>();
   for (const runner of ranking) {
     rankedByNumber.set(runner.numPmu, runner);
+  }
+  const snapshotByNumber = new Map<number, RunnerScoreSnapshotRow>();
+  for (const snapshot of scoreSnapshots) {
+    snapshotByNumber.set(snapshot.cheval_num, snapshot);
   }
   const storedByNumber = new Map<number, PredictionRow>();
   const storedByName = new Map<string, PredictionRow>();
@@ -127,24 +149,31 @@ function buildParticipantRows(
     .filter((participant) => !participant.nonPartant)
     .map((participant) => {
       const runner = rankedByNumber.get(participant.numPmu);
+      const snapshot = snapshotByNumber.get(participant.numPmu);
       const stored =
         storedByNumber.get(participant.numPmu) ??
         storedByName.get(normalizeHorseJoinKey(participant.nom));
-      const score =
-        stored?.score_blended ??
-        stored?.score_cheval ??
-        stored?.score_final_pari ??
-        runner?.prediction.scoreBlended ??
-        runner?.prediction.scoreCheval ??
-        runner?.prediction.scoreFinalPari ??
-        null;
-      const cote =
-        stored?.cote_depart ??
-        stored?.cote_matin ??
-        participant.cote ??
-        runner?.cote ??
-        runner?.coteDepart ??
-        null;
+      const score = firstFiniteNumber(
+        stored?.score_blended,
+        stored?.score_cheval,
+        stored?.score_final_pari,
+        snapshot?.score_lisibilite_adjusted,
+        snapshot?.score_expert,
+        runner?.prediction.scoreBlended,
+        runner?.prediction.scoreCheval,
+        runner?.prediction.scoreFinalPari
+      );
+      const cote = firstFiniteNumber(
+        stored?.cote_depart,
+        stored?.cote_matin,
+        participant.cote,
+        runner?.cote,
+        runner?.coteDepart
+      );
+      const hasStoredScore =
+        firstFiniteNumber(stored?.score_blended, stored?.score_cheval, stored?.score_final_pari) !== null;
+      const hasSnapshotScore =
+        firstFiniteNumber(snapshot?.score_lisibilite_adjusted, snapshot?.score_expert) !== null;
 
       return {
         numero: participant.numPmu,
@@ -153,21 +182,23 @@ function buildParticipantRows(
         entraineur: participant.entraineur || "—",
         cote,
         scoreIa: score,
-        scoreSource: forcedSource ?? (stored ? "supabase" : runner ? "engine" : "fallback"),
+        scoreSource:
+          forcedSource ??
+          (hasStoredScore || hasSnapshotScore ? "supabase" : runner ? "engine" : "fallback"),
         musique: participant.musique || runner?.musique || null,
         mise: computeRunnerKellyStake(score, cote),
-        topFacteur: runner?.prediction.topFacteurs[0] ?? null,
+        topFacteur: runner?.prediction.topFacteurs[0] ?? stored?.avis_texte ?? null,
       };
     })
     .sort((left, right) => left.numero - right.numero);
 }
 
 function getPredictionScore(row: PredictionRow) {
-  return row.score_blended ?? row.score_cheval ?? row.score_final_pari ?? null;
+  return firstFiniteNumber(row.score_blended, row.score_cheval, row.score_final_pari);
 }
 
 function getPredictionOdds(row: PredictionRow) {
-  return row.cote_depart ?? row.cote_matin ?? null;
+  return firstFiniteNumber(row.cote_depart, row.cote_matin);
 }
 
 function buildRowsFromPredictions(rows: PredictionRow[]): ParticipantTableRow[] {
@@ -461,11 +492,21 @@ async function loadRacePageData(id: string, requestedDate: string): Promise<Race
       return { kind: "not-found", date: requestedDate };
     }
 
-    const storedRows = await getRacePredictions(requestedDate, parsed.reunion, parsed.course).catch(
-      () => []
-    );
+    const [storedRows, scoreSnapshots] = await Promise.all([
+      getRacePredictions(requestedDate, parsed.reunion, parsed.course).catch(() => []),
+      listLatestRunnerScoreSnapshotsForRace(requestedDate, parsed.reunion, parsed.course).catch(
+        (scoreError: unknown) => {
+          logger.warn("race_page.score_snapshot_fallback_failed", {
+            id,
+            requestedDate,
+            error: scoreError instanceof Error ? scoreError.message : String(scoreError),
+          });
+          return [] as RunnerScoreSnapshotRow[];
+        }
+      ),
+    ]);
 
-    if (storedRows.length === 0) {
+    if (storedRows.length === 0 && scoreSnapshots.length === 0) {
       const fallback = await loadLatestStoredRaceFallback(excluded);
       if (fallback?.courseInfo && fallback.rows.length > 0) {
         return {
@@ -485,14 +526,19 @@ async function loadRacePageData(id: string, requestedDate: string): Promise<Race
       participants.length > 0
         ? analyzeRaceWithParameters(courseInfo, participants, algoParameters)
         : null;
-    const rows = buildParticipantRows(participants, analysis?.ranking ?? [], storedRows);
+    const rows = buildParticipantRows(
+      participants,
+      analysis?.ranking ?? [],
+      storedRows,
+      scoreSnapshots
+    );
 
     return {
       kind: "ready",
       courseInfo,
       analysis,
       rows,
-      dataBadge: storedRows.length > 0 ? "Supabase" : "Live PMU",
+      dataBadge: storedRows.length > 0 || scoreSnapshots.length > 0 ? "Supabase" : "Live PMU",
     };
   } catch (error) {
     logger.error("race_page.load_failed", error, {
