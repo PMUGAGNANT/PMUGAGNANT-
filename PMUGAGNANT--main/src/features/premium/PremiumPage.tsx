@@ -13,34 +13,34 @@ import { useLiveStats } from "@/lib/use-live-stats";
 
 const FEATURES = [
   {
-    label: "Ticket clair",
-    title: "Un cheval a jouer, pas une liste a decoder",
-    text: "Chaque course premium donne le cheval, le type de pari, la confiance et la mise conseillee.",
+    label: "Selection",
+    title: "Le cheval exact a jouer",
+    text: "Premium revele le cheval recommande, le numero, la cote PMU, la confiance IA et la decision JOUER / PASSER.",
   },
   {
-    label: "Mise",
-    title: "Mise calculee selon le risque",
-    text: "TurfEdge affiche une mise simple et lisible pour eviter le coup de tete avant le depart.",
+    label: "Mise Kelly",
+    title: "La mise conseillee en euros",
+    text: "TurfEdge calcule une mise lisible sur bankroll 100 EUR avec Kelly 25%, pour garder une gestion de risque propre.",
   },
   {
-    label: "Confiance",
-    title: "Pourquoi l'algo est sur ce cheval",
-    text: "Tu vois les signaux positifs : forme, cote, humain, terrain, regularite et value.",
+    label: "Pourquoi",
+    title: "3 raisons simples avant de jouer",
+    text: "Forme, cote, jockey, terrain, value : l'IA explique la selection en langage clair, sans jargon inutile.",
   },
   {
     label: "Alertes",
-    title: "Alerte T-10 quand le marche bouge",
-    text: "Quand une cote devient interessante juste avant le depart, tu recois le signal au bon moment.",
+    title: "Alertes avant le depart",
+    text: "Active les rappels sur les courses prioritaires et evite d'arriver trop tard quand le signal est fort.",
   },
   {
-    label: "Bilan",
+    label: "Bilan reel",
     title: "ROI, gains et pertes suivis",
-    text: "Le cockpit montre ce que les tickets auraient donne sur 7, 30 et 90 jours.",
+    text: "Le cockpit montre les mises, les gains, les pertes et les performances par course dans ton historique.",
   },
   {
     label: "Discipline",
-    title: "Jouer moins, mais mieux cadre",
-    text: "Les courses faibles sont marquees PASSER pour proteger la bankroll.",
+    title: "Jouer moins, mieux trier",
+    text: "Les courses faibles restent marquees PASSER pour proteger la bankroll et eviter les tickets forces.",
   },
 ];
 
@@ -70,16 +70,16 @@ const PREMIUM_EXAMPLES = [
 
 const TESTIMONIALS = [
   {
-    quote: "Je ne cherche plus dans 40 partants. Je regarde JOUER ou PASSER, puis la mise.",
-    name: "Marc, parieur trot",
+    quote: "Je regarde le verdict, la mise, puis les trois raisons. En 20 secondes je sais si je joue ou si je passe.",
+    name: "Marc, parieur trot en Ile-de-France",
   },
   {
-    quote: "Le plus utile, c'est la discipline. TurfEdge m'evite les courses pieges.",
-    name: "Nadia, joueuse Quinte",
+    quote: "Le vrai gain pour moi, c'est d'eviter les courses pieges. Le bouton PASSER m'a fait economiser beaucoup de tickets inutiles.",
+    name: "Nadia, joueuse Quinte le week-end",
   },
   {
-    quote: "La page bilan m'a fait comprendre mes vrais points forts : plat sprint et petites mises.",
-    name: "Julien, abonne premium",
+    quote: "Je ne suis pas expert data. Le bilan me montre juste ce que j'ai mise, ce qui est revenu, et si je progresse.",
+    name: "Julien, abonne premium depuis 3 mois",
   },
 ];
 
@@ -155,6 +155,7 @@ function formatEuros(value: number) {
 export default function PremiumPage() {
   const liveStats = useLiveStats();
   const hasStats = hasLiveStatsData(liveStats.data);
+  const checkoutHref = "/mes-paris?billing=checkout";
   const priceLabel = `${PREMIUM_MONTHLY_PRICE_DISPLAY_MAIN} ${PREMIUM_MONTHLY_PRICE_CURRENCY_SUFFIX}`;
   const crossedPriceLabel = "29 EUR / mois";
   const activeSubscribers = liveStats.data.activeSubscribersThisMonth;
@@ -202,15 +203,15 @@ export default function PremiumPage() {
               Les parieurs qui gagnent utilisent TurfEdge.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-[var(--pmu-text-soft)]">
-              Premium debloque la decision JOUER / PASSER, le cheval conseille,
-              la mise, le gain potentiel et les signaux qui expliquent la confiance.
+              Premium transforme chaque course en decision claire : quoi jouer,
+              combien miser, pourquoi l&apos;IA est confiante, et quand passer sans regret.
             </p>
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <Link href="/premium" className="app-button-primary min-h-12">
-                Passer PRO
+              <Link href={checkoutHref} className="app-button-primary min-h-12 w-full sm:w-auto">
+                Debloquer Premium - {priceLabel}
               </Link>
-              <Link href="/bilan" className="app-button-secondary min-h-12">
+              <Link href="/bilan" className="app-button-secondary min-h-12 w-full sm:w-auto">
                 Voir les gains suivis
               </Link>
             </div>
@@ -221,6 +222,18 @@ export default function PremiumPage() {
           </div>
           <div className="border-t border-[var(--pmu-border)] bg-[var(--pmu-primary-fade)] p-4 lg:border-l lg:border-t-0">
             <PromoVideo />
+            <div className="mt-4 rounded-lg border border-[var(--pmu-gold)] bg-[var(--pmu-gold-light)] p-4">
+              <p className="app-kicker text-[var(--pmu-gold)]">Offre fondateur</p>
+              <p className="mt-2 text-4xl font-black leading-none text-[var(--pmu-text)]">
+                {priceLabel}
+              </p>
+              <p className="mt-2 text-sm font-semibold text-[var(--pmu-text-soft)]">
+                Prix public <span className="line-through">{crossedPriceLabel}</span>. Garantie 7 jours.
+              </p>
+              <Link href={checkoutHref} className="app-button-primary mt-4 w-full min-h-12">
+                Activer mon acces PRO
+              </Link>
+            </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               {statCards.map((stat) => (
                 <div key={stat.label} className="result-chip px-4 py-3 text-center">
@@ -324,10 +337,10 @@ export default function PremiumPage() {
           Garantie 7 jours : si TurfEdge ne t&apos;aide pas a mieux trier tes courses, remboursement simple.
         </div>
         <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-          <Link href="/premium" className="app-button-primary min-h-12">
-            Passer PRO
+          <Link href={checkoutHref} className="app-button-primary min-h-12 w-full sm:w-auto">
+            Prendre Premium - {priceLabel}
           </Link>
-          <Link href="/" className="app-button-secondary min-h-12">
+          <Link href="/" className="app-button-secondary min-h-12 w-full sm:w-auto">
             Voir les courses du jour
           </Link>
         </div>

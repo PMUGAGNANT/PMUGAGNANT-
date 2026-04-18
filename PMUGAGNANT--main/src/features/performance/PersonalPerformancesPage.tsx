@@ -119,7 +119,7 @@ export default function PersonalPerformancesPage() {
       <section className="mx-auto grid max-w-[90rem] gap-5">
         <div className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-5 shadow-2xl shadow-black/25 md:p-7">
           <p className="text-xs font-black uppercase text-[#D4AF37]">Historique personnel</p>
-          <h1 className="mt-2 font-[var(--font-display)] text-6xl font-black leading-none text-[#F6F2E8]">
+          <h1 className="mt-2 font-[var(--font-display)] text-4xl font-black leading-none text-[#F6F2E8] sm:text-5xl md:text-6xl">
             Tes 30 derniers paris
           </h1>
           <p className="mt-3 text-sm font-bold text-slate-400">
@@ -132,7 +132,7 @@ export default function PersonalPerformancesPage() {
               </p>
               <Link
                 href="/premium"
-                className="mt-3 inline-flex rounded-lg bg-[#D4AF37] px-4 py-2 text-sm font-black text-[#0A0E1A]"
+                className="mt-3 inline-flex w-full justify-center rounded-lg bg-[#D4AF37] px-4 py-2 text-sm font-black text-[#0A0E1A] sm:w-auto"
               >
                 Passer PRO
               </Link>
@@ -191,7 +191,7 @@ export default function PersonalPerformancesPage() {
                 </tbody>
               </table>
             </div>
-            <div className="border-t border-white/10 p-5 text-right font-[var(--font-display)] text-3xl font-black">
+            <div className="border-t border-white/10 p-5 text-right font-[var(--font-display)] text-2xl font-black sm:text-3xl">
               Bilan: {formatEuros(totalProfit)} sur {visibleBets.length} paris (ROI: {roi >= 0 ? "+" : ""}
               {roi.toFixed(0)}%)
             </div>

@@ -708,7 +708,7 @@ export default function RaceChat({
               <button
                 type="submit"
                 disabled={sending || clampMessage(draft).length === 0}
-                className="rounded-lg bg-[#D4AF37] px-5 py-3 text-sm font-black text-[#0A0E1A] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full rounded-lg bg-[#D4AF37] px-5 py-3 text-sm font-black text-[#0A0E1A] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
               >
                 {sending ? "Envoi..." : "Envoyer"}
               </button>
@@ -724,7 +724,7 @@ export default function RaceChat({
             </p>
             <Link
               href="/premium"
-              className="mt-3 inline-flex rounded-lg bg-[#D4AF37] px-4 py-2 text-sm font-black text-[#0A0E1A]"
+              className="mt-3 inline-flex w-full justify-center rounded-lg bg-[#D4AF37] px-4 py-2 text-sm font-black text-[#0A0E1A] sm:w-auto"
             >
               Passer PRO
             </Link>
@@ -739,7 +739,7 @@ export default function RaceChat({
       </div>
 
       {toast ? (
-        <div className="fixed bottom-5 right-5 z-50 max-w-xs rounded-lg border border-[#D4AF37]/25 bg-[#101827] px-4 py-3 text-sm font-black text-[#F6F2E8] shadow-2xl shadow-black/40">
+        <div className="fixed bottom-4 left-4 right-4 z-50 rounded-lg border border-[#D4AF37]/25 bg-[#101827] px-4 py-3 text-sm font-black text-[#F6F2E8] shadow-2xl shadow-black/40 sm:bottom-5 sm:left-auto sm:right-5 sm:max-w-xs">
           {toast}
         </div>
       ) : null}
