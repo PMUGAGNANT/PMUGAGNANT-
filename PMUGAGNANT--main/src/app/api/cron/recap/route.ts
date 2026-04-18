@@ -1,28 +1,21 @@
-import { NextRequest, NextResponse } from "next/server";
-import { badRequest, serverError } from "@/lib/api-response";
-import { ensureCronAuthorized } from "@/lib/cron-auth";
-import { getTodayDateStr } from "@/lib/pmu-api";
+import { NextRequest } from "next/server";
+import { runCronRoute } from "@/lib/cron-execution";
 import { runDailyRecap } from "@/lib/daily-recap";
+import { getTodayDateStr } from "@/lib/pmu-api";
 import { normalizeRequestedDate } from "@/lib/request-utils";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export async function GET(request: NextRequest) {
-  const unauthorized = ensureCronAuthorized(request);
-  if (unauthorized) {
-    return unauthorized;
-  }
+  return runCronRoute(request, "/api/cron/recap", async () => {
+    const url = new URL(request.url);
+    const date = normalizeRequestedDate(url.searchParams.get("date"), getTodayDateStr());
 
-  const url = new URL(request.url);
-  const date = normalizeRequestedDate(url.searchParams.get("date"), getTodayDateStr());
-  if (!date) {
-    return badRequest("Invalid date format. Expected DDMMYYYY.");
-  }
+    if (!date) {
+      throw new Error("Invalid date format. Expected DDMMYYYY.");
+    }
 
-  try {
-    const summary = await runDailyRecap(date);
-    return NextResponse.json(summary);
-  } catch (error) {
-    return serverError("Daily recap cron failed", error, { date });
-  }
+    return runDailyRecap(date);
+  });
 }

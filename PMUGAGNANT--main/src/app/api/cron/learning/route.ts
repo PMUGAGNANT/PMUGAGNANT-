@@ -1,30 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
-import { ensureCronAuthorized } from "@/lib/cron-auth";
+import { NextRequest } from "next/server";
+import { runCronRoute } from "@/lib/cron-execution";
 import { runEngineLearning } from "@/lib/engine-learning";
-import { badRequest, serverError } from "@/lib/api-response";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export async function GET(request: NextRequest) {
-  const unauthorized = ensureCronAuthorized(request);
-  if (unauthorized) {
-    return unauthorized;
-  }
+  return runCronRoute(request, "/api/cron/learning", async () => {
+    const { searchParams } = new URL(request.url);
+    const dateRaw = searchParams.get("date");
+    const referenceDate = dateRaw ? new Date(dateRaw) : new Date();
 
-  const { searchParams } = new URL(request.url);
-  const dateRaw = searchParams.get("date");
+    if (Number.isNaN(referenceDate.getTime())) {
+      throw new Error("Invalid date parameter. Expected ISO date.");
+    }
 
-  const referenceDate = dateRaw ? new Date(dateRaw) : new Date();
-  if (Number.isNaN(referenceDate.getTime())) {
-    return badRequest("Invalid date parameter. Expected ISO date.");
-  }
-
-  try {
-    const result = await runEngineLearning(referenceDate);
-    return NextResponse.json(result);
-  } catch (error) {
-    return serverError("Learning cron failed", error, {
-      date: dateRaw ?? null,
-    });
-  }
+    return runEngineLearning(referenceDate);
+  });
 }

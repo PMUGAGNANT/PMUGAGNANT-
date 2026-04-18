@@ -1,6 +1,7 @@
-import { getTodayDateStr as getTodayDateStrFromUtils } from "@/lib/date-utils";
+import { getTodayDateStr as getTodayDateStrFromUtils, toIsoDate } from "@/lib/date-utils";
 import { isValidPmuDate } from "@/lib/request-utils";
 import { logger } from "@/lib/server-logger";
+import { getSupabaseAdminClient } from "@/lib/supabase";
 import type {
   LiveCourseSnapshot,
   Participant,
@@ -11,37 +12,80 @@ import type {
 const BASE_URL = "https://online.turfinfo.api.pmu.fr/rest/client/1";
 const REQUEST_TIMEOUT_MS = 12_000;
 const MAX_REVALIDATE_SECONDS = 300;
+const PMU_RETRY_ATTEMPTS = 3;
+
+class RetryablePmuError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RetryablePmuError";
+  }
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryablePmuError(error: unknown) {
+  return (
+    error instanceof RetryablePmuError ||
+    (error instanceof Error &&
+      (error.name === "AbortError" ||
+        error.message.includes("fetch failed") ||
+        error.message.includes("ECONNRESET") ||
+        error.message.includes("ETIMEDOUT")))
+  );
+}
 
 async function fetchPmuJson<T>(path: string, revalidate = 60): Promise<T> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let lastError: unknown = null;
 
-  try {
-    const response = await fetch(`${BASE_URL}${path}`, {
-      next: { revalidate: Math.max(0, Math.min(MAX_REVALIDATE_SECONDS, revalidate)) },
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "pmu-ai-v92/1.0",
-      },
-      signal: controller.signal,
-    } as RequestInit);
+  for (let attempt = 1; attempt <= PMU_RETRY_ATTEMPTS; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-    if (!response.ok) {
-      throw new Error(`PMU API error: ${response.status} ${response.statusText} (${path})`);
+    try {
+      const response = await fetch(`${BASE_URL}${path}`, {
+        next: { revalidate: Math.max(0, Math.min(MAX_REVALIDATE_SECONDS, revalidate)) },
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "pmu-ai-v92/1.0",
+        },
+        signal: controller.signal,
+      } as RequestInit);
+
+      if (!response.ok) {
+        const message = `PMU API error: ${response.status} ${response.statusText} (${path})`;
+        if (response.status === 429 || response.status >= 500) {
+          throw new RetryablePmuError(message);
+        }
+        throw new Error(message);
+      }
+
+      const text = await response.text();
+      if (!text.trim()) {
+        return {} as T;
+      }
+
+      return JSON.parse(text) as T;
+    } catch (error) {
+      lastError = error;
+      if (attempt >= PMU_RETRY_ATTEMPTS || !isRetryablePmuError(error)) {
+        logger.error("pmu_api.fetch_failed", error, { path, attempt });
+        throw error;
+      }
+
+      logger.warn("pmu_api.fetch_retry", {
+        path,
+        attempt,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      await sleep(300 * attempt);
+    } finally {
+      clearTimeout(timeout);
     }
-
-    const text = await response.text();
-    if (!text.trim()) {
-      return {} as T;
-    }
-
-    return JSON.parse(text) as T;
-  } catch (error) {
-    logger.error("pmu_api.fetch_failed", error, { path });
-    throw error;
-  } finally {
-    clearTimeout(timeout);
   }
+
+  throw lastError instanceof Error ? lastError : new Error(`PMU API error (${path})`);
 }
 
 function toParisHour(ms?: number | null) {
@@ -321,13 +365,141 @@ export function isEligiblePmuFranceRace(race: Pick<RaceSummary, "pays"> | null |
   return String(race?.pays ?? "").toUpperCase() === "FRA";
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+}
+
+function asNumber(value: unknown, fallback = 0) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function asNullableNumber(value: unknown) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function asString(value: unknown, fallback = "") {
+  return typeof value === "string" ? value : fallback;
+}
+
+async function getStoredRaces(dateStr: string): Promise<RaceSummary[]> {
+  const admin = getSupabaseAdminClient();
+  if (!admin) {
+    return [];
+  }
+
+  const isoDate = toIsoDate(dateStr);
+  const { data, error } = await admin
+    .from("races")
+    .select("*")
+    .eq("race_date", isoDate)
+    .order("heure_depart", { ascending: true });
+
+  if (error) {
+    logger.warn("pmu_api.fallback_races_unavailable", { error: error.message, dateStr });
+    return [];
+  }
+
+  return ((data ?? []) as unknown[]).map((row) => {
+    const record = asRecord(row);
+    const discipline = asString(record.discipline);
+    return {
+      dateStr,
+      reunion: asNumber(record.reunion),
+      course: asNumber(record.course),
+      hippodrome: asString(record.hippodrome),
+      pays: asString(record.pays, "FRA"),
+      nomCourse: asString(record.nom_course),
+      heureDepart: asString(record.heure_depart),
+      discipline,
+      estTrot: Boolean(record.est_trot) || discipline.includes("TROT"),
+      estPlat: Boolean(record.est_plat) || discipline === "PLAT",
+      estQuinte: Boolean(record.est_quinte),
+      allocation: asNumber(record.allocation),
+      distance: asNumber(record.distance),
+      nombrePartants: asNumber(record.nombre_partants),
+      terrain: asString(record.terrain, "") || null,
+      meteo: asString(record.meteo, "") || null,
+    };
+  });
+}
+
+async function getStoredParticipants(
+  dateStr: string,
+  reunion: number,
+  course: number
+): Promise<Participant[]> {
+  const admin = getSupabaseAdminClient();
+  if (!admin) {
+    return [];
+  }
+
+  const { data, error } = await admin
+    .from("runners")
+    .select("*")
+    .eq("race_date", toIsoDate(dateStr))
+    .eq("reunion", reunion)
+    .eq("course", course)
+    .order("cheval_num", { ascending: true });
+
+  if (error) {
+    logger.warn("pmu_api.fallback_runners_unavailable", {
+      error: error.message,
+      dateStr,
+      reunion,
+      course,
+    });
+    return [];
+  }
+
+  return ((data ?? []) as unknown[]).map((row) => {
+    const record = asRecord(row);
+    return {
+      numPmu: asNumber(record.cheval_num),
+      nom: asString(record.cheval_nom),
+      driver: asString(record.driver),
+      entraineur: asString(record.entraineur),
+      jockey: asString(record.jockey),
+      age: asNumber(record.age),
+      sexe: asString(record.sexe),
+      cote: asNullableNumber(record.cote),
+      coteMatin: asNullableNumber(record.cote_matin),
+      coteDepart: asNullableNumber(record.cote),
+      musique: asString(record.musique),
+      nombreCourses: 0,
+      nombreVictoires: 0,
+      nombrePlaces: 0,
+      gainCarriere: 0,
+      nombreSuiveurs: 0,
+      ordreArrivee: null,
+      statut: asString(record.statut, "PARTANT"),
+      nonPartant: Boolean(record.non_partant),
+    };
+  });
+}
+
 export async function getAllRaces(dateStr?: string): Promise<RaceSummary[]> {
   const date = dateStr ?? getTodayDateStr();
   if (!isValidPmuDate(date)) {
     throw new Error(`Invalid PMU date format: ${date}`);
   }
 
-  const data = await fetchPmuJson<Record<string, unknown>>(`/programme/${date}`);
+  let data: Record<string, unknown>;
+  try {
+    data = await fetchPmuJson<Record<string, unknown>>(`/programme/${date}`);
+  } catch (error) {
+    const fallback = await getStoredRaces(date);
+    if (fallback.length > 0) {
+      logger.warn("pmu_api.programme_fallback_supabase", {
+        date,
+        races: fallback.length,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return fallback;
+    }
+    throw error;
+  }
   const reunions = ((data.programme as Record<string, unknown> | undefined)?.reunions ??
     []) as Record<string, unknown>[];
 
@@ -395,9 +567,25 @@ export async function getParticipants(
     throw new Error(`Invalid race identifier: R${reunion}C${course}`);
   }
 
-  const data = await fetchPmuJson<Record<string, unknown>>(
-    `/programme/${dateStr}/R${reunion}/C${course}/participants`
-  );
+  let data: Record<string, unknown>;
+  try {
+    data = await fetchPmuJson<Record<string, unknown>>(
+      `/programme/${dateStr}/R${reunion}/C${course}/participants`
+    );
+  } catch (error) {
+    const fallback = await getStoredParticipants(dateStr, reunion, course);
+    if (fallback.length > 0) {
+      logger.warn("pmu_api.participants_fallback_supabase", {
+        dateStr,
+        reunion,
+        course,
+        runners: fallback.length,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return fallback;
+    }
+    throw error;
+  }
   const participants = ((data.participants ?? []) as Record<string, unknown>[])
     .filter((participant) => String(participant.statut ?? "PARTANT") !== "SUPPRIME")
     .map(mapParticipant);
