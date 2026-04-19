@@ -510,6 +510,7 @@ export interface RunnerScoreSnapshotRow {
   cheval_num: number;
   score_expert: number;
   score_v10?: number | null;
+  score_v10_1?: number | null;
   score_lisibilite_adjusted: number;
   proba_raw?: number | null;
   proba_calibrated?: number | null;

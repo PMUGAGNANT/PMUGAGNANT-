@@ -31,6 +31,7 @@ export interface ScoringV10CourseRow {
   hippodrome: string;
   discipline: string;
   distance: number | null;
+  terrain?: string | null;
 }
 
 export interface ScoringV10OutcomeRow {
@@ -63,6 +64,7 @@ export interface ScoringV10HistoryEntry {
   hippodrome: string;
   discipline: string;
   distance: number | null;
+  terrain: string | null;
   ordreArrivee: number | null;
   gagnant: boolean;
   place: boolean;
@@ -229,7 +231,7 @@ export async function loadScoringV10History(dateStr: string): Promise<ScoringV10
       fetchPaged<ScoringV10CourseRow>(async (from, to) =>
         admin
           .from("courses")
-          .select("date,reunion,course,hippodrome,discipline,distance")
+          .select("date,reunion,course,hippodrome,discipline,distance,terrain")
           .gte("date", startIso)
           .lt("date", endIso)
           .range(from, to)
@@ -306,6 +308,7 @@ export function buildScoringV10History(
         jockey: getFeatureJockey(feature),
         hippodrome: course.hippodrome,
         discipline: course.discipline,
+        terrain: course.terrain ?? null,
         distance:
           typeof course.distance === "number" && Number.isFinite(course.distance)
             ? course.distance

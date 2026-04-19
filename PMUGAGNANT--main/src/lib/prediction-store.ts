@@ -1,6 +1,7 @@
 import { toIsoDate } from "@/lib/date-utils";
 import { ENGINE_V6_VERSION, getEngineConfigVersion, getRaceSegmentKey } from "@/lib/engine-v6";
 import type { ScoreV10Breakdown } from "@/lib/predictions/scoring-v10";
+import type { ScoreV101Breakdown } from "@/lib/predictions/scoring-v10-1";
 import type { RaceRoleV10Selection } from "@/lib/predictions/roles-v10";
 import { logger } from "@/lib/server-logger";
 import { getSupabaseAdminClient, getSupabaseAdminConfigError } from "@/lib/supabase";
@@ -305,6 +306,8 @@ export function buildRunnerScoreSnapshots(
   v10?: {
     scores?: ScoreV10Breakdown[];
     roles?: RaceRoleV10Selection[];
+    scoresV101?: ScoreV101Breakdown[];
+    rolesV101?: RaceRoleV10Selection[];
   }
 ): RunnerScoreSnapshotRow[] {
   const createdAt = nowIso();
@@ -317,18 +320,27 @@ export function buildRunnerScoreSnapshots(
   const v10RoleByHorse = new Map(
     (v10?.roles ?? []).map((role) => [role.chevalNum, role] as const)
   );
+  const v101ByHorse = new Map(
+    (v10?.scoresV101 ?? []).map((score) => [score.chevalNum, score] as const)
+  );
+  const v101RoleByHorse = new Map(
+    (v10?.rolesV101 ?? []).map((role) => [role.chevalNum, role] as const)
+  );
 
   return rows.map((row) => {
     const runner = rankedByHorse.get(row.cheval_num);
     const value = analysis.valueTop5[row.cheval_num];
     const v10Score = v10ByHorse.get(row.cheval_num);
     const v10Role = v10RoleByHorse.get(row.cheval_num);
+    const v101Score = v101ByHorse.get(row.cheval_num);
+    const v101Role = v101RoleByHorse.get(row.cheval_num);
     const reasonCodes = uniqReasonCodes([
       row.decision,
       row.pari_conseille ?? "PLACE",
       row.lisibilite,
       row.outsider ? "OUTSIDER" : "",
       v10Role ? `V10_${v10Role.role}` : "",
+      v101Role ? `V101_${v101Role.role}` : "",
       ...(runner?.prediction.topFacteurs ?? []).map((factor) =>
         factor
           .normalize("NFD")
@@ -344,6 +356,7 @@ export function buildRunnerScoreSnapshots(
       cheval_num: row.cheval_num,
       score_expert: row.score_cheval,
       score_v10: v10Score?.scoreV10 ?? null,
+      score_v10_1: v101Score?.scoreV101 ?? null,
       score_lisibilite_adjusted: row.score_final_pari ?? row.score_cheval,
       proba_raw: runner?.prediction.probaEstimee ?? null,
       proba_calibrated: runner?.prediction.probaEstimee ?? null,
@@ -390,6 +403,30 @@ export function buildRunnerScoreSnapshots(
               jockeySample: v10Score.jockeySample,
               distanceSample: v10Score.distanceSample,
               distanceTop3: v10Score.distanceTop3,
+          }
+          : null,
+        v101: v101Score
+          ? {
+              score: v101Score.scoreV101,
+              decision: v101Score.decisionV101,
+              role: v101Role?.role ?? null,
+              roleLabel: v101Role?.label ?? null,
+              roleEmoji: v101Role?.emoji ?? null,
+              betType: v101Role?.betType ?? row.pari_conseille ?? null,
+              criteria: {
+                forme: v101Score.scoreC1,
+                value: v101Score.scoreC2,
+                jockeyHippodrome: v101Score.scoreC3,
+                distance: v101Score.scoreC4,
+              },
+              weightsApplied: v101Score.weightsApplied,
+              hippodromeWeightKey: v101Score.hippodromeWeightKey,
+              temporal: v101Score.temporal,
+              terrainEffect: v101Score.terrainEffect,
+              jockeyMomentum: v101Score.jockeyMomentum,
+              crowdEffect: v101Score.crowdEffect,
+              crowdRatio: v101Score.crowdRatio,
+              trackMemory: v101Score.trackMemory,
             }
           : null,
       },
@@ -532,6 +569,7 @@ export async function upsertRunnerScoreSnapshots(rows: RunnerScoreSnapshotRow[])
       const rowsWithoutScoreV10 = rows.map((row) => {
         const rowWithoutScoreV10 = { ...row };
         delete rowWithoutScoreV10.score_v10;
+        delete rowWithoutScoreV10.score_v10_1;
         return rowWithoutScoreV10;
       });
       const { error: fallbackError } = await admin

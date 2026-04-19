@@ -45,9 +45,19 @@ import {
   type ScoringV10History,
 } from "@/lib/predictions/scoring-v10";
 import {
+  computeRaceScoresV101,
+  loadScoringV101Config,
+  type ScoreV101Breakdown,
+  type ScoringV101Config,
+} from "@/lib/predictions/scoring-v10-1";
+import {
   selectRaceRolesV10,
   type RaceRoleV10Selection,
 } from "@/lib/predictions/roles-v10";
+import {
+  formatScoringV101AutoLearningTelegram,
+  runScoringV101AutoLearning,
+} from "@/lib/predictions/auto-learning";
 import { loadElitePerformers } from "@/lib/predictions/signals";
 import {
   formatMorningTelegram,
@@ -75,6 +85,8 @@ interface ProcessedRace {
   rows: PredictionRow[];
   v10Scores: ScoreV10Breakdown[];
   v10Roles: RaceRoleV10Selection[];
+  v101Scores: ScoreV101Breakdown[];
+  v101Roles: RaceRoleV10Selection[];
   instrumentation: {
     runId: string;
     featureSnapshots: ReturnType<typeof buildRunnerFeatureSnapshots>;
@@ -92,6 +104,7 @@ interface SelectionAlert {
   decision: PredictionDecision;
   heureDepart: string;
   rolesV10: RaceRoleV10Selection[];
+  rolesV101: RaceRoleV10Selection[];
 }
 
 interface PreRaceAlert {
@@ -306,7 +319,8 @@ async function processRace(
   race: RaceSummary,
   parameters: AlgoParameters,
   stage: "MATIN" | "T10" | "RESULTAT",
-  v10History: ScoringV10History
+  v10History: ScoringV10History,
+  v101Config: ScoringV101Config
 ): Promise<ProcessedRace> {
   const participants = await attachFaultRates(
     await getParticipants(dateStr, race.reunion, race.course)
@@ -328,7 +342,20 @@ async function processRace(
       Promise.resolve().then(() => analyzeRaceWithParameters(race, participants, parameters)),
       Promise.resolve().then(() => computeRaceScoresV10(race, participants, v10History)),
     ]);
+    const probaByHorse = new Map(
+      analysis.ranking.map(
+        (runner) => [runner.numPmu, runner.prediction.probaEstimee] as const
+      )
+    );
+    const v101Scores = computeRaceScoresV101(
+      race,
+      participants,
+      v10History,
+      v101Config,
+      probaByHorse
+    );
     const v10Roles = selectRaceRolesV10(v10Scores);
+    const v101Roles = selectRaceRolesV10(v101Scores);
     const rows = buildPredictionRows(dateStr, race, analysis, stage);
 
     return {
@@ -338,6 +365,8 @@ async function processRace(
       rows,
       v10Scores,
       v10Roles,
+      v101Scores,
+      v101Roles,
       instrumentation: {
         runId,
         featureSnapshots: buildRunnerFeatureSnapshots(
@@ -380,6 +409,7 @@ function getPrimarySelection(processed: ProcessedRace): SelectionAlert | null {
     decision: primary.decision,
     heureDepart: processed.race.heureDepart,
     rolesV10: processed.v10Roles,
+    rolesV101: processed.v101Roles,
   };
 }
 
@@ -426,6 +456,8 @@ async function persistProcessedRace(
       buildRunnerScoreSnapshots(processed.instrumentation.runId, rows, processed.analysis, {
         scores: processed.v10Scores,
         roles: processed.v10Roles,
+        scoresV101: processed.v101Scores,
+        rolesV101: processed.v101Roles,
       })
     );
 
@@ -627,10 +659,20 @@ function settlePredictionRow(
 
 export async function runMorningAnalysis(dateStr: string) {
   const parameters = await loadAlgoParameters();
-  const v10History = await loadScoringV10History(dateStr);
+  const [v10History, v101Config] = await Promise.all([
+    loadScoringV10History(dateStr),
+    loadScoringV101Config(),
+  ]);
   const races = await getAllRaces(dateStr);
   const processed = await processInBatches(races, async (race) => {
-    const current = await processRace(dateStr, race, parameters, "MATIN", v10History);
+    const current = await processRace(
+      dateStr,
+      race,
+      parameters,
+      "MATIN",
+      v10History,
+      v101Config
+    );
     await persistProcessedRace(dateStr, current, current.rows);
     return current;
   });
@@ -666,7 +708,10 @@ export async function runPreRaceSecondPass(
   options: RangeOptions = {}
 ) {
   const parameters = await loadAlgoParameters();
-  const v10History = await loadScoringV10History(dateStr);
+  const [v10History, v101Config] = await Promise.all([
+    loadScoringV10History(dateStr),
+    loadScoringV101Config(),
+  ]);
   const explicitTarget =
     (options.reunion !== null && options.reunion !== undefined) ||
     (options.course !== null && options.course !== undefined);
@@ -695,7 +740,14 @@ export async function runPreRaceSecondPass(
 
   const processed = await processInBatches(races, async (race) => {
     const baselineRows = await getRacePredictions(dateStr, race.reunion, race.course);
-    const current = await processRace(dateStr, race, parameters, "T10", v10History);
+    const current = await processRace(
+      dateStr,
+      race,
+      parameters,
+      "T10",
+      v10History,
+      v101Config
+    );
     const { updatedRows, alerts } = applyPreRaceSecondPass(
       current.rows,
       baselineRows,
@@ -759,7 +811,10 @@ export async function runPreRaceSecondPass(
 
 export async function runResultSync(dateStr: string, options: RangeOptions = {}) {
   const parameters = await loadAlgoParameters();
-  const v10History = await loadScoringV10History(dateStr);
+  const [v10History, v101Config] = await Promise.all([
+    loadScoringV10History(dateStr),
+    loadScoringV101Config(),
+  ]);
   const explicitTarget =
     (options.reunion !== null && options.reunion !== undefined) ||
     (options.course !== null && options.course !== undefined);
@@ -782,7 +837,14 @@ export async function runResultSync(dateStr: string, options: RangeOptions = {})
     : scheduledRaces.filter((entry) => entry.refresh.due).map((entry) => entry.race);
 
   const processed = await processInBatches(races, async (race) => {
-    const current = await processRace(dateStr, race, parameters, "RESULTAT", v10History);
+    const current = await processRace(
+      dateStr,
+      race,
+      parameters,
+      "RESULTAT",
+      v10History,
+      v101Config
+    );
     const baselineRows = await getRacePredictions(dateStr, race.reunion, race.course);
     const reports = await getFinalReports(dateStr, race.reunion, race.course);
     const participantByHorse = new Map(
@@ -813,6 +875,18 @@ export async function runResultSync(dateStr: string, options: RangeOptions = {})
     };
   });
 
+  let autoLearning: Awaited<ReturnType<typeof runScoringV101AutoLearning>> | null = null;
+  if (processed.length > 0) {
+    try {
+      autoLearning = await runScoringV101AutoLearning(dateStr);
+      if (isTelegramConfigured() && autoLearning.results.length > 0) {
+        await sendTelegramMessage(formatScoringV101AutoLearningTelegram(autoLearning.results));
+      }
+    } catch (error) {
+      logger.error("scoring_v10_1.auto_learning_after_results_failed", error, { dateStr });
+    }
+  }
+
   return {
     success: true,
     date: dateStr,
@@ -829,5 +903,6 @@ export async function runResultSync(dateStr: string, options: RangeOptions = {})
       ? Math.max(candidateRaces.length - races.length, 0)
       : scheduledRaces.filter((entry) => !entry.refresh.due).length,
     settledPredictions: processed.reduce((sum, race) => sum + race.settledRows.length, 0),
+    autoLearning,
   };
 }

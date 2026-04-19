@@ -150,7 +150,7 @@ function isRaceRoleV10(value: unknown): value is RaceRoleV10Key {
 
 function getSnapshotV10(snapshot: RunnerScoreSnapshotRow | undefined) {
   const payload = getRecord(snapshot?.blend_payload);
-  const v10 = getRecord(payload?.v10);
+  const v10 = getRecord(payload?.v101) ?? getRecord(payload?.v10);
   const criteria = getRecord(v10?.criteria);
   const market = getRecord(payload?.market);
   const role = v10?.role;
@@ -159,7 +159,7 @@ function getSnapshotV10(snapshot: RunnerScoreSnapshotRow | undefined) {
     betType === "GAGNANT" || betType === "PLACE" ? betType : null;
 
   return {
-    score: firstFiniteNumber(snapshot?.score_v10, getUnknownNumber(v10?.score)),
+    score: firstFiniteNumber(snapshot?.score_v10_1, getUnknownNumber(v10?.score), snapshot?.score_v10),
     role: isRaceRoleV10(role) ? role : null,
     betType: parsedBetType,
     criteria: {

@@ -147,6 +147,7 @@ export function formatMorningTelegram(
     decision: string;
     heureDepart?: string;
     rolesV10?: RaceRoleV10Selection[];
+    rolesV101?: RaceRoleV10Selection[];
   }>
 ) {
   const header = [`PMU Gagnant`, `Analyse du matin ${date}`];
@@ -155,11 +156,12 @@ export function formatMorningTelegram(
   }
 
   const lines = rows.slice(0, 10).flatMap((row) => {
-    if (row.rolesV10 && row.rolesV10.length > 0) {
+    const roles = row.rolesV101 && row.rolesV101.length > 0 ? row.rolesV101 : row.rolesV10;
+    if (roles && roles.length > 0) {
       return [
         `🏇 ${row.hippodrome.toUpperCase()} R${row.reunion}C${row.course} — ${row.heureDepart ?? ""}`.trim(),
         "━━━━━━━━━━━━━━━━━━━━",
-        ...row.rolesV10.map(formatRoleV10Telegram),
+        ...roles.map(formatRoleV10Telegram),
         "━━━━━━━━━━━━━━━━━━━━",
       ];
     }
