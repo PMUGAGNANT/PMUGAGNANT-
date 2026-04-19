@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import DashboardHeaderAccount from "@/components/dashboard/DashboardHeaderAccount";
+import PMUDashboard from "@/components/dashboard/PMUDashboard";
 import CountdownTimer from "@/components/race/CountdownTimer";
 import DashboardBestRaceRedirect from "@/components/race/DashboardBestRaceRedirect";
 import ScoreGauge from "@/components/ui/ScoreGauge";
@@ -94,7 +95,6 @@ function matchesDashboardFilter(item: DashboardRace, filter: DashboardFilter) {
   if (filter === "COUPLE") {
     return item.raceType === "COUPLE" || (!item.race.estQuinte && item.race.nombrePartants >= 6);
   }
-
   return item.raceType === "TIERCE" || item.race.nombrePartants >= 8;
 }
 
@@ -112,7 +112,6 @@ function groupPredictionsByRace(rows: PredictionRow[]) {
     current.push(row);
     map.set(key, current);
   }
-
   return map;
 }
 
@@ -122,7 +121,6 @@ function getRaceStatus(race: RaceSummary, predictions: PredictionRow[]) {
     (prediction) =>
       prediction.resultat_gagnant !== null || prediction.resultat_place !== null
   );
-
   return getVmaxRaceStatus(finished ? "finished" : null, minutesUntilStart);
 }
 
@@ -142,7 +140,6 @@ function getTopNumbers(predictions: PredictionRow[]) {
     })
     .map((prediction) => prediction.cheval_num)
     .filter((value) => Number.isFinite(value));
-
   return numbers.slice(0, 3);
 }
 
@@ -152,14 +149,12 @@ function buildDashboardRaces(
   searchTextByRace: Map<string, string>
 ) {
   const byRace = groupPredictionsByRace(predictions);
-
   return races.map((race) => {
     const raceKey = getRaceKeyFromSummary(race);
     const racePredictions = byRace.get(raceKey) ?? [];
     const predictionText = racePredictions
       .map((prediction) => prediction.cheval_nom)
       .join(" ");
-
     return {
       race,
       predictions: racePredictions,
@@ -179,7 +174,6 @@ function buildDashboardRaces(
 function getHeroRace(items: DashboardRace[]) {
   const quinte = items.find((item) => item.race.estQuinte && item.status !== "finished");
   if (quinte) return quinte;
-
   return [...items].sort((left, right) => right.confidence - left.confidence)[0] ?? null;
 }
 
@@ -221,22 +215,14 @@ function getSelectionScore(row: PredictionRow) {
 
 function getSelectedPredictions(rows: PredictionRow[]) {
   const byRace = new Map<string, PredictionRow[]>();
-
   for (const row of rows) {
-    if (row.stage !== "RESULTAT" || row.decision === "REJET" || row.non_partant) {
-      continue;
-    }
-
-    if ((row.mise_simulee ?? 0) <= 0) {
-      continue;
-    }
-
+    if (row.stage !== "RESULTAT" || row.decision === "REJET" || row.non_partant) continue;
+    if ((row.mise_simulee ?? 0) <= 0) continue;
     const key = getRaceKey(row);
     const raceRows = byRace.get(key) ?? [];
     raceRows.push(row);
     byRace.set(key, raceRows);
   }
-
   return [...byRace.values()].flatMap((raceRows) => {
     const selected =
       [...raceRows].sort((left, right) => {
@@ -244,7 +230,6 @@ function getSelectedPredictions(rows: PredictionRow[]) {
         if (priorityDiff !== 0) return priorityDiff;
         return getSelectionScore(right) - getSelectionScore(left);
       })[0] ?? null;
-
     return selected ? [selected] : [];
   });
 }
@@ -252,13 +237,11 @@ function getSelectedPredictions(rows: PredictionRow[]) {
 function getRealGain(row: PredictionRow, outcome: RunnerOutcomeRow) {
   const stake = row.mise_simulee ?? 0;
   const betType = row.pari_conseille ?? "GAGNANT";
-
   if (betType === "PLACE") {
     if (!outcome.resultat_place) return 0;
     const placeReport = outcome.rapport_place ?? row.rapport_place ?? null;
     return placeReport !== null ? stake * placeReport : row.gain_simule ?? 0;
   }
-
   if (!outcome.resultat_gagnant) return 0;
   const winReport = outcome.rapport_gagnant ?? row.rapport_gagnant ?? null;
   return winReport !== null ? stake * winReport : row.gain_simule ?? 0;
@@ -273,17 +256,13 @@ function getRoiFromOfficialOutcomes(
   );
   const settled = getSelectedPredictions(predictions).flatMap((row) => {
     const outcome = outcomesByRunner.get(getRunnerKey(row));
-    if (!outcome || outcome.non_partant) {
-      return [];
-    }
-
+    if (!outcome || outcome.non_partant) return [];
     const stake = row.mise_simulee ?? 0;
     const gain = getRealGain(row, outcome);
     return [{ stake, gain }];
   });
   const stake = settled.reduce((sum, row) => sum + row.stake, 0);
   const gain = settled.reduce((sum, row) => sum + row.gain, 0);
-
   if (stake <= 0) return 34.7;
   return ((gain - stake) / stake) * 100;
 }
@@ -301,7 +280,6 @@ function Sparkline({ values }: { values: number[] }) {
       return `${x},${y}`;
     })
     .join(" ");
-
   return (
     <svg className="mt-4 h-16 w-full" viewBox={`0 0 ${width} ${height}`} aria-hidden>
       <polyline
@@ -322,21 +300,14 @@ async function loadRaceSearchText(date: string, races: RaceSummary[]) {
       const participants = await getParticipants(date, race.reunion, race.course);
       const text = participants
         .map((participant) =>
-          [
-            participant.nom,
-            participant.jockey,
-            participant.driver,
-            participant.entraineur,
-          ]
+          [participant.nom, participant.jockey, participant.driver, participant.entraineur]
             .filter(Boolean)
             .join(" ")
         )
         .join(" ");
-
       return [getRaceKeyFromSummary(race), text] as const;
     })
   );
-
   return new Map(
     entries.flatMap((entry) => (entry.status === "fulfilled" ? [entry.value] : []))
   );
@@ -360,13 +331,7 @@ async function loadDashboardData() {
     start.toISOString().slice(0, 10),
     now.toISOString().slice(0, 10)
   ).catch(() => []);
-
-  return {
-    date,
-    races: buildDashboardRaces(races, predictions, searchTextByRace),
-    history,
-    outcomes,
-  };
+  return { date, races: buildDashboardRaces(races, predictions, searchTextByRace), history, outcomes };
 }
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
@@ -413,6 +378,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-[#F6F2E8]">
       <DashboardBestRaceRedirect href={heroHref} />
+
+      {/* ── HEADER ── */}
       <header className="sticky top-0 z-50 grid grid-cols-[1fr_auto] items-center gap-4 border-b border-[#D4AF37]/15 bg-[#0A0E1A]/90 px-4 py-3 backdrop-blur-xl md:grid-cols-[auto_auto_1fr_auto] md:px-8">
         <Link
           href="/dashboard"
@@ -429,13 +396,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         >
           ● LIVE
         </span>
-        <nav aria-hidden="true" className="hidden">
-          {["Quinté", "Couplé", "Tiercé", "Value Bets", "Stats"].map((item) => (
-            <a href={`#${item.toLowerCase().replaceAll(" ", "-")}`} key={item}>
-              {item}
-            </a>
-          ))}
-        </nav>
         <nav className="col-span-2 flex gap-2 overflow-x-auto text-sm font-bold text-slate-400 md:col-span-1 md:justify-center">
           {navItems.map((item) => (
             <Link
@@ -451,17 +411,15 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </Link>
           ))}
         </nav>
-        <div className="hidden">
-          <span className="rounded-full border border-[#D4AF37]/35 bg-[#D4AF37]/10 px-2 py-1 font-[var(--font-display)] text-sm font-black text-[#D4AF37]">
-            PRO
-          </span>
-          <div className="grid aspect-square w-9 place-items-center rounded-full bg-[#D4AF37] font-[var(--font-display)] font-black text-[#0A0E1A]">
-            JG
-          </div>
-        </div>
         <DashboardHeaderAccount />
       </header>
 
+      {/* ── PMU DASHBOARD PREMIUM ── */}
+      <div className="mx-auto w-full max-w-[900px] px-4 py-8">
+        <PMUDashboard />
+      </div>
+
+      {/* ── MAIN ── */}
       <main className="mx-auto grid w-full max-w-[92rem] gap-5 px-4 py-5 lg:grid-cols-[1fr_21rem] lg:px-6">
         <section className="grid gap-5">
           <form
@@ -630,9 +588,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <div className="grid grid-cols-[4.4rem_1fr_2.4rem] items-center gap-3" key={item.label}>
                   <span className="text-xs font-black text-slate-400">{item.label}</span>
                   <i className="h-2 overflow-hidden rounded-full bg-white/10">
-                    <b
-                      className={`block h-full rounded-full bg-gradient-to-r from-[#00C851] to-[#D4AF37] ${item.widthClass}`}
-                    />
+                    <b className={`block h-full rounded-full bg-gradient-to-r from-[#00C851] to-[#D4AF37] ${item.widthClass}`} />
                   </i>
                   <em className="text-right text-xs font-black not-italic text-slate-400">
                     {item.value}%
