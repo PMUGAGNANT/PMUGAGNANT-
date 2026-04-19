@@ -432,7 +432,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
       {/* ── PMU DASHBOARD PREMIUM ── */}
       <div className="mx-auto w-full max-w-[900px] px-4 py-8">
-        <PMUDashboard />
+        <PMUDashboard
+          race={hero?.race ?? null}
+          predictions={hero?.predictions ?? []}
+          roiMois={roi}
+          tauxReussite={successRates[0]?.value ?? 64}
+          nbPronostics={history.length}
+          bankroll={600}
+          miseConseillee={hero?.predictions[0]?.mise_simulee ?? 10}
+          algoVersion="9.2"
+        />
       </div>
 
       {/* ── MAIN ── */}
