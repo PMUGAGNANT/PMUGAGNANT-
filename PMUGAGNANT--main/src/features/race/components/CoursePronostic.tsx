@@ -79,10 +79,12 @@ function normalizeBetCode(value?: string | null): "GAGNANT" | "PLACE" {
 
 function getVisibleStake(pronostic: PronosticCardData, betType: string, confidence: number) {
   const explicitStake = pronostic.miseConseil;
-  if (typeof explicitStake === "number" && Number.isFinite(explicitStake) && explicitStake > 0) {
-    return explicitStake;
+  if (typeof explicitStake === "number" && Number.isFinite(explicitStake)) {
+    // Algo computed a stake: use it whether positive (bet) or 0 (REJET – don't override).
+    if (explicitStake >= 0) return explicitStake;
   }
 
+  // Fallback when the algo hasn't provided a stake (null / undefined).
   const normalizedBetType = normalizeKey(betType);
   if (normalizedBetType.includes("gagnant") && confidence >= 7) {
     return 10;
