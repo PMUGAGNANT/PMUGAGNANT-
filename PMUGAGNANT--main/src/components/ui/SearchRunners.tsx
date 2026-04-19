@@ -3,7 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type SearchRunnerType = "jockey" | "driver" | "entraineur" | "cheval";
+type SearchRunnerType = "numero" | "jockey" | "driver" | "entraineur" | "cheval" | "hippodrome";
 
 type SearchRunnerEntry = {
   reunion: number;
@@ -45,17 +45,21 @@ type KeyboardOption =
 const POPULAR_SEARCHES = ["Bazire", "Abrivard", "Nivard", "Lemaire", "Soumillon"];
 
 const TYPE_LABELS: Record<SearchRunnerType, string> = {
+  numero: "Numéro PMU",
   jockey: "Jockey",
   driver: "Driver",
   entraineur: "Entraîneur",
   cheval: "Cheval",
+  hippodrome: "Hippodrome",
 };
 
 const TYPE_EMOJIS: Record<SearchRunnerType, string> = {
+  numero: "No",
   jockey: "🏇",
   driver: "🏇",
   entraineur: "🎯",
   cheval: "🐎",
+  hippodrome: "🏟",
 };
 
 function getOddsTone(cote: number | null) {
@@ -123,8 +127,9 @@ export function SearchRunners({ dateStr }: SearchRunnersProps) {
   useEffect(() => {
     abortRef.current?.abort();
 
+    const isNumericQuery = /^\d+$/.test(debouncedQuery);
     const requestKey =
-      debouncedQuery.length >= 2 ? `${dateStr}:${debouncedQuery}` : "";
+      debouncedQuery.length >= 2 || isNumericQuery ? `${dateStr}:${debouncedQuery}` : "";
 
     if (!requestKey) {
       return;
@@ -166,10 +171,12 @@ export function SearchRunners({ dateStr }: SearchRunnersProps) {
   }, [dateStr, debouncedQuery]);
 
   const loading =
-    debouncedQuery.length >= 2 && resolvedRequestKey !== `${dateStr}:${debouncedQuery}`;
+    (debouncedQuery.length >= 2 || /^\d+$/.test(debouncedQuery)) &&
+    resolvedRequestKey !== `${dateStr}:${debouncedQuery}`;
 
   const keyboardOptions = useMemo<KeyboardOption[]>(() => {
-    if (query.trim().length >= 2) {
+    const trimmed = query.trim();
+    if (trimmed.length >= 2 || /^\d+$/.test(trimmed)) {
       return results.flatMap((group) =>
         group.entries.map((entry) => ({
           kind: "entry" as const,
@@ -186,7 +193,8 @@ export function SearchRunners({ dateStr }: SearchRunnersProps) {
   }, [query, results]);
 
   const showSuggestions = focused && query.trim().length === 0;
-  const showResults = open && focused && (query.trim().length >= 2 || showSuggestions || loading || !!error);
+  const isNumericQuery = /^\d+$/.test(query.trim());
+  const showResults = open && focused && (query.trim().length >= 2 || isNumericQuery || showSuggestions || loading || !!error);
 
   function goToEntry(entry: SearchRunnerEntry) {
     setOpen(false);
@@ -278,7 +286,7 @@ export function SearchRunners({ dateStr }: SearchRunnersProps) {
           <div>
             <h2 className="app-section-title">Qui court aujourd’hui ?</h2>
             <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">
-              Trouve un jockey, un driver, un entraîneur ou un cheval et ouvre directement la bonne course du jour.
+              Trouve un jockey, un driver, un entraîneur, un cheval ou un hippodrome et ouvre directement la bonne course du jour.
             </p>
           </div>
         </div>
@@ -299,7 +307,7 @@ export function SearchRunners({ dateStr }: SearchRunnersProps) {
               value={query}
               autoComplete="off"
               spellCheck={false}
-              placeholder="Rechercher un jockey, entraîneur ou cheval..."
+              placeholder="No, cheval, jockey, entraîneur, hippodrome..."
               className="app-input pl-11 pr-12"
               aria-label="Rechercher un jockey, entraîneur ou cheval"
               role="combobox"
@@ -391,13 +399,13 @@ export function SearchRunners({ dateStr }: SearchRunnersProps) {
                 <p className="px-1 py-2 text-sm text-[var(--pmu-orange)]">{error}</p>
               ) : null}
 
-              {!loading && !error && query.trim().length >= 2 && results.length === 0 ? (
+              {!loading && !error && (query.trim().length >= 2 || /^\d+$/.test(query.trim())) && results.length === 0 ? (
                 <p className="px-1 py-2 text-sm text-[var(--pmu-text-soft)]">
                   {normalizeResultsMessage(query.trim())}
                 </p>
               ) : null}
 
-              {!loading && !error && query.trim().length >= 2 && results.length > 0 ? (
+              {!loading && !error && (query.trim().length >= 2 || /^\d+$/.test(query.trim())) && results.length > 0 ? (
                 <div className="grid gap-3">
                   {results.map((group) => (
                     <div
@@ -452,17 +460,23 @@ export function SearchRunners({ dateStr }: SearchRunnersProps) {
                                 <span className="text-[var(--pmu-text-soft)]">•</span>
                                 <span className="text-[var(--pmu-text-soft)]">{entry.nomCourse}</span>
                               </div>
-                              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                                <span className="font-semibold text-[var(--pmu-text)]">
-                                  → N°{entry.numPmu} {entry.cheval}
-                                </span>
-                                <span className={`${getOddsTone(entry.cote)} text-xs font-bold`}>
-                                  {entry.cote !== null ? `Cote ${entry.cote}` : "Cote n.c."}
-                                </span>
-                                <span className="text-xs text-[var(--pmu-text-soft)]">
+                              {group.type !== "hippodrome" ? (
+                                <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                                  <span className="font-semibold text-[var(--pmu-text)]">
+                                    → N°{entry.numPmu} {entry.cheval}
+                                  </span>
+                                  <span className={`${getOddsTone(entry.cote)} text-xs font-bold`}>
+                                    {entry.cote !== null ? `Cote ${entry.cote}` : "Cote n.c."}
+                                  </span>
+                                  <span className="text-xs text-[var(--pmu-text-soft)]">
+                                    {entry.discipline} • {entry.nombrePartants} partants
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="mt-2 text-xs text-[var(--pmu-text-soft)]">
                                   {entry.discipline} • {entry.nombrePartants} partants
-                                </span>
-                              </div>
+                                </div>
+                              )}
                             </button>
                           );
                         })}
