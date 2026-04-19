@@ -13,7 +13,7 @@ import type { Participant, RaceSummary } from "@/lib/types";
 
 export const revalidate = 300;
 
-type SearchRunnerType = "numero" | "jockey" | "driver" | "entraineur" | "cheval";
+type SearchRunnerType = "numero" | "jockey" | "driver" | "entraineur" | "cheval" | "hippodrome";
 
 type SearchRunnerEntry = {
   reunion: number;
@@ -81,10 +81,15 @@ function buildEntry(race: RaceSummary, participant: Participant): SearchRunnerEn
 
 function buildIndexRows(race: RaceSummary, participant: Participant) {
   const entry = buildEntry(race, participant);
+  // In trot races, jockey falls back to driver in mapParticipant; skip jockey entry
+  // to avoid duplicate results for the same person.
+  const jockeyValue = participant.driver && participant.jockey === participant.driver
+    ? ""
+    : participant.jockey;
   const fields: Array<{ type: SearchRunnerType; value: string }> = [
     { type: "numero", value: String(participant.numPmu) },
     { type: "driver", value: participant.driver },
-    { type: "jockey", value: participant.jockey },
+    { type: "jockey", value: jockeyValue },
     { type: "entraineur", value: participant.entraineur },
     { type: "cheval", value: participant.nom },
   ];
@@ -129,6 +134,25 @@ async function buildDateIndex(dateStr: string) {
     return [];
   }
 
+  // One hippodrome entry per race so users can search by racetrack name.
+  const rows: SearchIndexRow[] = races.map((race) => ({
+    type: "hippodrome" as const,
+    name: race.hippodrome,
+    normalizedName: normalize(race.hippodrome),
+    entry: {
+      reunion: race.reunion,
+      course: race.course,
+      hippodrome: race.hippodrome,
+      nomCourse: race.nomCourse,
+      heureDepart: race.heureDepart,
+      discipline: race.discipline,
+      cheval: "",
+      numPmu: 0,
+      cote: null,
+      nombrePartants: race.nombrePartants,
+    },
+  }));
+
   const settled = await Promise.allSettled(
     races.map(async (race) => {
       const participants = await getParticipants(dateStr, race.reunion, race.course);
@@ -137,7 +161,6 @@ async function buildDateIndex(dateStr: string) {
   );
 
   let rejectedCount = 0;
-  const rows: SearchIndexRow[] = [];
 
   settled.forEach((result, index) => {
     if (result.status === "fulfilled") {
