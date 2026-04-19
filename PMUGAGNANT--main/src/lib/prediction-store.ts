@@ -1,5 +1,8 @@
 import { toIsoDate } from "@/lib/date-utils";
 import { ENGINE_V6_VERSION, getEngineConfigVersion, getRaceSegmentKey } from "@/lib/engine-v6";
+import type { ScoreV10Breakdown } from "@/lib/predictions/scoring-v10";
+import type { RaceRoleV10Selection } from "@/lib/predictions/roles-v10";
+import { logger } from "@/lib/server-logger";
 import { getSupabaseAdminClient, getSupabaseAdminConfigError } from "@/lib/supabase";
 import type {
   AlgoParameters,
@@ -247,6 +250,9 @@ export function buildRunnerFeatureSnapshots(
           ? {
               age: participant.age,
               sexe: participant.sexe,
+              driver: participant.driver,
+              jockey: participant.jockey,
+              entraineur: participant.entraineur,
               cote: participant.cote,
               coteMatin: participant.coteMatin ?? null,
               coteDepart: participant.coteDepart ?? null,
@@ -295,21 +301,34 @@ export function buildRunnerFeatureSnapshots(
 export function buildRunnerScoreSnapshots(
   runId: string,
   rows: PredictionRow[],
-  analysis: RaceAnalysis
+  analysis: RaceAnalysis,
+  v10?: {
+    scores?: ScoreV10Breakdown[];
+    roles?: RaceRoleV10Selection[];
+  }
 ): RunnerScoreSnapshotRow[] {
   const createdAt = nowIso();
   const rankedByHorse = new Map(
     analysis.ranking.map((runner) => [runner.numPmu, runner] as const)
   );
+  const v10ByHorse = new Map(
+    (v10?.scores ?? []).map((score) => [score.chevalNum, score] as const)
+  );
+  const v10RoleByHorse = new Map(
+    (v10?.roles ?? []).map((role) => [role.chevalNum, role] as const)
+  );
 
   return rows.map((row) => {
     const runner = rankedByHorse.get(row.cheval_num);
     const value = analysis.valueTop5[row.cheval_num];
+    const v10Score = v10ByHorse.get(row.cheval_num);
+    const v10Role = v10RoleByHorse.get(row.cheval_num);
     const reasonCodes = uniqReasonCodes([
       row.decision,
       row.pari_conseille ?? "PLACE",
       row.lisibilite,
       row.outsider ? "OUTSIDER" : "",
+      v10Role ? `V10_${v10Role.role}` : "",
       ...(runner?.prediction.topFacteurs ?? []).map((factor) =>
         factor
           .normalize("NFD")
@@ -324,6 +343,7 @@ export function buildRunnerScoreSnapshots(
       run_id: runId,
       cheval_num: row.cheval_num,
       score_expert: row.score_cheval,
+      score_v10: v10Score?.scoreV10 ?? null,
       score_lisibilite_adjusted: row.score_final_pari ?? row.score_cheval,
       proba_raw: runner?.prediction.probaEstimee ?? null,
       proba_calibrated: runner?.prediction.probaEstimee ?? null,
@@ -350,6 +370,28 @@ export function buildRunnerScoreSnapshots(
           variation: row.variation_cote,
           signalVariation: row.signal_variation,
         },
+        v10: v10Score
+          ? {
+              score: v10Score.scoreV10,
+              decision: v10Score.decision,
+              role: v10Role?.role ?? null,
+              roleLabel: v10Role?.label ?? null,
+              roleEmoji: v10Role?.emoji ?? null,
+              betType: v10Role?.betType ?? row.pari_conseille ?? null,
+              criteria: {
+                forme: v10Score.scoreC1,
+                value: v10Score.scoreC2,
+                jockeyHippodrome: v10Score.scoreC3,
+                distance: v10Score.scoreC4,
+              },
+              recentTop3Count: v10Score.recentTop3Count,
+              recentSample: v10Score.recentSample,
+              jockeyWinRate: v10Score.jockeyWinRate,
+              jockeySample: v10Score.jockeySample,
+              distanceSample: v10Score.distanceSample,
+              distanceTop3: v10Score.distanceTop3,
+            }
+          : null,
       },
       reason_codes: reasonCodes,
       created_at: createdAt,
@@ -486,6 +528,26 @@ export async function upsertRunnerScoreSnapshots(rows: RunnerScoreSnapshotRow[])
     .upsert(rows, { onConflict: "run_id,cheval_num" });
 
   if (error) {
+    if (error.message.toLowerCase().includes("score_v10")) {
+      const rowsWithoutScoreV10 = rows.map((row) => {
+        const rowWithoutScoreV10 = { ...row };
+        delete rowWithoutScoreV10.score_v10;
+        return rowWithoutScoreV10;
+      });
+      const { error: fallbackError } = await admin
+        .from("runner_score_snapshots")
+        .upsert(rowsWithoutScoreV10, { onConflict: "run_id,cheval_num" });
+
+      if (!fallbackError) {
+        logger.warn("runner_score_snapshots.score_v10_missing", {
+          hint: "Apply supabase/migrations/20260419_score_v10.sql to persist score_v10.",
+        });
+        return;
+      }
+
+      throw new Error(`Runner score snapshot upsert failed: ${fallbackError.message}`);
+    }
+
     throw new Error(`Runner score snapshot upsert failed: ${error.message}`);
   }
 }

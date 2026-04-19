@@ -1,5 +1,6 @@
 import type { WeeklyReportRow } from "@/lib/types";
 import type { MeteoData } from "@/lib/meteo";
+import type { RaceRoleV10Selection } from "@/lib/predictions/roles-v10";
 import { logger } from "@/lib/server-logger";
 
 const TELEGRAM_ENDPOINT = "https://api.telegram.org";
@@ -144,6 +145,8 @@ export function formatMorningTelegram(
     chevalNom: string;
     confiance: number;
     decision: string;
+    heureDepart?: string;
+    rolesV10?: RaceRoleV10Selection[];
   }>
 ) {
   const header = [`PMU Gagnant`, `Analyse du matin ${date}`];
@@ -151,14 +154,46 @@ export function formatMorningTelegram(
     return [...header, "Aucun ticket validé ce matin."].join("\n");
   }
 
-  const lines = rows
-    .slice(0, 10)
-    .map(
-      (row) =>
-        `R${row.reunion}C${row.course} ${row.hippodrome}: #${row.chevalNum} ${row.chevalNom} (${row.decision}, confiance ${row.confiance}/10)`
-    );
+  const lines = rows.slice(0, 10).flatMap((row) => {
+    if (row.rolesV10 && row.rolesV10.length > 0) {
+      return [
+        `🏇 ${row.hippodrome.toUpperCase()} R${row.reunion}C${row.course} — ${row.heureDepart ?? ""}`.trim(),
+        "━━━━━━━━━━━━━━━━━━━━",
+        ...row.rolesV10.map(formatRoleV10Telegram),
+        "━━━━━━━━━━━━━━━━━━━━",
+      ];
+    }
+
+    return [
+      `R${row.reunion}C${row.course} ${row.hippodrome}: #${row.chevalNum} ${row.chevalNom} (${row.decision}, confiance ${row.confiance}/10)`,
+    ];
+  });
 
   return [...header, ...lines].join("\n");
+}
+
+function formatRoleV10Telegram(role: RaceRoleV10Selection) {
+  const cote = role.cote ? role.cote.toFixed(1) : "n/d";
+  const jockeyRate =
+    role.jockeyWinRate === null ? "n/d" : `${Math.round(role.jockeyWinRate * 100)}%`;
+
+  if (role.role === "CHOIX") {
+    return `${role.emoji} CHOIX    N°${role.chevalNum} ${role.chevalNom} — Score ${role.scoreV10}/100`;
+  }
+
+  if (role.role === "PEPITE") {
+    return `${role.emoji} PÉPITE   N°${role.chevalNum} ${role.chevalNom} — Cote ${cote}`;
+  }
+
+  if (role.role === "CHASSEUR") {
+    return `${role.emoji} CHASSEUR N°${role.chevalNum} ${role.chevalNom} — Jockey ${jockeyRate}`;
+  }
+
+  if (role.role === "PODIUM") {
+    return `${role.emoji} PODIUM   N°${role.chevalNum} ${role.chevalNom} — PLACE`;
+  }
+
+  return `${role.emoji} OUTSIDER N°${role.chevalNum} ${role.chevalNom} — Cote ${cote}`;
 }
 
 export function formatPreRaceTelegram(

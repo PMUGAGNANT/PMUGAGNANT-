@@ -32,6 +32,7 @@ import {
   listPredictionsBetween,
 } from "@/lib/prediction-store";
 import { normalizeRequestedDate } from "@/lib/request-utils";
+import type { RaceRoleV10Key } from "@/lib/predictions/roles-v10";
 import { logger } from "@/lib/server-logger";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import type { Database } from "@/types/supabase";
@@ -123,6 +124,57 @@ function firstFiniteNumber(...values: Array<number | null | undefined>) {
   return null;
 }
 
+function getRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function getString(value: unknown) {
+  return typeof value === "string" && value.trim() !== "" ? value : null;
+}
+
+function getUnknownNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function isRaceRoleV10(value: unknown): value is RaceRoleV10Key {
+  return (
+    value === "CHOIX" ||
+    value === "PEPITE" ||
+    value === "CHASSEUR" ||
+    value === "PODIUM" ||
+    value === "OUTSIDER"
+  );
+}
+
+function getSnapshotV10(snapshot: RunnerScoreSnapshotRow | undefined) {
+  const payload = getRecord(snapshot?.blend_payload);
+  const v10 = getRecord(payload?.v10);
+  const criteria = getRecord(v10?.criteria);
+  const market = getRecord(payload?.market);
+  const role = v10?.role;
+  const betType = v10?.betType;
+  const parsedBetType: "GAGNANT" | "PLACE" | null =
+    betType === "GAGNANT" || betType === "PLACE" ? betType : null;
+
+  return {
+    score: firstFiniteNumber(snapshot?.score_v10, getUnknownNumber(v10?.score)),
+    role: isRaceRoleV10(role) ? role : null,
+    betType: parsedBetType,
+    criteria: {
+      forme: getUnknownNumber(criteria?.forme) ?? 0,
+      value: getUnknownNumber(criteria?.value) ?? 0,
+      jockeyHippodrome: getUnknownNumber(criteria?.jockeyHippodrome) ?? 0,
+      distance: getUnknownNumber(criteria?.distance) ?? 0,
+    },
+    cote: firstFiniteNumber(getUnknownNumber(market?.coteMatin), getUnknownNumber(market?.coteDepart)),
+    jockeyWinRate: getUnknownNumber(v10?.jockeyWinRate),
+    roleLabel: getString(v10?.roleLabel),
+    roleEmoji: getString(v10?.roleEmoji),
+  };
+}
+
 function buildParticipantRows(
   participants: Participant[],
   ranking: ScoredParticipant[],
@@ -153,6 +205,7 @@ function buildParticipantRows(
       const stored =
         storedByNumber.get(participant.numPmu) ??
         storedByName.get(normalizeHorseJoinKey(participant.nom));
+      const v10 = getSnapshotV10(snapshot);
       const score = firstFiniteNumber(
         stored?.score_blended,
         stored?.score_cheval,
@@ -182,6 +235,12 @@ function buildParticipantRows(
         entraineur: participant.entraineur || "—",
         cote,
         scoreIa: score,
+        scoreV10: v10.score,
+        scoreV10Role: v10.role,
+        scoreV10Criteria: v10.score !== null ? v10.criteria : null,
+        scoreV10BetType: v10.betType,
+        scoreV10Cote: v10.cote,
+        scoreV10JockeyRate: v10.jockeyWinRate,
         scoreSource:
           forcedSource ??
           (hasStoredScore || hasSnapshotScore ? "supabase" : runner ? "engine" : "fallback"),
@@ -330,6 +389,18 @@ async function loadLatestStoredRaceFallback(excluded: {
 }
 
 function getRecommendedRow(rows: ParticipantTableRow[], analysis: RaceAnalysis | null) {
+  const v10Choice = rows.find((item) => item.scoreV10Role === "CHOIX");
+  if (v10Choice) {
+    return v10Choice;
+  }
+
+  const bestV10 = rows
+    .filter((item) => typeof item.scoreV10 === "number" && Number.isFinite(item.scoreV10))
+    .sort((left, right) => (right.scoreV10 ?? 0) - (left.scoreV10 ?? 0))[0];
+  if (bestV10) {
+    return bestV10;
+  }
+
   const analysisPick = analysis?.favori?.numPmu ?? null;
   if (analysisPick !== null) {
     const row = rows.find((item) => item.numero === analysisPick);
@@ -436,6 +507,10 @@ async function loadInitialRaceChatMessages(raceId: string, raceDate: string) {
 }
 
 function getGaugeScore(analysis: RaceAnalysis | null, selectedRow: ParticipantTableRow | null) {
+  if (typeof selectedRow?.scoreV10 === "number" && Number.isFinite(selectedRow.scoreV10)) {
+    return Math.max(0, Math.min(100, Math.round(selectedRow.scoreV10)));
+  }
+
   const confidence =
     analysis?.scoreConfiance?.score ?? analysis?.favori?.prediction.confiance ?? null;
 
@@ -454,6 +529,53 @@ function getVerdictClass(verdict: "JOUER" | "SURVEILLER" | "PASSER") {
   if (verdict === "JOUER") return "bg-[#00C851] text-[#06100B]";
   if (verdict === "SURVEILLER") return "bg-[#FF9F1C] text-[#06100B]";
   return "bg-slate-600 text-white";
+}
+
+const V10_ROLE_ORDER: RaceRoleV10Key[] = ["CHOIX", "PEPITE", "CHASSEUR", "PODIUM", "OUTSIDER"];
+
+const V10_ROLE_UI: Record<RaceRoleV10Key, { label: string; emoji: string; className: string }> = {
+  CHOIX: {
+    label: "CHOIX",
+    emoji: "🎯",
+    className: "border-[#D4AF37]/45 bg-[#D4AF37]/[0.12] text-[#D4AF37]",
+  },
+  PEPITE: {
+    label: "PÉPITE",
+    emoji: "💎",
+    className: "border-[#2F80ED]/45 bg-[#2F80ED]/[0.12] text-[#8CC4FF]",
+  },
+  CHASSEUR: {
+    label: "CHASSEUR",
+    emoji: "🏹",
+    className: "border-[#00C851]/45 bg-[#00C851]/[0.10] text-[#00C851]",
+  },
+  PODIUM: {
+    label: "PODIUM",
+    emoji: "🥉",
+    className: "border-[#FF9F1C]/45 bg-[#FF9F1C]/[0.12] text-[#FFCE8A]",
+  },
+  OUTSIDER: {
+    label: "OUTSIDER",
+    emoji: "⚡",
+    className: "border-[#FF4D5A]/45 bg-[#FF4D5A]/[0.10] text-[#FF8B94]",
+  },
+};
+
+function getRoleCardsV10(rows: ParticipantTableRow[]) {
+  const roleRows = rows.filter((row) => row.scoreV10Role);
+  if (roleRows.length > 0) {
+    return roleRows.sort(
+      (left, right) =>
+        V10_ROLE_ORDER.indexOf(left.scoreV10Role ?? "OUTSIDER") -
+        V10_ROLE_ORDER.indexOf(right.scoreV10Role ?? "OUTSIDER")
+    );
+  }
+
+  const bestV10 = rows
+    .filter((row) => typeof row.scoreV10 === "number" && Number.isFinite(row.scoreV10))
+    .sort((left, right) => (right.scoreV10 ?? 0) - (left.scoreV10 ?? 0))[0];
+
+  return bestV10 ? [{ ...bestV10, scoreV10Role: "CHOIX" as const }] : [];
 }
 
 async function loadRacePageData(id: string, requestedDate: string): Promise<RacePageState> {
@@ -613,6 +735,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
   const { courseInfo, analysis, rows, dataBadge } = state;
   const selectedRow = getRecommendedRow(rows, analysis);
   const selectedNumber = selectedRow?.numero ?? null;
+  const roleCardsV10 = getRoleCardsV10(rows);
   const minutesUntilStart = getMinutesUntilStart(courseInfo.heureDepart, courseInfo.dateStr);
   const status = getVmaxRaceStatus(null, minutesUntilStart);
   const gaugeScore = getGaugeScore(analysis, selectedRow);
@@ -621,7 +744,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
         numero: selectedRow.numero,
         cheval: selectedRow.cheval,
         cote: selectedRow.cote,
-        score: selectedRow.scoreIa,
+        score: selectedRow.scoreV10 ?? selectedRow.scoreIa,
       })
     : computeRaceVerdict({
         numero: 0,
@@ -816,25 +939,57 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
 
               <div className="grid gap-4 md:grid-cols-[auto_1fr]">
                 <ScoreGauge score={gaugeScore} label="score IA" />
-                <div className="rounded-lg border border-[#D4AF37]/20 bg-[#D4AF37]/[0.06] p-4">
-                  <p className="text-xs font-black uppercase text-[#D4AF37]">Cheval IA #1</p>
-                  <div className="mt-3 flex items-center gap-3">
-                    {selectedRow ? (
-                      <span
-                        className={`grid aspect-square w-12 place-items-center rounded-full font-[var(--font-display)] text-2xl font-black ${getRunnerNumberClass(selectedRow.numero)}`}
-                      >
-                        {selectedRow.numero}
-                      </span>
-                    ) : null}
-                    <div>
-                      <strong className="block font-[var(--font-display)] text-4xl font-black leading-none">
-                        {selectedRow?.cheval ?? "Sélection en attente"}
-                      </strong>
-                      <span className="text-sm font-bold text-slate-400">
-                        {selectedRow?.jockey ?? "Jockey à confirmer"}
-                      </span>
+                <div className="grid gap-3">
+                  <p className="text-xs font-black uppercase text-[#D4AF37]">Rôles IA v10</p>
+                  {roleCardsV10.length > 0 ? (
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                      {roleCardsV10.map((roleRow) => {
+                        const role = roleRow.scoreV10Role ?? "CHOIX";
+                        const meta = V10_ROLE_UI[role];
+                        const detail =
+                          role === "CHASSEUR"
+                            ? `Jockey ${
+                                roleRow.scoreV10JockeyRate === null ||
+                                roleRow.scoreV10JockeyRate === undefined
+                                  ? "n/d"
+                                  : `${Math.round(roleRow.scoreV10JockeyRate * 100)}%`
+                              }`
+                            : role === "PODIUM"
+                              ? "PLACE"
+                              : role === "CHOIX"
+                                ? `Score ${Math.round(roleRow.scoreV10 ?? roleRow.scoreIa ?? 0)}/100`
+                                : `Cote ${formatOdds(roleRow.scoreV10Cote ?? roleRow.cote)}`;
+
+                        return (
+                          <article
+                            className={`rounded-lg border p-3 ${meta.className}`}
+                            key={`${role}-${roleRow.numero}`}
+                          >
+                            <p className="text-[0.68rem] font-black uppercase tracking-[0.14em]">
+                              {meta.emoji} {meta.label}
+                            </p>
+                            <div className="mt-3 flex items-center gap-2">
+                              <span
+                                className={`grid aspect-square w-9 shrink-0 place-items-center rounded-full font-[var(--font-display)] text-lg font-black ${getRunnerNumberClass(roleRow.numero)}`}
+                              >
+                                {roleRow.numero}
+                              </span>
+                              <strong className="min-w-0 break-words font-[var(--font-display)] text-2xl font-black leading-none text-[#F6F2E8]">
+                                {roleRow.cheval}
+                              </strong>
+                            </div>
+                            <span className="mt-2 block text-xs font-black text-slate-300">
+                              {detail}
+                            </span>
+                          </article>
+                        );
+                      })}
                     </div>
-                  </div>
+                  ) : (
+                    <p className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold text-slate-300">
+                      Rôles v10 en cours de calcul.
+                    </p>
+                  )}
                 </div>
               </div>
 

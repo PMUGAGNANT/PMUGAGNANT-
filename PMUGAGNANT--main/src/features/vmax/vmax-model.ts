@@ -15,6 +15,17 @@ export type ParticipantTableRow = {
   entraineur: string;
   cote: number | null;
   scoreIa: number | null;
+  scoreV10?: number | null;
+  scoreV10Role?: "CHOIX" | "PEPITE" | "CHASSEUR" | "PODIUM" | "OUTSIDER" | null;
+  scoreV10Criteria?: {
+    forme: number;
+    value: number;
+    jockeyHippodrome: number;
+    distance: number;
+  } | null;
+  scoreV10BetType?: "GAGNANT" | "PLACE" | null;
+  scoreV10Cote?: number | null;
+  scoreV10JockeyRate?: number | null;
   scoreSource: "supabase" | "engine" | "fallback";
   musique: string | null;
   mise: number | null;
