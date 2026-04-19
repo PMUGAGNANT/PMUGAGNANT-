@@ -430,20 +430,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <DashboardHeaderAccount />
       </header>
 
-      {/* ── PMU DASHBOARD PREMIUM ── */}
-      <div className="mx-auto w-full max-w-[900px] px-4 py-8">
-        <PMUDashboard
-          race={hero?.race ?? null}
-          predictions={hero?.predictions ?? []}
-          roiMois={roi}
-          tauxReussite={successRates[0]?.value ?? 64}
-          nbPronostics={history.length}
-          bankroll={600}
-          miseConseillee={hero?.predictions[0]?.mise_simulee ?? 10}
-          algoVersion="9.2"
-        />
-      </div>
-
       {/* ── MAIN ── */}
       <main className="mx-auto grid w-full max-w-[92rem] gap-5 px-4 py-5 lg:grid-cols-[1fr_21rem] lg:px-6">
         <section className="grid gap-5">
@@ -471,74 +457,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </button>
           </form>
 
-          <article className="grid overflow-hidden rounded-lg border border-[#D4AF37]/20 bg-[#101827] shadow-2xl shadow-black/25 lg:grid-cols-[0.9fr_1fr]">
-            <div className="relative min-h-[18rem] overflow-hidden lg:min-h-[27rem]">
-              <Image
-                src="/promo-poster.jpg"
-                alt="Cheval favori du Quinté du jour"
-                fill
-                priority
-                placeholder="blur"
-                blurDataURL={BLUR_DATA_URL}
-                sizes="(max-width: 768px) 100vw, 42vw"
-                className="object-cover brightness-[0.62] contrast-110 saturate-90"
-              />
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#0A0E1A]/90" />
-              <div className="absolute bottom-5 left-5 right-5">
-                <span className="text-xs font-black uppercase text-[#D4AF37]">
-                  Quinté du jour
-                </span>
-                <strong className="mt-1 block font-[var(--font-display)] text-5xl font-black leading-none">
-                  {hero ? `R${hero.race.reunion}C${hero.race.course}` : "Analyse"}
-                </strong>
-              </div>
-            </div>
-
-            <div className="grid content-center gap-5 p-5 md:p-8">
-              <p className="text-xs font-black uppercase text-[#D4AF37]">Signal premium</p>
-              <h1 className="break-words font-[var(--font-display)] text-5xl font-black leading-[0.9] text-[#F6F2E8] sm:text-6xl md:text-7xl">
-                {hero?.race.hippodrome ?? "Quinté à confirmer"}
-              </h1>
-              <p className="text-base font-bold text-slate-400">
-                {hero ? `${hero.race.heureDepart} · ${formatCourseMeta(hero.race)}` : "Programme en préparation"}
-              </p>
-
-              <div className="grid items-center gap-5 md:grid-cols-[auto_1fr]">
-                <ScoreGauge score={hero?.confidence ?? 0} />
-                <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
-                  <span className="text-xs font-black uppercase text-slate-400">
-                    Top 3 sélections
-                  </span>
-                  {hero?.topNumbers.length ? (
-                    <div className="mt-3 flex gap-2">
-                      {hero.topNumbers.map((num) => (
-                        <i
-                          className={`grid aspect-square w-10 place-items-center rounded-full font-[var(--font-display)] text-lg font-black not-italic ${getRunnerNumberClass(num)}`}
-                          key={num}
-                        >
-                          {num}
-                        </i>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="mt-3 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-black text-slate-400">
-                      Analyse en cours
-                    </p>
-                  )}
-                  <p className="mt-3 font-black">
-                    {hero?.predictions[0]?.cheval_nom ?? "Analyse en cours"}
-                  </p>
-                </div>
-              </div>
-
-              <Link
-                className="inline-flex w-full justify-center rounded-lg border border-[#D4AF37]/70 bg-gradient-to-br from-[#D4AF37] to-[#A47D18] px-5 py-4 font-black text-[#0A0E1A] shadow-lg shadow-[#D4AF37]/10"
-                href={heroHref ?? "/premium"}
-              >
-                Voir l&apos;analyse complète
-              </Link>
-            </div>
-          </article>
+          <PMUDashboard
+            race={hero?.race ?? null}
+            predictions={hero?.predictions ?? []}
+            roiMois={roi}
+            tauxReussite={successRates[0]?.value ?? 64}
+            nbPronostics={history.length}
+            bankroll={600}
+            miseConseillee={hero?.predictions[0]?.mise_simulee ?? 10}
+            algoVersion="9.2"
+          />
 
           <section id="stats">
             <div className="mb-3 flex items-center justify-between">
