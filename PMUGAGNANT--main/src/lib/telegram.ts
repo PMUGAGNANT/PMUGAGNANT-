@@ -13,9 +13,85 @@ function getTelegramConfig() {
   };
 }
 
+function getTelegramPrivateGroupConfig() {
+  return {
+    token: process.env.TELEGRAM_BOT_TOKEN,
+    privateChatId:
+      process.env.TELEGRAM_PRIVATE_CHAT_ID ?? process.env.TELEGRAM_PRO_CHAT_ID,
+    fallbackInviteLink:
+      process.env.TELEGRAM_PRIVATE_INVITE_LINK ?? process.env.TELEGRAM_PRO_INVITE_LINK,
+  };
+}
+
+function isInviteResponse(
+  value: unknown
+): value is { ok: boolean; result?: { invite_link?: string }; description?: string } {
+  return typeof value === "object" && value !== null && "ok" in value;
+}
+
 export function isTelegramConfigured() {
   const { token, chatId } = getTelegramConfig();
   return Boolean(token && chatId);
+}
+
+export function isTelegramPrivateGroupConfigured() {
+  const { token, privateChatId, fallbackInviteLink } = getTelegramPrivateGroupConfig();
+  return Boolean(fallbackInviteLink || (token && privateChatId));
+}
+
+export async function createPrivateTelegramInviteLink(context: {
+  userId: string;
+  email?: string | null;
+}) {
+  const { token, privateChatId, fallbackInviteLink } = getTelegramPrivateGroupConfig();
+  if (!token || !privateChatId) {
+    return fallbackInviteLink ?? null;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TELEGRAM_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${TELEGRAM_ENDPOINT}/bot${token}/createChatInviteLink`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        chat_id: privateChatId,
+        name: `PMU PRO ${context.userId.slice(0, 8)}`,
+        member_limit: 1,
+      }),
+      signal: controller.signal,
+    });
+
+    const payload = (await response.json()) as unknown;
+    if (!response.ok || !isInviteResponse(payload) || payload.ok !== true) {
+      const description =
+        isInviteResponse(payload) && typeof payload.description === "string"
+          ? payload.description
+          : `status ${response.status}`;
+      throw new Error(`Telegram private invite failed: ${description}`);
+    }
+
+    const inviteLink = payload.result?.invite_link;
+    if (typeof inviteLink === "string" && inviteLink.trim() !== "") {
+      return inviteLink;
+    }
+
+    throw new Error("Telegram private invite failed: missing invite_link");
+  } catch (error) {
+    logger.error("telegram.private_invite_failed", error, {
+      userId: context.userId,
+      email: context.email ?? null,
+    });
+    if (fallbackInviteLink) {
+      return fallbackInviteLink;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function sendTelegramMessage(text: string) {
