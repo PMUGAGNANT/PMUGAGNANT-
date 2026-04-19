@@ -20,6 +20,7 @@ import {
   listPredictionsByDate,
   listRunnerOutcomesBetween,
 } from "@/lib/prediction-store";
+import { unstable_cache } from "next/cache";
 import type { PredictionRow, RaceSummary, RunnerOutcomeRow } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -28,7 +29,8 @@ export const metadata: Metadata = {
     "Dashboard premium PMU Gagnant : Quinté du jour, courses prêtes, value bets et statistiques live.",
 };
 
-export const dynamic = "force-dynamic";
+// Revalide toutes les 60 secondes au lieu de refetcher à chaque visite
+export const revalidate = 60;
 
 const BLUR_DATA_URL =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAHCAIAAAC+zks0AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAGUlEQVR4nGNgYGD4z8DAwMgABXAGNgYAbDgBEi5CZmQAAAAASUVORK5CYII=";
@@ -294,10 +296,19 @@ function Sparkline({ values }: { values: number[] }) {
   );
 }
 
+// Cache participants 5 minutes — la donnée change peu avant le départ
+const getCachedParticipants = unstable_cache(
+  async (date: string, reunion: number, course: number) => {
+    return getParticipants(date, reunion, course).catch(() => []);
+  },
+  ["participants"],
+  { revalidate: 300 }
+);
+
 async function loadRaceSearchText(date: string, races: RaceSummary[]) {
   const entries = await Promise.allSettled(
     races.map(async (race) => {
-      const participants = await getParticipants(date, race.reunion, race.course);
+      const participants = await getCachedParticipants(date, race.reunion, race.course);
       const text = participants
         .map((participant) =>
           [participant.nom, participant.jockey, participant.driver, participant.entraineur]
@@ -313,26 +324,31 @@ async function loadRaceSearchText(date: string, races: RaceSummary[]) {
   );
 }
 
-async function loadDashboardData() {
-  const date = getTodayDateStr();
-  const races = await getAllRaces(date)
-    .then((items) => items.filter(isEligiblePmuFranceRace))
-    .catch(() => []);
-  const predictions = await listPredictionsByDate(date).catch(() => []);
-  const searchTextByRace = await loadRaceSearchText(date, races);
-  const now = new Date();
-  const start = new Date(now);
-  start.setDate(start.getDate() - 30);
-  const history = await listPredictionsBetween(
-    start.toISOString().slice(0, 10),
-    now.toISOString().slice(0, 10)
-  ).catch(() => []);
-  const outcomes = await listRunnerOutcomesBetween(
-    start.toISOString().slice(0, 10),
-    now.toISOString().slice(0, 10)
-  ).catch(() => []);
-  return { date, races: buildDashboardRaces(races, predictions, searchTextByRace), history, outcomes };
-}
+// Cache dashboard data 60 secondes — évite de refetcher à chaque clic
+const loadDashboardData = unstable_cache(
+  async () => {
+    const date = getTodayDateStr();
+    const races = await getAllRaces(date)
+      .then((items) => items.filter(isEligiblePmuFranceRace))
+      .catch(() => []);
+    const predictions = await listPredictionsByDate(date).catch(() => []);
+    const searchTextByRace = await loadRaceSearchText(date, races);
+    const now = new Date();
+    const start = new Date(now);
+    start.setDate(start.getDate() - 30);
+    const history = await listPredictionsBetween(
+      start.toISOString().slice(0, 10),
+      now.toISOString().slice(0, 10)
+    ).catch(() => []);
+    const outcomes = await listRunnerOutcomesBetween(
+      start.toISOString().slice(0, 10),
+      now.toISOString().slice(0, 10)
+    ).catch(() => []);
+    return { date, races: buildDashboardRaces(races, predictions, searchTextByRace), history, outcomes };
+  },
+  ["dashboard-data"],
+  { revalidate: 60 }
+);
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const resolvedSearchParams = searchParams ? await searchParams : {};
