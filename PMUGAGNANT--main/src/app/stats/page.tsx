@@ -107,7 +107,11 @@ function buildSettledSelections(
   });
 }
 
-function formatEuro(value: number) {
+function formatEuro(value: number | null) {
+  if (value === null || !Number.isFinite(value)) {
+    return "--";
+  }
+
   return `${value >= 0 ? "+" : ""}${new Intl.NumberFormat("fr-FR", {
     style: "currency",
     currency: "EUR",
@@ -127,12 +131,12 @@ export default async function StatsPage() {
   const settled = buildSettledSelections(predictions, outcomes);
   const totalStake = settled.reduce((sum, row) => sum + row.stake, 0);
   const totalGain = settled.reduce((sum, row) => sum + row.gain, 0);
-  const net = totalGain - totalStake;
-  const roi = totalStake > 0 ? (net / totalStake) * 100 : 0;
+  const net = totalStake > 0 ? totalGain - totalStake : null;
+  const roi = totalStake > 0 && net !== null ? (net / totalStake) * 100 : null;
   const hitRate =
     settled.length > 0
       ? (settled.filter((row) => row.won).length / settled.length) * 100
-      : 0;
+      : null;
   const history = settled.slice(-12).reverse();
 
   return (
@@ -153,20 +157,19 @@ export default async function StatsPage() {
         <section className="grid gap-3 md:grid-cols-3">
           <article className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-5">
             <p className="text-xs font-black uppercase text-[#D4AF37]">ROI global</p>
-            <p className={`mt-2 font-[var(--font-display)] text-5xl font-black ${roi >= 0 ? "text-[#00C851]" : "text-[#FF4D5A]"}`}>
-              {roi >= 0 ? "+" : ""}
-              {roi.toFixed(1)}%
+            <p className={`mt-2 font-[var(--font-display)] text-5xl font-black ${roi === null ? "text-slate-400" : roi >= 0 ? "text-[#00C851]" : "text-[#FF4D5A]"}`}>
+              {roi === null ? "--" : `${roi >= 0 ? "+" : ""}${roi.toFixed(1)}%`}
             </p>
           </article>
           <article className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-5">
             <p className="text-xs font-black uppercase text-[#D4AF37]">Taux reussite</p>
             <p className="mt-2 font-[var(--font-display)] text-5xl font-black text-[#F6F2E8]">
-              {hitRate.toFixed(0)}%
+              {hitRate === null ? "--" : `${hitRate.toFixed(0)}%`}
             </p>
           </article>
           <article className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-5">
             <p className="text-xs font-black uppercase text-[#D4AF37]">Gain net</p>
-            <p className={`mt-2 font-[var(--font-display)] text-5xl font-black ${net >= 0 ? "text-[#00C851]" : "text-[#FF4D5A]"}`}>
+            <p className={`mt-2 font-[var(--font-display)] text-5xl font-black ${net === null ? "text-slate-400" : net >= 0 ? "text-[#00C851]" : "text-[#FF4D5A]"}`}>
               {formatEuro(net)}
             </p>
           </article>

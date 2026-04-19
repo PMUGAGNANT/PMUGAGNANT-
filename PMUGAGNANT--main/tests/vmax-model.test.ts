@@ -33,15 +33,22 @@ test("score and stake helpers expose stable UI tiers", () => {
 });
 
 test("computeRunnerKellyStake applique Kelly 25% pour les scores jouables", () => {
-  assert.equal(computeRunnerKellyStake(80, 3), 6);
-  assert.equal(computeRunnerKellyStake(100, 100), 1);
-  assert.equal(computeRunnerKellyStake(100, 1.2), 25);
-  assert.equal(computeRunnerKellyStake(69, 4), null);
-  assert.equal(computeRunnerKellyStake(80, 1.1), null);
+  assert.equal(computeRunnerKellyStake(80, 3, 100), 6);
+  assert.equal(computeRunnerKellyStake(100, 100, 100), 1);
+  assert.equal(computeRunnerKellyStake(100, 1.2, 100), 25);
+  assert.equal(computeRunnerKellyStake(69, 4, 100), null);
+  assert.equal(computeRunnerKellyStake(80, 1.1, 100), null);
+  assert.equal(computeRunnerKellyStake(80, 3), null);
 });
 
 test("computeRaceVerdict transforme edge et cote en verdict immédiat", () => {
-  const play = computeRaceVerdict({ numero: 7, cheval: "Reine Esther", cote: 8, score: 92 });
+  const play = computeRaceVerdict({
+    numero: 7,
+    cheval: "Reine Esther",
+    cote: 8,
+    score: 92,
+    bankroll: 100,
+  });
   assert.equal(play.verdict, "JOUER");
   assert.ok(play.stake > 0);
 

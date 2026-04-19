@@ -5,7 +5,9 @@ import { getSupabaseAdminClient } from "@/lib/supabase";
 import type {
   LiveCourseSnapshot,
   Participant,
+  PredictionRow,
   RaceSummary,
+  RunnerFeatureSnapshotRow,
   SignalVariation,
 } from "@/lib/types";
 
@@ -346,6 +348,109 @@ function mapParticipant(raw: Record<string, unknown>): Participant {
   };
 }
 
+function uniqueLatestByHorse<T extends { cheval_num: number; created_at?: string }>(rows: T[]) {
+  const byHorse = new Map<number, T>();
+
+  for (const row of rows) {
+    const current = byHorse.get(row.cheval_num);
+    if (!current || (row.created_at ?? "") > (current.created_at ?? "")) {
+      byHorse.set(row.cheval_num, row);
+    }
+  }
+
+  return [...byHorse.values()].sort((left, right) => left.cheval_num - right.cheval_num);
+}
+
+function participantFromFeatureSnapshot(row: RunnerFeatureSnapshotRow) {
+  const payload = asRecord(row.payload);
+  const participant = asRecord(payload.participant);
+  return mapParticipant({
+    ...participant,
+    numPmu: row.cheval_num,
+    nom: row.cheval_nom,
+    statut: participant.statut ?? "PARTANT",
+  });
+}
+
+function participantFromPrediction(row: PredictionRow) {
+  return mapParticipant({
+    numPmu: row.cheval_num,
+    nom: row.cheval_nom,
+    cotePmu: row.cote_depart ?? row.cote_matin ?? null,
+    coteMatin: row.cote_matin ?? null,
+    coteDepart: row.cote_depart ?? null,
+    variationCote: row.variation_cote ?? null,
+    signalVariation: row.signal_variation ?? null,
+    ordreArrivee:
+      row.resultat_gagnant || row.resultat_place
+        ? row.resultat_gagnant
+          ? 1
+          : 3
+        : null,
+    statut: row.non_partant ? "NON_PARTANT" : "PARTANT",
+  });
+}
+
+async function getStoredParticipantsFallback(
+  dateStr: string,
+  reunion: number,
+  course: number
+) {
+  const admin = getSupabaseAdminClient();
+  if (!admin) {
+    return [] as Participant[];
+  }
+
+  const isoDate = toIsoDate(dateStr);
+  const { data: featureData, error: featureError } = await admin
+    .from("runner_feature_snapshots")
+    .select("*")
+    .eq("date", isoDate)
+    .eq("reunion", reunion)
+    .eq("course", course)
+    .order("created_at", { ascending: false })
+    .limit(300);
+
+  if (!featureError) {
+    const featureRows = uniqueLatestByHorse(
+      ((featureData ?? []) as RunnerFeatureSnapshotRow[]).filter((row) => row.cheval_num > 0)
+    );
+    if (featureRows.length > 0) {
+      return featureRows.map(participantFromFeatureSnapshot);
+    }
+  } else {
+    logger.warn("pmu_api.participants_feature_fallback_unavailable", {
+      dateStr,
+      reunion,
+      course,
+      error: featureError.message,
+    });
+  }
+
+  const { data: predictionData, error: predictionError } = await admin
+    .from("predictions")
+    .select("*")
+    .eq("date", isoDate)
+    .eq("reunion", reunion)
+    .eq("course", course)
+    .order("cheval_num", { ascending: true });
+
+  if (predictionError) {
+    logger.warn("pmu_api.participants_prediction_fallback_unavailable", {
+      dateStr,
+      reunion,
+      course,
+      error: predictionError.message,
+    });
+    return [];
+  }
+
+  const predictionRows = uniqueLatestByHorse(
+    ((predictionData ?? []) as PredictionRow[]).filter((row) => row.cheval_num > 0)
+  );
+  return predictionRows.map(participantFromPrediction);
+}
+
 export function getTodayDateStr(): string {
   return getTodayDateStrFromUtils();
 }
@@ -521,11 +626,37 @@ export async function getParticipants(
       `/programme/${dateStr}/R${reunion}/C${course}/participants`
     );
   } catch (error) {
+    const fallback = await getStoredParticipantsFallback(dateStr, reunion, course);
+    if (fallback.length > 0) {
+      logger.warn("pmu_api.participants_fallback_supabase", {
+        dateStr,
+        reunion,
+        course,
+        participants: fallback.length,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return fallback;
+    }
     throw error;
   }
   const participants = ((data.participants ?? []) as Record<string, unknown>[])
     .filter((participant) => String(participant.statut ?? "PARTANT") !== "SUPPRIME")
     .map(mapParticipant);
+
+  if (participants.length > 0) {
+    return participants;
+  }
+
+  const fallback = await getStoredParticipantsFallback(dateStr, reunion, course);
+  if (fallback.length > 0) {
+    logger.warn("pmu_api.participants_empty_fallback_supabase", {
+      dateStr,
+      reunion,
+      course,
+      participants: fallback.length,
+    });
+    return fallback;
+  }
 
   return participants;
 }

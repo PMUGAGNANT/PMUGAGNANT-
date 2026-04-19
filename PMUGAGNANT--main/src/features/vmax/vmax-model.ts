@@ -54,6 +54,8 @@ export type RaceVerdictInput = {
   cheval: string;
   cote: number | null;
   score: number | null;
+  bankroll?: number | null;
+  kellyFraction?: number | null;
 };
 
 export type RaceVerdictSummary = {
@@ -67,7 +69,6 @@ export type RaceVerdictSummary = {
   stake: number;
 };
 
-const DEFAULT_BANKROLL = 100;
 const DEFAULT_KELLY_FRACTION = 0.25;
 const MAX_KELLY_EDGE = 0.5;
 
@@ -262,7 +263,7 @@ export function getFairOddsFromScore(score: number | null | undefined) {
 export function computeRunnerKellyStake(
   score: number | null | undefined,
   odds: number | null | undefined,
-  bankroll = DEFAULT_BANKROLL,
+  bankroll?: number | null,
   kellyFraction = DEFAULT_KELLY_FRACTION
 ) {
   if (
@@ -271,7 +272,10 @@ export function computeRunnerKellyStake(
     score < 70 ||
     typeof odds !== "number" ||
     !Number.isFinite(odds) ||
-    odds <= 1
+    odds <= 1 ||
+    typeof bankroll !== "number" ||
+    !Number.isFinite(bankroll) ||
+    bankroll <= 0
   ) {
     return null;
   }
@@ -303,7 +307,17 @@ export function computeRaceVerdict(input: RaceVerdictInput): RaceVerdictSummary 
   const edge =
     fairOdds !== null && pmuOdds !== null ? 1 / fairOdds - 1 / pmuOdds : -1;
   const cappedEdge = edge > 0 ? Math.min(edge, MAX_KELLY_EDGE) : 0;
-  const rawStake = cappedEdge * DEFAULT_BANKROLL * DEFAULT_KELLY_FRACTION;
+  const bankroll =
+    typeof input.bankroll === "number" && Number.isFinite(input.bankroll) && input.bankroll > 0
+      ? input.bankroll
+      : null;
+  const kellyFraction =
+    typeof input.kellyFraction === "number" &&
+    Number.isFinite(input.kellyFraction) &&
+    input.kellyFraction > 0
+      ? input.kellyFraction
+      : DEFAULT_KELLY_FRACTION;
+  const rawStake = bankroll !== null ? cappedEdge * bankroll * kellyFraction : 0;
   const stake = rawStake > 0 ? Math.min(25, Math.max(1, Math.round(rawStake))) : 0;
   const verdict: RaceVerdict =
     edge <= 0 ? "PASSER" : edge < 0.1 ? "SURVEILLER" : "JOUER";

@@ -1,100 +1,86 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import type { PredictionRow, RaceSummary } from '@/lib/types'
 
-// ─── TYPES ───────────────────────────────────────────────────────────────────
 export interface PMUDashboardProps {
   race?: RaceSummary | null
   predictions?: PredictionRow[]
-  roiMois?: number
-  tauxReussite?: number
-  nbPronostics?: number
-  bankroll?: number
-  miseConseillee?: number
+  roiMois?: number | null
+  tauxReussite?: number | null
+  nbPronostics?: number | null
+  bankroll?: number | null
+  miseConseillee?: number | null
   derniereSynchro?: string
   algoVersion?: string
 }
 
-// ─── DONNÉES DE DÉMO (utilisées si aucune prop fournie) ──────────────────────
-const DEMO: Required<PMUDashboardProps> = {
-  roiMois: 18.4,
-  tauxReussite: 64,
-  nbPronostics: 87,
-  bankroll: 600,
-  miseConseillee: 12,
-  derniereSynchro: '--:--',
-  algoVersion: '9.2',
-  race: {
-    dateStr: '',
-    reunion: 1,
-    course: 1,
-    hippodrome: 'Vincennes',
-    pays: 'FR',
-    nomCourse: 'Prix de la Forêt de Rambouillet',
-    heureDepart: '20h10',
-    discipline: 'Attelé',
-    estTrot: true,
-    estPlat: false,
-    estQuinte: true,
-    allocation: 0,
-    distance: 2850,
-    nombrePartants: 16,
-  },
-  predictions: [
-    { date:'', reunion:1, course:1, hippodrome:'', cheval_num:7,  cheval_nom:'IDYLLE DE GUEZ',    score_cheval:92, confiance:9.2, qualite:88, lisibilite:'LISIBLE', value:31,  cote_matin:3.8, cote_depart:null, variation_cote:null, signal_variation:null, decision:'VALIDE',      pari_conseille:'GAGNANT', mise_simulee:12, resultat_place:null, resultat_gagnant:null, rapport_place:null, rapport_gagnant:null, gain_simule:null },
-    { date:'', reunion:1, course:1, hippodrome:'', cheval_num:3,  cheval_nom:'FLORIA DU CHÊNE',   score_cheval:84, confiance:8.4, qualite:80, lisibilite:'LISIBLE', value:18,  cote_matin:5.2, cote_depart:null, variation_cote:null, signal_variation:null, decision:'VALIDE',      pari_conseille:'GAGNANT', mise_simulee:8,  resultat_place:null, resultat_gagnant:null, rapport_place:null, rapport_gagnant:null, gain_simule:null },
-    { date:'', reunion:1, course:1, hippodrome:'', cheval_num:11, cheval_nom:'KING DU FOREZ',     score_cheval:79, confiance:7.9, qualite:72, lisibilite:'LISIBLE', value:4,   cote_matin:7.1, cote_depart:null, variation_cote:null, signal_variation:null, decision:'SURVEILLANCE',pari_conseille:'GAGNANT', mise_simulee:5,  resultat_place:null, resultat_gagnant:null, rapport_place:null, rapport_gagnant:null, gain_simule:null },
-    { date:'', reunion:1, course:1, hippodrome:'', cheval_num:1,  cheval_nom:'DARIUS DES LANDES', score_cheval:67, confiance:6.7, qualite:60, lisibilite:'LISIBLE', value:-6,  cote_matin:4.5, cote_depart:null, variation_cote:null, signal_variation:null, decision:'REJET',       pari_conseille:null,      mise_simulee:0,  resultat_place:null, resultat_gagnant:null, rapport_place:null, rapport_gagnant:null, gain_simule:null },
-    { date:'', reunion:1, course:1, hippodrome:'', cheval_num:5,  cheval_nom:'ELECTRA SPEED',     score_cheval:61, confiance:6.1, qualite:55, lisibilite:'LISIBLE', value:-12, cote_matin:6.9, cote_depart:null, variation_cote:null, signal_variation:null, decision:'REJET',       pari_conseille:null,      mise_simulee:0,  resultat_place:null, resultat_gagnant:null, rapport_place:null, rapport_gagnant:null, gain_simule:null },
-  ],
+function formatClock(date: Date) {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+function formatPercent(value: number | null | undefined, signed = false) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '--'
+  const rounded = Math.round(value)
+  return `${signed && rounded > 0 ? '+' : ''}${rounded}%`
+}
+
+function formatCount(value: number | null | undefined) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '--'
+  return String(Math.max(0, Math.round(value)))
+}
+
+function formatEuro(value: number | null | undefined) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '--'
+  return `${Math.max(0, Math.round(value))} EUR`
 }
 
 export default function PMUDashboard({
-  race,
-  predictions = DEMO.predictions,
-  roiMois = DEMO.roiMois,
-  tauxReussite = DEMO.tauxReussite,
-  nbPronostics = DEMO.nbPronostics,
-  bankroll = DEMO.bankroll,
-  miseConseillee = DEMO.miseConseillee,
-  derniereSynchro = DEMO.derniereSynchro,
-  algoVersion = DEMO.algoVersion,
+  race = null,
+  predictions = [],
+  roiMois = null,
+  tauxReussite = null,
+  nbPronostics = null,
+  bankroll = null,
+  miseConseillee = null,
+  derniereSynchro,
+  algoVersion = 'VMAX',
 }: PMUDashboardProps) {
   const [sent, setSent] = useState(false)
-  const [synced, setSynced] = useState(derniereSynchro)
+  const [synced, setSynced] = useState(() => derniereSynchro ?? formatClock(new Date()))
 
   useEffect(() => {
-    const now = new Date()
-    setSynced(`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`)
     const t = setInterval(() => {
-      const n = new Date()
-      setSynced(`${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`)
+      setSynced(formatClock(new Date()))
     }, 60000)
     return () => clearInterval(t)
   }, [])
 
-  // Trie : sélectionnés (mise > 0) d'abord, puis par score décroissant
   const sorted = [...predictions]
-    .filter(p => !p.non_partant)
+    .filter((p) => !p.non_partant)
     .sort((a, b) => {
-      if (a.mise_simulee > 0 && b.mise_simulee <= 0) return -1
-      if (a.mise_simulee <= 0 && b.mise_simulee > 0) return 1
-      return (b.score_blended ?? b.score_cheval) - (a.score_blended ?? a.score_cheval)
+      const aStake = a.mise_simulee ?? 0
+      const bStake = b.mise_simulee ?? 0
+      if (aStake > 0 && bStake <= 0) return -1
+      if (aStake <= 0 && bStake > 0) return 1
+      return (
+        (b.score_blended ?? b.score_cheval ?? b.score_final_pari ?? 0) -
+        (a.score_blended ?? a.score_cheval ?? a.score_final_pari ?? 0)
+      )
     })
     .slice(0, 7)
 
-  const activeRace = race ?? DEMO.race!
-  const raceName = activeRace.nomCourse || `R${activeRace.reunion}C${activeRace.course}`
+  const raceName = race ? race.nomCourse || `R${race.reunion}C${race.course}` : 'Course en attente'
+  const raceInfo = race
+    ? `${race.hippodrome} - ${race.discipline} - ${race.heureDepart}`
+    : 'donnees insuffisantes'
 
-  // Kelly tier selon mise
   function kellyTier(mise: number): string {
     if (mise >= 10) return 'A'
-    if (mise >= 6)  return 'B'
+    if (mise >= 6) return 'B'
     return 'C'
   }
 
-  // Edge depuis value ou market_edge
   function getEdge(p: PredictionRow): number | null {
     if (typeof p.value === 'number') return Math.round(p.value)
     return null
@@ -104,37 +90,34 @@ export default function PMUDashboard({
     <>
       <style>{CSS}</style>
       <div className="pmu-wrap">
-
-        {/* HEADER */}
         <header className="pmu-hd">
           <div className="pmu-logo">PMU Gagnant <em>VMAX</em></div>
           <button className="pmu-tg-btn" onClick={() => setSent(true)} disabled={sent}>
-            {sent ? '✓ Abonné !' : '✈ Recevoir sur Telegram'}
+            {sent ? 'Abonne !' : 'Recevoir sur Telegram'}
           </button>
         </header>
 
-        {/* ROI HERO */}
         <section className="pmu-hero">
           <div>
             <div className="pmu-eyebrow">ROI ce mois</div>
-            <div className="pmu-roi-num">+{Math.round(roiMois)}%</div>
-            <div className="pmu-roi-sub">Sur <span>{nbPronostics} pronostics</span> · Bankroll {bankroll} €</div>
+            <div className="pmu-roi-num">{formatPercent(roiMois, true)}</div>
+            <div className="pmu-roi-sub">
+              Sur <span>{formatCount(nbPronostics)} pronostics</span> - Bankroll {formatEuro(bankroll)}
+            </div>
           </div>
           <div className="pmu-mini-stats">
-            <div><div className="pmu-ms-val">{tauxReussite}%</div><div className="pmu-ms-lbl">taux de réussite</div></div>
-            <div><div className="pmu-ms-val">{miseConseillee} €</div><div className="pmu-ms-lbl">mise conseillée</div></div>
+            <div><div className="pmu-ms-val">{formatPercent(tauxReussite)}</div><div className="pmu-ms-lbl">taux de reussite</div></div>
+            <div><div className="pmu-ms-val">{formatEuro(miseConseillee)}</div><div className="pmu-ms-lbl">mise conseillee</div></div>
           </div>
         </section>
 
-        {/* RACE LINE */}
         <div className="pmu-race-line">
           <span className="pmu-race-name">{raceName}</span>
-          <span className="pmu-sep">·</span>
-          <span className="pmu-race-info">{activeRace.hippodrome} · {activeRace.discipline} · {activeRace.heureDepart}</span>
+          <span className="pmu-sep">-</span>
+          <span className="pmu-race-info">{raceInfo}</span>
           <div className="pmu-live-pill"><div className="pmu-live-dot" />LIVE</div>
         </div>
 
-        {/* TABLE */}
         <div>
           <div className="pmu-t-head">
             <div />
@@ -145,10 +128,11 @@ export default function PMUDashboard({
           </div>
 
           {sorted.map((p, i) => {
-            const active = p.mise_simulee > 0
+            const stake = p.mise_simulee ?? 0
+            const active = stake > 0
             const rank = active ? i + 1 : 99
-            const rc = rank===1 ? 'r1' : rank===2 ? 'r2' : rank===3 ? 'r3' : 'out'
-            const score = p.score_blended ?? p.score_cheval
+            const rc = rank === 1 ? 'r1' : rank === 2 ? 'r2' : rank === 3 ? 'r3' : 'out'
+            const score = p.score_blended ?? p.score_cheval ?? p.score_final_pari ?? 0
             const edge = getEdge(p)
             const cote = p.cote_depart ?? p.cote_matin
 
@@ -158,37 +142,39 @@ export default function PMUDashboard({
                 <div>
                   <div className="pmu-h-name">{p.cheval_nom}</div>
                   <div className="pmu-h-sub">
-                    {cote ? `Cote ${cote.toFixed(1)}×` : 'Cote N/A'}
-                    {p.decision === 'VALIDE' ? ' · ✓ VALIDE' : p.decision === 'SURVEILLANCE' ? ' · ◎ SURV.' : ''}
+                    {cote ? `Cote ${cote.toFixed(1)}x` : 'Cote N/A'}
+                    {p.decision === 'VALIDE' ? ' - VALIDE' : p.decision === 'SURVEILLANCE' ? ' - SURV.' : ''}
                   </div>
                 </div>
                 <div className="pmu-score-col">
                   <div className={`pmu-score-big${active ? '' : ' lo'}`}>{Math.round(score)}</div>
                   <div className="pmu-score-track">
-                    <div className={`pmu-score-fill${active ? '' : ' lo'}`} style={{width:`${Math.min(100, score)}%`}} />
+                    <div className={`pmu-score-fill${active ? '' : ' lo'}`} style={{ width: `${Math.min(100, score)}%` }} />
                   </div>
                 </div>
                 <div className="pmu-edge-col">
                   {edge !== null
                     ? <span className={`pmu-edge-val ${edge > 8 ? 'up' : edge < 0 ? 'dn' : 'flat'}`}>{edge > 0 ? '+' : ''}{edge}%</span>
-                    : <span className="pmu-edge-val flat">—</span>
+                    : <span className="pmu-edge-val flat">--</span>
                   }
                 </div>
                 <div className="pmu-mise-col">
                   {active
-                    ? <><div className="pmu-mise-amount">{p.mise_simulee} €</div><div className="pmu-mise-sub">Kelly {kellyTier(p.mise_simulee)}</div></>
-                    : <div className="pmu-mise-none">pas joué</div>
+                    ? <><div className="pmu-mise-amount">{formatEuro(stake)}</div><div className="pmu-mise-sub">Kelly {kellyTier(stake)}</div></>
+                    : <div className="pmu-mise-none">pas joue</div>
                   }
                 </div>
               </div>
             )
           })}
+          {sorted.length === 0 ? (
+            <div className="pmu-t-empty">donnees insuffisantes</div>
+          ) : null}
         </div>
 
-        {/* FOOTER */}
         <footer className="pmu-ft">
-          <span>Synchro PMU {synced} · VMAX v{algoVersion}</span>
-          <span>Cotes marché en confirmation uniquement</span>
+          <span>Synchro PMU {synced} - VMAX v{algoVersion}</span>
+          <span>Cotes marche en confirmation uniquement</span>
         </footer>
       </div>
     </>
@@ -239,6 +225,7 @@ const CSS = `
 .pmu-mise-amount{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--txt);line-height:1}
 .pmu-mise-none{color:var(--txt2);font-size:13px;font-family:'DM Mono',monospace}
 .pmu-mise-sub{font-size:9px;color:var(--txt2);margin-top:3px}
+.pmu-t-empty{padding:22px 32px;border-bottom:1px solid var(--bdr);font-size:12px;color:var(--txt2)}
 .pmu-ft{padding:14px 32px;border-top:1px solid var(--bdr);display:flex;justify-content:space-between;font-size:10px;color:var(--txt2);flex-wrap:wrap;gap:8px}
 @media(max-width:600px){
   .pmu-hd,.pmu-hero,.pmu-race-line,.pmu-t-head,.pmu-t-row,.pmu-ft{padding-left:16px;padding-right:16px}

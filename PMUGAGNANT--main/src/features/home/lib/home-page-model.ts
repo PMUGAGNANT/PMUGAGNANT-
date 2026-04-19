@@ -46,6 +46,8 @@ export type RaceScore = {
     betType?: string | null;
     confidence?: number | null;
     cote?: number | null;
+    stake?: number | null;
+    edge?: number | null;
     topFacteurs?: string[];
   } | null;
   pepiteDuJour?: {
@@ -62,6 +64,11 @@ export type RaceScore = {
     role: "PEPITE" | "OUTSIDER";
     confiance: number;
     score_cheval: number;
+  } | null;
+  access?: {
+    level?: "FREE" | "PRO";
+    locked?: boolean;
+    message?: string;
   } | null;
 };
 
@@ -157,6 +164,7 @@ export type FocusDetailResponse = {
         numPmu?: number | string | null;
         nom?: string | null;
       } | null;
+      message?: string | null;
     } | null;
   } | null;
 };
@@ -225,7 +233,7 @@ export function formatRelativeDay(dateStr: string) {
 }
 
 export function formatStake(value?: number | null) {
-  if (!value) return "8 EUR";
+  if (!value || !Number.isFinite(value)) return "--";
 
   return new Intl.NumberFormat("fr-FR", {
     style: "currency",
@@ -324,6 +332,10 @@ function toApiRaceScoreLite(score: RaceScore | undefined): ApiRaceScoreLite | un
 }
 
 export function getPickLabel(score?: RaceScore) {
+  if (score?.scoreLocked === true) {
+    return "Top 3 PRO masque";
+  }
+
   if (!score?.pick?.numPmu && !score?.pick?.nom) {
     return "Ticket principal en preparation";
   }

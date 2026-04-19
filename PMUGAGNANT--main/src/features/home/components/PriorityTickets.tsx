@@ -63,7 +63,9 @@ export function PriorityTickets({
     focusDetail?.paywall?.preview?.favori?.numPmu ??
     null;
   const focusPickTitle =
-    focusRace.score?.pick?.numPmu || focusRace.score?.pick?.nom
+    focusRace.score?.scoreLocked
+      ? "Top 3 PRO masque"
+      : focusRace.score?.pick?.numPmu || focusRace.score?.pick?.nom
       ? `#${focusRace.score?.pick?.numPmu ?? "--"} ${focusRace.score?.pick?.nom ?? "Selection"}`
       : focusDetail?.paywall?.preview?.favori?.numPmu ||
           focusDetail?.paywall?.preview?.favori?.nom
@@ -88,13 +90,14 @@ export function PriorityTickets({
     focusRace.score?.pick?.confidence ??
     selectedParticipant?.prediction?.confiance ??
     null;
-  const focusStakeValue = focusConfidence
-    ? Math.max(6, Math.round(focusConfidence * 2.5))
-    : 8;
+  const focusStakeValue = focusRace.score?.pick?.stake ?? null;
   const focusStake = formatStake(focusStakeValue);
   const focusOdds = focusRace.score?.pick?.cote ?? selectedParticipant?.cote ?? null;
   const focusGrossReturn =
-    typeof focusOdds === "number" && Number.isFinite(focusOdds)
+    typeof focusStakeValue === "number" &&
+    Number.isFinite(focusStakeValue) &&
+    typeof focusOdds === "number" &&
+    Number.isFinite(focusOdds)
       ? focusStakeValue * focusOdds
       : null;
   const focusDecision =
@@ -225,7 +228,9 @@ export function PriorityTickets({
               <p className="mt-1 text-[11px] font-semibold text-[var(--pmu-text-soft)]">
                 {focusGrossReturn
                   ? `Mise ${focusStake} -> gain potentiel ${formatStake(focusGrossReturn)}`
-                  : "Gain potentiel affiche des que la cote est disponible"}
+                  : focusRace.score?.scoreLocked
+                    ? "Scores, mises et edge reserves aux abonnes PRO"
+                    : "Gain potentiel affiche des que la cote est disponible"}
               </p>
             </div>
             <div className="app-card-muted px-4 py-3.5">

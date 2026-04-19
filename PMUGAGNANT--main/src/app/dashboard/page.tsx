@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import DashboardHeaderAccount from "@/components/dashboard/DashboardHeaderAccount";
 import PMUDashboard from "@/components/dashboard/PMUDashboard";
 import CountdownTimer from "@/components/race/CountdownTimer";
 import DashboardBestRaceRedirect from "@/components/race/DashboardBestRaceRedirect";
-import ScoreGauge from "@/components/ui/ScoreGauge";
 import StatusBadge from "@/components/ui/StatusBadge";
 import {
   formatRaceAnalysisId,
@@ -20,20 +19,15 @@ import {
   listPredictionsByDate,
   listRunnerOutcomesBetween,
 } from "@/lib/prediction-store";
-import { unstable_cache } from "next/cache";
 import type { PredictionRow, RaceSummary, RunnerOutcomeRow } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "Dashboard VMAX - PMU Gagnant",
   description:
-    "Dashboard premium PMU Gagnant : Quinté du jour, courses prêtes, value bets et statistiques live.",
+    "Dashboard premium PMU Gagnant : Quinte du jour, courses pretes, value bets et statistiques live.",
 };
 
-// Revalide toutes les 60 secondes au lieu de refetcher à chaque visite
 export const revalidate = 60;
-
-const BLUR_DATA_URL =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAHCAIAAAC+zks0AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAGUlEQVR4nGNgYGD4z8DAwMgABXAGNgYAbDgBEi5CZmQAAAAASUVORK5CYII=";
 
 type DashboardFilter = "ALL" | "QUINTE" | "COUPLE" | "TIERCE";
 
@@ -58,6 +52,19 @@ type PerformanceRow = {
   race: string;
   pick: string;
   result: string;
+};
+
+type SettledSelection = PerformanceRow & {
+  date: string;
+  stake: number;
+  gain: number;
+  won: boolean;
+  betType: string;
+};
+
+type SuccessRateRow = {
+  label: string;
+  value: number | null;
 };
 
 function getSingleSearchParam(value: string | string[] | undefined) {
@@ -126,9 +133,19 @@ function getRaceStatus(race: RaceSummary, predictions: PredictionRow[]) {
   return getVmaxRaceStatus(finished ? "finished" : null, minutesUntilStart);
 }
 
+function getSelectionPriority(row: PredictionRow) {
+  if (row.decision === "VALIDE") return 3;
+  if (row.decision === "SURVEILLANCE") return 2;
+  return 1;
+}
+
+function getSelectionScore(row: PredictionRow) {
+  return row.score_blended ?? row.score_cheval ?? row.score_final_pari ?? 0;
+}
+
 function getRaceConfidence(predictions: PredictionRow[]) {
   const best = predictions[0];
-  if (!best) return 64;
+  if (!best) return 0;
   return Math.max(0, Math.min(100, Math.round(best.confiance * 10 || best.score_cheval)));
 }
 
@@ -179,40 +196,12 @@ function getHeroRace(items: DashboardRace[]) {
   return [...items].sort((left, right) => right.confidence - left.confidence)[0] ?? null;
 }
 
-function formatCourseMeta(race: RaceSummary) {
-  return `${race.discipline || "PMU"} · ${race.heureDepart} · ${race.nombrePartants} partants`;
-}
-
-function getLatestPerformances(rows: PredictionRow[]) {
-  return rows
-    .filter((row) => typeof row.gain_simule === "number")
-    .slice(-5)
-    .reverse()
-    .map((row) => ({
-      race: `R${row.reunion}C${row.course}`,
-      pick: row.cheval_nom,
-      result: `${(row.gain_simule ?? 0) - row.mise_simulee >= 0 ? "+" : ""}${(
-        (row.gain_simule ?? 0) - row.mise_simulee
-      ).toFixed(0)} €`,
-    }));
-}
-
 function getRaceKey(row: Pick<PredictionRow | RunnerOutcomeRow, "date" | "reunion" | "course">) {
   return `${row.date}-${row.reunion}-${row.course}`;
 }
 
 function getRunnerKey(row: Pick<PredictionRow | RunnerOutcomeRow, "date" | "reunion" | "course" | "cheval_num">) {
   return `${getRaceKey(row)}-${row.cheval_num}`;
-}
-
-function getSelectionPriority(row: PredictionRow) {
-  if (row.decision === "VALIDE") return 3;
-  if (row.decision === "SURVEILLANCE") return 2;
-  return 1;
-}
-
-function getSelectionScore(row: PredictionRow) {
-  return row.score_blended ?? row.score_cheval ?? row.score_final_pari ?? 0;
 }
 
 function getSelectedPredictions(rows: PredictionRow[]) {
@@ -242,31 +231,86 @@ function getRealGain(row: PredictionRow, outcome: RunnerOutcomeRow) {
   if (betType === "PLACE") {
     if (!outcome.resultat_place) return 0;
     const placeReport = outcome.rapport_place ?? row.rapport_place ?? null;
-    return placeReport !== null ? stake * placeReport : row.gain_simule ?? 0;
+    return placeReport !== null ? stake * placeReport : null;
   }
   if (!outcome.resultat_gagnant) return 0;
   const winReport = outcome.rapport_gagnant ?? row.rapport_gagnant ?? null;
-  return winReport !== null ? stake * winReport : row.gain_simule ?? 0;
+  return winReport !== null ? stake * winReport : null;
 }
 
-function getRoiFromOfficialOutcomes(
+function formatPerformanceEuro(value: number) {
+  return `${value >= 0 ? "+" : ""}${value.toFixed(0)} EUR`;
+}
+
+function buildSettledSelections(
   predictions: PredictionRow[],
   outcomes: RunnerOutcomeRow[]
 ) {
   const outcomesByRunner = new Map(
     outcomes.map((outcome) => [getRunnerKey(outcome), outcome] as const)
   );
-  const settled = getSelectedPredictions(predictions).flatMap((row) => {
+  return getSelectedPredictions(predictions).flatMap((row): SettledSelection[] => {
     const outcome = outcomesByRunner.get(getRunnerKey(row));
     if (!outcome || outcome.non_partant) return [];
-    const stake = row.mise_simulee ?? 0;
     const gain = getRealGain(row, outcome);
-    return [{ stake, gain }];
+    if (gain === null) return [];
+    const stake = row.mise_simulee ?? 0;
+    const betType = row.pari_conseille ?? "AUTRE";
+    const won = betType === "PLACE" ? outcome.resultat_place : outcome.resultat_gagnant;
+    return [
+      {
+        date: row.date,
+        race: `R${row.reunion}C${row.course}`,
+        pick: row.cheval_nom,
+        result: formatPerformanceEuro(gain - stake),
+        stake,
+        gain,
+        won,
+        betType,
+      },
+    ];
   });
+}
+
+function getRoiFromSettledSelections(settled: SettledSelection[]) {
   const stake = settled.reduce((sum, row) => sum + row.stake, 0);
   const gain = settled.reduce((sum, row) => sum + row.gain, 0);
-  if (stake <= 0) return 34.7;
+  if (stake <= 0) return null;
   return ((gain - stake) / stake) * 100;
+}
+
+function getHitRateFromSettledSelections(settled: SettledSelection[]) {
+  if (settled.length === 0) return null;
+  return (settled.filter((row) => row.won).length / settled.length) * 100;
+}
+
+function getSuccessRates(settled: SettledSelection[]): SuccessRateRow[] {
+  return ["GAGNANT", "PLACE"].map((betType) => {
+    const scoped = settled.filter((row) => row.betType === betType);
+    return {
+      label: betType === "GAGNANT" ? "Gagnant" : "Place",
+      value: getHitRateFromSettledSelections(scoped),
+    };
+  });
+}
+
+function getSparklineValues(settled: SettledSelection[]) {
+  const sorted = [...settled].sort((left, right) => left.date.localeCompare(right.date));
+  let cumulativeProfit = 0;
+  return sorted.map((row) => {
+    cumulativeProfit += row.gain - row.stake;
+    return cumulativeProfit;
+  });
+}
+
+function formatSignedPercent(value: number | null) {
+  if (value === null || !Number.isFinite(value)) return "--";
+  return `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`;
+}
+
+function formatRate(value: number | null) {
+  if (value === null || !Number.isFinite(value)) return "--";
+  return `${Math.round(value)}%`;
 }
 
 function Sparkline({ values }: { values: number[] }) {
@@ -296,7 +340,6 @@ function Sparkline({ values }: { values: number[] }) {
   );
 }
 
-// Cache participants 5 minutes — la donnée change peu avant le départ
 const getCachedParticipants = unstable_cache(
   async (date: string, reunion: number, course: number) => {
     return getParticipants(date, reunion, course).catch(() => []);
@@ -324,7 +367,6 @@ async function loadRaceSearchText(date: string, races: RaceSummary[]) {
   );
 }
 
-// Cache dashboard data 60 secondes — évite de refetcher à chaque clic
 const loadDashboardData = unstable_cache(
   async () => {
     const date = getTodayDateStr();
@@ -366,23 +408,15 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const heroHref = hero
     ? `/race/${formatRaceAnalysisId(hero.race.reunion, hero.race.course)}?date=${hero.race.dateStr}`
     : null;
-  const roi = getRoiFromOfficialOutcomes(history, outcomes);
-  const latestPerformances: PerformanceRow[] =
-    getLatestPerformances(history).length > 0
-      ? getLatestPerformances(history)
-      : [
-          { race: "R1C4", pick: "Jarash", result: "+47 €" },
-          { race: "R3C2", pick: "Karma Quick", result: "+18 €" },
-          { race: "R4C7", pick: "Moon Lady", result: "-10 €" },
-          { race: "R2C6", pick: "Helios", result: "+31 €" },
-          { race: "R1C8", pick: "Noble Dream", result: "+12 €" },
-        ];
-  const successRates = [
-    { label: "Quinté", value: 68, widthClass: "w-[68%]" },
-    { label: "Couplé", value: 61, widthClass: "w-[61%]" },
-    { label: "Tiercé", value: 54, widthClass: "w-[54%]" },
-    { label: "Value", value: 72, widthClass: "w-[72%]" },
-  ];
+  const settled = buildSettledSelections(history, outcomes);
+  const roi = getRoiFromSettledSelections(settled);
+  const hitRate = getHitRateFromSettledSelections(settled);
+  const latestPerformances: PerformanceRow[] = settled.slice(-5).reverse();
+  const successRates = getSuccessRates(settled);
+  const sparklineValues = getSparklineValues(settled);
+  const recommendedStake =
+    hero?.predictions.find((prediction) => (prediction.mise_simulee ?? 0) > 0)?.mise_simulee ??
+    null;
   const navItems = [
     { label: "Quinte", href: "/dashboard?type=QUINTE", filter: "QUINTE" },
     { label: "Couple", href: "/dashboard?type=COUPLE", filter: "COUPLE" },
@@ -395,7 +429,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     <div className="min-h-screen bg-[#0A0E1A] text-[#F6F2E8]">
       <DashboardBestRaceRedirect href={heroHref} />
 
-      {/* ── HEADER ── */}
       <header className="sticky top-0 z-50 grid grid-cols-[1fr_auto] items-center gap-4 border-b border-[#D4AF37]/15 bg-[#0A0E1A]/90 px-4 py-3 backdrop-blur-xl md:grid-cols-[auto_auto_1fr_auto] md:px-8">
         <Link
           href="/dashboard"
@@ -410,7 +443,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               : "border-white/10 bg-white/5 text-slate-500"
           }`}
         >
-          ● LIVE
+          LIVE
         </span>
         <nav className="col-span-2 flex gap-2 overflow-x-auto text-sm font-bold text-slate-400 md:col-span-1 md:justify-center">
           {navItems.map((item) => (
@@ -430,7 +463,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <DashboardHeaderAccount />
       </header>
 
-      {/* ── MAIN ── */}
       <main className="mx-auto grid w-full max-w-[92rem] gap-5 px-4 py-5 lg:grid-cols-[1fr_21rem] lg:px-6">
         <section className="grid gap-5">
           <form
@@ -461,11 +493,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             race={hero?.race ?? null}
             predictions={hero?.predictions ?? []}
             roiMois={roi}
-            tauxReussite={successRates[0]?.value ?? 64}
-            nbPronostics={history.length}
-            bankroll={600}
-            miseConseillee={hero?.predictions[0]?.mise_simulee ?? 10}
-            algoVersion="9.2"
+            tauxReussite={hitRate}
+            nbPronostics={settled.length > 0 ? settled.length : null}
+            bankroll={null}
+            miseConseillee={recommendedStake}
+            algoVersion="--"
           />
 
           <section id="stats">
@@ -491,7 +523,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     </span>
                   </div>
                   <p className="text-sm font-bold text-slate-400">
-                    {item.race.discipline} · {item.race.heureDepart} · {item.race.nombrePartants} partants
+                    {item.race.discipline} - {item.race.heureDepart} - {item.race.nombrePartants} partants
                   </p>
                   <CountdownTimer dateStr={item.race.dateStr} heureDepart={item.race.heureDepart} />
                   {item.topNumbers.length > 0 ? (
@@ -527,24 +559,34 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <aside className="hidden content-start gap-3 lg:grid">
           <section className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-4 shadow-xl shadow-black/20">
             <p className="text-xs font-black uppercase text-[#D4AF37]">ROI 30 jours</p>
-            <strong className="mt-2 block font-[var(--font-display)] text-5xl font-black text-[#00C851]">
-              {roi >= 0 ? "+" : ""}
-              {roi.toFixed(1)}%
+            <strong
+              className={`mt-2 block font-[var(--font-display)] text-5xl font-black ${
+                roi === null ? "text-slate-400" : roi >= 0 ? "text-[#00C851]" : "text-[#FF4D5A]"
+              }`}
+            >
+              {formatSignedPercent(roi)}
             </strong>
-            <Sparkline values={[12, 15, 14, 18, 21, 19, 24, 27, 31, 29, 34, 37]} />
+            {sparklineValues.length > 0 ? (
+              <Sparkline values={sparklineValues} />
+            ) : (
+              <p className="mt-4 text-xs font-black text-slate-400">donnees insuffisantes</p>
+            )}
           </section>
 
           <section className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-4 shadow-xl shadow-black/20">
-            <p className="text-xs font-black uppercase text-[#D4AF37]">Réussite par pari</p>
+            <p className="text-xs font-black uppercase text-[#D4AF37]">Reussite par pari</p>
             <div className="mt-4 grid gap-3">
               {successRates.map((item) => (
                 <div className="grid grid-cols-[4.4rem_1fr_2.4rem] items-center gap-3" key={item.label}>
                   <span className="text-xs font-black text-slate-400">{item.label}</span>
                   <i className="h-2 overflow-hidden rounded-full bg-white/10">
-                    <b className={`block h-full rounded-full bg-gradient-to-r from-[#00C851] to-[#D4AF37] ${item.widthClass}`} />
+                    <b
+                      className="block h-full rounded-full bg-gradient-to-r from-[#00C851] to-[#D4AF37]"
+                      style={{ width: `${item.value ?? 0}%` }}
+                    />
                   </i>
                   <em className="text-right text-xs font-black not-italic text-slate-400">
-                    {item.value}%
+                    {formatRate(item.value)}
                   </em>
                 </div>
               ))}
@@ -552,7 +594,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </section>
 
           <section className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-4 shadow-xl shadow-black/20">
-            <p className="text-xs font-black uppercase text-[#D4AF37]">Dernières performances</p>
+            <p className="text-xs font-black uppercase text-[#D4AF37]">Dernieres performances</p>
             <table className="mt-3 w-full border-collapse">
               <tbody>
                 {latestPerformances.map((row) => (
@@ -562,6 +604,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     <td className="py-2 text-right text-xs font-black text-[#00C851]">{row.result}</td>
                   </tr>
                 ))}
+                {latestPerformances.length === 0 ? (
+                  <tr className="border-t border-white/10">
+                    <td className="py-3 text-xs font-black text-slate-400" colSpan={3}>
+                      donnees insuffisantes
+                    </td>
+                  </tr>
+                ) : null}
               </tbody>
             </table>
           </section>

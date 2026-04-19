@@ -10,7 +10,6 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import {
   buildValueBets,
   computeRaceVerdict,
-  computeRunnerKellyStake,
   formatRaceAnalysisId,
   formatOdds,
   formatStakeEuro,
@@ -227,6 +226,7 @@ function buildParticipantRows(
         firstFiniteNumber(stored?.score_blended, stored?.score_cheval, stored?.score_final_pari) !== null;
       const hasSnapshotScore =
         firstFiniteNumber(snapshot?.score_lisibilite_adjusted, snapshot?.score_expert) !== null;
+      const storedStake = firstFiniteNumber(stored?.mise_simulee, snapshot?.stake_final);
 
       return {
         numero: participant.numPmu,
@@ -245,7 +245,7 @@ function buildParticipantRows(
           forcedSource ??
           (hasStoredScore || hasSnapshotScore ? "supabase" : runner ? "engine" : "fallback"),
         musique: participant.musique || runner?.musique || null,
-        mise: computeRunnerKellyStake(score, cote),
+        mise: storedStake !== null && storedStake > 0 ? storedStake : null,
         topFacteur: runner?.prediction.topFacteurs[0] ?? stored?.avis_texte ?? null,
       };
     })
@@ -275,7 +275,7 @@ function buildRowsFromPredictions(rows: PredictionRow[]): ParticipantTableRow[] 
         scoreIa: score,
         scoreSource: "fallback" as const,
         musique: null,
-        mise: computeRunnerKellyStake(score, cote),
+        mise: row.mise_simulee > 0 ? row.mise_simulee : null,
         topFacteur: row.avis_texte ?? null,
       };
     })
@@ -413,7 +413,7 @@ function getRecommendedRow(rows: ParticipantTableRow[], analysis: RaceAnalysis |
 async function countRaceAlerts(dateStr: string, reunion: number, course: number) {
   const admin = getSupabaseAdminClient();
   if (!admin) {
-    return 247;
+    return null;
   }
 
   const { count, error } = await admin
@@ -425,10 +425,10 @@ async function countRaceAlerts(dateStr: string, reunion: number, course: number)
     .eq("status", "ACTIVE");
 
   if (error) {
-    return 247;
+    return null;
   }
 
-  return count ?? 247;
+  return count ?? null;
 }
 
 function buildServerReactionSummaries(messageIds: string[], rows: RaceReactionRow[]) {
@@ -752,6 +752,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
         cote: null,
         score: 0,
       });
+  const verdictStakeLabel = verdict.stake > 0 ? formatStakeEuro(verdict.stake) : "â€”";
   const chatRaceId = formatRaceAnalysisId(courseInfo.reunion, courseInfo.course);
   const chatRaceDate = toIsoDate(courseInfo.dateStr);
   const [alertCount, initialChatMessages] = await Promise.all([
@@ -810,7 +811,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
                   {verdict.verdict}
                 </strong>
                 <p className="font-[var(--font-display)] text-2xl font-black leading-none text-[#F6F2E8]">
-                  {verdict.verdict === "PASSER" ? "Aucune mise" : `mise: ${formatStakeEuro(verdict.stake)}`}
+                  {verdict.verdict === "PASSER" ? "Aucune mise" : `mise: ${verdictStakeLabel}`}
                 </p>
                 <span className="w-fit rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[0.66rem] font-black uppercase text-slate-400">
                   {dataBadge}
@@ -832,9 +833,9 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
                       <h1 className="break-words font-[var(--font-display)] text-4xl font-black leading-none text-[#F6F2E8] sm:text-5xl md:text-6xl">
                         {verdict.cheval}
                       </h1>
-                      {verdict.verdict === "JOUER" ? (
+                      {verdict.verdict === "JOUER" && alertCount !== null && alertCount > 0 ? (
                         <p className="mt-2 text-sm font-bold text-[#D4AF37]">
-                          {Math.max(alertCount, 247)} abonnés suivent ce signal aujourd&apos;hui.
+                          {alertCount} abonnés suivent ce signal aujourd&apos;hui.
                         </p>
                       ) : null}
                     </div>
@@ -870,14 +871,14 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
                   <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-4">
                     <p className="text-xs font-black uppercase text-slate-400">Mise Kelly</p>
                     <strong className="mt-2 block whitespace-nowrap font-[var(--font-display)] text-4xl font-black leading-none text-[#F6F2E8] md:text-5xl">
-                      {formatStakeEuro(verdict.stake)}
+                      {verdictStakeLabel}
                     </strong>
                   </div>
                 </div>
 
                 <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
                   <p className="text-sm font-bold text-slate-400">
-                    Kelly 25% sur bankroll 100€, basé sur l&apos;edge IA vs cote PMU.
+                    Mise issue des snapshots Supabase; affichage en attente si la bankroll est indisponible.
                   </p>
                   <RaceAlertButton
                     dateStr={courseInfo.dateStr}
@@ -1124,7 +1125,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
               verdict: verdict.verdict,
               cheval: verdict.cheval,
               cote: formatOdds(verdict.cote),
-              mise: formatStakeEuro(verdict.stake),
+                mise: verdictStakeLabel,
             }}
           />
         </div>

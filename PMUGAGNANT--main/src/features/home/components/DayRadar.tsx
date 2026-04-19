@@ -69,7 +69,7 @@ export function DayRadar({
           </div>
           <div>
             <span>Bankroll</span>
-            <i className="is-gold" style={{ width: "64%" }} />
+            <i className="is-gold" style={{ width: "0%" }} />
           </div>
         </div>
       </section>

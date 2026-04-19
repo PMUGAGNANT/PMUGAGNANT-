@@ -108,12 +108,15 @@ function CompactRaceCard({
       : item.status === "surveillance"
         ? { label: "SURVEILLER", tone: "warning" as const }
         : { label: "PASSER", tone: "neutral" as const };
-  const pickConfidence = item.score?.pick?.confidence ?? item.scoreValue;
-  const stakeValue = Math.max(6, Math.round(pickConfidence * 2.5));
+  const stakeValue = item.score?.pick?.stake ?? null;
   const stake = formatStake(stakeValue);
   const odds = item.score?.pick?.cote ?? null;
   const grossReturn =
-    typeof odds === "number" && Number.isFinite(odds) && odds > 0
+    typeof stakeValue === "number" &&
+    Number.isFinite(stakeValue) &&
+    typeof odds === "number" &&
+    Number.isFinite(odds) &&
+    odds > 0
       ? stakeValue * odds
       : null;
 
@@ -179,7 +182,11 @@ function CompactRaceCard({
         <div className="app-card-muted px-3 py-3">
           <p className="app-label">Mise</p>
           <p className="mt-1 text-sm font-black text-[var(--pmu-text)]">
-            {grossReturn ? `${stake} -> ${formatStake(grossReturn)}` : `${stake} - cote ${formatOddsLabel(odds)}`}
+            {item.score?.scoreLocked
+              ? "Mise PRO masquee"
+              : grossReturn
+                ? `${stake} -> ${formatStake(grossReturn)}`
+                : `${stake} - cote ${formatOddsLabel(odds)}`}
           </p>
         </div>
         <div className="app-card-muted px-3 py-3">

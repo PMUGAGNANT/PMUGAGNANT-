@@ -219,13 +219,9 @@ export async function GET(
                 required: true,
                 preview: {
                   lisibilite: computedAnalysis.prediction.lisibilite,
-                  recommendation: computedAnalysis.recommandation?.decision ?? null,
-                  favori: computedAnalysis.favori
-                    ? {
-                        numPmu: computedAnalysis.favori.numPmu,
-                        nom: computedAnalysis.favori.nom,
-                      }
-                    : null,
+                  recommendation: null,
+                  favori: null,
+                  message: "Top 3, scores, mises, edge et analyse complete reserves aux abonnes PRO.",
                 },
               }
             : null,

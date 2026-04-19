@@ -60,6 +60,8 @@ function HomeBoardCard({
       pickConfidence={item.score?.pick?.confidence}
       pickCote={item.score?.pick?.cote}
       pickBetType={item.score?.pick?.betType}
+      pickStake={item.score?.pick?.stake}
+      detailsLocked={item.score?.scoreLocked === true}
       decision={item.score?.decision}
       topFacteurs={item.score?.pick?.topFacteurs}
       priorityBadge={item.priorityBadge}

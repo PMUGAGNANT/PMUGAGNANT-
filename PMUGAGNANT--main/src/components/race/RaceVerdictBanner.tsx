@@ -38,7 +38,7 @@ function getVerdictLine(verdict: RaceVerdictSummary) {
     return "PASSER";
   }
 
-  return `${verdict.verdict} — mise: ${formatStakeEuro(verdict.stake)}`;
+  return `${verdict.verdict} — mise: ${verdict.stake > 0 ? formatStakeEuro(verdict.stake) : "—"}`;
 }
 
 export default function RaceVerdictBanner({
@@ -92,10 +92,7 @@ export default function RaceVerdictBanner({
   const urgent = minutesUntilStart > 0 && minutesUntilStart < 30;
   const horseLabel = locked ? "Cheval réservé PRO" : verdict.cheval;
   const stakeLabel = locked ? "Débloquer avec PRO" : getVerdictLine(verdict);
-  const socialProof = useMemo(
-    () => Math.max(alertCount, 247),
-    [alertCount]
-  );
+  const socialProof = useMemo(() => Math.max(0, alertCount), [alertCount]);
 
   return (
     <section

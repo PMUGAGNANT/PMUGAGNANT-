@@ -48,6 +48,8 @@ export type CourseCardProps = {
   pickConfidence?: number | null;
   pickCote?: number | null;
   pickBetType?: string | null;
+  pickStake?: number | null;
+  detailsLocked?: boolean;
   decision?: string | null;
   topFacteurs?: string[];
   priorityBadge?: RacePriorityBadge | null;
@@ -66,7 +68,9 @@ function formatCountdown(minutes: number): string {
   return m === 0 ? `${h} h` : `${h} h ${m}`;
 }
 
-function formatEuros(value: number): string {
+function formatEuros(value: number | null | undefined): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "--";
+
   return new Intl.NumberFormat("fr-FR", {
     style: "currency",
     currency: "EUR",
@@ -158,6 +162,8 @@ export function CourseCard({
   pickConfidence,
   pickCote,
   pickBetType,
+  pickStake = null,
+  detailsLocked = false,
   decision = null,
   topFacteurs,
   priorityBadge = null,
@@ -209,7 +215,7 @@ export function CourseCard({
     : "";
   const selectedInCombo = comboAction ? isSelected(comboId) : false;
   const comboFull = selections.length >= 4 && !selectedInCombo;
-  const stakeValue = Math.max(6, Math.round((pickConfidence ?? displayScore) * 2.5));
+  const stakeValue = pickStake;
   const stakeLabel = formatEuros(stakeValue);
 
   const lines: Array<{ label: string; value: string }> = [];
@@ -305,7 +311,7 @@ export function CourseCard({
         <div className="stake-chip px-4 py-4">
           <p className="app-label text-[var(--pmu-gold)]">Mise</p>
           <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
-            {stakeLabel}
+            {detailsLocked ? "PRO masque" : stakeLabel}
           </p>
         </div>
         <div className="app-card-muted px-4 py-4">
