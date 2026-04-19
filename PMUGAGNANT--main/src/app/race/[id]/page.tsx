@@ -480,94 +480,91 @@ async function loadRacePageData(id: string, requestedDate: string): Promise<Race
 
 // ─── STYLES ──────────────────────────────────────────────────────────────────
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,300&display=swap');
-.rp-wrap{--bg:#0A0E1A;--s1:#101827;--s2:#151E2E;--bdr:rgba(212,175,55,0.18);--bdr2:rgba(212,175,55,0.35);--g:#D4AF37;--g2:#F0D060;--txt:#F6F2E8;--txt2:#8A8070;--grn:#00C851;--red:#FF4D5A;--blu:#6AABDE;font-family:'DM Mono',monospace;color:var(--txt);background:var(--bg);min-height:100vh}
-
-.rp-topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:rgba(10,14,26,0.95);border-bottom:1px solid var(--bdr);backdrop-filter:blur(16px)}
-.rp-logo{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:900;color:var(--g);letter-spacing:-0.3px;text-decoration:none;text-transform:uppercase}
-
-.rp-body{max-width:1200px;margin:0 auto;padding:28px 24px;display:grid;gap:20px}
-
-.rp-course-header{background:linear-gradient(135deg,#101827 0%,#151E2E 100%);border:1px solid var(--bdr2);border-radius:16px;padding:28px 32px;display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap;position:relative;overflow:hidden}
-.rp-course-header::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(212,175,55,0.08) 0%,transparent 70%)}
-.rp-course-name{font-family:'Cormorant Garamond',serif;font-size:42px;font-weight:700;color:var(--txt);line-height:1;letter-spacing:-0.5px;margin-bottom:10px}
-.rp-course-meta{font-size:13px;color:var(--txt2);letter-spacing:0.3px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.rp-course-meta-dot{width:4px;height:4px;border-radius:50%;background:var(--bdr2);display:inline-block}
-.rp-course-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;letter-spacing:1.5px;padding:5px 14px;border-radius:20px;font-weight:500}
-.rp-course-badge.live{background:rgba(0,200,81,0.15);border:1px solid rgba(0,200,81,0.4);color:var(--grn)}
-.rp-course-badge.termine{background:rgba(106,171,222,0.12);border:1px solid rgba(106,171,222,0.3);color:var(--blu)}
-.rp-course-badge.upcoming{background:rgba(212,175,55,0.12);border:1px solid var(--bdr2);color:var(--g)}
-.rp-live-dot{width:7px;height:7px;border-radius:50%;background:var(--grn);box-shadow:0 0 8px var(--grn);animation:rpblink 1.4s infinite}
-@keyframes rpblink{0%,100%{opacity:1;box-shadow:0 0 8px var(--grn)}50%{opacity:0.4;box-shadow:none}}
-.rp-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:14px}
-
-.rp-grid{display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start}
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400&display=swap');
+.rp-wrap{--bg:#07080F;--s1:#0D1020;--s2:#131628;--g:#D4AF37;--g2:#FFE566;--g3:#8B6914;--txt:#FFFFFF;--txt2:#6A6A80;--txt3:#3A3A50;--grn:#00FF87;--red:#FF4D5A;--blu:#4DC8FF;--bdr:rgba(212,175,55,0.15);--bdr2:rgba(212,175,55,0.35);font-family:"DM Mono",monospace;color:var(--txt);background:var(--bg);min-height:100vh}
+.rp-topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:12px 32px;background:rgba(7,8,15,0.92);border-bottom:1px solid var(--bdr);backdrop-filter:blur(20px)}
+.rp-logo{font-family:"Cormorant Garamond",serif;font-size:22px;font-weight:700;background:linear-gradient(90deg,#D4AF37,#FFE566);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-decoration:none;letter-spacing:2px;text-transform:uppercase}
+.rp-data-badge{font-size:9px;background:rgba(255,255,255,0.04);border:1px solid var(--bdr);border-radius:20px;padding:3px 10px;color:var(--txt2);letter-spacing:0.5px}
+.rp-body{max-width:1280px;margin:0 auto;padding:24px;display:grid;gap:20px}
+.rp-course-header{position:relative;overflow:hidden;border-radius:20px;padding:32px 36px;border:1px solid var(--bdr2);background:linear-gradient(135deg,#0D1020 0%,#131628 60%,#0A0D1C 100%);display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.rp-course-header::before{content:"";position:absolute;top:-80px;right:-80px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(212,175,55,0.1) 0%,transparent 65%);pointer-events:none}
+.rp-course-tag{font-size:10px;color:var(--g);letter-spacing:3px;text-transform:uppercase;margin-bottom:10px}
+.rp-course-name{font-family:"Cormorant Garamond",serif;font-size:44px;font-weight:700;color:#fff;line-height:1;letter-spacing:-1px;margin-bottom:14px}
+.rp-course-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--txt2)}
+.rp-sep{color:var(--txt3)}
+.rp-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:14px;min-width:120px}
+.rp-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;letter-spacing:1.5px;padding:6px 16px;border-radius:20px}
+.rp-badge.live{background:rgba(0,255,135,0.1);border:1px solid rgba(0,255,135,0.4);color:var(--grn)}
+.rp-badge.termine{background:rgba(77,200,255,0.1);border:1px solid rgba(77,200,255,0.3);color:var(--blu)}
+.rp-badge.upcoming{background:rgba(212,175,55,0.1);border:1px solid var(--bdr2);color:var(--g)}
+.rp-live-dot{width:7px;height:7px;border-radius:50%;background:var(--grn);box-shadow:0 0 10px var(--grn);animation:rpblink 1.4s infinite}
+@keyframes rpblink{0%,100%{opacity:1}50%{opacity:0.3}}
+.rp-grid{display:grid;grid-template-columns:1fr 290px;gap:20px;align-items:start}
 @media(max-width:900px){.rp-grid{grid-template-columns:1fr}}
 .rp-main{display:grid;gap:20px}
-
-.rp-card{background:var(--s1);border:1px solid var(--bdr);border-radius:16px;overflow:hidden}
-.rp-card-header{padding:16px 24px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;background:rgba(212,175,55,0.03)}
-.rp-card-title{font-size:10px;color:var(--g);text-transform:uppercase;letter-spacing:2.5px;font-weight:500}
-
-.rp-selection-section{padding:24px 28px}
-.rp-bubbles{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
-.rp-bubble{width:64px;height:64px;border-radius:50%;background:var(--g);color:#0A0E1A;display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:900;line-height:1;border:2px solid var(--g2);box-shadow:0 0 24px rgba(212,175,55,0.35),0 0 6px rgba(212,175,55,0.2)}
-.rp-bubble.rank2{background:rgba(212,175,55,0.55);border-color:rgba(212,175,55,0.5);box-shadow:0 0 12px rgba(212,175,55,0.15)}
-.rp-bubble.rank3{background:rgba(212,175,55,0.25);border-color:rgba(212,175,55,0.25);box-shadow:none}
-
-.rp-verdict-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--bdr)}
-.rp-stat-cell{text-align:center;padding:18px 12px;border-right:1px solid var(--bdr)}
-.rp-stat-cell:last-child{border-right:none}
-.rp-stat-label{font-size:9px;color:var(--txt2);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px}
-.rp-stat-val{font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:700;line-height:1;color:var(--g)}
-.rp-stat-val.grn{color:var(--grn);text-shadow:0 0 20px rgba(0,200,81,0.3)}
-.rp-stat-val.red{color:var(--red)}
-
+.rp-card{background:var(--s1);border:1px solid var(--bdr);border-radius:20px;overflow:hidden}
+.rp-card-header{padding:14px 24px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between}
+.rp-card-title{font-size:9px;color:var(--g);text-transform:uppercase;letter-spacing:3px}
+.rp-sel-body{padding:24px 28px}
+.rp-bubbles{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.rp-bubble-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;min-width:80px}
+.rp-bubble{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:"Cormorant Garamond",serif;font-size:34px;font-weight:700;line-height:1;flex-shrink:0}
+.rp-bubble.r1{background:linear-gradient(135deg,#D4AF37,#FFE566);color:#07080F;box-shadow:0 0 32px rgba(212,175,55,0.5),0 0 64px rgba(212,175,55,0.15)}
+.rp-bubble.r2{background:linear-gradient(135deg,rgba(212,175,55,0.45),rgba(212,175,55,0.65));color:#fff;border:1px solid rgba(212,175,55,0.5);box-shadow:0 0 16px rgba(212,175,55,0.2)}
+.rp-bubble.r3{background:rgba(212,175,55,0.1);color:rgba(212,175,55,0.6);border:1px solid rgba(212,175,55,0.2)}
+.rp-bubble-name{font-size:11px;color:var(--txt);text-align:center;max-width:80px;line-height:1.3}
+.rp-bubble-score{font-size:10px;color:var(--txt2);text-align:center}
+.rp-verdict-bar{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--bdr)}
+.rp-vstat{text-align:center;padding:20px 12px;border-right:1px solid var(--bdr)}
+.rp-vstat:last-child{border-right:none}
+.rp-vstat-label{font-size:9px;color:var(--txt2);text-transform:uppercase;letter-spacing:2px;margin-bottom:10px}
+.rp-vstat-val{font-family:"Cormorant Garamond",serif;font-size:40px;font-weight:700;line-height:1}
+.rp-vstat-val.gold{background:linear-gradient(90deg,#D4AF37,#FFE566);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.rp-vstat-val.grn{background:linear-gradient(90deg,#00FF87,#00C851);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.rp-vstat-val.red{color:var(--red)}
 .rp-table-wrap{overflow-x:auto}
-.rp-table{width:100%;border-collapse:collapse;min-width:600px}
+.rp-table{width:100%;border-collapse:collapse;min-width:640px}
 .rp-th{font-size:9px;color:var(--g);text-transform:uppercase;letter-spacing:2px;padding:12px 16px;text-align:left;border-bottom:1px solid var(--bdr);white-space:nowrap;background:rgba(212,175,55,0.03)}
 .rp-th.r{text-align:right}
-.rp-tr{border-bottom:1px solid rgba(212,175,55,0.06);transition:background 0.12s;position:relative;cursor:pointer}
+.rp-tr{border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.12s;cursor:pointer}
 .rp-tr:last-child{border-bottom:none}
 .rp-tr:hover{background:rgba(212,175,55,0.04)}
-.rp-tr.sel{background:rgba(212,175,55,0.07);border-left:3px solid var(--g)}
-.rp-tr.out{opacity:0.35}
-.rp-td{padding:16px;font-size:13px;vertical-align:middle}
+.rp-tr.sel{background:linear-gradient(90deg,rgba(212,175,55,0.08),transparent);border-left:3px solid var(--g)}
+.rp-tr.out{opacity:0.28}
+.rp-td{padding:14px 16px;vertical-align:middle}
 .rp-td.r{text-align:right}
-.rp-num{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:var(--txt2);line-height:1;width:32px;text-align:center}
-.rp-num.sel{color:var(--g);font-weight:700;font-size:26px}
-.rp-horse-name{font-size:14px;color:var(--txt);letter-spacing:0.2px;font-weight:400}
-.rp-horse-sub{font-size:11px;color:var(--txt2);margin-top:3px}
-.rp-score-wrap{display:flex;align-items:center;gap:10px;justify-content:flex-end}
-.rp-score-track{height:3px;background:var(--s2);border-radius:2px;overflow:hidden;width:60px}
-.rp-score-fill{height:100%;border-radius:2px;background:var(--g)}
-.rp-score-fill.lo{background:var(--txt2);opacity:0.4}
-.rp-score-num{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--g);min-width:32px;text-align:right}
-.rp-score-num.lo{color:var(--txt2);font-weight:300}
-.rp-musique{font-size:10px;color:var(--txt2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:0.5px}
-.rp-cote{font-size:14px;color:var(--txt2);font-weight:400}
-.rp-mise{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--txt)}
-.rp-mise.none{color:var(--txt2);font-size:12px;font-family:'DM Mono',monospace;font-weight:300}
-
+.rp-num{font-family:"Cormorant Garamond",serif;font-size:22px;font-weight:300;color:var(--txt2);line-height:1;text-align:center}
+.rp-num.sel{background:linear-gradient(135deg,#D4AF37,#FFE566);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:700;font-size:26px}
+.rp-horse{font-size:13px;color:#fff;letter-spacing:0.2px;white-space:nowrap}
+.rp-sub{font-size:10px;color:var(--txt2);margin-top:3px;white-space:nowrap}
+.rp-score-cell{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+.rp-score-track{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;width:50px;overflow:hidden}
+.rp-score-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#8B6914,#D4AF37)}
+.rp-score-fill.lo{background:rgba(255,255,255,0.12)}
+.rp-score-n{font-family:"Cormorant Garamond",serif;font-size:22px;font-weight:700;background:linear-gradient(90deg,#D4AF37,#FFE566);-webkit-background-clip:text;-webkit-text-fill-color:transparent;min-width:32px;text-align:right}
+.rp-score-n.lo{background:none;-webkit-text-fill-color:var(--txt2);font-weight:300}
+.rp-musique{font-size:10px;color:var(--txt2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rp-cote{font-size:13px;color:var(--txt2)}
+.rp-mise{font-family:"Cormorant Garamond",serif;font-size:22px;font-weight:600;color:#fff}
+.rp-mise.none{color:var(--txt2);font-size:11px;font-family:"DM Mono",monospace;font-weight:300}
 .rp-sidebar{display:grid;gap:16px}
-.rp-side-card{background:var(--s1);border:1px solid var(--bdr);border-radius:16px;overflow:hidden}
-.rp-side-title{font-size:10px;color:var(--g);text-transform:uppercase;letter-spacing:2.5px;padding:14px 18px;border-bottom:1px solid var(--bdr);background:rgba(212,175,55,0.03)}
-.rp-side-body{padding:16px 18px;display:grid;gap:10px}
-.rp-value-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:rgba(0,200,81,0.06);border-radius:10px;border-left:3px solid var(--grn)}
-.rp-value-name{font-size:12px;color:var(--txt)}
-.rp-value-edge{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;color:var(--grn)}
+.rp-scard{background:var(--s1);border:1px solid var(--bdr);border-radius:20px;overflow:hidden}
+.rp-stitle{font-size:9px;color:var(--g);text-transform:uppercase;letter-spacing:3px;padding:14px 20px;border-bottom:1px solid var(--bdr)}
+.rp-sbody{padding:16px 20px;display:grid;gap:10px}
+.rp-vbet{padding:12px 14px;border-radius:12px;background:rgba(0,255,135,0.05);border:1px solid rgba(0,255,135,0.2);border-left:3px solid var(--grn);display:flex;justify-content:space-between;align-items:center}
+.rp-vbet-name{font-size:12px;color:#fff}
+.rp-vbet-sub{font-size:10px;color:var(--txt2);margin-top:3px}
+.rp-vbet-edge{font-family:"Cormorant Garamond",serif;font-size:26px;font-weight:700;background:linear-gradient(90deg,#00FF87,#00C851);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .rp-plan-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--bdr);font-size:12px}
 .rp-plan-row:last-child{border-bottom:none}
-.rp-plan-label{color:var(--txt2)}
-.rp-plan-val{color:var(--txt)}
-.rp-raisons{display:grid;gap:8px}
-.rp-raison{background:var(--s2);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--txt2);border-left:2px solid var(--bdr2);line-height:1.6}
-.rp-alert-btn{margin:12px 18px 16px}
-.rp-pro-lock{background:rgba(212,175,55,0.08);border:1px solid var(--bdr2);border-radius:10px;padding:14px 16px;text-align:center}
-.rp-pro-lock p{font-size:12px;color:var(--g);margin-bottom:10px}
-.rp-pro-link{display:inline-flex;background:var(--g);color:#0A0E1A;font-size:11px;font-family:'DM Mono',monospace;padding:8px 18px;border-radius:6px;text-decoration:none;font-weight:500}
-.rp-data-badge{font-size:9px;background:rgba(255,255,255,0.05);border:1px solid var(--bdr);border-radius:20px;padding:3px 10px;color:var(--txt2);letter-spacing:0.5px}
-`;
+.rp-plan-lbl{color:var(--txt2)}
+.rp-plan-val{color:#fff}
+.rp-raison{background:var(--s2);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--txt2);line-height:1.6;border-left:2px solid rgba(212,175,55,0.3)}
+.rp-alert-btn{margin:12px 20px 16px}
+.rp-pro-lock{background:linear-gradient(135deg,rgba(212,175,55,0.08),rgba(212,175,55,0.03));border:1px solid var(--bdr2);border-radius:12px;padding:16px;text-align:center}
+.rp-pro-lock p{font-size:12px;color:var(--g);margin-bottom:12px}
+.rp-pro-link{display:inline-flex;background:linear-gradient(90deg,#D4AF37,#FFE566);color:#07080F;font-size:11px;font-family:"DM Mono",monospace;padding:9px 20px;border-radius:8px;text-decoration:none;font-weight:500}
+``;
 
 export default async function RacePage({ params, searchParams }: RacePageProps) {
   const { id } = await params;
@@ -700,18 +697,16 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
                   </span>
                 )}
               </div>
-              <div className="rp-selection-section">
+              <div className="rp-sel-body">
                 <div className="rp-bubbles">
                   {top3.map((row, i) => (
-                    <div key={row.numero} style={{display:'flex',alignItems:'center',gap:'10px'}}>
-                      <div className={`rp-bubble ${i === 1 ? 'rank2' : i === 2 ? 'rank3' : ''}`}>
+                    <div key={row.numero} className="rp-bubble-wrap">
+                      <div className={`rp-bubble ${i === 1 ? 'r2' : i === 2 ? 'r3' : 'r1'}`}>
                         {row.numero}
                       </div>
-                      <div style={{fontSize:'11px',color:'#6A6258'}}>
-                        <div style={{color:'#EDE8DF',fontSize:'12px'}}>{row.cheval}</div>
-                        <div>Score {Math.round(row.scoreV10 ?? row.scoreIa ?? 0)}</div>
-                        {row.cote && <div>Cote {formatOdds(row.cote)}</div>}
-                      </div>
+                      <div className="rp-bubble-name">{row.cheval}</div>
+                      <div className="rp-bubble-score">Score {Math.round(row.scoreV10 ?? row.scoreIa ?? 0)}</div>
+                      {row.cote && <div className="rp-bubble-score">Cote {formatOdds(row.cote)}</div>}
                     </div>
                   ))}
                   {top3.length === 0 && (
@@ -720,19 +715,19 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
                 </div>
               </div>
               <div className="rp-verdict-bar">
-                <div className="rp-stat-cell">
-                  <div className="rp-stat-label">Verdict</div>
+                <div className="rp-vstat">
+                  <div className="rp-vstat-label">Verdict</div>
                   <div className={`rp-stat-val ${verdict.verdict === 'JOUER' ? 'grn' : verdict.verdict === 'PASSER' ? 'red' : ''}`}>
                     {verdict.verdict}
                   </div>
                 </div>
-                <div className="rp-stat-cell">
-                  <div className="rp-stat-label">Confiance</div>
-                  <div className="rp-stat-val">{verdict.scorePercent}%</div>
+                <div className="rp-vstat">
+                  <div className="rp-vstat-label">Confiance</div>
+                  <div className="rp-vstat-val">{verdict.scorePercent}%</div>
                 </div>
-                <div className="rp-stat-cell">
-                  <div className="rp-stat-label">Mise Kelly</div>
-                  <div className="rp-stat-val">{stakeLabel}</div>
+                <div className="rp-vstat">
+                  <div className="rp-vstat-label">Mise Kelly</div>
+                  <div className="rp-vstat-val">{stakeLabel}</div>
                 </div>
               </div>
             </div>
@@ -767,18 +762,18 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
                             <div className={`rp-num ${isSelected ? 'sel' : ''}`}>{row.numero}</div>
                           </td>
                           <td className="rp-td">
-                            <div className="rp-horse-name">{row.cheval}</div>
+                            <div className="rp-horse">{row.cheval}</div>
                           </td>
                           <td className="rp-td">
-                            <div className="rp-horse-sub">{row.jockey}</div>
-                            <div className="rp-horse-sub">{row.entraineur}</div>
+                            <div className="rp-sub">{row.jockey}</div>
+                            <div className="rp-sub">{row.entraineur}</div>
                           </td>
                           <td className="rp-td">
                             <div className="rp-musique">{row.musique ?? '—'}</div>
                           </td>
                           <td className="rp-td r">
                             {score !== null ? (
-                              <div className="rp-score-wrap" style={{justifyContent:'flex-end'}}>
+                              <div className="rp-score-cell" style={{justifyContent:'flex-end'}}>
                                 <div className="rp-score-track">
                                   <div className={`rp-score-fill ${active ? '' : 'lo'}`} style={{width:`${Math.min(100,score)}%`}} />
                                 </div>
@@ -823,16 +818,16 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
           <div className="rp-sidebar">
 
             {/* COUNTDOWN */}
-            <div className="rp-side-card">
-              <div className="rp-side-title">Départ</div>
+            <div className="rp-scard">
+              <div className="rp-stitle">Départ</div>
               <div style={{padding:'16px 18px'}}>
                 <CountdownTimer dateStr={courseInfo.dateStr} heureDepart={courseInfo.heureDepart} variant="hero" />
               </div>
             </div>
 
             {/* ALERTE */}
-            <div className="rp-side-card">
-              <div className="rp-side-title">Alerte Telegram</div>
+            <div className="rp-scard">
+              <div className="rp-stitle">Alerte Telegram</div>
               <div className="rp-alert-btn" style={{marginTop:'12px'}}>
                 <RaceAlertButton
                   dateStr={courseInfo.dateStr}
@@ -852,21 +847,21 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
             </div>
 
             {/* VALUE BETS */}
-            <div className="rp-side-card">
-              <div className="rp-side-title">Value Bets</div>
-              <div className="rp-side-body">
+            <div className="rp-scard">
+              <div className="rp-stitle">Value Bets</div>
+              <div className="rp-sbody">
                 {valueBets.length > 0 ? (
                   <>
                     {valueBets.slice(0, 1).map((bet) => (
                       <div key={bet.numero}>
-                        <div className="rp-value-row">
+                        <div className="rp-vbet">
                           <div>
-                            <div className="rp-value-name">#{bet.numero} {bet.cheval}</div>
+                            <div className="rp-vbet-name">#{bet.numero} {bet.cheval}</div>
                             <div style={{fontSize:'10px',color:'#6A6258',marginTop:'2px'}}>
                               PMU {formatOdds(bet.coteActuelle)} · fair {formatOdds(bet.coteFair)}
                             </div>
                           </div>
-                          <div className="rp-value-edge">+{Math.round(bet.edgePct)}%</div>
+                          <div className="rp-vbet-edge">+{Math.round(bet.edgePct)}%</div>
                         </div>
                         <div style={{fontSize:'11px',color:'#6A6258',marginTop:'8px',lineHeight:'1.5'}}>
                           {getValueExplanation(bet.explanation)}
@@ -887,27 +882,27 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
             </div>
 
             {/* PLAN DE JEU */}
-            <div className="rp-side-card">
-              <div className="rp-side-title">Plan de jeu</div>
-              <div className="rp-side-body">
+            <div className="rp-scard">
+              <div className="rp-stitle">Plan de jeu</div>
+              <div className="rp-sbody">
                 {analysis?.favori?.prediction.typePariConseille && (
                   <div className="rp-plan-row">
-                    <span className="rp-plan-label">Type conseillé</span>
+                    <span className="rp-plan-lbl">Type conseillé</span>
                     <span className="rp-plan-val">{analysis.favori.prediction.typePariConseille}</span>
                   </div>
                 )}
                 {analysis?.prediction.lisibilite && (
                   <div className="rp-plan-row">
-                    <span className="rp-plan-label">Lisibilité</span>
+                    <span className="rp-plan-lbl">Lisibilité</span>
                     <span className="rp-plan-val">{analysis.prediction.lisibilite}</span>
                   </div>
                 )}
                 <div className="rp-plan-row">
-                  <span className="rp-plan-label">Course</span>
+                  <span className="rp-plan-lbl">Course</span>
                   <span className="rp-plan-val">R{courseInfo.reunion}C{courseInfo.course}</span>
                 </div>
                 <div className="rp-plan-row" style={{borderBottom:'none'}}>
-                  <span className="rp-plan-label">Cote sélection</span>
+                  <span className="rp-plan-lbl">Cote sélection</span>
                   <span className="rp-plan-val">{formatOdds(verdict.cote)}</span>
                 </div>
               </div>
