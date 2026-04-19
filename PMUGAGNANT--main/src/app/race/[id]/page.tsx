@@ -564,7 +564,7 @@ const CSS = `
 .rp-pro-lock{background:linear-gradient(135deg,rgba(212,175,55,0.08),rgba(212,175,55,0.03));border:1px solid var(--bdr2);border-radius:12px;padding:16px;text-align:center}
 .rp-pro-lock p{font-size:12px;color:var(--g);margin-bottom:12px}
 .rp-pro-link{display:inline-flex;background:linear-gradient(90deg,#D4AF37,#FFE566);color:#07080F;font-size:11px;font-family:"DM Mono",monospace;padding:9px 20px;border-radius:8px;text-decoration:none;font-weight:500}
-``;
+`;
 
 export default async function RacePage({ params, searchParams }: RacePageProps) {
   const { id } = await params;
