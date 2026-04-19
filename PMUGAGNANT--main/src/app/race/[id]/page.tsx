@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import CountdownTimer from "@/components/race/CountdownTimer";
 import ParticipantsTable from "@/components/race/ParticipantsTable";
@@ -52,9 +51,6 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
-
-const BLUR_DATA_URL =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAHCAIAAAC+zks0AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAGUlEQVR4nGNgYGD4z8DAwMgABXAGNgYAbDgBEi5CZmQAAAAASUVORK5CYII=";
 
 type RacePageProps = {
   params: Promise<{ id: string }>;
@@ -115,11 +111,8 @@ function getFiniteNumber(value: number | null | undefined) {
 function firstFiniteNumber(...values: Array<number | null | undefined>) {
   for (const value of values) {
     const numeric = getFiniteNumber(value);
-    if (numeric !== null) {
-      return numeric;
-    }
+    if (numeric !== null) return numeric;
   }
-
   return null;
 }
 
@@ -139,11 +132,8 @@ function getUnknownNumber(value: unknown) {
 
 function isRaceRoleV10(value: unknown): value is RaceRoleV10Key {
   return (
-    value === "CHOIX" ||
-    value === "PEPITE" ||
-    value === "CHASSEUR" ||
-    value === "PODIUM" ||
-    value === "OUTSIDER"
+    value === "CHOIX" || value === "PEPITE" || value === "CHASSEUR" ||
+    value === "PODIUM" || value === "OUTSIDER"
   );
 }
 
@@ -156,7 +146,6 @@ function getSnapshotV10(snapshot: RunnerScoreSnapshotRow | undefined) {
   const betType = v10?.betType;
   const parsedBetType: "GAGNANT" | "PLACE" | null =
     betType === "GAGNANT" || betType === "PLACE" ? betType : null;
-
   return {
     score: firstFiniteNumber(snapshot?.score_v10_1, getUnknownNumber(v10?.score), snapshot?.score_v10),
     role: isRaceRoleV10(role) ? role : null,
@@ -182,20 +171,15 @@ function buildParticipantRows(
   forcedSource: ParticipantTableRow["scoreSource"] | null = null
 ): ParticipantTableRow[] {
   const rankedByNumber = new Map<number, ScoredParticipant>();
-  for (const runner of ranking) {
-    rankedByNumber.set(runner.numPmu, runner);
-  }
+  for (const runner of ranking) rankedByNumber.set(runner.numPmu, runner);
   const snapshotByNumber = new Map<number, RunnerScoreSnapshotRow>();
-  for (const snapshot of scoreSnapshots) {
-    snapshotByNumber.set(snapshot.cheval_num, snapshot);
-  }
+  for (const snapshot of scoreSnapshots) snapshotByNumber.set(snapshot.cheval_num, snapshot);
   const storedByNumber = new Map<number, PredictionRow>();
   const storedByName = new Map<string, PredictionRow>();
   for (const row of storedRows) {
     storedByNumber.set(row.cheval_num, row);
     storedByName.set(normalizeHorseJoinKey(row.cheval_nom), row);
   }
-
   return participants
     .filter((participant) => !participant.nonPartant)
     .map((participant) => {
@@ -206,28 +190,17 @@ function buildParticipantRows(
         storedByName.get(normalizeHorseJoinKey(participant.nom));
       const v10 = getSnapshotV10(snapshot);
       const score = firstFiniteNumber(
-        stored?.score_blended,
-        stored?.score_cheval,
-        stored?.score_final_pari,
-        snapshot?.score_lisibilite_adjusted,
-        snapshot?.score_expert,
-        runner?.prediction.scoreBlended,
-        runner?.prediction.scoreCheval,
-        runner?.prediction.scoreFinalPari
+        stored?.score_blended, stored?.score_cheval, stored?.score_final_pari,
+        snapshot?.score_lisibilite_adjusted, snapshot?.score_expert,
+        runner?.prediction.scoreBlended, runner?.prediction.scoreCheval, runner?.prediction.scoreFinalPari
       );
       const cote = firstFiniteNumber(
-        stored?.cote_depart,
-        stored?.cote_matin,
-        participant.cote,
-        runner?.cote,
-        runner?.coteDepart
+        stored?.cote_depart, stored?.cote_matin, participant.cote,
+        runner?.cote, runner?.coteDepart
       );
-      const hasStoredScore =
-        firstFiniteNumber(stored?.score_blended, stored?.score_cheval, stored?.score_final_pari) !== null;
-      const hasSnapshotScore =
-        firstFiniteNumber(snapshot?.score_lisibilite_adjusted, snapshot?.score_expert) !== null;
+      const hasStoredScore = firstFiniteNumber(stored?.score_blended, stored?.score_cheval, stored?.score_final_pari) !== null;
+      const hasSnapshotScore = firstFiniteNumber(snapshot?.score_lisibilite_adjusted, snapshot?.score_expert) !== null;
       const storedStake = firstFiniteNumber(stored?.mise_simulee, snapshot?.stake_final);
-
       return {
         numero: participant.numPmu,
         cheval: participant.nom,
@@ -241,9 +214,7 @@ function buildParticipantRows(
         scoreV10BetType: v10.betType,
         scoreV10Cote: v10.cote,
         scoreV10JockeyRate: v10.jockeyWinRate,
-        scoreSource:
-          forcedSource ??
-          (hasStoredScore || hasSnapshotScore ? "supabase" : runner ? "engine" : "fallback"),
+        scoreSource: forcedSource ?? (hasStoredScore || hasSnapshotScore ? "supabase" : runner ? "engine" : "fallback"),
         musique: participant.musique || runner?.musique || null,
         mise: storedStake !== null && storedStake > 0 ? storedStake : null,
         topFacteur: runner?.prediction.topFacteurs[0] ?? stored?.avis_texte ?? null,
@@ -262,23 +233,18 @@ function getPredictionOdds(row: PredictionRow) {
 
 function buildRowsFromPredictions(rows: PredictionRow[]): ParticipantTableRow[] {
   return rows
-    .map((row) => {
-      const score = getPredictionScore(row);
-      const cote = getPredictionOdds(row);
-
-      return {
-        numero: row.cheval_num,
-        cheval: row.cheval_nom,
-        jockey: "—",
-        entraineur: "—",
-        cote,
-        scoreIa: score,
-        scoreSource: "fallback" as const,
-        musique: null,
-        mise: row.mise_simulee > 0 ? row.mise_simulee : null,
-        topFacteur: row.avis_texte ?? null,
-      };
-    })
+    .map((row) => ({
+      numero: row.cheval_num,
+      cheval: row.cheval_nom,
+      jockey: "—",
+      entraineur: "—",
+      cote: getPredictionOdds(row),
+      scoreIa: getPredictionScore(row),
+      scoreSource: "fallback" as const,
+      musique: null,
+      mise: row.mise_simulee > 0 ? row.mise_simulee : null,
+      topFacteur: row.avis_texte ?? null,
+    }))
     .sort((left, right) => left.numero - right.numero);
 }
 
@@ -305,10 +271,7 @@ function raceSummaryFromCourseRecord(record: CourseRecordRow): RaceSummary {
 
 function raceSummaryFromPredictionRows(rows: PredictionRow[], fallbackDate: string): RaceSummary | null {
   const first = rows[0];
-  if (!first) {
-    return null;
-  }
-
+  if (!first) return null;
   return {
     dateStr: fromIsoDate(first.date || fallbackDate),
     reunion: first.reunion,
@@ -336,23 +299,13 @@ function getLatestRaceRows(rows: PredictionRow[]) {
     return left.course - right.course;
   });
   const first = sorted[0];
-  if (!first) {
-    return [];
-  }
-
+  if (!first) return [];
   return sorted.filter(
-    (row) =>
-      row.date === first.date &&
-      row.reunion === first.reunion &&
-      row.course === first.course
+    (row) => row.date === first.date && row.reunion === first.reunion && row.course === first.course
   );
 }
 
-async function loadLatestStoredRaceFallback(excluded: {
-  dateIso: string;
-  reunion: number;
-  course: number;
-}) {
+async function loadLatestStoredRaceFallback(excluded: { dateIso: string; reunion: number; course: number }) {
   const endIso = excluded.dateIso;
   const startDate = new Date(`${endIso}T12:00:00.000Z`);
   startDate.setUTCDate(startDate.getUTCDate() - 14);
@@ -362,24 +315,14 @@ async function loadLatestStoredRaceFallback(excluded: {
     listCourseRecordsBetween(startIso, endIso).catch(() => []),
   ]);
   const candidates = predictionRows.filter(
-    (row) =>
-      row.date !== excluded.dateIso ||
-      row.reunion !== excluded.reunion ||
-      row.course !== excluded.course
+    (row) => row.date !== excluded.dateIso || row.reunion !== excluded.reunion || row.course !== excluded.course
   );
   const latestRows = getLatestRaceRows(candidates);
   const first = latestRows[0];
-  if (!first) {
-    return null;
-  }
-
+  if (!first) return null;
   const courseRecord = courseRows.find(
-    (row) =>
-      row.date === first.date &&
-      row.reunion === first.reunion &&
-      row.course === first.course
+    (row) => row.date === first.date && row.reunion === first.reunion && row.course === first.course
   );
-
   return {
     courseInfo: courseRecord
       ? raceSummaryFromCourseRecord(courseRecord)
@@ -390,32 +333,22 @@ async function loadLatestStoredRaceFallback(excluded: {
 
 function getRecommendedRow(rows: ParticipantTableRow[], analysis: RaceAnalysis | null) {
   const v10Choice = rows.find((item) => item.scoreV10Role === "CHOIX");
-  if (v10Choice) {
-    return v10Choice;
-  }
-
+  if (v10Choice) return v10Choice;
   const bestV10 = rows
     .filter((item) => typeof item.scoreV10 === "number" && Number.isFinite(item.scoreV10))
     .sort((left, right) => (right.scoreV10 ?? 0) - (left.scoreV10 ?? 0))[0];
-  if (bestV10) {
-    return bestV10;
-  }
-
+  if (bestV10) return bestV10;
   const analysisPick = analysis?.favori?.numPmu ?? null;
   if (analysisPick !== null) {
     const row = rows.find((item) => item.numero === analysisPick);
     if (row) return row;
   }
-
   return [...rows].sort((left, right) => (right.scoreIa ?? 0) - (left.scoreIa ?? 0))[0] ?? null;
 }
 
 async function countRaceAlerts(dateStr: string, reunion: number, course: number) {
   const admin = getSupabaseAdminClient();
-  if (!admin) {
-    return null;
-  }
-
+  if (!admin) return null;
   const { count, error } = await admin
     .from("race_alerts")
     .select("id", { count: "exact", head: true })
@@ -423,42 +356,27 @@ async function countRaceAlerts(dateStr: string, reunion: number, course: number)
     .eq("reunion", reunion)
     .eq("course", course)
     .eq("status", "ACTIVE");
-
-  if (error) {
-    return null;
-  }
-
+  if (error) return null;
   return count ?? null;
 }
 
 function buildServerReactionSummaries(messageIds: string[], rows: RaceReactionRow[]) {
   const emojis: ReactionEmoji[] = ["🔥", "👀", "❌"];
   const grouped = new Map<RaceMessageRow["id"], RaceChatMessage["reactions"]>();
-
   for (const id of messageIds) {
-    grouped.set(
-      id,
-      emojis.map((emoji) => ({ emoji, count: 0, reactedByMe: false }))
-    );
+    grouped.set(id, emojis.map((emoji) => ({ emoji, count: 0, reactedByMe: false })));
   }
-
   for (const row of rows) {
     const reactions = grouped.get(row.message_id);
     const reaction = reactions?.find((item) => item.emoji === row.emoji);
-    if (reaction) {
-      reaction.count += 1;
-    }
+    if (reaction) reaction.count += 1;
   }
-
   return grouped;
 }
 
 async function loadInitialRaceChatMessages(raceId: string, raceDate: string) {
   const admin = getSupabaseAdminClient();
-  if (!admin) {
-    return [];
-  }
-
+  if (!admin) return [];
   const { data: messageData, error: messageError } = await admin
     .from("race_messages")
     .select("*")
@@ -466,40 +384,21 @@ async function loadInitialRaceChatMessages(raceId: string, raceDate: string) {
     .eq("race_date", raceDate)
     .order("created_at", { ascending: false })
     .limit(50);
-
   if (messageError) {
-    logger.warn("race_chat.initial_messages_failed", {
-      raceId,
-      raceDate,
-      error: messageError.message,
-    });
+    logger.warn("race_chat.initial_messages_failed", { raceId, raceDate, error: messageError.message });
     return [];
   }
-
   const messages = ((messageData ?? []) as RaceMessageRow[]).reverse();
   const messageIds = messages.map((message) => message.id);
-  if (messageIds.length === 0) {
-    return [];
-  }
-
+  if (messageIds.length === 0) return [];
   const { data: reactionData, error: reactionError } = await admin
     .from("race_message_reactions")
     .select("*")
     .in("message_id", messageIds);
-
   if (reactionError) {
-    logger.warn("race_chat.initial_reactions_failed", {
-      raceId,
-      raceDate,
-      error: reactionError.message,
-    });
+    logger.warn("race_chat.initial_reactions_failed", { raceId, raceDate, error: reactionError.message });
   }
-
-  const reactionsByMessage = buildServerReactionSummaries(
-    messageIds,
-    (reactionData ?? []) as RaceReactionRow[]
-  );
-
+  const reactionsByMessage = buildServerReactionSummaries(messageIds, (reactionData ?? []) as RaceReactionRow[]);
   return messages.map((message) => ({
     ...message,
     reactions: reactionsByMessage.get(message.id) ?? [],
@@ -510,14 +409,10 @@ function getGaugeScore(analysis: RaceAnalysis | null, selectedRow: ParticipantTa
   if (typeof selectedRow?.scoreV10 === "number" && Number.isFinite(selectedRow.scoreV10)) {
     return Math.max(0, Math.min(100, Math.round(selectedRow.scoreV10)));
   }
-
-  const confidence =
-    analysis?.scoreConfiance?.score ?? analysis?.favori?.prediction.confiance ?? null;
-
+  const confidence = analysis?.scoreConfiance?.score ?? analysis?.favori?.prediction.confiance ?? null;
   if (typeof confidence === "number" && Number.isFinite(confidence)) {
     return Math.max(0, Math.min(100, Math.round(confidence * 10)));
   }
-
   return Math.max(0, Math.min(100, Math.round(selectedRow?.scoreIa ?? 0)));
 }
 
@@ -525,41 +420,7 @@ function getValueExplanation(value: string | null | undefined) {
   return value ?? "L'IA détecte un écart positif entre le prix PMU et la probabilité estimée.";
 }
 
-function getVerdictClass(verdict: "JOUER" | "SURVEILLER" | "PASSER") {
-  if (verdict === "JOUER") return "bg-[#00C851] text-[#06100B]";
-  if (verdict === "SURVEILLER") return "bg-[#FF9F1C] text-[#06100B]";
-  return "bg-slate-600 text-white";
-}
-
 const V10_ROLE_ORDER: RaceRoleV10Key[] = ["CHOIX", "PEPITE", "CHASSEUR", "PODIUM", "OUTSIDER"];
-
-const V10_ROLE_UI: Record<RaceRoleV10Key, { label: string; emoji: string; className: string }> = {
-  CHOIX: {
-    label: "CHOIX",
-    emoji: "🎯",
-    className: "border-[#D4AF37]/45 bg-[#D4AF37]/[0.12] text-[#D4AF37]",
-  },
-  PEPITE: {
-    label: "PÉPITE",
-    emoji: "💎",
-    className: "border-[#2F80ED]/45 bg-[#2F80ED]/[0.12] text-[#8CC4FF]",
-  },
-  CHASSEUR: {
-    label: "CHASSEUR",
-    emoji: "🏹",
-    className: "border-[#00C851]/45 bg-[#00C851]/[0.10] text-[#00C851]",
-  },
-  PODIUM: {
-    label: "PODIUM",
-    emoji: "🥉",
-    className: "border-[#FF9F1C]/45 bg-[#FF9F1C]/[0.12] text-[#FFCE8A]",
-  },
-  OUTSIDER: {
-    label: "OUTSIDER",
-    emoji: "⚡",
-    className: "border-[#FF4D5A]/45 bg-[#FF4D5A]/[0.10] text-[#FF8B94]",
-  },
-};
 
 function getRoleCardsV10(rows: ParticipantTableRow[]) {
   const roleRows = rows.filter((row) => row.scoreV10Role);
@@ -570,117 +431,136 @@ function getRoleCardsV10(rows: ParticipantTableRow[]) {
         V10_ROLE_ORDER.indexOf(right.scoreV10Role ?? "OUTSIDER")
     );
   }
-
   const bestV10 = rows
     .filter((row) => typeof row.scoreV10 === "number" && Number.isFinite(row.scoreV10))
     .sort((left, right) => (right.scoreV10 ?? 0) - (left.scoreV10 ?? 0))[0];
-
   return bestV10 ? [{ ...bestV10, scoreV10Role: "CHOIX" as const }] : [];
 }
 
 async function loadRacePageData(id: string, requestedDate: string): Promise<RacePageState> {
   const parsed = parseRaceAnalysisId(id);
-  if (!parsed) {
-    return { kind: "invalid" };
-  }
-
-  const excluded = {
-    dateIso: toIsoDate(requestedDate),
-    reunion: parsed.reunion,
-    course: parsed.course,
-  };
-
+  if (!parsed) return { kind: "invalid" };
+  const excluded = { dateIso: toIsoDate(requestedDate), reunion: parsed.reunion, course: parsed.course };
   try {
-    const [races, algoParameters] = await Promise.all([
-      getAllRaces(requestedDate),
-      loadAlgoParameters(),
-    ]);
-    const courseInfo = races.find(
-      (race) => race.reunion === parsed.reunion && race.course === parsed.course
-    );
-
+    const [races, algoParameters] = await Promise.all([getAllRaces(requestedDate), loadAlgoParameters()]);
+    const courseInfo = races.find((race) => race.reunion === parsed.reunion && race.course === parsed.course);
     if (!courseInfo) {
       const fallback = await loadLatestStoredRaceFallback(excluded);
       if (fallback?.courseInfo && fallback.rows.length > 0) {
-        return {
-          kind: "ready",
-          courseInfo: fallback.courseInfo,
-          analysis: null,
-          rows: fallback.rows,
-          dataBadge: "Données J-1",
-        };
+        return { kind: "ready", courseInfo: fallback.courseInfo, analysis: null, rows: fallback.rows, dataBadge: "Données J-1" };
       }
-
       return { kind: "not-found", date: requestedDate };
     }
-
     const [storedRows, scoreSnapshots] = await Promise.all([
       getRacePredictions(requestedDate, parsed.reunion, parsed.course).catch(() => []),
-      listLatestRunnerScoreSnapshotsForRace(requestedDate, parsed.reunion, parsed.course).catch(
-        (scoreError: unknown) => {
-          logger.warn("race_page.score_snapshot_fallback_failed", {
-            id,
-            requestedDate,
-            error: scoreError instanceof Error ? scoreError.message : String(scoreError),
-          });
-          return [] as RunnerScoreSnapshotRow[];
-        }
-      ),
+      listLatestRunnerScoreSnapshotsForRace(requestedDate, parsed.reunion, parsed.course).catch((scoreError: unknown) => {
+        logger.warn("race_page.score_snapshot_fallback_failed", { id, requestedDate, error: scoreError instanceof Error ? scoreError.message : String(scoreError) });
+        return [] as RunnerScoreSnapshotRow[];
+      }),
     ]);
-
     if (storedRows.length === 0 && scoreSnapshots.length === 0) {
       const fallback = await loadLatestStoredRaceFallback(excluded);
       if (fallback?.courseInfo && fallback.rows.length > 0) {
-        return {
-          kind: "ready",
-          courseInfo: fallback.courseInfo,
-          analysis: null,
-          rows: fallback.rows,
-          dataBadge: "Données J-1",
-        };
+        return { kind: "ready", courseInfo: fallback.courseInfo, analysis: null, rows: fallback.rows, dataBadge: "Données J-1" };
       }
     }
-
-    const participants = await attachFaultRates(
-      await getParticipants(requestedDate, parsed.reunion, parsed.course)
-    );
-    const analysis =
-      participants.length > 0
-        ? analyzeRaceWithParameters(courseInfo, participants, algoParameters)
-        : null;
-    const rows = buildParticipantRows(
-      participants,
-      analysis?.ranking ?? [],
-      storedRows,
-      scoreSnapshots
-    );
-
-    return {
-      kind: "ready",
-      courseInfo,
-      analysis,
-      rows,
-      dataBadge: storedRows.length > 0 || scoreSnapshots.length > 0 ? "Supabase" : "Live PMU",
-    };
+    const participants = await attachFaultRates(await getParticipants(requestedDate, parsed.reunion, parsed.course));
+    const analysis = participants.length > 0 ? analyzeRaceWithParameters(courseInfo, participants, algoParameters) : null;
+    const rows = buildParticipantRows(participants, analysis?.ranking ?? [], storedRows, scoreSnapshots);
+    return { kind: "ready", courseInfo, analysis, rows, dataBadge: storedRows.length > 0 || scoreSnapshots.length > 0 ? "Supabase" : "Live PMU" };
   } catch (error) {
-    logger.error("race_page.load_failed", error, {
-      id,
-      requestedDate,
-    });
+    logger.error("race_page.load_failed", error, { id, requestedDate });
     const fallback = await loadLatestStoredRaceFallback(excluded).catch(() => null);
     if (fallback?.courseInfo && fallback.rows.length > 0) {
-      return {
-        kind: "ready",
-        courseInfo: fallback.courseInfo,
-        analysis: null,
-        rows: fallback.rows,
-        dataBadge: "Données J-1",
-      };
+      return { kind: "ready", courseInfo: fallback.courseInfo, analysis: null, rows: fallback.rows, dataBadge: "Données J-1" };
     }
-
     return { kind: "error" };
   }
 }
+
+// ─── STYLES ──────────────────────────────────────────────────────────────────
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,300&display=swap');
+.rp-wrap{--bg:#0A0908;--s1:#111009;--s2:#181510;--bdr:rgba(201,168,76,0.13);--bdr2:rgba(201,168,76,0.25);--g:#C9A84C;--g2:#E8D190;--txt:#EDE8DF;--txt2:#6A6258;--grn:#52C27A;--red:#C26052;--blu:#6AABDE;font-family:'DM Mono',monospace;color:var(--txt);background:var(--bg);min-height:100vh}
+.rp-topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:rgba(10,9,8,0.92);border-bottom:1px solid var(--bdr);backdrop-filter:blur(12px)}
+.rp-logo{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--g);letter-spacing:-0.3px;text-decoration:none}
+.rp-body{max-width:1200px;margin:0 auto;padding:28px 24px;display:grid;gap:20px}
+.rp-course-header{background:var(--s1);border:1px solid var(--bdr);border-radius:14px;padding:24px 28px;display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.rp-course-name{font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:700;color:var(--txt);line-height:1;letter-spacing:-0.5px;margin-bottom:8px}
+.rp-course-meta{font-size:12px;color:var(--txt2);letter-spacing:0.3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rp-course-meta-dot{width:3px;height:3px;border-radius:50%;background:var(--bdr2);display:inline-block}
+.rp-course-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;letter-spacing:1.5px;padding:4px 12px;border-radius:20px;font-weight:500}
+.rp-course-badge.live{background:rgba(82,194,122,0.12);border:1px solid rgba(82,194,122,0.3);color:var(--grn)}
+.rp-course-badge.termine{background:rgba(106,171,222,0.1);border:1px solid rgba(106,171,222,0.25);color:var(--blu)}
+.rp-course-badge.upcoming{background:rgba(201,168,76,0.1);border:1px solid var(--bdr2);color:var(--g)}
+.rp-live-dot{width:6px;height:6px;border-radius:50%;background:var(--grn);animation:rpblink 1.4s infinite}
+@keyframes rpblink{0%,100%{opacity:1}50%{opacity:0.3}}
+.rp-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:12px}
+.rp-grid{display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start}
+@media(max-width:900px){.rp-grid{grid-template-columns:1fr}}
+.rp-main{display:grid;gap:20px}
+.rp-card{background:var(--s1);border:1px solid var(--bdr);border-radius:14px;overflow:hidden}
+.rp-card-header{padding:16px 24px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between}
+.rp-card-title{font-size:10px;color:var(--txt2);text-transform:uppercase;letter-spacing:2px}
+.rp-selection-section{padding:20px 24px}
+.rp-selection-label{font-size:10px;color:var(--txt2);text-transform:uppercase;letter-spacing:2px;margin-bottom:14px}
+.rp-bubbles{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.rp-bubble{width:52px;height:52px;border-radius:50%;background:var(--g);color:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;line-height:1;border:2px solid var(--g2);box-shadow:0 0 16px rgba(201,168,76,0.2)}
+.rp-bubble.rank2{background:rgba(201,168,76,0.5);border-color:rgba(201,168,76,0.4);box-shadow:none}
+.rp-bubble.rank3{background:rgba(201,168,76,0.25);border-color:rgba(201,168,76,0.2);box-shadow:none}
+.rp-bubble-info{display:flex;flex-direction:column;gap:4px;margin-left:4px}
+.rp-bubble-stat{font-size:11px;color:var(--txt2)}
+.rp-bubble-stat strong{color:var(--txt)}
+.rp-verdict-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:16px 24px;border-top:1px solid var(--bdr)}
+.rp-stat-cell{text-align:center;padding:12px;border-radius:10px;background:var(--s2)}
+.rp-stat-label{font-size:9px;color:var(--txt2);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
+.rp-stat-val{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;line-height:1;color:var(--g)}
+.rp-stat-val.grn{color:var(--grn)}
+.rp-stat-val.red{color:var(--red)}
+.rp-table-wrap{overflow-x:auto}
+.rp-table{width:100%;border-collapse:collapse;min-width:600px}
+.rp-th{font-size:9px;color:var(--txt2);text-transform:uppercase;letter-spacing:1.5px;padding:10px 16px;text-align:left;border-bottom:1px solid var(--bdr);white-space:nowrap}
+.rp-th.r{text-align:right}
+.rp-tr{border-bottom:1px solid rgba(201,168,76,0.05);transition:background 0.12s;position:relative;cursor:pointer}
+.rp-tr:last-child{border-bottom:none}
+.rp-tr:hover{background:rgba(201,168,76,0.03)}
+.rp-tr.sel{background:rgba(201,168,76,0.05);border-left:3px solid var(--g)}
+.rp-tr.out{opacity:0.4}
+.rp-td{padding:14px 16px;font-size:13px;vertical-align:middle}
+.rp-td.r{text-align:right}
+.rp-num{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:300;color:var(--txt2);line-height:1;width:32px;text-align:center}
+.rp-num.sel{color:var(--g);font-weight:700}
+.rp-horse-name{font-size:13px;color:var(--txt);letter-spacing:0.2px}
+.rp-horse-sub{font-size:10px;color:var(--txt2);margin-top:2px}
+.rp-score-wrap{display:flex;align-items:center;gap:8px}
+.rp-score-track{height:2px;background:var(--s2);border-radius:1px;overflow:hidden;width:60px}
+.rp-score-fill{height:100%;border-radius:1px;background:var(--g);opacity:0.7}
+.rp-score-fill.lo{background:var(--txt2);opacity:0.3}
+.rp-score-num{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:var(--g);min-width:28px}
+.rp-score-num.lo{color:var(--txt2);font-weight:300}
+.rp-musique{font-size:10px;color:var(--txt2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rp-cote{font-size:13px;color:var(--txt2)}
+.rp-mise{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--txt)}
+.rp-mise.none{color:var(--txt2);font-size:12px;font-family:'DM Mono',monospace}
+.rp-sidebar{display:grid;gap:16px}
+.rp-side-card{background:var(--s1);border:1px solid var(--bdr);border-radius:14px;overflow:hidden}
+.rp-side-title{font-size:10px;color:var(--txt2);text-transform:uppercase;letter-spacing:2px;padding:14px 18px;border-bottom:1px solid var(--bdr)}
+.rp-side-body{padding:16px 18px;display:grid;gap:10px}
+.rp-value-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--s2);border-radius:8px;border-left:2px solid var(--g)}
+.rp-value-name{font-size:12px;color:var(--txt)}
+.rp-value-edge{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--grn)}
+.rp-plan-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bdr);font-size:12px}
+.rp-plan-row:last-child{border-bottom:none}
+.rp-plan-label{color:var(--txt2)}
+.rp-plan-val{color:var(--txt)}
+.rp-raisons{display:grid;gap:8px}
+.rp-raison{background:var(--s2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--txt2);border-left:2px solid var(--bdr2)}
+.rp-alert-btn{margin:0 18px 16px}
+.rp-pro-lock{background:rgba(201,168,76,0.08);border:1px solid var(--bdr2);border-radius:10px;padding:14px 16px;text-align:center}
+.rp-pro-lock p{font-size:12px;color:var(--g);margin-bottom:10px}
+.rp-pro-link{display:inline-flex;background:var(--g);color:var(--bg);font-size:11px;font-family:'DM Mono',monospace;padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:500}
+.rp-data-badge{font-size:9px;background:rgba(255,255,255,0.05);border:1px solid var(--bdr);border-radius:20px;padding:3px 10px;color:var(--txt2);letter-spacing:0.5px}
+`;
 
 export default async function RacePage({ params, searchParams }: RacePageProps) {
   const { id } = await params;
@@ -690,13 +570,12 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
 
   if (!requestedDate) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#0A0E1A] px-4 text-[#F6F2E8]">
-        <section className="max-w-xl rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-6 text-center">
-          <p className="text-xs font-black uppercase text-[#D4AF37]">Date invalide</p>
-          <h1 className="mt-2 font-[var(--font-display)] text-5xl font-black text-[#F6F2E8]">
-            Impossible de charger cette course.
-          </h1>
-          <Link className="mt-5 inline-flex rounded-lg bg-[#D4AF37] px-5 py-3 font-black text-[#0A0E1A]" href="/dashboard">
+      <main className="grid min-h-screen place-items-center bg-[#0A0908] px-4 text-[#EDE8DF]">
+        <style>{CSS}</style>
+        <section className="max-w-xl rounded-lg border border-[#C9A84C]/20 bg-[#111009] p-6 text-center">
+          <p className="text-xs font-black uppercase text-[#C9A84C]">Date invalide</p>
+          <h1 className="mt-2 font-serif text-4xl font-black text-[#EDE8DF]">Impossible de charger cette course.</h1>
+          <Link className="mt-5 inline-flex rounded-lg bg-[#C9A84C] px-5 py-3 text-sm font-black text-[#0A0908]" href="/dashboard">
             Revenir au dashboard
           </Link>
         </section>
@@ -707,24 +586,16 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
   const state = await loadRacePageData(id, requestedDate);
 
   if (state.kind !== "ready") {
-    const title =
-      state.kind === "invalid"
-        ? "Identifiant de course invalide"
-        : state.kind === "not-found"
-          ? "Course introuvable"
-          : "Analyse indisponible";
-    const detail =
-      state.kind === "not-found"
-        ? `Aucune course ne correspond à cette fiche pour le ${state.date}.`
-        : "Le dashboard reste disponible pendant que les données PMU se mettent à jour.";
-
+    const title = state.kind === "invalid" ? "Identifiant invalide" : state.kind === "not-found" ? "Course introuvable" : "Analyse indisponible";
+    const detail = state.kind === "not-found" ? `Aucune course pour le ${state.date}.` : "Les données PMU se mettent à jour.";
     return (
-      <main className="grid min-h-screen place-items-center bg-[#0A0E1A] px-4 text-[#F6F2E8]">
-        <section className="max-w-xl rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-6 text-center">
-          <p className="text-xs font-black uppercase text-[#D4AF37]">PMU Gagnant</p>
-          <h1 className="mt-2 font-[var(--font-display)] text-5xl font-black text-[#F6F2E8]">{title}</h1>
-          <p className="mt-3 text-sm font-bold text-slate-400">{detail}</p>
-          <Link className="mt-5 inline-flex rounded-lg bg-[#D4AF37] px-5 py-3 font-black text-[#0A0E1A]" href="/dashboard">
+      <main className="grid min-h-screen place-items-center bg-[#0A0908] px-4 text-[#EDE8DF]">
+        <style>{CSS}</style>
+        <section className="max-w-xl rounded-lg border border-[#C9A84C]/20 bg-[#111009] p-6 text-center">
+          <p className="text-xs font-black uppercase text-[#C9A84C]">PMU Gagnant</p>
+          <h1 className="mt-2 font-serif text-4xl font-black text-[#EDE8DF]">{title}</h1>
+          <p className="mt-3 text-sm text-[#6A6258]">{detail}</p>
+          <Link className="mt-5 inline-flex rounded-lg bg-[#C9A84C] px-5 py-3 text-sm font-black text-[#0A0908]" href="/dashboard">
             Revenir au dashboard
           </Link>
         </section>
@@ -740,39 +611,17 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
   const status = getVmaxRaceStatus(null, minutesUntilStart);
   const gaugeScore = getGaugeScore(analysis, selectedRow);
   const verdict = selectedRow
-    ? computeRaceVerdict({
-        numero: selectedRow.numero,
-        cheval: selectedRow.cheval,
-        cote: selectedRow.cote,
-        score: selectedRow.scoreV10 ?? selectedRow.scoreIa,
-      })
-    : computeRaceVerdict({
-        numero: 0,
-        cheval: "Sélection indisponible",
-        cote: null,
-        score: 0,
-      });
-  const verdictStakeLabel = verdict.stake > 0 ? formatStakeEuro(verdict.stake) : "â€”";
+    ? computeRaceVerdict({ numero: selectedRow.numero, cheval: selectedRow.cheval, cote: selectedRow.cote, score: selectedRow.scoreV10 ?? selectedRow.scoreIa })
+    : computeRaceVerdict({ numero: 0, cheval: "Sélection indisponible", cote: null, score: 0 });
+  const verdictStakeLabel = verdict.stake > 0 ? formatStakeEuro(verdict.stake) : "—";
   const chatRaceId = formatRaceAnalysisId(courseInfo.reunion, courseInfo.course);
   const chatRaceDate = toIsoDate(courseInfo.dateStr);
   const [alertCount, initialChatMessages] = await Promise.all([
     countRaceAlerts(courseInfo.dateStr, courseInfo.reunion, courseInfo.course),
     loadInitialRaceChatMessages(chatRaceId, chatRaceDate),
   ]);
-  const valueBets = buildValueBets(
-    rows.map((row) => ({
-      numero: row.numero,
-      cheval: row.cheval,
-      cote: row.cote,
-      scoreIa: row.scoreIa,
-      raison: row.topFacteur,
-    }))
-  );
+  const valueBets = buildValueBets(rows.map((row) => ({ numero: row.numero, cheval: row.cheval, cote: row.cote, scoreIa: row.scoreIa, raison: row.topFacteur })));
   const stakeLabel = selectedRow ? formatStakeEuro(selectedRow.mise) : "—";
-  const potentialGain =
-    selectedRow?.mise && selectedRow.cote
-      ? currencyFormatter.format(selectedRow.mise * selectedRow.cote)
-      : "Gain potentiel en attente";
   const topReasons = [
     ...(analysis?.favori?.prediction.topFacteurs ?? []),
     analysis?.prediction.lisibilite ? `Course ${analysis.prediction.lisibilite.toLowerCase()}` : null,
@@ -780,356 +629,300 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
   ].filter((reason): reason is string => Boolean(reason)).slice(0, 3);
   const urgentRace = minutesUntilStart > 0 && minutesUntilStart < 30;
 
+  // Top 3 par score pour les bulles
+  const top3 = [...rows]
+    .filter((r) => r.scoreIa !== null)
+    .sort((a, b) => (b.scoreV10 ?? b.scoreIa ?? 0) - (a.scoreV10 ?? a.scoreIa ?? 0))
+    .slice(0, 3);
+
+  const statusClass = status === "live" ? "live" : status === "finished" ? "termine" : "upcoming";
+  const statusLabel = status === "live" ? "LIVE" : status === "finished" ? "TERMINÉE" : "À VENIR";
+
   return (
-    <main className="min-h-screen bg-[#0A0E1A] text-[#F6F2E8]">
-      <header className="sticky top-0 z-50 flex items-center justify-between gap-4 border-b border-[#D4AF37]/15 bg-[#0A0E1A]/90 px-4 py-3 backdrop-blur-xl md:px-8">
-        <Link href="/dashboard" className="font-[var(--font-display)] text-2xl font-black text-[#D4AF37] sm:text-3xl">
-          PMU GAGNANT
-        </Link>
-        <StatusBadge status={status} />
-      </header>
+    <main className="rp-wrap">
+      <style>{CSS}</style>
 
-      <section className="mx-auto w-full max-w-[92rem] px-4 py-5 lg:px-6">
-        <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
-          <div className="grid gap-5">
-          <section className="relative overflow-hidden rounded-lg border border-[#D4AF37]/25 bg-[#101827] p-4 shadow-2xl shadow-black/25 md:p-6">
-            <span
-              className="pointer-events-none absolute -right-4 top-3 max-w-[88%] truncate font-[var(--font-display)] text-7xl font-black uppercase leading-none text-[#F6F2E8] opacity-[0.08] md:text-9xl"
-              aria-hidden
-            >
-              {verdict.cheval}
+      {/* TOPBAR */}
+      <div className="rp-topbar">
+        <Link href="/dashboard" className="rp-logo">PMU GAGNANT</Link>
+        <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
+          <span className="rp-data-badge">{dataBadge}</span>
+          <StatusBadge status={status} />
+        </div>
+      </div>
+
+      <div className="rp-body">
+
+        {/* HEADER COURSE */}
+        <div className="rp-course-header">
+          <div>
+            <div className="rp-course-name">{courseInfo.nomCourse}</div>
+            <div className="rp-course-meta">
+              <span>{courseInfo.hippodrome}</span>
+              <span className="rp-course-meta-dot" />
+              <span>{courseInfo.discipline}</span>
+              <span className="rp-course-meta-dot" />
+              <span>{courseInfo.distance} m</span>
+              <span className="rp-course-meta-dot" />
+              <span>{courseInfo.nombrePartants} partants</span>
+              <span className="rp-course-meta-dot" />
+              <span>{courseInfo.heureDepart}</span>
+              <span className="rp-course-meta-dot" />
+              <span>R{courseInfo.reunion}C{courseInfo.course}</span>
+            </div>
+          </div>
+          <div className="rp-header-right">
+            <span className={`rp-course-badge ${statusClass}`}>
+              {status === "live" && <span className="rp-live-dot" />}
+              {statusLabel}
             </span>
+            <ScoreGauge score={gaugeScore} label="confiance IA" />
+          </div>
+        </div>
 
-            <div className="relative z-10 grid gap-6 xl:grid-cols-[18rem_1fr] xl:items-start">
-              <div className="grid gap-3 rounded-lg border border-white/10 bg-[#0A0E1A]/55 p-4">
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-[#D4AF37]">
-                  Verdict IA
-                </p>
-                <strong
-                  className={`inline-flex max-w-full break-words rounded-lg px-5 py-3 font-[var(--font-display)] text-4xl font-black leading-none sm:text-5xl md:text-6xl ${getVerdictClass(verdict.verdict)}`}
-                >
-                  {verdict.verdict}
-                </strong>
-                <p className="font-[var(--font-display)] text-2xl font-black leading-none text-[#F6F2E8]">
-                  {verdict.verdict === "PASSER" ? "Aucune mise" : `mise: ${verdictStakeLabel}`}
-                </p>
-                <span className="w-fit rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[0.66rem] font-black uppercase text-slate-400">
-                  {dataBadge}
-                </span>
+        <div className="rp-grid">
+          <div className="rp-main">
+
+            {/* SÉLECTION IA */}
+            <div className="rp-card">
+              <div className="rp-card-header">
+                <span className="rp-card-title">Sélection IA VMAX</span>
+                {urgentRace && (
+                  <span style={{fontSize:'10px',color:'#C26052',letterSpacing:'1px'}}>
+                    ⚠ {Math.max(1, Math.round(minutesUntilStart))} min restantes
+                  </span>
+                )}
               </div>
-
-              <div className="grid min-w-0 gap-4">
-                <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-start">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <span
-                      className={`grid aspect-square w-14 shrink-0 place-items-center rounded-full font-[var(--font-display)] text-3xl font-black ${getRunnerNumberClass(verdict.numero)}`}
-                    >
-                      {verdict.numero || "-"}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-xs font-black uppercase text-slate-400">
-                        Cheval recommandé
-                      </p>
-                      <h1 className="break-words font-[var(--font-display)] text-4xl font-black leading-none text-[#F6F2E8] sm:text-5xl md:text-6xl">
-                        {verdict.cheval}
-                      </h1>
-                      {verdict.verdict === "JOUER" && alertCount !== null && alertCount > 0 ? (
-                        <p className="mt-2 text-sm font-bold text-[#D4AF37]">
-                          {alertCount} abonnés suivent ce signal aujourd&apos;hui.
-                        </p>
-                      ) : null}
+              <div className="rp-selection-section">
+                <div className="rp-bubbles">
+                  {top3.map((row, i) => (
+                    <div key={row.numero} style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                      <div className={`rp-bubble ${i === 1 ? 'rank2' : i === 2 ? 'rank3' : ''}`}>
+                        {row.numero}
+                      </div>
+                      <div style={{fontSize:'11px',color:'#6A6258'}}>
+                        <div style={{color:'#EDE8DF',fontSize:'12px'}}>{row.cheval}</div>
+                        <div>Score {Math.round(row.scoreV10 ?? row.scoreIa ?? 0)}</div>
+                        {row.cote && <div>Cote {formatOdds(row.cote)}</div>}
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <CountdownTimer
-                      dateStr={courseInfo.dateStr}
-                      heureDepart={courseInfo.heureDepart}
-                      variant="hero"
-                    />
-                    {urgentRace ? (
-                      <p className="text-xs font-black uppercase text-[#FF4D5A]">
-                        Plus que {Math.max(1, Math.round(minutesUntilStart))} min pour jouer
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="grid min-w-0 gap-3 md:grid-cols-3">
-                  <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-4">
-                    <p className="text-xs font-black uppercase text-slate-400">Cote PMU</p>
-                    <strong className="mt-2 block whitespace-nowrap font-[var(--font-display)] text-4xl font-black leading-none text-[#D4AF37] md:text-5xl">
-                      {formatOdds(verdict.cote)}
-                    </strong>
-                  </div>
-                  <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-4">
-                    <p className="text-xs font-black uppercase text-slate-400">Confiance IA</p>
-                    <strong className="mt-2 block whitespace-nowrap font-[var(--font-display)] text-4xl font-black leading-none text-[#00C851] md:text-5xl">
-                      {verdict.scorePercent}%
-                    </strong>
-                  </div>
-                  <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-4">
-                    <p className="text-xs font-black uppercase text-slate-400">Mise Kelly</p>
-                    <strong className="mt-2 block whitespace-nowrap font-[var(--font-display)] text-4xl font-black leading-none text-[#F6F2E8] md:text-5xl">
-                      {verdictStakeLabel}
-                    </strong>
-                  </div>
-                </div>
-
-                <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
-                  <p className="text-sm font-bold text-slate-400">
-                    Mise issue des snapshots Supabase; affichage en attente si la bankroll est indisponible.
-                  </p>
-                  <RaceAlertButton
-                    dateStr={courseInfo.dateStr}
-                    reunion={courseInfo.reunion}
-                    course={courseInfo.course}
-                    hippodrome={courseInfo.hippodrome}
-                    heureDepart={courseInfo.heureDepart}
-                    chevalNum={verdict.numero}
-                    chevalNom={verdict.cheval}
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <article className="grid overflow-hidden rounded-lg border border-[#D4AF37]/20 bg-[#101827] shadow-2xl shadow-black/25 lg:grid-cols-[0.82fr_1fr]">
-            <div className="relative min-h-[16rem] overflow-hidden lg:min-h-[28rem]">
-              <Image
-                src="/promo-poster.jpg"
-                alt="Course PMU analysée par l'IA"
-                fill
-                priority
-                placeholder="blur"
-                blurDataURL={BLUR_DATA_URL}
-                sizes="(max-width: 768px) 100vw, 40vw"
-                className="object-cover brightness-[0.58] contrast-110 saturate-90"
-              />
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#0A0E1A]/95" />
-              <div className="absolute bottom-5 left-5 right-5">
-                <p className="text-xs font-black uppercase text-[#D4AF37]">
-                  {verdict.verdict === "JOUER" ? "Décision immédiate" : "Course à filtrer"}
-                </p>
-                <strong
-                  className={`mt-2 inline-flex rounded-lg px-4 py-2 font-[var(--font-display)] text-5xl font-black leading-none ${
-                    verdict.verdict === "JOUER"
-                      ? "bg-[#00C851] text-[#06100B]"
-                      : verdict.verdict === "SURVEILLER"
-                        ? "bg-[#FF9F1C] text-[#06100B]"
-                        : "bg-slate-600 text-white"
-                  }`}
-                >
-                  {verdict.verdict}
-                </strong>
-              </div>
-            </div>
-
-            <div className="grid gap-5 p-5 md:p-8">
-              <div className="grid gap-2">
-                <p className="text-xs font-black uppercase text-[#D4AF37]">
-                  R{courseInfo.reunion}C{courseInfo.course} · {courseInfo.heureDepart}
-                </p>
-                <h1 className="break-words font-[var(--font-display)] text-5xl font-black leading-[0.9] text-[#F6F2E8] sm:text-6xl md:text-7xl">
-                  {courseInfo.hippodrome}
-                </h1>
-                <p className="text-sm font-bold text-slate-400">
-                  {courseInfo.nomCourse} · {courseInfo.discipline} · {courseInfo.distance} m · {courseInfo.nombrePartants} partants
-                </p>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-[auto_1fr]">
-                <ScoreGauge score={gaugeScore} label="score IA" />
-                <div className="grid gap-3">
-                  <p className="text-xs font-black uppercase text-[#D4AF37]">Rôles IA v10</p>
-                  {roleCardsV10.length > 0 ? (
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                      {roleCardsV10.map((roleRow) => {
-                        const role = roleRow.scoreV10Role ?? "CHOIX";
-                        const meta = V10_ROLE_UI[role];
-                        const detail =
-                          role === "CHASSEUR"
-                            ? `Jockey ${
-                                roleRow.scoreV10JockeyRate === null ||
-                                roleRow.scoreV10JockeyRate === undefined
-                                  ? "n/d"
-                                  : `${Math.round(roleRow.scoreV10JockeyRate * 100)}%`
-                              }`
-                            : role === "PODIUM"
-                              ? "PLACE"
-                              : role === "CHOIX"
-                                ? `Score ${Math.round(roleRow.scoreV10 ?? roleRow.scoreIa ?? 0)}/100`
-                                : `Cote ${formatOdds(roleRow.scoreV10Cote ?? roleRow.cote)}`;
-
-                        return (
-                          <article
-                            className={`rounded-lg border p-3 ${meta.className}`}
-                            key={`${role}-${roleRow.numero}`}
-                          >
-                            <p className="text-[0.68rem] font-black uppercase tracking-[0.14em]">
-                              {meta.emoji} {meta.label}
-                            </p>
-                            <div className="mt-3 flex items-center gap-2">
-                              <span
-                                className={`grid aspect-square w-9 shrink-0 place-items-center rounded-full font-[var(--font-display)] text-lg font-black ${getRunnerNumberClass(roleRow.numero)}`}
-                              >
-                                {roleRow.numero}
-                              </span>
-                              <strong className="min-w-0 break-words font-[var(--font-display)] text-2xl font-black leading-none text-[#F6F2E8]">
-                                {roleRow.cheval}
-                              </strong>
-                            </div>
-                            <span className="mt-2 block text-xs font-black text-slate-300">
-                              {detail}
-                            </span>
-                          </article>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold text-slate-300">
-                      Rôles v10 en cours de calcul.
-                    </p>
+                  ))}
+                  {top3.length === 0 && (
+                    <span style={{fontSize:'12px',color:'#6A6258'}}>Analyse en cours…</span>
                   )}
                 </div>
               </div>
-
-              <div
-                className={`rounded-lg border border-white/10 p-4 ${getStakeToneClass(selectedRow?.mise)}`}
-                title="Basé sur bankroll de 100€ et Kelly 25%"
-              >
-                <p className="text-xs font-black uppercase">Mise conseillée</p>
-                <strong className="mt-1 block font-[var(--font-display)] text-5xl font-black leading-none">
-                  {stakeLabel}
-                </strong>
-                <span className="mt-2 block text-sm font-black">
-                  {selectedRow?.mise ? `Mise ${currencyFormatter.format(selectedRow.mise)} → ${potentialGain}` : potentialGain}
-                </span>
+              <div className="rp-verdict-bar">
+                <div className="rp-stat-cell">
+                  <div className="rp-stat-label">Verdict</div>
+                  <div className={`rp-stat-val ${verdict.verdict === 'JOUER' ? 'grn' : verdict.verdict === 'PASSER' ? 'red' : ''}`}>
+                    {verdict.verdict}
+                  </div>
+                </div>
+                <div className="rp-stat-cell">
+                  <div className="rp-stat-label">Confiance</div>
+                  <div className="rp-stat-val">{verdict.scorePercent}%</div>
+                </div>
+                <div className="rp-stat-cell">
+                  <div className="rp-stat-label">Mise Kelly</div>
+                  <div className="rp-stat-val">{stakeLabel}</div>
+                </div>
               </div>
+            </div>
 
-              <div className="grid gap-2">
-                <p className="text-xs font-black uppercase text-[#D4AF37]">Pourquoi ce cheval ?</p>
-                {topReasons.length > 0 ? (
-                  topReasons.map((reason) => (
-                    <p className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold text-slate-300" key={reason}>
-                      {reason}
-                    </p>
-                  ))
+            {/* TABLEAU DES PARTANTS */}
+            <div className="rp-card">
+              <div className="rp-card-header">
+                <span className="rp-card-title">Tableau des partants</span>
+                <span style={{fontSize:'11px',color:'#6A6258'}}>{rows.length} chevaux</span>
+              </div>
+              <div className="rp-table-wrap">
+                <table className="rp-table">
+                  <thead>
+                    <tr>
+                      <th className="rp-th" style={{width:'40px'}}>N°</th>
+                      <th className="rp-th">Cheval</th>
+                      <th className="rp-th">Jockey / Entraîneur</th>
+                      <th className="rp-th">Musique</th>
+                      <th className="rp-th r">Score VMAX</th>
+                      <th className="rp-th r">Cote</th>
+                      <th className="rp-th r">Mise</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row) => {
+                      const active = row.mise !== null && row.mise > 0;
+                      const score = row.scoreV10 ?? row.scoreIa;
+                      const isSelected = row.numero === selectedNumber;
+                      return (
+                        <tr key={row.numero} className={`rp-tr ${isSelected ? 'sel' : !active && score !== null && score < 50 ? 'out' : ''}`}>
+                          <td className="rp-td">
+                            <div className={`rp-num ${isSelected ? 'sel' : ''}`}>{row.numero}</div>
+                          </td>
+                          <td className="rp-td">
+                            <div className="rp-horse-name">{row.cheval}</div>
+                          </td>
+                          <td className="rp-td">
+                            <div className="rp-horse-sub">{row.jockey}</div>
+                            <div className="rp-horse-sub">{row.entraineur}</div>
+                          </td>
+                          <td className="rp-td">
+                            <div className="rp-musique">{row.musique ?? '—'}</div>
+                          </td>
+                          <td className="rp-td r">
+                            {score !== null ? (
+                              <div className="rp-score-wrap" style={{justifyContent:'flex-end'}}>
+                                <div className="rp-score-track">
+                                  <div className={`rp-score-fill ${active ? '' : 'lo'}`} style={{width:`${Math.min(100,score)}%`}} />
+                                </div>
+                                <div className={`rp-score-num ${active ? '' : 'lo'}`}>{Math.round(score)}</div>
+                              </div>
+                            ) : <span style={{color:'#6A6258',fontSize:'12px'}}>—</span>}
+                          </td>
+                          <td className="rp-td r">
+                            <span className="rp-cote">{row.cote ? formatOdds(row.cote) : '—'}</span>
+                          </td>
+                          <td className="rp-td r">
+                            {active
+                              ? <span className="rp-mise">{formatStakeEuro(row.mise)}</span>
+                              : <span className="rp-mise none">pas joué</span>
+                            }
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* POURQUOI CE CHEVAL */}
+            {topReasons.length > 0 && (
+              <div className="rp-card">
+                <div className="rp-card-header">
+                  <span className="rp-card-title">Pourquoi ce cheval ?</span>
+                </div>
+                <div style={{padding:'16px 20px'}} className="rp-raisons">
+                  {topReasons.map((reason) => (
+                    <div className="rp-raison" key={reason}>{reason}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+          </div>
+
+          {/* SIDEBAR */}
+          <div className="rp-sidebar">
+
+            {/* COUNTDOWN */}
+            <div className="rp-side-card">
+              <div className="rp-side-title">Départ</div>
+              <div style={{padding:'16px 18px'}}>
+                <CountdownTimer dateStr={courseInfo.dateStr} heureDepart={courseInfo.heureDepart} variant="hero" />
+              </div>
+            </div>
+
+            {/* ALERTE */}
+            <div className="rp-side-card">
+              <div className="rp-side-title">Alerte Telegram</div>
+              <div className="rp-alert-btn" style={{marginTop:'12px'}}>
+                <RaceAlertButton
+                  dateStr={courseInfo.dateStr}
+                  reunion={courseInfo.reunion}
+                  course={courseInfo.course}
+                  hippodrome={courseInfo.hippodrome}
+                  heureDepart={courseInfo.heureDepart}
+                  chevalNum={verdict.numero}
+                  chevalNom={verdict.cheval}
+                />
+              </div>
+              {alertCount !== null && alertCount > 0 && (
+                <div style={{padding:'0 18px 14px',fontSize:'11px',color:'#6A6258'}}>
+                  {alertCount} abonnés suivent ce signal
+                </div>
+              )}
+            </div>
+
+            {/* VALUE BETS */}
+            <div className="rp-side-card">
+              <div className="rp-side-title">Value Bets</div>
+              <div className="rp-side-body">
+                {valueBets.length > 0 ? (
+                  <>
+                    {valueBets.slice(0, 1).map((bet) => (
+                      <div key={bet.numero}>
+                        <div className="rp-value-row">
+                          <div>
+                            <div className="rp-value-name">#{bet.numero} {bet.cheval}</div>
+                            <div style={{fontSize:'10px',color:'#6A6258',marginTop:'2px'}}>
+                              PMU {formatOdds(bet.coteActuelle)} · fair {formatOdds(bet.coteFair)}
+                            </div>
+                          </div>
+                          <div className="rp-value-edge">+{Math.round(bet.edgePct)}%</div>
+                        </div>
+                        <div style={{fontSize:'11px',color:'#6A6258',marginTop:'8px',lineHeight:'1.5'}}>
+                          {getValueExplanation(bet.explanation)}
+                        </div>
+                      </div>
+                    ))}
+                    {valueBets.length > 1 && (
+                      <div className="rp-pro-lock">
+                        <p>{valueBets.length - 1} value bets masqués PRO</p>
+                        <Link href="/premium" className="rp-pro-link">Passer PRO</Link>
+                      </div>
+                    )}
+                  </>
                 ) : (
-                  <p className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold text-slate-300">
-                    Les signaux IA sont en cours de calcul.
-                  </p>
+                  <div style={{fontSize:'12px',color:'#6A6258'}}>Aucun value bet net. Restez discipliné.</div>
                 )}
               </div>
             </div>
-          </article>
 
-          <section className="grid gap-3">
-            <div className="flex items-end justify-between gap-3">
-              <div>
-                <p className="text-xs font-black uppercase text-[#D4AF37]">Tableau des partants</p>
-                <h2 className="font-[var(--font-display)] text-4xl font-black text-[#F6F2E8]">Scores, cotes, forme et mise</h2>
+            {/* PLAN DE JEU */}
+            <div className="rp-side-card">
+              <div className="rp-side-title">Plan de jeu</div>
+              <div className="rp-side-body">
+                {analysis?.favori?.prediction.typePariConseille && (
+                  <div className="rp-plan-row">
+                    <span className="rp-plan-label">Type conseillé</span>
+                    <span className="rp-plan-val">{analysis.favori.prediction.typePariConseille}</span>
+                  </div>
+                )}
+                {analysis?.prediction.lisibilite && (
+                  <div className="rp-plan-row">
+                    <span className="rp-plan-label">Lisibilité</span>
+                    <span className="rp-plan-val">{analysis.prediction.lisibilite}</span>
+                  </div>
+                )}
+                <div className="rp-plan-row">
+                  <span className="rp-plan-label">Course</span>
+                  <span className="rp-plan-val">R{courseInfo.reunion}C{courseInfo.course}</span>
+                </div>
+                <div className="rp-plan-row" style={{borderBottom:'none'}}>
+                  <span className="rp-plan-label">Cote sélection</span>
+                  <span className="rp-plan-val">{formatOdds(verdict.cote)}</span>
+                </div>
               </div>
-              <Link
-                href={`/course/${courseInfo.reunion}/${courseInfo.course}?date=${courseInfo.dateStr}`}
-                className="hidden rounded-lg border border-[#D4AF37]/30 px-4 py-2 text-sm font-black text-[#D4AF37] md:inline-flex"
-              >
-                Fiche classique
-              </Link>
             </div>
-            <ParticipantsTable rows={rows} selectedNumber={selectedNumber} />
-          </section>
+
           </div>
-
-          <aside className="grid content-start gap-4">
-          <section className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-4 shadow-xl shadow-black/20">
-            <p className="text-xs font-black uppercase text-[#D4AF37]">Value bets</p>
-            <div className="mt-4 grid gap-3">
-              {valueBets.length > 0 ? (
-                valueBets.slice(0, 1).map((bet) => (
-                  <article className="rounded-lg border border-white/10 bg-[#0D1422] p-3" key={bet.numero}>
-                    <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
-                      <span
-                        className={`grid aspect-square w-9 place-items-center rounded-full font-[var(--font-display)] text-lg font-black ${getRunnerNumberClass(bet.numero)}`}
-                      >
-                        {bet.numero}
-                      </span>
-                      <div>
-                        <strong className="block text-sm font-black">{bet.cheval}</strong>
-                        <span className="font-[var(--font-display)] text-base font-black text-[#D4AF37]">
-                          {formatOdds(bet.coteActuelle)} PMU · fair {formatOdds(bet.coteFair)}
-                        </span>
-                      </div>
-                      {bet.edgePct > 10 ? (
-                        <span className="rounded-full border border-[#00C851]/30 bg-[#00C851]/10 px-2 py-1 text-[0.68rem] font-black text-[#00C851]">
-                          VALUE +
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-3 text-sm font-bold italic text-slate-400">
-                      Edge {percentFormatter.format(bet.edgePct)} % · {getValueExplanation(bet.explanation)}
-                    </p>
-                  </article>
-                ))
-              ) : (
-                <p className="rounded-lg border border-white/10 bg-[#0D1422] p-4 text-sm font-bold text-slate-400">
-                  Aucun value bet net pour le moment. L&apos;IA conseille de rester discipliné.
-                </p>
-              )}
-              {valueBets.length > 1 ? (
-                <div className="rounded-lg border border-[#D4AF37]/25 bg-[#D4AF37]/10 p-4">
-                  <p className="text-sm font-black text-[#D4AF37]">
-                    {valueBets.length - 1} value bets masqués PRO
-                  </p>
-                  <Link
-                    href="/premium"
-                    className="mt-3 inline-flex rounded-lg bg-[#D4AF37] px-4 py-2 text-sm font-black text-[#0A0E1A]"
-                  >
-                    Passer PRO
-                  </Link>
-                </div>
-              ) : null}
-            </div>
-          </section>
-
-          <section className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-4 shadow-xl shadow-black/20">
-            <p className="text-xs font-black uppercase text-[#D4AF37]">Plan de jeu</p>
-            <dl className="mt-4 grid gap-3 text-sm font-bold">
-              {analysis?.favori?.prediction.typePariConseille ? (
-                <div className="flex justify-between border-b border-white/10 pb-2">
-                  <dt className="text-slate-400">Type conseillé</dt>
-                  <dd>{analysis.favori.prediction.typePariConseille}</dd>
-                </div>
-              ) : null}
-              {analysis?.prediction.lisibilite ? (
-                <div className="flex justify-between border-b border-white/10 pb-2">
-                  <dt className="text-slate-400">Lisibilité</dt>
-                  <dd>{analysis.prediction.lisibilite}</dd>
-                </div>
-              ) : null}
-              <div className="flex justify-between">
-                <dt className="text-slate-400">Course</dt>
-                <dd>R{courseInfo.reunion}C{courseInfo.course}</dd>
-              </div>
-            </dl>
-          </section>
-          </aside>
         </div>
 
-        <div className="mt-5">
-          <RaceChat
-            raceId={chatRaceId}
-            raceDate={chatRaceDate}
-            initialMessages={initialChatMessages}
-            pinnedVerdict={{
-              verdict: verdict.verdict,
-              cheval: verdict.cheval,
-              cote: formatOdds(verdict.cote),
-                mise: verdictStakeLabel,
-            }}
-          />
-        </div>
-      </section>
+        {/* CHAT */}
+        <RaceChat
+          raceId={chatRaceId}
+          raceDate={chatRaceDate}
+          initialMessages={initialChatMessages}
+          pinnedVerdict={{
+            verdict: verdict.verdict,
+            cheval: verdict.cheval,
+            cote: formatOdds(verdict.cote),
+            mise: verdictStakeLabel,
+          }}
+        />
+
+      </div>
     </main>
   );
 }
