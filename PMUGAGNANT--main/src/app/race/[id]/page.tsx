@@ -1,10 +1,9 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
-import CountdownTimer from "@/components/race/CountdownTimer";
+import DashboardHeaderAccount from "@/components/dashboard/DashboardHeaderAccount";
 import RaceAlertButton from "@/components/race/RaceAlertButton";
 import RaceChat from "@/components/race/RaceChat";
 import ScoreGauge from "@/components/ui/ScoreGauge";
-import StatusBadge from "@/components/ui/StatusBadge";
 import {
   buildValueBets,
   computeRaceVerdict,
@@ -44,7 +43,7 @@ import type {
 export const metadata: Metadata = {
   title: "Analyse course - PMU Gagnant",
   description:
-    "Analyse IA d'une course PMU : tableau des partants, scores, cotes, forme, mises conseillées et value bets.",
+    "Analyse IA d'une course PMU : tableau des partants, scores, cotes, forme, mises conseillÃ©es et value bets.",
 };
 
 export const dynamic = "force-dynamic";
@@ -63,7 +62,7 @@ type RacePageState =
       courseInfo: RaceSummary;
       analysis: RaceAnalysis | null;
       rows: ParticipantTableRow[];
-      dataBadge: "Supabase" | "Données J-1" | "Live PMU";
+      dataBadge: "Supabase" | "DonnÃ©es J-1" | "Live PMU";
     };
 
 type RaceMessageRow = Database["public"]["Tables"]["race_messages"]["Row"];
@@ -189,8 +188,8 @@ function buildParticipantRows(
       return {
         numero: participant.numPmu,
         cheval: participant.nom,
-        jockey: participant.jockey || participant.driver || "—",
-        entraineur: participant.entraineur || "—",
+        jockey: participant.jockey || participant.driver || "â€”",
+        entraineur: participant.entraineur || "â€”",
         cote,
         scoreIa: score,
         scoreV10: v10.score,
@@ -221,8 +220,8 @@ function buildRowsFromPredictions(rows: PredictionRow[]): ParticipantTableRow[] 
     .map((row) => ({
       numero: row.cheval_num,
       cheval: row.cheval_nom,
-      jockey: "—",
-      entraineur: "—",
+      jockey: "â€”",
+      entraineur: "â€”",
       cote: getPredictionOdds(row),
       scoreIa: getPredictionScore(row),
       scoreSource: "fallback" as const,
@@ -402,7 +401,7 @@ function getGaugeScore(analysis: RaceAnalysis | null, selectedRow: ParticipantTa
 }
 
 function getValueExplanation(value: string | null | undefined) {
-  return value ?? "L'IA détecte un écart positif entre le prix PMU et la probabilité estimée.";
+  return value ?? "L'IA dÃ©tecte un Ã©cart positif entre le prix PMU et la probabilitÃ© estimÃ©e.";
 }
 
 async function loadRacePageData(id: string, requestedDate: string): Promise<RacePageState> {
@@ -415,7 +414,7 @@ async function loadRacePageData(id: string, requestedDate: string): Promise<Race
     if (!courseInfo) {
       const fallback = await loadLatestStoredRaceFallback(excluded);
       if (fallback?.courseInfo && fallback.rows.length > 0) {
-        return { kind: "ready", courseInfo: fallback.courseInfo, analysis: null, rows: fallback.rows, dataBadge: "Données J-1" };
+        return { kind: "ready", courseInfo: fallback.courseInfo, analysis: null, rows: fallback.rows, dataBadge: "DonnÃ©es J-1" };
       }
       return { kind: "not-found", date: requestedDate };
     }
@@ -429,7 +428,7 @@ async function loadRacePageData(id: string, requestedDate: string): Promise<Race
     if (storedRows.length === 0 && scoreSnapshots.length === 0) {
       const fallback = await loadLatestStoredRaceFallback(excluded);
       if (fallback?.courseInfo && fallback.rows.length > 0) {
-        return { kind: "ready", courseInfo: fallback.courseInfo, analysis: null, rows: fallback.rows, dataBadge: "Données J-1" };
+        return { kind: "ready", courseInfo: fallback.courseInfo, analysis: null, rows: fallback.rows, dataBadge: "DonnÃ©es J-1" };
       }
     }
     const participants = await attachFaultRates(await getParticipants(requestedDate, parsed.reunion, parsed.course));
@@ -440,153 +439,31 @@ async function loadRacePageData(id: string, requestedDate: string): Promise<Race
     logger.error("race_page.load_failed", error, { id, requestedDate });
     const fallback = await loadLatestStoredRaceFallback(excluded).catch(() => null);
     if (fallback?.courseInfo && fallback.rows.length > 0) {
-      return { kind: "ready", courseInfo: fallback.courseInfo, analysis: null, rows: fallback.rows, dataBadge: "Données J-1" };
+      return { kind: "ready", courseInfo: fallback.courseInfo, analysis: null, rows: fallback.rows, dataBadge: "DonnÃ©es J-1" };
     }
     return { kind: "error" };
   }
 }
 
-// ─── STYLES ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ STYLES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,600;0,700;1,400&display=swap');
-.rp-wrap{--bg:#07080F;--s1:#0D1020;--s2:#131628;--g:#D4AF37;--g2:#FFE566;--g3:#8B6914;--txt:#FFFFFF;--txt2:#6A6A80;--txt3:#3A3A50;--grn:#00FF87;--red:#FF4D5A;--blu:#4DC8FF;--bdr:rgba(212,175,55,0.15);--bdr2:rgba(212,175,55,0.35);font-family:"DM Mono",monospace;color:var(--txt);background:var(--bg);min-height:100vh}
-.rp-topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:12px 32px;background:rgba(7,8,15,0.92);border-bottom:1px solid var(--bdr);backdrop-filter:blur(20px)}
-.rp-logo{font-family:"Cormorant Garamond",serif;font-size:22px;font-weight:700;background:linear-gradient(90deg,#D4AF37,#FFE566);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-decoration:none;letter-spacing:2px;text-transform:uppercase}
-.rp-data-badge{font-size:9px;background:rgba(255,255,255,0.04);border:1px solid var(--bdr);border-radius:20px;padding:3px 10px;color:var(--txt2);letter-spacing:0.5px}
-.rp-body{max-width:1280px;margin:0 auto;padding:24px;display:grid;gap:20px}
-.rp-course-header{position:relative;overflow:hidden;border-radius:20px;padding:32px 36px;border:1px solid var(--bdr2);background:linear-gradient(135deg,#0D1020 0%,#131628 60%,#0A0D1C 100%);display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap}
-.rp-course-header::before{content:"";position:absolute;top:-80px;right:-80px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(212,175,55,0.1) 0%,transparent 65%);pointer-events:none}
-.rp-course-tag{font-size:10px;color:var(--g);letter-spacing:3px;text-transform:uppercase;margin-bottom:10px}
-.rp-course-name{font-family:"Cormorant Garamond",serif;font-size:44px;font-weight:700;color:#fff;line-height:1;letter-spacing:-1px;margin-bottom:14px}
-.rp-course-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--txt2)}
-.rp-sep{color:var(--txt3)}
-.rp-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:14px;min-width:120px}
-.rp-badge,.rp-course-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;letter-spacing:1.5px;padding:6px 16px;border-radius:20px}
-.rp-badge.live,.rp-course-badge.live{background:rgba(0,255,135,0.1);border:1px solid rgba(0,255,135,0.4);color:var(--grn)}
-.rp-badge.termine,.rp-course-badge.termine{background:rgba(77,200,255,0.1);border:1px solid rgba(77,200,255,0.3);color:var(--blu)}
-.rp-badge.upcoming,.rp-course-badge.upcoming{background:rgba(212,175,55,0.1);border:1px solid var(--bdr2);color:var(--g)}
-.rp-live-dot{width:7px;height:7px;border-radius:50%;background:var(--grn);box-shadow:0 0 10px var(--grn);animation:rpblink 1.4s infinite}
-@keyframes rpblink{0%,100%{opacity:1}50%{opacity:0.3}}
-.rp-grid{display:grid;grid-template-columns:1fr 290px;gap:20px;align-items:start}
-@media(max-width:900px){.rp-grid{grid-template-columns:1fr}}
-.rp-main{display:grid;gap:20px}
-.rp-card{background:var(--s1);border:1px solid var(--bdr);border-radius:20px;overflow:hidden}
-.rp-card-header{padding:14px 24px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between}
-.rp-card-title{font-size:9px;color:var(--g);text-transform:uppercase;letter-spacing:3px}
-.rp-sel-body{padding:24px 28px}
-.rp-bubbles{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
-.rp-bubble-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;min-width:80px}
-.rp-bubble{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:"Cormorant Garamond",serif;font-size:34px;font-weight:700;line-height:1;flex-shrink:0}
-.rp-bubble.r1{background:linear-gradient(135deg,#D4AF37,#FFE566);color:#07080F;box-shadow:0 0 32px rgba(212,175,55,0.5),0 0 64px rgba(212,175,55,0.15)}
-.rp-bubble.r2{background:linear-gradient(135deg,rgba(212,175,55,0.45),rgba(212,175,55,0.65));color:#fff;border:1px solid rgba(212,175,55,0.5);box-shadow:0 0 16px rgba(212,175,55,0.2)}
-.rp-bubble.r3{background:rgba(212,175,55,0.1);color:rgba(212,175,55,0.6);border:1px solid rgba(212,175,55,0.2)}
-.rp-bubble-name{font-size:11px;color:var(--txt);text-align:center;max-width:80px;line-height:1.3}
-.rp-bubble-score{font-size:10px;color:var(--txt2);text-align:center}
-.rp-verdict-bar{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--bdr)}
-.rp-vstat{text-align:center;padding:20px 12px;border-right:1px solid var(--bdr)}
-.rp-vstat:last-child{border-right:none}
-.rp-vstat-label{font-size:9px;color:var(--txt2);text-transform:uppercase;letter-spacing:2px;margin-bottom:10px}
-.rp-vstat-val{font-family:"Cormorant Garamond",serif;font-size:40px;font-weight:700;line-height:1}
-.rp-vstat-val.gold{background:linear-gradient(90deg,#D4AF37,#FFE566);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.rp-vstat-val.grn{background:linear-gradient(90deg,#00FF87,#00C851);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.rp-vstat-val.orn{color:#FF9F1C}
-.rp-vstat-val.red{color:var(--red)}
-.rp-vstat-val.muted{color:var(--txt2)}
-.rp-table-wrap{overflow-x:auto}
-.rp-table{width:100%;border-collapse:collapse;min-width:640px}
-.rp-th{font-size:9px;color:var(--g);text-transform:uppercase;letter-spacing:2px;padding:12px 16px;text-align:left;border-bottom:1px solid var(--bdr);white-space:nowrap;background:rgba(212,175,55,0.03)}
-.rp-th.r{text-align:right}
-.rp-tr{border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.12s;cursor:pointer}
-.rp-tr:last-child{border-bottom:none}
-.rp-tr:hover{background:rgba(212,175,55,0.04)}
-.rp-tr.sel{background:linear-gradient(90deg,rgba(212,175,55,0.08),transparent);border-left:3px solid var(--g)}
-.rp-tr.out{opacity:0.28}
-.rp-td{padding:14px 16px;vertical-align:middle}
-.rp-td.r{text-align:right}
-.rp-num{font-family:"Cormorant Garamond",serif;font-size:22px;font-weight:300;color:var(--txt2);line-height:1;text-align:center}
-.rp-num.sel{background:linear-gradient(135deg,#D4AF37,#FFE566);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:700;font-size:26px}
-.rp-horse{font-size:13px;color:#fff;letter-spacing:0.2px;white-space:nowrap}
-.rp-sub{font-size:10px;color:var(--txt2);margin-top:3px;white-space:nowrap}
-.rp-score-cell{display:flex;align-items:center;gap:10px;justify-content:flex-end}
-.rp-score-track{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;width:50px;overflow:hidden}
-.rp-score-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#8B6914,#D4AF37)}
-.rp-score-fill.lo{background:rgba(255,255,255,0.12)}
-.rp-score-n{font-family:"Cormorant Garamond",serif;font-size:22px;font-weight:700;background:linear-gradient(90deg,#D4AF37,#FFE566);-webkit-background-clip:text;-webkit-text-fill-color:transparent;min-width:32px;text-align:right}
-.rp-score-n.lo{background:none;-webkit-text-fill-color:var(--txt2);font-weight:300}
-.rp-musique{font-size:10px;color:var(--txt2);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rp-cote{font-size:13px;color:var(--txt2)}
-.rp-mise{font-family:"Cormorant Garamond",serif;font-size:22px;font-weight:600;color:#fff}
-.rp-mise.none{color:var(--txt2);font-size:11px;font-family:"DM Mono",monospace;font-weight:300}
-.rp-sidebar{display:grid;gap:16px}
-.rp-scard{background:var(--s1);border:1px solid var(--bdr);border-radius:20px;overflow:hidden}
-.rp-stitle{font-size:9px;color:var(--g);text-transform:uppercase;letter-spacing:3px;padding:14px 20px;border-bottom:1px solid var(--bdr)}
-.rp-sbody{padding:16px 20px;display:grid;gap:10px}
-.rp-vbet{padding:12px 14px;border-radius:12px;background:rgba(0,255,135,0.05);border:1px solid rgba(0,255,135,0.2);border-left:3px solid var(--grn);display:flex;justify-content:space-between;align-items:center}
-.rp-vbet-name{font-size:12px;color:#fff}
-.rp-vbet-sub{font-size:10px;color:var(--txt2);margin-top:3px}
-.rp-vbet-edge{font-family:"Cormorant Garamond",serif;font-size:26px;font-weight:700;background:linear-gradient(90deg,#00FF87,#00C851);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.rp-plan-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--bdr);font-size:12px}
-.rp-plan-row:last-child{border-bottom:none}
-.rp-plan-lbl{color:var(--txt2)}
-.rp-plan-val{color:#fff}
-.rp-raison{background:var(--s2);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--txt2);line-height:1.6;border-left:2px solid rgba(212,175,55,0.3)}
-.rp-alert-btn{margin:12px 20px 16px}
-.rp-pro-lock{background:linear-gradient(135deg,rgba(212,175,55,0.08),rgba(212,175,55,0.03));border:1px solid var(--bdr2);border-radius:12px;padding:16px;text-align:center}
-.rp-pro-lock p{font-size:12px;color:var(--g);margin-bottom:12px}
-.rp-pro-link{display:inline-flex;background:linear-gradient(90deg,#D4AF37,#FFE566);color:#07080F;font-size:11px;font-family:"DM Mono",monospace;padding:9px 20px;border-radius:8px;text-decoration:none;font-weight:500}
-@media(max-width:640px){.rp-course-name{font-size:28px}.rp-bubble{width:56px;height:56px;font-size:26px}.rp-verdict-bar{grid-template-columns:1fr}.rp-grid{grid-template-columns:1fr}}
-
-/* Full light app skin: keep the race logic, remove the old VMAX visuals. */
-.rp-wrap{--bg:var(--pmu-bg,#F8F6EF);--s1:#FFFFFF;--s2:#F4F1E8;--g:var(--pmu-accent,#D6B633);--g2:var(--pmu-accent,#D6B633);--g3:#A38719;--txt:var(--pmu-text,#162318);--txt2:var(--pmu-muted,#67706A);--txt3:#8B938D;--grn:var(--pmu-primary,#006837);--red:#C94B57;--blu:#2777AD;--bdr:var(--pmu-border,#DDD8C9);--bdr2:rgba(0,104,55,0.22);font-family:var(--font-ui),Arial,sans-serif;color:var(--txt);background:var(--bg);min-height:100vh}
-.rp-topbar{position:sticky;top:0;z-index:50;background:#fff;border-bottom:1px solid var(--bdr);box-shadow:0 10px 30px rgba(29,41,31,0.06);backdrop-filter:blur(16px)}
-.rp-logo{font-family:var(--font-heading),Arial,sans-serif;font-size:20px;font-weight:900;color:var(--pmu-primary,#006837);background:none;-webkit-text-fill-color:currentColor;text-decoration:none;letter-spacing:.08em;text-transform:uppercase}
-.rp-data-badge{background:var(--s2);border:1px solid var(--bdr);color:var(--txt2);font-weight:800}
-.rp-body{max-width:96rem;margin:0 auto;padding:24px 18px 72px}
-.rp-course-header{background:#fff;border:1px solid var(--bdr);border-radius:8px;box-shadow:0 18px 48px rgba(29,41,31,0.08);padding:24px;gap:18px}
-.rp-course-header::before{display:none}
-.rp-course-name{font-family:var(--font-heading),Arial,sans-serif;color:var(--txt);font-size:clamp(32px,5vw,58px);line-height:1;letter-spacing:0}
-.rp-course-meta{color:var(--txt2)}
-.rp-course-meta-dot{background:var(--g)}
-.rp-course-badge{border-radius:8px;border-color:var(--bdr);background:var(--s2);color:var(--txt)}
-.rp-course-badge.live{border-color:rgba(0,104,55,.28);background:rgba(0,104,55,.08);color:var(--pmu-primary,#006837)}
-.rp-course-badge.termine{border-color:rgba(103,112,106,.28);background:rgba(103,112,106,.1);color:var(--txt2)}
-.rp-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,360px);gap:24px}
-.rp-card,.rp-scard{background:#fff;border:1px solid var(--bdr);border-radius:8px;box-shadow:0 16px 42px rgba(29,41,31,0.08);overflow:hidden}
-.rp-card-header,.rp-stitle{border-bottom:1px solid var(--bdr);background:#fff;color:var(--pmu-primary,#006837)}
-.rp-course-tag,.rp-card-title,.rp-stitle{font-size:13px;font-weight:900;letter-spacing:0;text-transform:none}
-.rp-selection{background:#fff;border-bottom:1px solid var(--bdr)}
-.rp-bubble,.rp-bubble.r1,.rp-bubble.r2,.rp-bubble.r3{background:#fff;border:1px solid var(--bdr);box-shadow:none;color:var(--txt);font-family:var(--font-heading),Arial,sans-serif}
-.rp-bubble.sel{background:var(--pmu-primary,#006837);border-color:var(--pmu-primary,#006837);color:#fff;box-shadow:0 12px 30px rgba(0,104,55,.18)}
-.rp-bubble-score,.rp-sub,.rp-musique,.rp-mise.none,.rp-plan-lbl,.rp-raison{color:var(--txt2)}
-.rp-bubble-name,.rp-horse,.rp-plan-val,.rp-vbet-name{color:var(--txt)}
-.rp-verdict-bar{background:#fff;border-top:1px solid var(--bdr)}
-.rp-vstat{border-right:1px solid var(--bdr)}
-.rp-vstat-label,.rp-th{color:var(--txt2);letter-spacing:0;text-transform:none}
-.rp-vstat-val{font-family:var(--font-heading),Arial,sans-serif;color:var(--txt)}
-.rp-vstat-val.grn,.rp-score-num,.rp-mise,.rp-vbet-edge{color:var(--pmu-primary,#006837);background:none;-webkit-text-fill-color:currentColor}
-.rp-vstat-val.orn{color:#A87900}
-.rp-vstat-val.muted{color:var(--txt2)}
-.rp-table-wrap{background:#fff}
-.rp-table{background:#fff}
-.rp-table thead{background:var(--s2)}
-.rp-tr{background:#fff;border-bottom:1px solid var(--bdr);opacity:1}
-.rp-tr:hover{background:rgba(0,104,55,.04)}
-.rp-tr.sel{background:rgba(214,182,51,.14)}
-.rp-tr.out{opacity:.64}
-.rp-num{background:var(--s2);color:var(--txt2);border:1px solid var(--bdr)}
-.rp-num.sel{background:var(--pmu-primary,#006837);color:#fff;border-color:var(--pmu-primary,#006837)}
-.rp-cote{color:var(--txt)}
-.rp-score-track{background:#E2DED2}
-.rp-score-fill{background:var(--pmu-primary,#006837)}
-.rp-score-fill.lo{background:#B8B09D}
-.rp-score-num.lo{color:var(--txt2)}
-.rp-vbet{background:rgba(0,104,55,.06);border-color:rgba(0,104,55,.18);border-left-color:var(--pmu-primary,#006837)}
-.rp-raison{background:var(--s2);border-left-color:var(--pmu-accent,#D6B633)}
-.rp-pro-lock{background:var(--s2);border-color:var(--bdr)}
-.rp-pro-lock p{color:var(--txt)}
-.rp-pro-link{background:var(--pmu-primary,#006837);color:#fff;border-radius:8px}
-.rp-alert-btn button{border-radius:8px!important}
-@media(max-width:900px){.rp-grid{grid-template-columns:1fr}.rp-body{padding:16px 12px 56px}.rp-course-header{padding:18px}.rp-topbar{padding:12px 16px}}
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&family=Cormorant+Garamond:wght@600;700&display=swap');
+.rp-wrap{--gold:#D4AF37;--green:#00C851;--orange:#FF9F1C;--red:#FF4D5A;--blue:#4DC8FF;--muted:rgba(255,255,255,0.35);--bg:#080A12;--panel:#10131F;--panel2:#151928;--line:rgba(255,255,255,0.12);min-height:100vh;background:var(--bg);color:#fff;font-family:"DM Mono",monospace}
+.rp-nav{position:sticky;top:0;z-index:50;display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:18px;border-bottom:1px solid rgba(212,175,55,.18);background:rgba(8,10,18,.92);padding:14px 32px;backdrop-filter:blur(16px)}
+.rp-logo{font-family:"Cormorant Garamond",serif;font-size:28px;font-weight:700;color:var(--gold);text-decoration:none;letter-spacing:.08em}
+.rp-live{display:inline-flex;align-items:center;border:1px solid rgba(0,200,81,.45);border-radius:999px;background:rgba(0,200,81,.12);color:var(--green);padding:5px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em}
+.rp-links{display:flex;justify-content:center;gap:8px}.rp-links a{border-radius:8px;color:rgba(255,255,255,.72);font-size:12px;font-weight:700;letter-spacing:.08em;padding:9px 12px;text-decoration:none;text-transform:uppercase}.rp-links a:hover{background:rgba(255,255,255,.08);color:var(--gold)}
+.rp-burger{display:none;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.06);color:#fff;font-size:18px;padding:8px 11px}
+.rp-body{max-width:1480px;margin:0 auto;padding:24px;display:grid;gap:22px}.rp-page-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:start}.rp-main{display:grid;gap:18px}.rp-sidebar{display:grid;gap:16px}
+.rp-course-header,.rp-card,.rp-scard{border:1px solid var(--line);border-radius:8px;background:var(--panel);box-shadow:0 24px 60px rgba(0,0,0,.24)}
+.rp-course-header{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:28px;background:radial-gradient(circle at 84% 16%,rgba(77,200,255,.14),transparent 26%),var(--panel)}
+.rp-course-name{font-family:"Cormorant Garamond",serif;font-size:48px;font-weight:700;line-height:.95;color:#fff}.rp-course-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;color:rgba(255,255,255,.68);font-size:12px}.rp-course-meta-dot{width:4px;height:4px;border-radius:50%;background:var(--gold);margin-top:7px}
+.rp-header-right{display:grid;justify-items:end;gap:14px}.rp-course-badge{border:1px solid rgba(77,200,255,.4);border-radius:999px;color:var(--blue);font-size:11px;font-weight:700;letter-spacing:.12em;padding:7px 12px;text-transform:uppercase}.rp-course-badge.live{border-color:rgba(0,200,81,.45);color:var(--green)}.rp-course-badge.termine{border-color:rgba(255,255,255,.18);color:var(--muted)}
+.rp-card{overflow:hidden}.rp-card-header,.rp-stitle{border-bottom:1px solid var(--line);color:var(--gold);font-size:11px;font-weight:700;letter-spacing:.18em;padding:14px 18px;text-transform:uppercase}.rp-sel-body{padding:22px}.rp-bubbles{display:flex;flex-wrap:wrap;gap:18px}.rp-bubble-wrap{display:grid;justify-items:center;gap:8px;min-width:92px}.rp-bubble{display:grid;place-items:center;width:72px;height:72px;border-radius:50%;border:1px solid rgba(212,175,55,.55);background:rgba(212,175,55,.16);color:var(--gold);font-family:"Cormorant Garamond",serif;font-size:34px;font-weight:700}.rp-bubble.r2{border-color:rgba(77,200,255,.45);background:rgba(77,200,255,.12);color:var(--blue)}.rp-bubble.r3{border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:var(--muted)}.rp-bubble-name{font-family:"Cormorant Garamond",serif;font-size:17px;font-weight:700;text-align:center}.rp-bubble-score{color:rgba(255,255,255,.58);font-size:11px}
+.rp-verdict-bar{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line)}.rp-vstat{padding:18px;text-align:center;border-right:1px solid var(--line)}.rp-vstat:last-child{border-right:0}.rp-vstat-label,.rp-th{color:rgba(255,255,255,.48);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}.rp-vstat-val{font-family:"DM Mono",monospace;font-size:34px;font-weight:700}.rp-vstat-val.grn{color:var(--green)}.rp-vstat-val.orn{color:var(--orange)}.rp-vstat-val.red{color:var(--red)}.rp-vstat-val.muted{color:var(--muted)}
+.rp-table-wrap{overflow-x:auto}.rp-table{width:100%;min-width:760px;border-collapse:collapse}.rp-table thead{background:var(--panel2)}.rp-th{padding:12px 14px;text-align:left}.rp-th.r{text-align:right}.rp-tr{border-top:1px solid var(--line)}.rp-tr.sel{background:rgba(212,175,55,.08)}.rp-tr.out{opacity:.42}.rp-td{padding:14px;vertical-align:middle;font-size:12px}.rp-td.r{text-align:right}.rp-num{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);color:rgba(255,255,255,.7);font-family:"DM Mono",monospace;font-weight:700}.rp-num.sel{border-color:var(--gold);background:rgba(212,175,55,.18);color:var(--gold)}.rp-horse{font-family:"Cormorant Garamond",serif;font-size:20px;font-weight:700;color:#fff;white-space:nowrap}.rp-sub,.rp-mise.none{color:rgba(255,255,255,.52);font-size:11px}.rp-score-cell{display:flex;justify-content:flex-end;align-items:center;gap:10px}.rp-score-track{width:56px;height:4px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden}.rp-score-fill{height:100%;background:var(--gold)}.rp-score-fill.lo{background:var(--orange)}.rp-score-num{color:var(--gold);font-weight:700}.rp-score-num.lo{color:var(--orange)}.rp-cote{color:var(--blue);font-weight:700}.rp-mise{color:#fff;font-weight:700}
+.rp-sbody{display:grid;gap:12px;padding:16px}.rp-vbet{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid rgba(0,200,81,.3);border-left:3px solid var(--green);border-radius:8px;background:rgba(0,200,81,.08);padding:12px}.rp-vbet-name{font-family:"Cormorant Garamond",serif;font-size:18px;font-weight:700}.rp-vbet-edge{color:var(--green);font-size:24px;font-weight:700}.rp-pro-lock{border:1px solid rgba(212,175,55,.35);border-radius:8px;background:rgba(212,175,55,.08);padding:14px;text-align:center}.rp-pro-lock p{color:var(--gold);font-size:12px}.rp-pro-link{display:inline-flex;margin-top:10px;border-radius:8px;background:var(--gold);color:#080A12;font-size:11px;font-weight:700;letter-spacing:.1em;padding:10px 16px;text-decoration:none;text-transform:uppercase}.rp-alert-btn{padding:16px}.rp-alert-btn button{border-radius:8px!important}.rp-plan-row{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding:10px 0;font-size:12px}.rp-plan-row:last-child{border-bottom:0}.rp-plan-lbl{color:rgba(255,255,255,.5)}.rp-plan-val{color:#fff;font-weight:700;text-align:right}
+@media(max-width:768px){.rp-nav{grid-template-columns:auto auto 1fr auto;padding:12px 16px}.rp-logo{font-size:23px}.rp-links{display:none}.rp-burger{display:inline-flex}.rp-body{padding:16px}.rp-course-header{padding:16px;display:grid}.rp-course-name{font-size:28px}.rp-page-grid{grid-template-columns:1fr}.rp-sidebar{grid-row:auto}.rp-bubble{width:52px;height:52px;font-size:26px}.rp-verdict-bar{grid-template-columns:1fr}.rp-table-wrap{overflow-x:auto}}
 `;
 
 export default async function RacePage({ params, searchParams }: RacePageProps) {
@@ -614,7 +491,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
 
   if (state.kind !== "ready") {
     const title = state.kind === "invalid" ? "Identifiant invalide" : state.kind === "not-found" ? "Course introuvable" : "Analyse indisponible";
-    const detail = state.kind === "not-found" ? `Aucune course pour le ${state.date}.` : "Les données PMU se mettent à jour.";
+    const detail = state.kind === "not-found" ? `Aucune course pour le ${state.date}.` : "Les donnÃ©es PMU se mettent Ã  jour.";
     return (
       <main className="grid min-h-screen place-items-center bg-[var(--pmu-bg)] px-4 text-[var(--pmu-text)]">
         <style>{CSS}</style>
@@ -630,7 +507,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
     );
   }
 
-  const { courseInfo, analysis, rows, dataBadge } = state;
+  const { courseInfo, analysis, rows } = state;
   const selectedRow = getRecommendedRow(rows, analysis);
   const selectedNumber = selectedRow?.numero ?? null;
   const minutesUntilStart = getMinutesUntilStart(courseInfo.heureDepart, courseInfo.dateStr);
@@ -638,11 +515,11 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
   const gaugeScore = getGaugeScore(analysis, selectedRow);
   const verdict = selectedRow
     ? computeRaceVerdict({ numero: selectedRow.numero, cheval: selectedRow.cheval, cote: selectedRow.cote, score: selectedRow.scoreV10 ?? selectedRow.scoreIa })
-    : computeRaceVerdict({ numero: 0, cheval: "Sélection indisponible", cote: null, score: 0 });
-  const stakeLabel = selectedRow ? formatStakeEuro(selectedRow.mise) : "—";
+    : computeRaceVerdict({ numero: 0, cheval: "Selection indisponible", cote: null, score: 0 });
+  const stakeLabel = selectedRow ? formatStakeEuro(selectedRow.mise) : "--";
   const verdictStakeLabel = verdict.stake > 0 ? formatStakeEuro(verdict.stake) : stakeLabel;
   const verdictToneClass =
-    verdict.verdict === "JOUER" ? "grn" : verdict.verdict === "SURVEILLER" ? "orn" : "muted";
+    verdict.verdict === "JOUER" ? "grn" : verdict.verdict === "SURVEILLER" ? "orn" : "red";
   const chatRaceId = formatRaceAnalysisId(courseInfo.reunion, courseInfo.course);
   const chatRaceDate = toIsoDate(courseInfo.dateStr);
   const [alertCount, initialChatMessages] = await Promise.all([
@@ -650,41 +527,38 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
     loadInitialRaceChatMessages(chatRaceId, chatRaceDate),
   ]);
   const valueBets = buildValueBets(rows.map((row) => ({ numero: row.numero, cheval: row.cheval, cote: row.cote, scoreIa: row.scoreIa, raison: row.topFacteur })));
-  const topReasons = [
-    ...(analysis?.favori?.prediction.topFacteurs ?? []),
-    analysis?.prediction.lisibilite ? `Course ${analysis.prediction.lisibilite.toLowerCase()}` : null,
-    analysis?.soliditeFavori?.alertes[0] ? `Point de vigilance : ${analysis.soliditeFavori.alertes[0]}` : null,
-  ].filter((reason): reason is string => Boolean(reason)).slice(0, 3);
-  const urgentRace = minutesUntilStart > 0 && minutesUntilStart < 30;
-
-  // Top 3 par score pour les bulles
   const top3 = [...rows]
-    .filter((r) => r.scoreIa !== null)
-    .sort((a, b) => (b.scoreV10 ?? b.scoreIa ?? 0) - (a.scoreV10 ?? a.scoreIa ?? 0))
+    .filter((row) => row.scoreIa !== null)
+    .sort((left, right) => (right.scoreV10 ?? right.scoreIa ?? 0) - (left.scoreV10 ?? left.scoreIa ?? 0))
     .slice(0, 3);
-
   const statusClass = status === "live" ? "live" : status === "finished" ? "termine" : "upcoming";
-  const statusLabel = status === "live" ? "LIVE" : status === "finished" ? "TERMINÉE" : "À VENIR";
+  const statusLabel = status === "live" ? "EN COURS" : status === "finished" ? "TERMINE" : "A VENIR";
+  const navItems = [
+    { label: "Dashboard", href: "/dashboard" },
+    { label: "Value Bets", href: "/value-bets" },
+    { label: "Stats", href: "/stats" },
+    { label: "Mon compte", href: "/mes-paris" },
+  ];
 
   return (
     <main className="rp-wrap">
       <style>{CSS}</style>
-
-      {/* TOPBAR */}
-      <div className="rp-topbar">
+      <header className="rp-nav">
         <Link href="/dashboard" className="rp-logo">PMU GAGNANT</Link>
-        <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
-          <span className="rp-data-badge">{dataBadge}</span>
-          <StatusBadge status={status} />
-        </div>
-      </div>
+        <span className="rp-live">LIVE</span>
+        <nav className="rp-links" aria-label="Navigation principale">
+          {navItems.map((item) => (
+            <Link href={item.href} key={item.label}>{item.label}</Link>
+          ))}
+        </nav>
+        <button className="rp-burger" type="button" aria-label="Menu">?</button>
+        <DashboardHeaderAccount />
+      </header>
 
       <div className="rp-body">
-
-        {/* HEADER COURSE */}
-        <div className="rp-course-header">
+        <section className="rp-course-header">
           <div>
-            <div className="rp-course-name">{courseInfo.nomCourse}</div>
+            <h1 className="rp-course-name">{courseInfo.nomCourse}</h1>
             <div className="rp-course-meta">
               <span>{courseInfo.hippodrome}</span>
               <span className="rp-course-meta-dot" />
@@ -700,50 +574,32 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
             </div>
           </div>
           <div className="rp-header-right">
-            <span className={`rp-course-badge ${statusClass}`}>
-              {status === "live" && <span className="rp-live-dot" />}
-              {statusLabel}
-            </span>
+            <span className={`rp-course-badge ${statusClass}`}>{statusLabel}</span>
             <ScoreGauge score={gaugeScore} label="confiance IA" />
           </div>
-        </div>
+        </section>
 
-        <div className="rp-grid">
+        <div className="rp-page-grid">
           <div className="rp-main">
-
-            {/* SÉLECTION IA */}
-            <div className="rp-card">
-              <div className="rp-card-header">
-                <span className="rp-card-title">Sélection IA</span>
-                {urgentRace && (
-                  <span style={{fontSize:'10px',color:'#C26052',letterSpacing:'1px'}}>
-                    ⚠ {Math.max(1, Math.round(minutesUntilStart))} min restantes
-                  </span>
-                )}
-              </div>
+            <section className="rp-card">
+              <div className="rp-card-header">Bloc selection IA</div>
               <div className="rp-sel-body">
                 <div className="rp-bubbles">
-                  {top3.map((row, i) => (
+                  {top3.map((row, index) => (
                     <div key={row.numero} className="rp-bubble-wrap">
-                      <div className={`rp-bubble ${i === 1 ? 'r2' : i === 2 ? 'r3' : 'r1'}`}>
-                        {row.numero}
-                      </div>
+                      <div className={`rp-bubble ${index === 1 ? "r2" : index === 2 ? "r3" : "r1"}`}>{row.numero}</div>
                       <div className="rp-bubble-name">{row.cheval}</div>
                       <div className="rp-bubble-score">Score {Math.round(row.scoreV10 ?? row.scoreIa ?? 0)}</div>
-                      {row.cote && <div className="rp-bubble-score">Cote {formatOdds(row.cote)}</div>}
+                      {row.cote ? <div className="rp-bubble-score">Cote {formatOdds(row.cote)}</div> : null}
                     </div>
                   ))}
-                  {top3.length === 0 && (
-                    <span style={{fontSize:'12px',color:'#6A6258'}}>Analyse en cours…</span>
-                  )}
+                  {top3.length === 0 ? <span className="rp-sub">Analyse en cours</span> : null}
                 </div>
               </div>
               <div className="rp-verdict-bar">
                 <div className="rp-vstat">
                   <div className="rp-vstat-label">Verdict</div>
-                  <div className={`rp-vstat-val ${verdictToneClass}`}>
-                    {verdict.verdict}
-                  </div>
+                  <div className={`rp-vstat-val ${verdictToneClass}`}>{verdict.verdict}</div>
                 </div>
                 <div className="rp-vstat">
                   <div className="rp-vstat-label">Confiance</div>
@@ -754,23 +610,18 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
                   <div className="rp-vstat-val">{verdictStakeLabel}</div>
                 </div>
               </div>
-            </div>
+            </section>
 
-            {/* TABLEAU DES PARTANTS */}
-            <div className="rp-card">
-              <div className="rp-card-header">
-                <span className="rp-card-title">Tableau des partants</span>
-                <span style={{fontSize:'11px',color:'#6A6258'}}>{rows.length} chevaux</span>
-              </div>
+            <section className="rp-card">
+              <div className="rp-card-header">Tableau partants</div>
               <div className="rp-table-wrap">
                 <table className="rp-table">
                   <thead>
                     <tr>
-                      <th className="rp-th" style={{width:'40px'}}>N°</th>
+                      <th className="rp-th">N°</th>
                       <th className="rp-th">Cheval</th>
-                      <th className="rp-th">Jockey / Entraîneur</th>
-                      <th className="rp-th">Musique</th>
-                      <th className="rp-th r">Score IA</th>
+                      <th className="rp-th">Jockey</th>
+                      <th className="rp-th r">Score VMAX</th>
                       <th className="rp-th r">Cote</th>
                       <th className="rp-th r">Mise</th>
                     </tr>
@@ -781,78 +632,61 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
                       const score = row.scoreV10 ?? row.scoreIa;
                       const isSelected = row.numero === selectedNumber;
                       return (
-                        <tr key={row.numero} className={`rp-tr ${isSelected ? 'sel' : !active && score !== null && score < 50 ? 'out' : ''}`}>
-                          <td className="rp-td">
-                            <div className={`rp-num ${isSelected ? 'sel' : ''}`}>{row.numero}</div>
-                          </td>
-                          <td className="rp-td">
-                            <div className="rp-horse">{row.cheval}</div>
-                          </td>
-                          <td className="rp-td">
-                            <div className="rp-sub">{row.jockey}</div>
-                            <div className="rp-sub">{row.entraineur}</div>
-                          </td>
-                          <td className="rp-td">
-                            <div className="rp-musique">{row.musique ?? '—'}</div>
-                          </td>
+                        <tr key={row.numero} className={`rp-tr ${isSelected ? "sel" : !active && score !== null && score < 50 ? "out" : ""}`}>
+                          <td className="rp-td"><div className={`rp-num ${isSelected ? "sel" : ""}`}>{row.numero}</div></td>
+                          <td className="rp-td"><div className="rp-horse">{row.cheval}</div></td>
+                          <td className="rp-td"><div className="rp-sub">{row.jockey}</div></td>
                           <td className="rp-td r">
                             {score !== null ? (
-                              <div className="rp-score-cell" style={{justifyContent:'flex-end'}}>
-                                <div className="rp-score-track">
-                                  <div className={`rp-score-fill ${active ? '' : 'lo'}`} style={{width:`${Math.min(100,score)}%`}} />
-                                </div>
-                                <div className={`rp-score-num ${active ? '' : 'lo'}`}>{Math.round(score)}</div>
+                              <div className="rp-score-cell">
+                                <div className="rp-score-track"><div className={`rp-score-fill ${active ? "" : "lo"}`} style={{ width: `${Math.min(100, score)}%` }} /></div>
+                                <div className={`rp-score-num ${active ? "" : "lo"}`}>{Math.round(score)}</div>
                               </div>
-                            ) : <span style={{color:'#6A6258',fontSize:'12px'}}>—</span>}
+                            ) : <span className="rp-sub">--</span>}
                           </td>
-                          <td className="rp-td r">
-                            <span className="rp-cote">{row.cote ? formatOdds(row.cote) : '—'}</span>
-                          </td>
-                          <td className="rp-td r">
-                            {active
-                              ? <span className="rp-mise">{formatStakeEuro(row.mise)}</span>
-                              : <span className="rp-mise none">pas joué</span>
-                            }
-                          </td>
+                          <td className="rp-td r"><span className="rp-cote">{row.cote ? formatOdds(row.cote) : "--"}</span></td>
+                          <td className="rp-td r">{active ? <span className="rp-mise">{formatStakeEuro(row.mise)}</span> : <span className="rp-mise none">pas joue</span>}</td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
               </div>
-            </div>
-
-            {/* POURQUOI CE CHEVAL */}
-            {topReasons.length > 0 && (
-              <div className="rp-card">
-                <div className="rp-card-header">
-                  <span className="rp-card-title">Pourquoi ce cheval ?</span>
-                </div>
-                <div style={{padding:'16px 20px'}} className="rp-raisons">
-                  {topReasons.map((reason) => (
-                    <div className="rp-raison" key={reason}>{reason}</div>
-                  ))}
-                </div>
-              </div>
-            )}
-
+            </section>
           </div>
 
-          {/* SIDEBAR */}
-          <div className="rp-sidebar">
-
-            {/* COUNTDOWN */}
-            <div className="rp-scard">
-              <div className="rp-stitle">Départ</div>
-              <div style={{padding:'16px 18px'}}>
-                <CountdownTimer dateStr={courseInfo.dateStr} heureDepart={courseInfo.heureDepart} variant="hero" />
+          <aside className="rp-sidebar">
+            <section className="rp-scard">
+              <div className="rp-stitle">Value Bets</div>
+              <div className="rp-sbody">
+                {valueBets.length > 0 ? (
+                  <>
+                    {valueBets.slice(0, 1).map((bet) => (
+                      <div key={bet.numero}>
+                        <div className="rp-vbet">
+                          <div>
+                            <div className="rp-vbet-name">#{bet.numero} {bet.cheval}</div>
+                            <div className="rp-sub">PMU {formatOdds(bet.coteActuelle)} · fair {formatOdds(bet.coteFair)}</div>
+                          </div>
+                          <div className="rp-vbet-edge">+{Math.round(bet.edgePct)}%</div>
+                        </div>
+                        <div className="rp-sub" style={{ marginTop: "8px", lineHeight: 1.5 }}>{getValueExplanation(bet.explanation)}</div>
+                      </div>
+                    ))}
+                    {valueBets.length > 1 ? (
+                      <div className="rp-pro-lock">
+                        <p>{valueBets.length - 1} value bets masques PRO</p>
+                        <Link href="/premium" className="rp-pro-link">Passer PRO</Link>
+                      </div>
+                    ) : null}
+                  </>
+                ) : <div className="rp-sub">Aucun value bet net. Restez discipline.</div>}
               </div>
-            </div>
+            </section>
 
-            {/* ALERTE */}
-            <div className="rp-scard">
+            <section className="rp-scard">
               <div className="rp-stitle">Alerte Telegram</div>
-              <div className="rp-alert-btn" style={{marginTop:'12px'}}>
+              <div className="rp-alert-btn">
                 <RaceAlertButton
                   dateStr={courseInfo.dateStr}
                   reunion={courseInfo.reunion}
@@ -863,91 +697,31 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
                   chevalNom={verdict.cheval}
                 />
               </div>
-              {alertCount !== null && alertCount > 0 && (
-                <div style={{padding:'0 18px 14px',fontSize:'11px',color:'#6A6258'}}>
-                  {alertCount} abonnés suivent ce signal
-                </div>
-              )}
-            </div>
+              {alertCount !== null && alertCount > 0 ? <div className="rp-sub" style={{ padding: "0 16px 16px" }}>{alertCount} abonnes suivent ce signal</div> : null}
+            </section>
 
-            {/* VALUE BETS */}
-            <div className="rp-scard">
-              <div className="rp-stitle">Value Bets</div>
-              <div className="rp-sbody">
-                {valueBets.length > 0 ? (
-                  <>
-                    {valueBets.slice(0, 1).map((bet) => (
-                      <div key={bet.numero}>
-                        <div className="rp-vbet">
-                          <div>
-                            <div className="rp-vbet-name">#{bet.numero} {bet.cheval}</div>
-                            <div style={{fontSize:'10px',color:'#6A6258',marginTop:'2px'}}>
-                              PMU {formatOdds(bet.coteActuelle)} · fair {formatOdds(bet.coteFair)}
-                            </div>
-                          </div>
-                          <div className="rp-vbet-edge">+{Math.round(bet.edgePct)}%</div>
-                        </div>
-                        <div style={{fontSize:'11px',color:'#6A6258',marginTop:'8px',lineHeight:'1.5'}}>
-                          {getValueExplanation(bet.explanation)}
-                        </div>
-                      </div>
-                    ))}
-                    {valueBets.length > 1 && (
-                      <div className="rp-pro-lock">
-                        <p>{valueBets.length - 1} value bets masqués PRO</p>
-                        <Link href="/premium" className="rp-pro-link">Passer PRO</Link>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div style={{fontSize:'12px',color:'#6A6258'}}>Aucun value bet net. Restez discipliné.</div>
-                )}
-              </div>
-            </div>
-
-            {/* PLAN DE JEU */}
-            <div className="rp-scard">
+            <section className="rp-scard">
               <div className="rp-stitle">Plan de jeu</div>
               <div className="rp-sbody">
-                {analysis?.favori?.prediction.typePariConseille && (
-                  <div className="rp-plan-row">
-                    <span className="rp-plan-lbl">Type conseillé</span>
-                    <span className="rp-plan-val">{analysis.favori.prediction.typePariConseille}</span>
-                  </div>
-                )}
-                {analysis?.prediction.lisibilite && (
-                  <div className="rp-plan-row">
-                    <span className="rp-plan-lbl">Lisibilité</span>
-                    <span className="rp-plan-val">{analysis.prediction.lisibilite}</span>
-                  </div>
-                )}
-                <div className="rp-plan-row">
-                  <span className="rp-plan-lbl">Course</span>
-                  <span className="rp-plan-val">R{courseInfo.reunion}C{courseInfo.course}</span>
-                </div>
-                <div className="rp-plan-row" style={{borderBottom:'none'}}>
-                  <span className="rp-plan-lbl">Cote sélection</span>
-                  <span className="rp-plan-val">{formatOdds(verdict.cote)}</span>
-                </div>
+                {analysis?.favori?.prediction.typePariConseille ? (
+                  <div className="rp-plan-row"><span className="rp-plan-lbl">Type conseille</span><span className="rp-plan-val">{analysis.favori.prediction.typePariConseille}</span></div>
+                ) : null}
+                {analysis?.prediction.lisibilite ? (
+                  <div className="rp-plan-row"><span className="rp-plan-lbl">Lisibilite</span><span className="rp-plan-val">{analysis.prediction.lisibilite}</span></div>
+                ) : null}
+                <div className="rp-plan-row"><span className="rp-plan-lbl">Course</span><span className="rp-plan-val">R{courseInfo.reunion}C{courseInfo.course}</span></div>
+                <div className="rp-plan-row"><span className="rp-plan-lbl">Cote selection</span><span className="rp-plan-val">{formatOdds(verdict.cote)}</span></div>
               </div>
-            </div>
-
-          </div>
+            </section>
+          </aside>
         </div>
 
-        {/* CHAT */}
         <RaceChat
           raceId={chatRaceId}
           raceDate={chatRaceDate}
           initialMessages={initialChatMessages}
-          pinnedVerdict={{
-            verdict: verdict.verdict,
-            cheval: verdict.cheval,
-            cote: formatOdds(verdict.cote),
-            mise: verdictStakeLabel,
-          }}
+          pinnedVerdict={{ verdict: verdict.verdict, cheval: verdict.cheval, cote: formatOdds(verdict.cote), mise: verdictStakeLabel }}
         />
-
       </div>
     </main>
   );

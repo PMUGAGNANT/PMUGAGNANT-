@@ -1,14 +1,9 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import DashboardHeaderAccount from "@/components/dashboard/DashboardHeaderAccount";
-import PMUDashboard from "@/components/dashboard/PMUDashboard";
-import CountdownTimer from "@/components/race/CountdownTimer";
-import DashboardBestRaceRedirect from "@/components/race/DashboardBestRaceRedirect";
-import StatusBadge from "@/components/ui/StatusBadge";
 import {
   formatRaceAnalysisId,
-  getRunnerNumberClass,
   getVmaxRaceStatus,
   type VmaxRaceStatus,
 } from "@/features/vmax/vmax-model";
@@ -313,6 +308,85 @@ function formatRate(value: number | null) {
   return `${Math.round(value)}%`;
 }
 
+function getStatusLabel(status: VmaxRaceStatus) {
+  if (status === "live") return "En cours";
+  if (status === "finished") return "Termine";
+  return "A venir";
+}
+
+function getHeroVerdict(hero: DashboardRace | null) {
+  const best = hero?.predictions.find((prediction) => prediction.decision !== "REJET");
+  if (!best) return "SURVEILLER";
+  if (best.decision === "VALIDE") return "JOUER";
+  if (best.decision === "SURVEILLANCE") return "SURVEILLER";
+  return "PASSER";
+}
+
+function getVerdictClass(verdict: string) {
+  if (verdict === "JOUER") return "is-play";
+  if (verdict === "SURVEILLER") return "is-watch";
+  return "is-pass";
+}
+
+function getCompactBubbleClass(index: number) {
+  if (index === 0) return "is-gold";
+  if (index === 1) return "is-blue";
+  return "is-muted";
+}
+
+const EMPTY_RACES_MESSAGE =
+  "Aucune course disponible pour aujourd'hui. Les pronostics du prochain Quinte seront disponibles demain matin.";
+
+const DASHBOARD_CSS = `
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&family=Cormorant+Garamond:wght@600;700&display=swap');
+.dash{--gold:#D4AF37;--green:#00C851;--orange:#FF9F1C;--red:#FF4D5A;--blue:#4DC8FF;--muted:rgba(255,255,255,0.35);--bg:#080A12;--panel:#10131F;--panel2:#151928;--line:rgba(255,255,255,0.12);min-height:100vh;background:var(--bg);color:#fff;font-family:"DM Mono",monospace}
+.dash-nav{position:sticky;top:0;z-index:50;display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:18px;border-bottom:1px solid rgba(212,175,55,.18);background:rgba(8,10,18,.92);padding:14px 32px;backdrop-filter:blur(16px)}
+.dash-logo{font-family:"Cormorant Garamond",serif;font-size:28px;font-weight:700;color:var(--gold);text-decoration:none;letter-spacing:.08em}
+.dash-live{display:inline-flex;align-items:center;border:1px solid rgba(0,200,81,.45);border-radius:999px;background:rgba(0,200,81,.12);color:var(--green);padding:5px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em}
+.dash-links{display:flex;justify-content:center;gap:8px}
+.dash-links a{border-radius:8px;color:rgba(255,255,255,.72);font-size:12px;font-weight:700;letter-spacing:.08em;padding:9px 12px;text-decoration:none;text-transform:uppercase}
+.dash-links a:hover{background:rgba(255,255,255,.08);color:var(--gold)}
+.dash-burger{display:none;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.06);color:#fff;font-size:18px;padding:8px 11px}
+.dash-shell{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;max-width:1480px;margin:0 auto;padding:24px}
+.dash-main{display:grid;gap:22px}
+.dash-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;min-height:360px;border:1px solid rgba(212,175,55,.35);border-radius:8px;background:radial-gradient(circle at 82% 18%,rgba(212,175,55,.24),transparent 28%),linear-gradient(135deg,#080A12 0%,#111827 58%,#080A12 100%);padding:34px;box-shadow:0 24px 60px rgba(0,0,0,.34)}
+.dash-kicker,.dash-label{color:var(--gold);font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
+.dash-course-name{max-width:900px;font-family:"Cormorant Garamond",serif;font-size:48px;font-weight:700;line-height:.95;margin:14px 0 12px}
+.dash-meta{color:rgba(255,255,255,.7);font-size:13px}
+.dash-selection{display:flex;flex-wrap:wrap;gap:14px;margin-top:28px}
+.dash-bubble{display:grid;place-items:center;width:72px;height:72px;border-radius:50%;border:1px solid rgba(212,175,55,.45);background:rgba(212,175,55,.14);color:var(--gold);font-family:"Cormorant Garamond",serif;font-size:34px;font-weight:700}
+.dash-hero-side{display:grid;align-content:center;gap:16px;min-width:220px}
+.dash-verdict{font-family:"Cormorant Garamond",serif;font-size:46px;font-weight:700;line-height:1}
+.dash-verdict.is-play{color:var(--green)}.dash-verdict.is-watch{color:var(--orange)}.dash-verdict.is-pass{color:var(--red)}
+.dash-stake{font-size:13px;color:rgba(255,255,255,.72)}
+.dash-stake strong{display:block;color:#fff;font-family:"Cormorant Garamond",serif;font-size:34px;line-height:1.1}
+.dash-cta{display:inline-flex;align-items:center;justify-content:center;border-radius:8px;background:var(--gold);color:#080A12;font-size:12px;font-weight:700;letter-spacing:.08em;padding:13px 18px;text-decoration:none;text-transform:uppercase}
+.dash-section-head{display:flex;align-items:end;justify-content:space-between;gap:16px}
+.dash-title{font-family:"Cormorant Garamond",serif;font-size:34px;font-weight:700;line-height:1}
+.dash-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.dash-card{display:grid;gap:14px;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:16px;text-decoration:none;color:#fff;transition:transform .15s,border-color .15s}
+.dash-card:hover{transform:translateY(-2px);border-color:rgba(212,175,55,.45)}
+.dash-card-title{font-family:"Cormorant Garamond",serif;font-size:26px;font-weight:700;line-height:1}
+.dash-card-meta{color:rgba(255,255,255,.62);font-size:12px}
+.dash-card-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.dash-mini-bubbles{display:flex;gap:7px}
+.dash-mini{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;font-family:"Cormorant Garamond",serif;font-size:18px;font-weight:700}
+.dash-mini.is-gold{background:rgba(212,175,55,.18);border:1px solid rgba(212,175,55,.55);color:var(--gold)}
+.dash-mini.is-blue{background:rgba(77,200,255,.12);border:1px solid rgba(77,200,255,.45);color:var(--blue)}
+.dash-mini.is-muted{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--muted)}
+.dash-status{border:1px solid rgba(77,200,255,.35);border-radius:999px;color:var(--blue);font-size:10px;font-weight:700;letter-spacing:.12em;padding:5px 8px;text-transform:uppercase;white-space:nowrap}
+.dash-status.live{border-color:rgba(0,200,81,.45);color:var(--green)}.dash-status.finished{border-color:rgba(255,255,255,.18);color:var(--muted)}
+.dash-empty{border:1px solid var(--line);border-radius:8px;background:var(--panel);color:rgba(255,255,255,.74);font-size:14px;line-height:1.6;padding:20px}
+.dash-side{display:grid;align-content:start;gap:14px}
+.dash-stat{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:18px}
+.dash-stat-value{display:block;font-family:"DM Mono",monospace;font-size:38px;font-weight:700;margin-top:10px}
+.dash-stat-value.pos{color:var(--green)}.dash-stat-value.neg{color:var(--red)}.dash-stat-value.neutral{color:var(--muted)}
+.dash-perf{width:100%;border-collapse:collapse;margin-top:10px}
+.dash-perf td{border-top:1px solid var(--line);font-size:11px;padding:10px 0;vertical-align:top}
+.dash-perf .gain{color:var(--green);font-weight:700;text-align:right}
+@media(max-width:768px){.dash-nav{grid-template-columns:auto auto 1fr auto;padding:12px 16px}.dash-logo{font-size:23px}.dash-links{display:none}.dash-burger{display:inline-flex}.dash-shell{grid-template-columns:1fr;padding:16px}.dash-hero{grid-template-columns:1fr;padding:16px}.dash-course-name{font-size:28px}.dash-bubble{width:52px;height:52px;font-size:26px}.dash-grid{grid-template-columns:1fr}.dash-side{grid-row:auto}.dash-hero-side{min-width:0}}
+`;
+
 function Sparkline({ values }: { values: number[] }) {
   const width = 220;
   const height = 68;
@@ -404,7 +478,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       matchesDashboardSearch(item, searchQuery)
   );
   const hero = getHeroRace(filteredRaces.length > 0 ? filteredRaces : races);
-  const visibleRaces = filteredRaces.slice(0, 6);
+  const heroKey = hero ? getRaceKeyFromSummary(hero.race) : null;
+  const visibleRaces = filteredRaces
+    .filter((item) => getRaceKeyFromSummary(item.race) !== heroKey)
+    .slice(0, 9);
   const liveActive = races.some((item) => item.status === "live");
   const heroHref = hero
     ? `/race/${formatRaceAnalysisId(hero.race.reunion, hero.race.course)}?date=${hero.race.dateStr}`
@@ -418,199 +495,128 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const recommendedStake =
     hero?.predictions.find((prediction) => (prediction.mise_simulee ?? 0) > 0)?.mise_simulee ??
     null;
+  const heroVerdict = getHeroVerdict(hero);
   const navItems = [
-    { label: "Quinte", href: "/dashboard?type=QUINTE", filter: "QUINTE" },
-    { label: "Couple", href: "/dashboard?type=COUPLE", filter: "COUPLE" },
-    { label: "Tierce", href: "/dashboard?type=TIERCE", filter: "TIERCE" },
-    { label: "Value Bets", href: "/value-bets", filter: null },
-    { label: "Stats", href: "/stats", filter: null },
-  ] satisfies Array<{ label: string; href: string; filter: DashboardFilter | null }>;
+    { label: "Dashboard", href: "/dashboard" },
+    { label: "Value Bets", href: "/value-bets" },
+    { label: "Stats", href: "/stats" },
+    { label: "Mon compte", href: "/mes-paris" },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#0A0E1A] text-[#F6F2E8]">
-      <DashboardBestRaceRedirect href={heroHref} />
-
-      <header className="sticky top-0 z-50 grid grid-cols-[1fr_auto] items-center gap-4 border-b border-[#D4AF37]/15 bg-[#0A0E1A]/90 px-4 py-3 backdrop-blur-xl md:grid-cols-[auto_auto_1fr_auto] md:px-8">
-        <Link
-          href="/dashboard"
-          className="font-[var(--font-display)] text-2xl font-black leading-none text-[#D4AF37] sm:text-3xl"
-        >
-          PMU GAGNANT
-        </Link>
-        <span
-          className={`inline-flex rounded-full border px-3 py-1 font-[var(--font-display)] text-sm font-black ${
-            liveActive
-              ? "animate-pulse border-[#00C851]/40 bg-[#00C851]/10 text-[#00C851]"
-              : "border-white/10 bg-white/5 text-slate-500"
-          }`}
-        >
-          LIVE
-        </span>
-        <nav className="col-span-2 flex gap-2 overflow-x-auto text-sm font-bold text-slate-400 md:col-span-1 md:justify-center">
+    <div className="dash">
+      <style>{DASHBOARD_CSS}</style>
+      <header className="dash-nav">
+        <Link href="/dashboard" className="dash-logo">PMU GAGNANT</Link>
+        <span className="dash-live">{liveActive ? "LIVE" : "LIVE"}</span>
+        <nav className="dash-links" aria-label="Navigation principale">
           {navItems.map((item) => (
-            <Link
-              className={`shrink-0 rounded-full px-3 py-1.5 transition hover:bg-white/10 hover:text-[#D4AF37] ${
-                item.filter !== null && item.filter === selectedFilter
-                  ? "bg-[#D4AF37]/10 text-[#D4AF37]"
-                  : ""
-              }`}
-              href={item.href}
-              key={item.label}
-            >
-              {item.label}
-            </Link>
+            <Link href={item.href} key={item.label}>{item.label}</Link>
           ))}
         </nav>
+        <button className="dash-burger" type="button" aria-label="Menu">â˜°</button>
         <DashboardHeaderAccount />
       </header>
 
-      <main className="mx-auto grid w-full max-w-[92rem] gap-5 px-4 py-5 lg:grid-cols-[1fr_21rem] lg:px-6">
-        <section className="grid gap-5">
-          <form
-            action="/dashboard"
-            className="grid gap-3 rounded-lg border border-[#D4AF37]/15 bg-[#101827] p-3 shadow-xl shadow-black/20 sm:grid-cols-[1fr_auto]"
-          >
-            <input type="hidden" name="type" value={selectedFilter === "ALL" ? "" : selectedFilter} />
-            <label className="sr-only" htmlFor="dashboard-search">
-              Rechercher une course, un cheval, un jockey ou un entraineur
-            </label>
-            <input
-              id="dashboard-search"
-              name="q"
-              type="search"
-              defaultValue={searchQuery}
-              placeholder="Rechercher cheval, jockey, entraineur, hippodrome..."
-              className="min-h-11 rounded-lg border border-white/10 bg-white/[0.04] px-4 text-sm font-bold text-[#F6F2E8] outline-none placeholder:text-slate-500 focus:border-[#D4AF37]/45"
-            />
-            <button
-              type="submit"
-              className="rounded-lg bg-[#D4AF37] px-5 py-3 text-sm font-black text-[#0A0E1A]"
-            >
-              Rechercher
-            </button>
-          </form>
-
-          <PMUDashboard
-            race={hero?.race ?? null}
-            predictions={hero?.predictions ?? []}
-            roiMois={roi}
-            tauxReussite={hitRate}
-            nbPronostics={settled.length > 0 ? settled.length : null}
-            bankroll={null}
-            miseConseillee={recommendedStake}
-            algoVersion="--"
-          />
-
-          <section id="stats">
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-xs font-black uppercase text-[#D4AF37]">Courses du jour</p>
-              <span className="font-[var(--font-display)] font-black text-slate-400">
-                {visibleRaces.length}/6 visibles
-              </span>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {visibleRaces.map((item) => (
-                <Link
-                  href={`/race/${formatRaceAnalysisId(item.race.reunion, item.race.course)}?date=${item.race.dateStr}`}
-                  key={`${item.race.reunion}-${item.race.course}`}
-                  className="group grid min-h-40 gap-3 rounded-lg border border-[#D4AF37]/15 bg-[#101827] p-4 shadow-xl shadow-black/20 transition hover:-translate-y-1 hover:border-[#D4AF37]/40"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <strong className="min-w-0 break-words font-[var(--font-display)] text-2xl font-black leading-none">
-                      {item.race.hippodrome}
-                    </strong>
-                    <span className="shrink-0">
-                      <StatusBadge status={item.status} />
-                    </span>
-                  </div>
-                  <p className="text-sm font-bold text-slate-400">
-                    {item.race.discipline} - {item.race.heureDepart} - {item.race.nombrePartants} partants
-                  </p>
-                  <CountdownTimer dateStr={item.race.dateStr} heureDepart={item.race.heureDepart} />
-                  {item.topNumbers.length > 0 ? (
-                    <div className="flex items-center gap-2 opacity-90 transition group-hover:opacity-100">
-                      {item.topNumbers.slice(0, 3).map((num) => (
-                        <i
-                          className={`grid aspect-square w-8 place-items-center rounded-full font-[var(--font-display)] font-black not-italic ${getRunnerNumberClass(num)}`}
-                          key={num}
-                        >
-                          {num}
-                        </i>
-                      ))}
-                      <span className="ml-auto text-xs font-black uppercase text-slate-500">
-                        Top IA
-                      </span>
-                    </div>
-                  ) : (
-                    <p className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-black text-slate-400">
-                      Analyse en cours
-                    </p>
-                  )}
-                </Link>
-              ))}
-              {visibleRaces.length === 0 ? (
-                <div className="rounded-lg border border-white/10 bg-[#101827] p-5 text-sm font-black text-slate-400 md:col-span-2 xl:col-span-3">
-                  Aucune course ne correspond a ce filtre pour le moment.
+      <main className="dash-shell">
+        <section className="dash-main">
+          {hero ? (
+            <section className="dash-hero">
+              <div>
+                <p className="dash-kicker">Analyse IA du jour</p>
+                <h1 className="dash-course-name">{hero.race.nomCourse}</h1>
+                <p className="dash-meta">
+                  {hero.race.hippodrome} Â· {hero.race.discipline} Â· {hero.race.heureDepart}
+                </p>
+                <div className="dash-selection" aria-label="Selections IA">
+                  {hero.topNumbers.slice(0, 3).map((num) => (
+                    <span className="dash-bubble" key={num}>{num}</span>
+                  ))}
                 </div>
-              ) : null}
+              </div>
+              <div className="dash-hero-side">
+                <div>
+                  <p className="dash-label">Verdict</p>
+                  <strong className={`dash-verdict ${getVerdictClass(heroVerdict)}`}>{heroVerdict}</strong>
+                </div>
+                <p className="dash-stake">
+                  Mise conseillee
+                  <strong>{recommendedStake !== null ? `${recommendedStake} EUR` : "--"}</strong>
+                </p>
+                {heroHref ? (
+                  <Link className="dash-cta" href={heroHref}>Voir l&apos;analyse complete</Link>
+                ) : null}
+              </div>
+            </section>
+          ) : (
+            <section className="dash-empty">{EMPTY_RACES_MESSAGE}</section>
+          )}
+
+          <section>
+            <div className="dash-section-head">
+              <h2 className="dash-title">Autres courses du jour</h2>
+              <p className="dash-label">{visibleRaces.length} courses</p>
             </div>
+            {visibleRaces.length > 0 ? (
+              <div className="dash-grid">
+                {visibleRaces.map((item) => (
+                  <Link
+                    href={`/race/${formatRaceAnalysisId(item.race.reunion, item.race.course)}?date=${item.race.dateStr}`}
+                    key={`${item.race.reunion}-${item.race.course}`}
+                    className="dash-card"
+                  >
+                    <div className="dash-card-row">
+                      <strong className="dash-card-title">{item.race.hippodrome}</strong>
+                      <span className={`dash-status ${item.status}`}>{getStatusLabel(item.status)}</span>
+                    </div>
+                    <p className="dash-card-meta">
+                      {item.race.discipline} Â· {item.race.heureDepart} Â· {item.race.nombrePartants} partants
+                    </p>
+                    <div className="dash-card-row">
+                      <div className="dash-mini-bubbles">
+                        {item.topNumbers.slice(0, 3).map((num, index) => (
+                          <span className={`dash-mini ${getCompactBubbleClass(index)}`} key={num}>{num}</span>
+                        ))}
+                      </div>
+                      <span className="dash-label">Top IA</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="dash-empty">{EMPTY_RACES_MESSAGE}</div>
+            )}
           </section>
         </section>
 
-        <aside className="hidden content-start gap-3 lg:grid">
-          <section className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-4 shadow-xl shadow-black/20">
-            <p className="text-xs font-black uppercase text-[#D4AF37]">ROI 30 jours</p>
-            <strong
-              className={`mt-2 block font-[var(--font-display)] text-5xl font-black ${
-                roi === null ? "text-slate-400" : roi >= 0 ? "text-[#00C851]" : "text-[#FF4D5A]"
-              }`}
-            >
+        <aside className="dash-side">
+          <section className="dash-stat">
+            <p className="dash-label">ROI 30 jours</p>
+            <strong className={`dash-stat-value ${roi === null ? "neutral" : roi >= 0 ? "pos" : "neg"}`}>
               {formatSignedPercent(roi)}
             </strong>
-            {sparklineValues.length > 0 ? (
-              <Sparkline values={sparklineValues} />
-            ) : (
-              <p className="mt-4 text-xs font-black text-slate-400">donnees insuffisantes</p>
-            )}
+            {sparklineValues.length > 0 ? <Sparkline values={sparklineValues} /> : null}
           </section>
-
-          <section className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-4 shadow-xl shadow-black/20">
-            <p className="text-xs font-black uppercase text-[#D4AF37]">Reussite par pari</p>
-            <div className="mt-4 grid gap-3">
-              {successRates.map((item) => (
-                <div className="grid grid-cols-[4.4rem_1fr_2.4rem] items-center gap-3" key={item.label}>
-                  <span className="text-xs font-black text-slate-400">{item.label}</span>
-                  <i className="h-2 overflow-hidden rounded-full bg-white/10">
-                    <b
-                      className="block h-full rounded-full bg-gradient-to-r from-[#00C851] to-[#D4AF37]"
-                      style={{ width: `${item.value ?? 0}%` }}
-                    />
-                  </i>
-                  <em className="text-right text-xs font-black not-italic text-slate-400">
-                    {formatRate(item.value)}
-                  </em>
-                </div>
-              ))}
-            </div>
+          <section className="dash-stat">
+            <p className="dash-label">Taux de reussite</p>
+            <strong className="dash-stat-value pos">{formatRate(hitRate)}</strong>
+            {successRates.map((item) => (
+              <p className="dash-card-meta" key={item.label}>{item.label} Â· {formatRate(item.value)}</p>
+            ))}
           </section>
-
-          <section className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-4 shadow-xl shadow-black/20">
-            <p className="text-xs font-black uppercase text-[#D4AF37]">Dernieres performances</p>
-            <table className="mt-3 w-full border-collapse">
+          <section className="dash-stat">
+            <p className="dash-label">Dernieres performances</p>
+            <table className="dash-perf">
               <tbody>
                 {latestPerformances.map((row) => (
-                  <tr className="border-t border-white/10" key={`${row.race}-${row.pick}`}>
-                    <td className="py-2 text-xs font-black text-slate-400">{row.race}</td>
-                    <td className="py-2 text-xs font-bold text-slate-300">{row.pick}</td>
-                    <td className="py-2 text-right text-xs font-black text-[#00C851]">{row.result}</td>
+                  <tr key={`${row.race}-${row.pick}`}>
+                    <td>{row.race}</td>
+                    <td>{row.pick}</td>
+                    <td className="gain">{row.result}</td>
                   </tr>
                 ))}
                 {latestPerformances.length === 0 ? (
-                  <tr className="border-t border-white/10">
-                    <td className="py-3 text-xs font-black text-slate-400" colSpan={3}>
-                      donnees insuffisantes
-                    </td>
-                  </tr>
+                  <tr><td colSpan={3}>{EMPTY_RACES_MESSAGE}</td></tr>
                 ) : null}
               </tbody>
             </table>
