@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import {
   createContext,
   useCallback,
@@ -423,6 +424,7 @@ function EmptySlot({ index }: { index: number }) {
 /* ── Panel principal ──────────────────────────────────────── */
 
 export function ComboPanel() {
+  const pathname = usePathname();
   const {
     selections, stake, isOpen,
     removeSelection, clearSelections,
@@ -449,6 +451,7 @@ export function ComboPanel() {
   const canCopy = selections.length >= 2;
   const missingCount = Math.max(0, 2 - selections.length);
   const slotsToShow = Math.max(0, 2 - selections.length);
+  const disabled = pathname === "/login" || pathname.startsWith("/admin");
 
   async function copyTicket() {
     if (!canCopy || !navigator.clipboard) return;
@@ -457,6 +460,10 @@ export function ComboPanel() {
     );
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
+  }
+
+  if (disabled) {
+    return null;
   }
 
   if (!isOpen) {

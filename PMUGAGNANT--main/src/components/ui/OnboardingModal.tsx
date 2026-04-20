@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 const STORAGE_KEY = "pmu-onboarding-done";
@@ -38,10 +39,16 @@ const STEPS: Step[] = [
 ];
 
 export default function OnboardingModal() {
+  const pathname = usePathname();
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState(0);
+  const disabled = pathname === "/login" || pathname.startsWith("/admin");
 
   useEffect(() => {
+    if (disabled) {
+      return undefined;
+    }
+
     try {
       const done = window.localStorage.getItem(STORAGE_KEY);
       if (!done) {
@@ -53,7 +60,7 @@ export default function OnboardingModal() {
     }
 
     return undefined;
-  }, []);
+  }, [disabled]);
 
   const close = useCallback(() => {
     setVisible(false);
@@ -77,7 +84,7 @@ export default function OnboardingModal() {
     setStep((current) => Math.max(0, current - 1));
   }, []);
 
-  if (!visible) {
+  if (disabled || !visible) {
     return null;
   }
 
