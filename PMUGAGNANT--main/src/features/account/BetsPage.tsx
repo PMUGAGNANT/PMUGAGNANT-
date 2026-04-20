@@ -18,6 +18,7 @@ import {
   getSupabaseConfigError,
   hasSupabaseConfig,
 } from "@/lib/supabase";
+import { getSafeRedirectPath } from "@/lib/safe-redirect";
 import { ReferralCard } from "@/components/ui/ReferralCard";
 import { UserStreakCard } from "@/components/ui/UserStreakCard";
 
@@ -160,7 +161,7 @@ function MesParisContent() {
           message:
             "Le paiement a ete interrompu. Ton compte reste sur l'offre gratuite tant que l'abonnement n'est pas confirme.",
         });
-        router.replace(searchParams.get("next") || "/dashboard");
+        router.replace(getSafeRedirectPath(searchParams.get("next"), "/dashboard"));
         return;
       }
 
@@ -316,7 +317,8 @@ function MesParisContent() {
       } = await supabase.auth.getSession();
 
       if (!session) {
-        const redirectTarget = action === "checkout" ? "/premium" : "/mes-paris";
+        const redirectTarget =
+          action === "checkout" ? "/mes-paris?billing=checkout" : "/mes-paris";
         router.push(`/login?redirect=${encodeURIComponent(redirectTarget)}`);
         setBillingLoading(false);
         return;

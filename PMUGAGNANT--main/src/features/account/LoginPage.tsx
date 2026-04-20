@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ReferralInput } from "@/components/ui/ReferralInput";
 import { applyReferralCode } from "@/lib/referral-client";
 import { normalizeReferralCode } from "@/lib/referral";
+import { getSafeRedirectPath } from "@/lib/safe-redirect";
 import {
   getSupabaseBrowserClient,
   getSupabaseConfigError,
@@ -35,23 +36,32 @@ const TRUST_MARKERS = [
 ];
 
 function getFriendlyAuthError(message: string) {
-  if (message.includes("Invalid login")) {
+  const normalizedMessage = message.toLowerCase();
+
+  if (normalizedMessage.includes("invalid login")) {
     return "Email ou mot de passe incorrect.";
   }
 
-  if (message.includes("already registered")) {
+  if (normalizedMessage.includes("already registered")) {
     return "Cet email est deja utilise. Connecte-toi a la place.";
   }
 
-  if (message.includes("Password should be")) {
+  if (
+    normalizedMessage.includes("password should be") ||
+    normalizedMessage.includes("password should contain")
+  ) {
     return "Le mot de passe doit contenir au moins 6 caracteres.";
   }
 
-  if (message.includes("Invalid API key")) {
+  if (normalizedMessage.includes("email not confirmed")) {
+    return "Compte cree. Confirme ton email, puis connecte-toi.";
+  }
+
+  if (normalizedMessage.includes("invalid api key")) {
     return "La cle publique Supabase de production est invalide. Remplace NEXT_PUBLIC_SUPABASE_ANON_KEY dans Vercel par la vraie anon key de Supabase, puis redeploie.";
   }
 
-  if (message.includes("fetch") || message.includes("Failed to fetch")) {
+  if (normalizedMessage.includes("fetch") || normalizedMessage.includes("failed to fetch")) {
     return "Impossible de joindre Supabase pour le moment. Verifie NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY sur Vercel.";
   }
 
@@ -68,8 +78,17 @@ function LoginPageContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const redirectTo = searchParams.get("redirect") || "/";
-  const premiumIntent = useMemo(() => redirectTo.includes("mes-paris"), [redirectTo]);
+  const redirectTo = useMemo(
+    () => getSafeRedirectPath(searchParams.get("redirect"), "/"),
+    [searchParams]
+  );
+  const premiumIntent = useMemo(
+    () =>
+      ["/mes-paris", "/premium", "/subscribe"].some((path) =>
+        redirectTo.startsWith(path)
+      ),
+    [redirectTo]
+  );
   const referralCode = useMemo(
     () => normalizeReferralCode(searchParams.get("ref")),
     [searchParams]
@@ -88,15 +107,22 @@ function LoginPageContent() {
 
     try {
       const supabase = getSupabaseBrowserClient();
+      const normalizedEmail = email.trim().toLowerCase();
 
       if (isSignUp) {
-        const { error: signUpError } = await supabase.auth.signUp({ email, password });
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: normalizedEmail,
+          password,
+        });
         if (signUpError) {
           throw signUpError;
         }
 
         const { data: signInData, error: signInError } =
-          await supabase.auth.signInWithPassword({ email, password });
+          await supabase.auth.signInWithPassword({
+            email: normalizedEmail,
+            password,
+          });
         if (signInError) {
           throw signInError;
         }
@@ -110,7 +136,7 @@ function LoginPageContent() {
         }
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
+          email: normalizedEmail,
           password,
         });
         if (signInError) {
@@ -118,12 +144,12 @@ function LoginPageContent() {
         }
       }
 
-      router.push(redirectTo);
+      router.replace(redirectTo);
     } catch (authError: unknown) {
       const message =
         authError instanceof Error ? authError.message : "Une erreur est survenue";
 
-      if (message.includes("already registered")) {
+      if (message.toLowerCase().includes("already registered")) {
         setIsSignUp(false);
       }
 

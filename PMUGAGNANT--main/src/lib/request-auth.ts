@@ -12,6 +12,14 @@ export function getSupabaseRequestClientFromRequest(req: NextRequest) {
   return createSupabaseRequestClient(token);
 }
 
+function isMissingSessionError(error: unknown) {
+  return (
+    error instanceof Error &&
+    (error.name === "AuthSessionMissingError" ||
+      error.message.toLowerCase().includes("auth session missing"))
+  );
+}
+
 export async function getOptionalRequestUser(
   req: NextRequest
 ): Promise<{
@@ -19,6 +27,7 @@ export async function getOptionalRequestUser(
   user: User | null;
   errorResponse?: ReturnType<typeof serviceUnavailable> | ReturnType<typeof serverError>;
 }> {
+  const token = getBearerToken(req.headers.get("authorization"));
   const client = getSupabaseRequestClientFromRequest(req);
 
   if (!client) {
@@ -29,12 +38,20 @@ export async function getOptionalRequestUser(
     };
   }
 
+  if (!token) {
+    return { client, user: null };
+  }
+
   const {
     data: { user },
     error,
   } = await client.auth.getUser();
 
   if (error) {
+    if (isMissingSessionError(error)) {
+      return { client, user: null };
+    }
+
     return {
       client,
       user: null,
