@@ -35,6 +35,10 @@ export function isTelegramConfigured() {
   return Boolean(token && chatId);
 }
 
+export function isTelegramBotConfigured() {
+  return Boolean(process.env.TELEGRAM_BOT_TOKEN);
+}
+
 export function isTelegramPrivateGroupConfigured() {
   const { token, privateChatId, fallbackInviteLink } = getTelegramPrivateGroupConfig();
   return Boolean(fallbackInviteLink || (token && privateChatId));
@@ -95,8 +99,8 @@ export async function createPrivateTelegramInviteLink(context: {
   }
 }
 
-export async function sendTelegramMessage(text: string) {
-  const { token, chatId } = getTelegramConfig();
+export async function sendTelegramMessageToChat(chatId: string | number, text: string) {
+  const { token } = getTelegramConfig();
   if (!token || !chatId) {
     return { sent: false, skipped: true };
   }
@@ -130,6 +134,52 @@ export async function sendTelegramMessage(text: string) {
   } catch (error) {
     logger.error("telegram.send_failed", error);
     throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function sendTelegramMessage(text: string) {
+  const { chatId } = getTelegramConfig();
+  if (!chatId) {
+    return { sent: false, skipped: true };
+  }
+
+  return sendTelegramMessageToChat(chatId, text);
+}
+
+export async function setTelegramWebhook(input: {
+  webhookUrl: string;
+  secretToken?: string | null;
+}) {
+  const { token } = getTelegramConfig();
+  if (!token) {
+    return { ok: false, skipped: true };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TELEGRAM_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${TELEGRAM_ENDPOINT}/bot${token}/setWebhook`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        url: input.webhookUrl,
+        allowed_updates: ["message"],
+        ...(input.secretToken ? { secret_token: input.secretToken } : {}),
+      }),
+      signal: controller.signal,
+    });
+    const payload = (await response.json()) as unknown;
+
+    if (!response.ok) {
+      throw new Error(`Telegram webhook setup failed: ${response.status} ${JSON.stringify(payload)}`);
+    }
+
+    return payload;
   } finally {
     clearTimeout(timeout);
   }
