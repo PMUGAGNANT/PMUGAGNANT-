@@ -730,6 +730,77 @@ export interface FinalReports {
   generic: Record<string, Record<string, number>>;
 }
 
+export type CourseRapports = Pick<FinalReports, "simpleGagnant" | "simplePlace">;
+
+function normalizePmuMoneyValue(value: unknown) {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return null;
+  }
+
+  return value > 100 ? value / 100 : value;
+}
+
+function getHorseNumberFromRecord(record: Record<string, unknown>) {
+  const candidate =
+    record.numPmu ??
+    record.numero ??
+    record.numeroCheval ??
+    record.numCheval ??
+    record.num ??
+    record.cheval_num ??
+    null;
+  const parsed = typeof candidate === "number" ? candidate : Number(candidate);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function getArrivalOrderFromRecord(record: Record<string, unknown>, fallback: number) {
+  const candidate =
+    record.ordreArrivee ??
+    record.position ??
+    record.rang ??
+    record.ordre ??
+    record.place ??
+    fallback;
+  const parsed = typeof candidate === "number" ? candidate : Number(candidate);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function getOddsFromRecord(record: Record<string, unknown>) {
+  const coteDirect = asRecord(record.coteDirect);
+  const dernierRapportDirect = asRecord(record.dernierRapportDirect);
+  const rapportDirect = asRecord(record.rapportDirect);
+  return normalizePmuMoneyValue(
+    record.cote ??
+      record.cotePmu ??
+      record.coteActuelle ??
+      record.coteProbable ??
+      coteDirect.cotePmu ??
+      coteDirect.cote ??
+      dernierRapportDirect.rapport ??
+      rapportDirect.rapport
+  );
+}
+
+function collectRecords(value: unknown, records: Record<string, unknown>[] = []) {
+  if (Array.isArray(value)) {
+    for (const item of value) collectRecords(item, records);
+    return records;
+  }
+
+  if (typeof value !== "object" || value === null) {
+    return records;
+  }
+
+  const record = value as Record<string, unknown>;
+  records.push(record);
+  for (const child of Object.values(record)) {
+    if (typeof child === "object" && child !== null) {
+      collectRecords(child, records);
+    }
+  }
+  return records;
+}
+
 function parseCombinaisonKey(combinaison: unknown): string | null {
   if (Array.isArray(combinaison)) {
     return combinaison.join("-");
@@ -852,4 +923,85 @@ export async function getFinalReports(
   }
 
   return result;
+}
+
+export async function getArriveeCourse(
+  dateStr: string,
+  reunion: number,
+  course: number
+): Promise<number[] | null> {
+  try {
+    if (!isValidPmuDate(dateStr)) return null;
+    const data = await fetchPmuJson<Record<string, unknown> | unknown[]>(
+      `/programme/${dateStr}/R${reunion}/C${course}/arrivee`,
+      10
+    );
+    const rawSource = Array.isArray(data)
+      ? data
+      : ((data.arrivee ?? data.ordreArrivee ?? data.participants ?? []) as unknown[]);
+    const source = Array.isArray(rawSource) ? rawSource : collectRecords(rawSource);
+    if (!Array.isArray(source) || source.length === 0) {
+      return null;
+    }
+
+    const arrivee = source
+      .map((item, index) => {
+        if (typeof item === "number") {
+          return { numero: item, ordre: index + 1 };
+        }
+        const record = asRecord(item);
+        const numero = getHorseNumberFromRecord(record);
+        return numero === null
+          ? null
+          : { numero, ordre: getArrivalOrderFromRecord(record, index + 1) };
+      })
+      .filter((item): item is { numero: number; ordre: number } => item !== null)
+      .sort((left, right) => left.ordre - right.ordre)
+      .map((item) => item.numero);
+
+    return arrivee.length > 0 ? arrivee : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function getRapportsCourse(
+  dateStr: string,
+  reunion: number,
+  course: number
+): Promise<CourseRapports | null> {
+  try {
+    const reports = await getFinalReports(dateStr, reunion, course);
+    return {
+      simpleGagnant: reports.simpleGagnant,
+      simplePlace: reports.simplePlace,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function getCotesDirectes(
+  dateStr: string,
+  reunion: number,
+  course: number
+): Promise<Map<number, number> | null> {
+  try {
+    if (!isValidPmuDate(dateStr)) return null;
+    const data = await fetchPmuJson<Record<string, unknown> | unknown[]>(
+      `/programme/${dateStr}/R${reunion}/C${course}/masse-enjeux/direct`,
+      5
+    );
+    const cotes = new Map<number, number>();
+    for (const record of collectRecords(data)) {
+      const numero = getHorseNumberFromRecord(record);
+      const cote = getOddsFromRecord(record);
+      if (numero !== null && cote !== null) {
+        cotes.set(numero, cote);
+      }
+    }
+    return cotes.size > 0 ? cotes : null;
+  } catch {
+    return null;
+  }
 }

@@ -18,7 +18,7 @@ import { analyzeRaceWithParameters } from "@/lib/analysis";
 import { loadAlgoParameters } from "@/lib/config";
 import { fromIsoDate, getMinutesUntilStart, getTodayDateStr, toIsoDate } from "@/lib/date-utils";
 import { attachFaultRates } from "@/lib/horse-faults";
-import { getAllRaces, getParticipants } from "@/lib/pmu-api";
+import { getAllRaces, getArriveeCourse, getCotesDirectes, getParticipants } from "@/lib/pmu-api";
 import {
   getRacePredictions,
   listLatestRunnerScoreSnapshotsForRace,
@@ -63,6 +63,8 @@ type RacePageState =
       analysis: RaceAnalysis | null;
       rows: ParticipantTableRow[];
       dataBadge: "Supabase" | "DonnÃ©es J-1" | "Live PMU";
+      arrivee: number[] | null;
+      cotesLive: boolean;
     };
 
 type RaceMessageRow = Database["public"]["Tables"]["race_messages"]["Row"];
@@ -404,6 +406,16 @@ function getValueExplanation(value: string | null | undefined) {
   return value ?? "L'IA dÃ©tecte un Ã©cart positif entre le prix PMU et la probabilitÃ© estimÃ©e.";
 }
 
+function getRaceStatus(courseInfo: RaceSummary, predictions: PredictionRow[]) {
+  const finished = predictions.some(
+    (prediction) => prediction.resultat_gagnant !== null || prediction.resultat_place !== null
+  );
+  return getVmaxRaceStatus(
+    finished ? "finished" : null,
+    getMinutesUntilStart(courseInfo.heureDepart, courseInfo.dateStr)
+  );
+}
+
 async function loadRacePageData(id: string, requestedDate: string): Promise<RacePageState> {
   const parsed = parseRaceAnalysisId(id);
   if (!parsed) return { kind: "invalid" };
@@ -414,7 +426,7 @@ async function loadRacePageData(id: string, requestedDate: string): Promise<Race
     if (!courseInfo) {
       const fallback = await loadLatestStoredRaceFallback(excluded);
       if (fallback?.courseInfo && fallback.rows.length > 0) {
-        return { kind: "ready", courseInfo: fallback.courseInfo, analysis: null, rows: fallback.rows, dataBadge: "DonnÃ©es J-1" };
+        return { kind: "ready", courseInfo: fallback.courseInfo, analysis: null, rows: fallback.rows, dataBadge: "DonnÃ©es J-1", arrivee: null, cotesLive: false };
       }
       return { kind: "not-found", date: requestedDate };
     }
@@ -428,18 +440,39 @@ async function loadRacePageData(id: string, requestedDate: string): Promise<Race
     if (storedRows.length === 0 && scoreSnapshots.length === 0) {
       const fallback = await loadLatestStoredRaceFallback(excluded);
       if (fallback?.courseInfo && fallback.rows.length > 0) {
-        return { kind: "ready", courseInfo: fallback.courseInfo, analysis: null, rows: fallback.rows, dataBadge: "DonnÃ©es J-1" };
+        return { kind: "ready", courseInfo: fallback.courseInfo, analysis: null, rows: fallback.rows, dataBadge: "DonnÃ©es J-1", arrivee: null, cotesLive: false };
       }
     }
     const participants = await attachFaultRates(await getParticipants(requestedDate, parsed.reunion, parsed.course));
     const analysis = participants.length > 0 ? analyzeRaceWithParameters(courseInfo, participants, algoParameters) : null;
-    const rows = buildParticipantRows(participants, analysis?.ranking ?? [], storedRows, scoreSnapshots);
-    return { kind: "ready", courseInfo, analysis, rows, dataBadge: storedRows.length > 0 || scoreSnapshots.length > 0 ? "Supabase" : "Live PMU" };
+    const raceStatus = getRaceStatus(courseInfo, storedRows);
+    const [arrivee, cotesDirectes] = await Promise.all([
+      raceStatus === "finished"
+        ? getArriveeCourse(requestedDate, parsed.reunion, parsed.course)
+        : Promise.resolve(null),
+      raceStatus !== "finished"
+        ? getCotesDirectes(requestedDate, parsed.reunion, parsed.course)
+        : Promise.resolve(null),
+    ]);
+    const rows = buildParticipantRows(participants, analysis?.ranking ?? [], storedRows, scoreSnapshots)
+      .map((row) => ({
+        ...row,
+        cote: cotesDirectes?.get(row.numero) ?? row.cote,
+      }));
+    return {
+      kind: "ready",
+      courseInfo,
+      analysis,
+      rows,
+      dataBadge: storedRows.length > 0 || scoreSnapshots.length > 0 ? "Supabase" : "Live PMU",
+      arrivee,
+      cotesLive: Boolean(cotesDirectes && cotesDirectes.size > 0),
+    };
   } catch (error) {
     logger.error("race_page.load_failed", error, { id, requestedDate });
     const fallback = await loadLatestStoredRaceFallback(excluded).catch(() => null);
     if (fallback?.courseInfo && fallback.rows.length > 0) {
-      return { kind: "ready", courseInfo: fallback.courseInfo, analysis: null, rows: fallback.rows, dataBadge: "DonnÃ©es J-1" };
+      return { kind: "ready", courseInfo: fallback.courseInfo, analysis: null, rows: fallback.rows, dataBadge: "DonnÃ©es J-1", arrivee: null, cotesLive: false };
     }
     return { kind: "error" };
   }
@@ -459,7 +492,8 @@ const CSS = `
 .rp-course-header{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:28px;background:radial-gradient(circle at 84% 16%,rgba(77,200,255,.14),transparent 26%),var(--panel)}
 .rp-course-name{font-family:"Cormorant Garamond",serif;font-size:48px;font-weight:700;line-height:.95;color:#fff}.rp-course-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;color:rgba(255,255,255,.68);font-size:12px}.rp-course-meta-dot{width:4px;height:4px;border-radius:50%;background:var(--gold);margin-top:7px}
 .rp-header-right{display:grid;justify-items:end;gap:14px}.rp-course-badge{border:1px solid rgba(77,200,255,.4);border-radius:999px;color:var(--blue);font-size:11px;font-weight:700;letter-spacing:.12em;padding:7px 12px;text-transform:uppercase}.rp-course-badge.live{border-color:rgba(0,200,81,.45);color:var(--green)}.rp-course-badge.termine{border-color:rgba(255,255,255,.18);color:var(--muted)}
-.rp-card{overflow:hidden}.rp-card-header,.rp-stitle{border-bottom:1px solid var(--line);color:var(--gold);font-size:11px;font-weight:700;letter-spacing:.18em;padding:14px 18px;text-transform:uppercase}.rp-sel-body{padding:22px}.rp-bubbles{display:flex;flex-wrap:wrap;gap:18px}.rp-bubble-wrap{display:grid;justify-items:center;gap:8px;min-width:92px}.rp-bubble{display:grid;place-items:center;width:72px;height:72px;border-radius:50%;border:1px solid rgba(212,175,55,.55);background:rgba(212,175,55,.16);color:var(--gold);font-family:"Cormorant Garamond",serif;font-size:34px;font-weight:700}.rp-bubble.r2{border-color:rgba(77,200,255,.45);background:rgba(77,200,255,.12);color:var(--blue)}.rp-bubble.r3{border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:var(--muted)}.rp-bubble-name{font-family:"Cormorant Garamond",serif;font-size:17px;font-weight:700;text-align:center}.rp-bubble-score{color:rgba(255,255,255,.58);font-size:11px}
+.rp-official{display:flex;align-items:center;justify-content:space-between;gap:18px;border:1px solid rgba(0,200,81,.28);border-radius:8px;background:rgba(0,200,81,.08);padding:0 18px 16px}.rp-arrival-list{display:flex;flex-wrap:wrap;gap:12px;padding-top:14px}.rp-arrival-item{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.04);padding:10px 12px}.rp-arrival-rank,.rp-live-odds{color:var(--blue);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}.rp-arrival-num{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:rgba(212,175,55,.16);color:var(--gold);font-family:"DM Mono",monospace;font-weight:700}.rp-ai-badge{border-radius:999px;border:1px solid rgba(255,255,255,.18);color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.14em;padding:8px 12px;text-transform:uppercase}.rp-ai-badge.ok{border-color:rgba(0,200,81,.45);color:var(--green)}.rp-ai-badge.ko{color:var(--muted)}
+.rp-card{overflow:hidden}.rp-card-header,.rp-stitle{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);color:var(--gold);font-size:11px;font-weight:700;letter-spacing:.18em;padding:14px 18px;text-transform:uppercase}.rp-sel-body{padding:22px}.rp-bubbles{display:flex;flex-wrap:wrap;gap:18px}.rp-bubble-wrap{display:grid;justify-items:center;gap:8px;min-width:92px}.rp-bubble{display:grid;place-items:center;width:72px;height:72px;border-radius:50%;border:1px solid rgba(212,175,55,.55);background:rgba(212,175,55,.16);color:var(--gold);font-family:"Cormorant Garamond",serif;font-size:34px;font-weight:700}.rp-bubble.r2{border-color:rgba(77,200,255,.45);background:rgba(77,200,255,.12);color:var(--blue)}.rp-bubble.r3{border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:var(--muted)}.rp-bubble-name{font-family:"Cormorant Garamond",serif;font-size:17px;font-weight:700;text-align:center}.rp-bubble-score{color:rgba(255,255,255,.58);font-size:11px}
 .rp-verdict-bar{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line)}.rp-vstat{padding:18px;text-align:center;border-right:1px solid var(--line)}.rp-vstat:last-child{border-right:0}.rp-vstat-label,.rp-th{color:rgba(255,255,255,.48);font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}.rp-vstat-val{font-family:"DM Mono",monospace;font-size:34px;font-weight:700}.rp-vstat-val.grn{color:var(--green)}.rp-vstat-val.orn{color:var(--orange)}.rp-vstat-val.red{color:var(--red)}.rp-vstat-val.muted{color:var(--muted)}
 .rp-table-wrap{overflow-x:auto}.rp-table{width:100%;min-width:760px;border-collapse:collapse}.rp-table thead{background:var(--panel2)}.rp-th{padding:12px 14px;text-align:left}.rp-th.r{text-align:right}.rp-tr{border-top:1px solid var(--line)}.rp-tr.sel{background:rgba(212,175,55,.08)}.rp-tr.out{opacity:.42}.rp-td{padding:14px;vertical-align:middle;font-size:12px}.rp-td.r{text-align:right}.rp-num{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);color:rgba(255,255,255,.7);font-family:"DM Mono",monospace;font-weight:700}.rp-num.sel{border-color:var(--gold);background:rgba(212,175,55,.18);color:var(--gold)}.rp-horse{font-family:"Cormorant Garamond",serif;font-size:20px;font-weight:700;color:#fff;white-space:nowrap}.rp-sub,.rp-mise.none{color:rgba(255,255,255,.52);font-size:11px}.rp-score-cell{display:flex;justify-content:flex-end;align-items:center;gap:10px}.rp-score-track{width:56px;height:4px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden}.rp-score-fill{height:100%;background:var(--gold)}.rp-score-fill.lo{background:var(--orange)}.rp-score-num{color:var(--gold);font-weight:700}.rp-score-num.lo{color:var(--orange)}.rp-cote{color:var(--blue);font-weight:700}.rp-mise{color:#fff;font-weight:700}
 .rp-sbody{display:grid;gap:12px;padding:16px}.rp-vbet{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid rgba(0,200,81,.3);border-left:3px solid var(--green);border-radius:8px;background:rgba(0,200,81,.08);padding:12px}.rp-vbet-name{font-family:"Cormorant Garamond",serif;font-size:18px;font-weight:700}.rp-vbet-edge{color:var(--green);font-size:24px;font-weight:700}.rp-pro-lock{border:1px solid rgba(212,175,55,.35);border-radius:8px;background:rgba(212,175,55,.08);padding:14px;text-align:center}.rp-pro-lock p{color:var(--gold);font-size:12px}.rp-pro-link{display:inline-flex;margin-top:10px;border-radius:8px;background:var(--gold);color:#080A12;font-size:11px;font-weight:700;letter-spacing:.1em;padding:10px 16px;text-decoration:none;text-transform:uppercase}.rp-alert-btn{padding:16px}.rp-alert-btn button{border-radius:8px!important}.rp-plan-row{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);padding:10px 0;font-size:12px}.rp-plan-row:last-child{border-bottom:0}.rp-plan-lbl{color:rgba(255,255,255,.5)}.rp-plan-val{color:#fff;font-weight:700;text-align:right}
@@ -507,7 +541,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
     );
   }
 
-  const { courseInfo, analysis, rows } = state;
+  const { courseInfo, analysis, rows, arrivee, cotesLive } = state;
   const selectedRow = getRecommendedRow(rows, analysis);
   const selectedNumber = selectedRow?.numero ?? null;
   const minutesUntilStart = getMinutesUntilStart(courseInfo.heureDepart, courseInfo.dateStr);
@@ -533,6 +567,12 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
     .slice(0, 3);
   const statusClass = status === "live" ? "live" : status === "finished" ? "termine" : "upcoming";
   const statusLabel = status === "live" ? "EN COURS" : status === "finished" ? "TERMINE" : "A VENIR";
+  const arrivalTop3 = arrivee?.slice(0, 3) ?? [];
+  const arrivalRows = arrivalTop3.map((numero) => ({
+    numero,
+    cheval: rows.find((row) => row.numero === numero)?.cheval ?? `Cheval ${numero}`,
+  }));
+  const iaCorrecte = selectedNumber !== null && arrivalTop3.includes(selectedNumber);
   const navItems = [
     { label: "Dashboard", href: "/dashboard" },
     { label: "Value Bets", href: "/value-bets" },
@@ -579,6 +619,26 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
           </div>
         </section>
 
+        {arrivalRows.length > 0 ? (
+          <section className="rp-official">
+            <div>
+              <div className="rp-card-header">Arrivee officielle</div>
+              <div className="rp-arrival-list">
+                {arrivalRows.map((row, index) => (
+                  <div className="rp-arrival-item" key={row.numero}>
+                    <span className="rp-arrival-rank">{index + 1}{index === 0 ? "er" : "eme"}</span>
+                    <span className="rp-arrival-num">{row.numero}</span>
+                    <strong>{row.cheval}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <span className={`rp-ai-badge ${iaCorrecte ? "ok" : "ko"}`}>
+              {iaCorrecte ? "IA CORRECTE" : "IA INCORRECTE"}
+            </span>
+          </section>
+        ) : null}
+
         <div className="rp-page-grid">
           <div className="rp-main">
             <section className="rp-card">
@@ -613,7 +673,10 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
             </section>
 
             <section className="rp-card">
-              <div className="rp-card-header">Tableau partants</div>
+              <div className="rp-card-header">
+                <span>Tableau partants</span>
+                {cotesLive ? <span className="rp-live-odds">Cotes live</span> : null}
+              </div>
               <div className="rp-table-wrap">
                 <table className="rp-table">
                   <thead>

@@ -1,5 +1,6 @@
 import { toIsoDate } from "@/lib/date-utils";
 import { ENGINE_V6_VERSION, getEngineConfigVersion, getRaceSegmentKey } from "@/lib/engine-v6";
+import type { CourseRapports } from "@/lib/pmu-api";
 import type { ScoreV10Breakdown } from "@/lib/predictions/scoring-v10";
 import type { ScoreV101Breakdown } from "@/lib/predictions/scoring-v10-1";
 import type { RaceRoleV10Selection } from "@/lib/predictions/roles-v10";
@@ -616,6 +617,40 @@ export async function upsertRunnerOutcomes(rows: RunnerOutcomeRow[]) {
   if (error) {
     throw new Error(`Runner outcomes upsert failed: ${error.message}`);
   }
+}
+
+export async function saveRunnerOutcome(
+  dateStr: string,
+  reunion: number,
+  course: number,
+  arriveData: number[] | null,
+  rapportsData: CourseRapports | null
+) {
+  if (!arriveData || arriveData.length === 0) {
+    return { saved: 0 };
+  }
+
+  const date = toIsoDate(dateStr);
+  const createdAt = nowIso();
+  const rows: RunnerOutcomeRow[] = arriveData.map((chevalNum, index) => {
+    const ordreArrivee = index + 1;
+    return {
+      date,
+      reunion,
+      course,
+      cheval_num: chevalNum,
+      ordre_arrivee: ordreArrivee,
+      resultat_gagnant: ordreArrivee === 1,
+      resultat_place: ordreArrivee <= 3,
+      rapport_gagnant: rapportsData?.simpleGagnant[chevalNum] ?? null,
+      rapport_place: rapportsData?.simplePlace[chevalNum] ?? null,
+      non_partant: false,
+      created_at: createdAt,
+    };
+  });
+
+  await upsertRunnerOutcomes(rows);
+  return { saved: rows.length };
 }
 
 export async function upsertPredictions(rows: PredictionRow[]) {

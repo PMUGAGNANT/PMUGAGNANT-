@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { PredictionRow, RaceSummary } from '@/lib/types'
+import type { PredictionRow, RaceSummary, RunnerOutcomeRow } from '@/lib/types'
 
 export interface PMUDashboardProps {
   race?: RaceSummary | null
@@ -13,6 +13,7 @@ export interface PMUDashboardProps {
   miseConseillee?: number | null
   derniereSynchro?: string
   algoVersion?: string
+  runnerOutcomes?: RunnerOutcomeRow[]
 }
 
 function formatClock(date: Date) {
@@ -35,6 +36,11 @@ function formatEuro(value: number | null | undefined) {
   return `${Math.max(0, Math.round(value))} EUR`
 }
 
+function formatSignedEuro(value: number | null | undefined) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '--'
+  return `${value >= 0 ? '+' : ''}${Math.round(value)} EUR`
+}
+
 export default function PMUDashboard({
   race = null,
   predictions = [],
@@ -45,6 +51,7 @@ export default function PMUDashboard({
   miseConseillee = null,
   derniereSynchro,
   algoVersion = 'VMAX',
+  runnerOutcomes = [],
 }: PMUDashboardProps) {
   const [sent, setSent] = useState(false)
   const [synced, setSynced] = useState(() => derniereSynchro ?? formatClock(new Date()))
@@ -84,6 +91,21 @@ export default function PMUDashboard({
   function getEdge(p: PredictionRow): number | null {
     if (typeof p.value === 'number') return Math.round(p.value)
     return null
+  }
+
+  const outcomeByHorse = new Map(runnerOutcomes.map((row) => [row.cheval_num, row]))
+
+  function getRealGain(p: PredictionRow) {
+    const outcome = outcomeByHorse.get(p.cheval_num)
+    const stake = p.mise_simulee ?? 0
+    if (!outcome || stake <= 0) return null
+    const betType = p.pari_conseille ?? 'GAGNANT'
+    if (betType === 'PLACE') {
+      const gain = outcome.resultat_place ? stake * (outcome.rapport_place ?? 0) : 0
+      return gain - stake
+    }
+    const gain = outcome.resultat_gagnant ? stake * (outcome.rapport_gagnant ?? 0) : 0
+    return gain - stake
   }
 
   return (
@@ -135,6 +157,7 @@ export default function PMUDashboard({
             const score = p.score_blended ?? p.score_cheval ?? p.score_final_pari ?? 0
             const edge = getEdge(p)
             const cote = p.cote_depart ?? p.cote_matin
+            const realGain = getRealGain(p)
 
             return (
               <div key={p.cheval_num} className={`pmu-t-row ${rc}`}>
@@ -159,9 +182,11 @@ export default function PMUDashboard({
                   }
                 </div>
                 <div className="pmu-mise-col">
-                  {active
-                    ? <><div className="pmu-mise-amount">{formatEuro(stake)}</div><div className="pmu-mise-sub">Kelly {kellyTier(stake)}</div></>
-                    : <div className="pmu-mise-none">pas joue</div>
+                  {realGain !== null
+                    ? <div className={`pmu-real-gain ${realGain >= 0 ? 'up' : 'dn'}`}>{formatSignedEuro(realGain)}</div>
+                    : active
+                      ? <><div className="pmu-mise-amount">{formatEuro(stake)}</div><div className="pmu-mise-sub">Kelly {kellyTier(stake)}</div></>
+                      : <div className="pmu-mise-none">pas joue</div>
                   }
                 </div>
               </div>
@@ -223,6 +248,7 @@ const CSS = `
 .pmu-edge-val.up{color:var(--grn)}.pmu-edge-val.dn,.pmu-edge-val.flat{color:var(--txt2)}
 .pmu-mise-col{text-align:right}
 .pmu-mise-amount{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--txt);line-height:1}
+.pmu-real-gain{font-family:'DM Mono',monospace;font-size:13px;font-weight:500}.pmu-real-gain.up{color:var(--grn)}.pmu-real-gain.dn{color:#FF4D5A}
 .pmu-mise-none{color:var(--txt2);font-size:13px;font-family:'DM Mono',monospace}
 .pmu-mise-sub{font-size:9px;color:var(--txt2);margin-top:3px}
 .pmu-t-empty{padding:22px 32px;border-bottom:1px solid var(--bdr);font-size:12px;color:var(--txt2)}
