@@ -245,6 +245,10 @@ function mapParticipant(raw: Record<string, unknown>): Participant {
       : typeof raw.coteReference === "number"
         ? (raw.coteReference as number)
         : cote;
+  const parsedOrdreArrivee =
+    typeof raw.ordreArrivee === "number" || typeof raw.ordreArrivee === "string"
+      ? Number(raw.ordreArrivee)
+      : null;
   const variation =
     cote !== null && coteMatin !== null && coteMatin > 0
       ? ((cote - coteMatin) / coteMatin) * 100
@@ -322,7 +326,9 @@ function mapParticipant(raw: Record<string, unknown>): Participant {
       Number(gainsParticipant.gainsAnneeEnCours ?? 0),
     nombreSuiveurs: Number(raw.nombreIndicateursFavoris ?? raw.nombreSuiveurs ?? 0),
     ordreArrivee:
-      typeof raw.ordreArrivee === "number" ? Number(raw.ordreArrivee) : null,
+      parsedOrdreArrivee !== null && Number.isInteger(parsedOrdreArrivee) && parsedOrdreArrivee > 0
+        ? parsedOrdreArrivee
+        : null,
     statut: String(raw.statut ?? ""),
     placeCorde: getStall(raw),
     stalle: getStall(raw),
@@ -781,6 +787,20 @@ function getOddsFromRecord(record: Record<string, unknown>) {
   );
 }
 
+function buildArriveeFromParticipants(participants: Participant[]) {
+  const arrivee = participants
+    .filter(
+      (participant) =>
+        typeof participant.ordreArrivee === "number" &&
+        Number.isInteger(participant.ordreArrivee) &&
+        participant.ordreArrivee > 0
+    )
+    .sort((left, right) => Number(left.ordreArrivee) - Number(right.ordreArrivee))
+    .map((participant) => participant.numPmu);
+
+  return arrivee.length > 0 ? arrivee : null;
+}
+
 function collectRecords(value: unknown, records: Record<string, unknown>[] = []) {
   if (Array.isArray(value)) {
     for (const item of value) collectRecords(item, records);
@@ -936,12 +956,20 @@ export async function getArriveeCourse(
       `/programme/${dateStr}/R${reunion}/C${course}/arrivee`,
       10
     );
+    console.log("[pmu-api.getArriveeCourse] raw arrivee", { dateStr, reunion, course, data });
     const rawSource = Array.isArray(data)
       ? data
-      : ((data.arrivee ?? data.ordreArrivee ?? data.participants ?? []) as unknown[]);
+      : ((data.arrivee ??
+          data.arrivees ??
+          data.classement ??
+          data.resultat ??
+          data.resultats ??
+          data.ordreArrivee ??
+          data.participants ??
+          []) as unknown[]);
     const source = Array.isArray(rawSource) ? rawSource : collectRecords(rawSource);
     if (!Array.isArray(source) || source.length === 0) {
-      return null;
+      return buildArriveeFromParticipants(await getParticipants(dateStr, reunion, course));
     }
 
     const arrivee = source
@@ -959,9 +987,21 @@ export async function getArriveeCourse(
       .sort((left, right) => left.ordre - right.ordre)
       .map((item) => item.numero);
 
-    return arrivee.length > 0 ? arrivee : null;
-  } catch {
-    return null;
+    return arrivee.length > 0
+      ? arrivee
+      : buildArriveeFromParticipants(await getParticipants(dateStr, reunion, course));
+  } catch (error) {
+    console.log("[pmu-api.getArriveeCourse] arrivee endpoint failed, fallback participants", {
+      dateStr,
+      reunion,
+      course,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    try {
+      return buildArriveeFromParticipants(await getParticipants(dateStr, reunion, course));
+    } catch {
+      return null;
+    }
   }
 }
 

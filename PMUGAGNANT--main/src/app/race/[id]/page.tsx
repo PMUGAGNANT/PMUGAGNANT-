@@ -149,6 +149,20 @@ function getSnapshotV10(snapshot: RunnerScoreSnapshotRow | undefined) {
   };
 }
 
+function buildArriveeFromParticipants(participants: Participant[]) {
+  const arrivee = participants
+    .filter(
+      (participant) =>
+        typeof participant.ordreArrivee === "number" &&
+        Number.isInteger(participant.ordreArrivee) &&
+        participant.ordreArrivee > 0
+    )
+    .sort((left, right) => Number(left.ordreArrivee) - Number(right.ordreArrivee))
+    .map((participant) => participant.numPmu);
+
+  return arrivee.length > 0 ? arrivee : null;
+}
+
 function buildParticipantRows(
   participants: Participant[],
   ranking: ScoredParticipant[],
@@ -448,7 +462,7 @@ async function loadRacePageData(id: string, requestedDate: string): Promise<Race
     const minutesUntilStart = getMinutesUntilStart(courseInfo.heureDepart, courseInfo.dateStr);
     const raceStatus = getRaceStatus(courseInfo, storedRows);
     const shouldFetchArrivee = raceStatus === "finished" || minutesUntilStart < -30;
-    const [arrivee, cotesDirectes] = await Promise.all([
+    const [pmuArrivee, cotesDirectes] = await Promise.all([
       shouldFetchArrivee
         ? getArriveeCourse(requestedDate, parsed.reunion, parsed.course)
         : Promise.resolve(null),
@@ -456,6 +470,7 @@ async function loadRacePageData(id: string, requestedDate: string): Promise<Race
         ? getCotesDirectes(requestedDate, parsed.reunion, parsed.course)
         : Promise.resolve(null),
     ]);
+    const arrivee = pmuArrivee ?? (shouldFetchArrivee ? buildArriveeFromParticipants(participants) : null);
     const rows = buildParticipantRows(participants, analysis?.ranking ?? [], storedRows, scoreSnapshots)
       .map((row) => ({
         ...row,
