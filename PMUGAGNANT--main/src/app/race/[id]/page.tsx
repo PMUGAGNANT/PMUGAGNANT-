@@ -535,6 +535,57 @@ const CSS = `
 .rp-pro-lock p{font-size:12px;color:var(--g);margin-bottom:12px}
 .rp-pro-link{display:inline-flex;background:linear-gradient(90deg,#D4AF37,#FFE566);color:#07080F;font-size:11px;font-family:"DM Mono",monospace;padding:9px 20px;border-radius:8px;text-decoration:none;font-weight:500}
 @media(max-width:640px){.rp-course-name{font-size:28px}.rp-bubble{width:56px;height:56px;font-size:26px}.rp-verdict-bar{grid-template-columns:1fr}.rp-grid{grid-template-columns:1fr}}
+
+/* Light app skin: keep the race logic, remove the old VMAX dark page. */
+.rp-wrap{--bg:var(--pmu-bg,#F8F6EF);--s1:var(--pmu-surface,#FFFFFF);--s2:var(--pmu-surface-2,#F1EEE3);--g:var(--pmu-accent,#D6B633);--g2:var(--pmu-accent,#D6B633);--g3:#A38719;--txt:var(--pmu-text,#162318);--txt2:var(--pmu-muted,#67706A);--txt3:#8B938D;--grn:var(--pmu-primary,#006837);--red:#C94B57;--blu:#2777AD;--bdr:var(--pmu-border,#DDD8C9);--bdr2:rgba(0,104,55,0.22);font-family:var(--font-ui),Arial,sans-serif;color:var(--txt);background:var(--bg);min-height:100vh}
+.rp-topbar{position:sticky;top:0;z-index:50;background:rgba(255,255,255,0.9);border-bottom:1px solid var(--bdr);box-shadow:0 10px 30px rgba(29,41,31,0.06);backdrop-filter:blur(16px)}
+.rp-logo{font-family:var(--font-heading),Arial,sans-serif;font-size:20px;font-weight:900;color:var(--pmu-primary,#006837);background:none;-webkit-text-fill-color:currentColor;text-decoration:none;letter-spacing:.08em;text-transform:uppercase}
+.rp-data-badge{background:var(--s2);border:1px solid var(--bdr);color:var(--txt2);font-weight:800}
+.rp-body{max-width:96rem;margin:0 auto;padding:24px 18px 72px}
+.rp-course-header{background:var(--s1);border:1px solid var(--bdr);border-radius:8px;box-shadow:0 18px 48px rgba(29,41,31,0.08);padding:24px;gap:18px}
+.rp-course-name{font-family:var(--font-heading),Arial,sans-serif;color:var(--txt);font-size:clamp(32px,5vw,58px);line-height:1;letter-spacing:0}
+.rp-course-meta{color:var(--txt2)}
+.rp-course-meta-dot{background:var(--g)}
+.rp-course-badge{border-radius:8px;border-color:var(--bdr);background:var(--s2);color:var(--txt)}
+.rp-course-badge.live{border-color:rgba(0,104,55,.28);background:rgba(0,104,55,.08);color:var(--pmu-primary,#006837)}
+.rp-course-badge.termine{border-color:rgba(103,112,106,.28);background:rgba(103,112,106,.1);color:var(--txt2)}
+.rp-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,360px);gap:24px}
+.rp-card,.rp-scard{background:var(--s1);border:1px solid var(--bdr);border-radius:8px;box-shadow:0 16px 42px rgba(29,41,31,0.08);overflow:hidden}
+.rp-card-header,.rp-stitle{border-bottom:1px solid var(--bdr);background:linear-gradient(180deg,#fff,var(--s2));color:var(--pmu-primary,#006837)}
+.rp-card-title,.rp-stitle{font-weight:900;letter-spacing:.16em}
+.rp-selection{background:linear-gradient(180deg,#fff,var(--s2));border-bottom:1px solid var(--bdr)}
+.rp-bubble{background:var(--s2);border:1px solid var(--bdr);box-shadow:none;color:var(--txt)}
+.rp-bubble.sel{background:var(--pmu-accent,#D6B633);border-color:var(--pmu-accent,#D6B633);color:#142015;box-shadow:0 12px 30px rgba(214,182,51,.24)}
+.rp-bubble-score,.rp-sub,.rp-musique,.rp-mise.none,.rp-plan-lbl,.rp-raison{color:var(--txt2)}
+.rp-bubble-name,.rp-horse,.rp-plan-val,.rp-vbet-name{color:var(--txt)}
+.rp-verdict-bar{background:#fff;border-top:1px solid var(--bdr)}
+.rp-vstat{border-right:1px solid var(--bdr)}
+.rp-vstat-label,.rp-th{color:var(--txt2)}
+.rp-vstat-val{font-family:var(--font-heading),Arial,sans-serif;color:var(--txt)}
+.rp-vstat-val.grn,.rp-score-num,.rp-mise,.rp-vbet-edge{color:var(--pmu-primary,#006837);background:none;-webkit-text-fill-color:currentColor}
+.rp-vstat-val.orn{color:#A87900}
+.rp-vstat-val.muted{color:var(--txt2)}
+.rp-table-wrap{background:#fff}
+.rp-table{background:#fff}
+.rp-table thead{background:var(--s2)}
+.rp-tr{background:#fff;border-bottom:1px solid var(--bdr);opacity:1}
+.rp-tr:hover{background:rgba(0,104,55,.04)}
+.rp-tr.sel{background:rgba(214,182,51,.14)}
+.rp-tr.out{opacity:.64}
+.rp-num{background:var(--s2);color:var(--txt2);border:1px solid var(--bdr)}
+.rp-num.sel{background:var(--pmu-primary,#006837);color:#fff;border-color:var(--pmu-primary,#006837)}
+.rp-cote{color:var(--txt)}
+.rp-score-track{background:#E2DED2}
+.rp-score-fill{background:var(--pmu-primary,#006837)}
+.rp-score-fill.lo{background:#B8B09D}
+.rp-score-num.lo{color:var(--txt2)}
+.rp-vbet{background:rgba(0,104,55,.06);border-color:rgba(0,104,55,.18);border-left-color:var(--pmu-primary,#006837)}
+.rp-raison{background:var(--s2);border-left-color:var(--pmu-accent,#D6B633)}
+.rp-pro-lock{background:var(--s2);border-color:var(--bdr)}
+.rp-pro-lock p{color:var(--txt)}
+.rp-pro-link{background:var(--pmu-primary,#006837);color:#fff;border-radius:8px}
+.rp-alert-btn button{border-radius:8px!important}
+@media(max-width:900px){.rp-grid{grid-template-columns:1fr}.rp-body{padding:16px 12px 56px}.rp-course-header{padding:18px}.rp-topbar{padding:12px 16px}}
 `;
 
 export default async function RacePage({ params, searchParams }: RacePageProps) {
@@ -545,12 +596,12 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
 
   if (!requestedDate) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#0A0908] px-4 text-[#EDE8DF]">
+      <main className="grid min-h-screen place-items-center bg-[var(--pmu-bg)] px-4 text-[var(--pmu-text)]">
         <style>{CSS}</style>
-        <section className="max-w-xl rounded-lg border border-[#C9A84C]/20 bg-[#111009] p-6 text-center">
-          <p className="text-xs font-black uppercase text-[#C9A84C]">Date invalide</p>
-          <h1 className="mt-2 font-serif text-4xl font-black text-[#EDE8DF]">Impossible de charger cette course.</h1>
-          <Link className="mt-5 inline-flex rounded-lg bg-[#C9A84C] px-5 py-3 text-sm font-black text-[#0A0908]" href="/dashboard">
+        <section className="app-card max-w-xl p-6 text-center">
+          <p className="app-kicker">Date invalide</p>
+          <h1 className="mt-2 font-heading text-4xl font-black text-[var(--pmu-text)]">Impossible de charger cette course.</h1>
+          <Link className="app-button-primary mt-5 inline-flex" href="/dashboard">
             Revenir au dashboard
           </Link>
         </section>
@@ -564,13 +615,13 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
     const title = state.kind === "invalid" ? "Identifiant invalide" : state.kind === "not-found" ? "Course introuvable" : "Analyse indisponible";
     const detail = state.kind === "not-found" ? `Aucune course pour le ${state.date}.` : "Les données PMU se mettent à jour.";
     return (
-      <main className="grid min-h-screen place-items-center bg-[#0A0908] px-4 text-[#EDE8DF]">
+      <main className="grid min-h-screen place-items-center bg-[var(--pmu-bg)] px-4 text-[var(--pmu-text)]">
         <style>{CSS}</style>
-        <section className="max-w-xl rounded-lg border border-[#C9A84C]/20 bg-[#111009] p-6 text-center">
-          <p className="text-xs font-black uppercase text-[#C9A84C]">PMU Gagnant</p>
-          <h1 className="mt-2 font-serif text-4xl font-black text-[#EDE8DF]">{title}</h1>
-          <p className="mt-3 text-sm text-[#6A6258]">{detail}</p>
-          <Link className="mt-5 inline-flex rounded-lg bg-[#C9A84C] px-5 py-3 text-sm font-black text-[#0A0908]" href="/dashboard">
+        <section className="app-card max-w-xl p-6 text-center">
+          <p className="app-kicker">PMU Gagnant</p>
+          <h1 className="mt-2 font-heading text-4xl font-black text-[var(--pmu-text)]">{title}</h1>
+          <p className="mt-3 text-sm text-[var(--pmu-muted)]">{detail}</p>
+          <Link className="app-button-primary mt-5 inline-flex" href="/dashboard">
             Revenir au dashboard
           </Link>
         </section>
