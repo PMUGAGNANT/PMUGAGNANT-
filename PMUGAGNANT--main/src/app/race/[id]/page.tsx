@@ -536,13 +536,14 @@ const CSS = `
 .rp-pro-link{display:inline-flex;background:linear-gradient(90deg,#D4AF37,#FFE566);color:#07080F;font-size:11px;font-family:"DM Mono",monospace;padding:9px 20px;border-radius:8px;text-decoration:none;font-weight:500}
 @media(max-width:640px){.rp-course-name{font-size:28px}.rp-bubble{width:56px;height:56px;font-size:26px}.rp-verdict-bar{grid-template-columns:1fr}.rp-grid{grid-template-columns:1fr}}
 
-/* Light app skin: keep the race logic, remove the old VMAX dark page. */
-.rp-wrap{--bg:var(--pmu-bg,#F8F6EF);--s1:var(--pmu-surface,#FFFFFF);--s2:var(--pmu-surface-2,#F1EEE3);--g:var(--pmu-accent,#D6B633);--g2:var(--pmu-accent,#D6B633);--g3:#A38719;--txt:var(--pmu-text,#162318);--txt2:var(--pmu-muted,#67706A);--txt3:#8B938D;--grn:var(--pmu-primary,#006837);--red:#C94B57;--blu:#2777AD;--bdr:var(--pmu-border,#DDD8C9);--bdr2:rgba(0,104,55,0.22);font-family:var(--font-ui),Arial,sans-serif;color:var(--txt);background:var(--bg);min-height:100vh}
-.rp-topbar{position:sticky;top:0;z-index:50;background:rgba(255,255,255,0.9);border-bottom:1px solid var(--bdr);box-shadow:0 10px 30px rgba(29,41,31,0.06);backdrop-filter:blur(16px)}
+/* Full light app skin: keep the race logic, remove the old VMAX visuals. */
+.rp-wrap{--bg:var(--pmu-bg,#F8F6EF);--s1:#FFFFFF;--s2:#F4F1E8;--g:var(--pmu-accent,#D6B633);--g2:var(--pmu-accent,#D6B633);--g3:#A38719;--txt:var(--pmu-text,#162318);--txt2:var(--pmu-muted,#67706A);--txt3:#8B938D;--grn:var(--pmu-primary,#006837);--red:#C94B57;--blu:#2777AD;--bdr:var(--pmu-border,#DDD8C9);--bdr2:rgba(0,104,55,0.22);font-family:var(--font-ui),Arial,sans-serif;color:var(--txt);background:var(--bg);min-height:100vh}
+.rp-topbar{position:sticky;top:0;z-index:50;background:#fff;border-bottom:1px solid var(--bdr);box-shadow:0 10px 30px rgba(29,41,31,0.06);backdrop-filter:blur(16px)}
 .rp-logo{font-family:var(--font-heading),Arial,sans-serif;font-size:20px;font-weight:900;color:var(--pmu-primary,#006837);background:none;-webkit-text-fill-color:currentColor;text-decoration:none;letter-spacing:.08em;text-transform:uppercase}
 .rp-data-badge{background:var(--s2);border:1px solid var(--bdr);color:var(--txt2);font-weight:800}
 .rp-body{max-width:96rem;margin:0 auto;padding:24px 18px 72px}
-.rp-course-header{background:var(--s1);border:1px solid var(--bdr);border-radius:8px;box-shadow:0 18px 48px rgba(29,41,31,0.08);padding:24px;gap:18px}
+.rp-course-header{background:#fff;border:1px solid var(--bdr);border-radius:8px;box-shadow:0 18px 48px rgba(29,41,31,0.08);padding:24px;gap:18px}
+.rp-course-header::before{display:none}
 .rp-course-name{font-family:var(--font-heading),Arial,sans-serif;color:var(--txt);font-size:clamp(32px,5vw,58px);line-height:1;letter-spacing:0}
 .rp-course-meta{color:var(--txt2)}
 .rp-course-meta-dot{background:var(--g)}
@@ -550,17 +551,17 @@ const CSS = `
 .rp-course-badge.live{border-color:rgba(0,104,55,.28);background:rgba(0,104,55,.08);color:var(--pmu-primary,#006837)}
 .rp-course-badge.termine{border-color:rgba(103,112,106,.28);background:rgba(103,112,106,.1);color:var(--txt2)}
 .rp-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,360px);gap:24px}
-.rp-card,.rp-scard{background:var(--s1);border:1px solid var(--bdr);border-radius:8px;box-shadow:0 16px 42px rgba(29,41,31,0.08);overflow:hidden}
-.rp-card-header,.rp-stitle{border-bottom:1px solid var(--bdr);background:linear-gradient(180deg,#fff,var(--s2));color:var(--pmu-primary,#006837)}
-.rp-card-title,.rp-stitle{font-weight:900;letter-spacing:.16em}
-.rp-selection{background:linear-gradient(180deg,#fff,var(--s2));border-bottom:1px solid var(--bdr)}
-.rp-bubble{background:var(--s2);border:1px solid var(--bdr);box-shadow:none;color:var(--txt)}
-.rp-bubble.sel{background:var(--pmu-accent,#D6B633);border-color:var(--pmu-accent,#D6B633);color:#142015;box-shadow:0 12px 30px rgba(214,182,51,.24)}
+.rp-card,.rp-scard{background:#fff;border:1px solid var(--bdr);border-radius:8px;box-shadow:0 16px 42px rgba(29,41,31,0.08);overflow:hidden}
+.rp-card-header,.rp-stitle{border-bottom:1px solid var(--bdr);background:#fff;color:var(--pmu-primary,#006837)}
+.rp-course-tag,.rp-card-title,.rp-stitle{font-size:13px;font-weight:900;letter-spacing:0;text-transform:none}
+.rp-selection{background:#fff;border-bottom:1px solid var(--bdr)}
+.rp-bubble,.rp-bubble.r1,.rp-bubble.r2,.rp-bubble.r3{background:#fff;border:1px solid var(--bdr);box-shadow:none;color:var(--txt);font-family:var(--font-heading),Arial,sans-serif}
+.rp-bubble.sel{background:var(--pmu-primary,#006837);border-color:var(--pmu-primary,#006837);color:#fff;box-shadow:0 12px 30px rgba(0,104,55,.18)}
 .rp-bubble-score,.rp-sub,.rp-musique,.rp-mise.none,.rp-plan-lbl,.rp-raison{color:var(--txt2)}
 .rp-bubble-name,.rp-horse,.rp-plan-val,.rp-vbet-name{color:var(--txt)}
 .rp-verdict-bar{background:#fff;border-top:1px solid var(--bdr)}
 .rp-vstat{border-right:1px solid var(--bdr)}
-.rp-vstat-label,.rp-th{color:var(--txt2)}
+.rp-vstat-label,.rp-th{color:var(--txt2);letter-spacing:0;text-transform:none}
 .rp-vstat-val{font-family:var(--font-heading),Arial,sans-serif;color:var(--txt)}
 .rp-vstat-val.grn,.rp-score-num,.rp-mise,.rp-vbet-edge{color:var(--pmu-primary,#006837);background:none;-webkit-text-fill-color:currentColor}
 .rp-vstat-val.orn{color:#A87900}
@@ -713,7 +714,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
             {/* SÉLECTION IA */}
             <div className="rp-card">
               <div className="rp-card-header">
-                <span className="rp-card-title">Sélection IA VMAX</span>
+                <span className="rp-card-title">Sélection IA</span>
                 {urgentRace && (
                   <span style={{fontSize:'10px',color:'#C26052',letterSpacing:'1px'}}>
                     ⚠ {Math.max(1, Math.round(minutesUntilStart))} min restantes
@@ -769,7 +770,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
                       <th className="rp-th">Cheval</th>
                       <th className="rp-th">Jockey / Entraîneur</th>
                       <th className="rp-th">Musique</th>
-                      <th className="rp-th r">Score VMAX</th>
+                      <th className="rp-th r">Score IA</th>
                       <th className="rp-th r">Cote</th>
                       <th className="rp-th r">Mise</th>
                     </tr>
