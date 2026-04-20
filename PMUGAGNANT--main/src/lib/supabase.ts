@@ -24,11 +24,11 @@ export function hasSupabaseAdminConfig() {
 }
 
 export function getSupabaseConfigError() {
-  return "Supabase n'est pas configur?. Ajoutez NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY.";
+  return "Supabase n'est pas configure. Ajoutez NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY.";
 }
 
 export function getSupabaseAdminConfigError() {
-  return "Supabase admin n'est pas configur?. Ajoutez SUPABASE_SERVICE_ROLE_KEY.";
+  return "Supabase admin n'est pas configure. Ajoutez SUPABASE_SERVICE_ROLE_KEY.";
 }
 
 export function getSupabaseBrowserClient() {
