@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     "Dashboard premium PMU Gagnant : Quinte du jour, courses pretes, value bets et statistiques live.",
 };
 
-export const revalidate = 60;
+export const revalidate = 120;
 
 type DashboardFilter = "ALL" | "QUINTE" | "COUPLE" | "TIERCE";
 
@@ -349,8 +349,9 @@ const getCachedParticipants = unstable_cache(
 );
 
 async function loadRaceSearchText(date: string, races: RaceSummary[]) {
+  const searchableRaces = races.slice(0, 8);
   const entries = await Promise.allSettled(
-    races.map(async (race) => {
+    searchableRaces.map(async (race) => {
       const participants = await getCachedParticipants(date, race.reunion, race.course);
       const text = participants
         .map((participant) =>
@@ -389,7 +390,7 @@ const loadDashboardData = unstable_cache(
     return { date, races: buildDashboardRaces(races, predictions, searchTextByRace), history, outcomes };
   },
   ["dashboard-data"],
-  { revalidate: 60 }
+  { revalidate: 120 }
 );
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {

@@ -63,18 +63,20 @@ function buildCards(rows: PredictionRow[]): ValueBetCard[] {
           raison: row.avis_texte,
         })),
         6
-      ).map((bet) => ({
-        date: first.date,
-        reunion: first.reunion,
-        course: first.course,
-        hippodrome: first.hippodrome,
-        numero: bet.numero,
-        cheval: bet.cheval,
-        coteActuelle: bet.coteActuelle,
-        coteFair: bet.coteFair,
-        edgePct: bet.edgePct,
-        explanation: bet.explanation,
-      }));
+      )
+        .filter((bet) => bet.edgePct > 10)
+        .map((bet) => ({
+          date: first.date,
+          reunion: first.reunion,
+          course: first.course,
+          hippodrome: first.hippodrome,
+          numero: bet.numero,
+          cheval: bet.cheval,
+          coteActuelle: bet.coteActuelle,
+          coteFair: bet.coteFair,
+          edgePct: bet.edgePct,
+          explanation: bet.explanation,
+        }));
     })
     .sort((left, right) => right.edgePct - left.edgePct);
 }

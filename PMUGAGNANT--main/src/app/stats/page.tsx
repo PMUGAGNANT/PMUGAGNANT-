@@ -122,7 +122,7 @@ function formatEuro(value: number | null) {
 export default async function StatsPage() {
   const endIso = toIsoDate(getTodayDateStr());
   const startDate = new Date(`${endIso}T12:00:00.000Z`);
-  startDate.setUTCDate(startDate.getUTCDate() - 90);
+  startDate.setUTCDate(startDate.getUTCDate() - 30);
   const startIso = startDate.toISOString().slice(0, 10);
   const [predictions, outcomes] = await Promise.all([
     listPredictionsBetween(startIso, endIso).catch(() => []),
@@ -150,7 +150,7 @@ export default async function StatsPage() {
             Stats TurfEdge
           </h1>
           <p className="mt-3 text-sm font-bold text-slate-400">
-            ROI global, taux de reussite et historique des selections mesurees sur 90 jours.
+            ROI global, taux de reussite et historique des selections mesurees sur 30 jours.
           </p>
         </header>
 
