@@ -140,83 +140,146 @@ export default async function StatsPage() {
   const history = settled.slice(-12).reverse();
 
   return (
-    <main className="min-h-screen bg-[#0A0E1A] px-4 py-6 text-[#F6F2E8]">
-      <section className="mx-auto grid w-full max-w-[92rem] gap-5">
-        <header className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-5 shadow-2xl shadow-black/25 md:p-7">
-          <Link href="/dashboard" className="text-xs font-black uppercase text-[#D4AF37]">
-            Retour dashboard
-          </Link>
-          <h1 className="mt-3 font-[var(--font-display)] text-5xl font-black leading-none md:text-7xl">
-            Stats TurfEdge
-          </h1>
-          <p className="mt-3 text-sm font-bold text-slate-400">
-            ROI global, taux de reussite et historique des selections mesurees sur 30 jours.
-          </p>
-        </header>
+    <div className="mx-auto flex w-full max-w-[96rem] flex-col gap-6 lg:gap-8">
+      <section className="app-page-hero p-6 md:p-8">
+        <div className="relative z-[1] grid gap-6 xl:grid-cols-[1.08fr,0.92fr] xl:items-end">
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-[color-mix(in_srgb,var(--pmu-primary)_26%,transparent)] bg-[var(--pmu-primary-soft)] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-[var(--pmu-primary)]">
+                Stats TurfEdge
+              </span>
+              <span className="app-pill text-xs">30 jours</span>
+              <span className="app-pill text-xs">{settled.length} selections</span>
+            </div>
 
-        <section className="grid gap-3 md:grid-cols-3">
-          <article className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-5">
-            <p className="text-xs font-black uppercase text-[#D4AF37]">ROI global</p>
-            <p className={`mt-2 font-[var(--font-display)] text-5xl font-black ${roi === null ? "text-slate-400" : roi >= 0 ? "text-[#00C851]" : "text-[#FF4D5A]"}`}>
-              {roi === null ? "--" : `${roi >= 0 ? "+" : ""}${roi.toFixed(1)}%`}
-            </p>
-          </article>
-          <article className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-5">
-            <p className="text-xs font-black uppercase text-[#D4AF37]">Taux reussite</p>
-            <p className="mt-2 font-[var(--font-display)] text-5xl font-black text-[#F6F2E8]">
-              {hitRate === null ? "--" : `${hitRate.toFixed(0)}%`}
-            </p>
-          </article>
-          <article className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-5">
-            <p className="text-xs font-black uppercase text-[#D4AF37]">Gain net</p>
-            <p className={`mt-2 font-[var(--font-display)] text-5xl font-black ${net === null ? "text-slate-400" : net >= 0 ? "text-[#00C851]" : "text-[#FF4D5A]"}`}>
-              {formatEuro(net)}
-            </p>
-          </article>
-        </section>
-
-        <section className="rounded-lg border border-white/10 bg-[#101827] shadow-2xl shadow-black/20">
-          <div className="border-b border-white/10 p-4">
-            <h2 className="font-[var(--font-display)] text-3xl font-black">
-              Historique recent
-            </h2>
+            <div>
+              <p className="app-kicker">Mesure officielle</p>
+              <h1 className="max-w-4xl text-4xl font-black leading-[0.93] text-[var(--pmu-text)] md:text-6xl">
+                ROI, taux de reussite et historique recent.
+              </h1>
+              <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
+                Les chiffres ci-dessous utilisent les selections mesurees, les mises
+                simulees et les resultats officiels rapproches sur les 30 derniers jours.
+              </p>
+            </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[42rem] border-collapse">
-              <thead>
-                <tr className="text-left text-xs uppercase text-slate-400">
-                  <th className="px-4 py-3 font-black">Course</th>
-                  <th className="px-4 py-3 font-black">Cheval</th>
-                  <th className="px-4 py-3 text-right font-black">Mise</th>
-                  <th className="px-4 py-3 text-right font-black">Gain/Perte</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map((row) => (
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Link href="/dashboard" className="app-button-secondary justify-center">
+              Retour dashboard
+            </Link>
+            <Link href="/bilan" className="app-button-primary justify-center">
+              Bilan complet
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-3">
+        <article className="app-stat-card px-5 py-5">
+          <p className="app-label">ROI global</p>
+          <p
+            className="mt-2 text-5xl font-black leading-none"
+            style={{
+              color:
+                roi === null
+                  ? "var(--pmu-text-muted)"
+                  : roi >= 0
+                    ? "var(--pmu-primary)"
+                    : "var(--pmu-red)",
+            }}
+          >
+            {roi === null ? "--" : `${roi >= 0 ? "+" : ""}${roi.toFixed(1)}%`}
+          </p>
+        </article>
+
+        <article className="app-stat-card px-5 py-5">
+          <p className="app-label">Taux reussite</p>
+          <p className="mt-2 text-5xl font-black leading-none text-[var(--pmu-text)]">
+            {hitRate === null ? "--" : `${hitRate.toFixed(0)}%`}
+          </p>
+        </article>
+
+        <article className="app-stat-card px-5 py-5">
+          <p className="app-label">Gain net</p>
+          <p
+            className="mt-2 text-5xl font-black leading-none"
+            style={{
+              color:
+                net === null
+                  ? "var(--pmu-text-muted)"
+                  : net >= 0
+                    ? "var(--pmu-primary)"
+                    : "var(--pmu-red)",
+            }}
+          >
+            {formatEuro(net)}
+          </p>
+        </article>
+      </section>
+
+      <section className="app-card overflow-hidden p-0">
+        <div className="app-section-heading p-5 md:p-6">
+          <div>
+            <p className="app-kicker">Historique</p>
+            <h2 className="app-section-title">Selections recentes</h2>
+          </div>
+          <span className="app-pill text-xs">{history.length} lignes</span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[42rem] text-left text-sm">
+            <thead className="border-y border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] text-[var(--pmu-text-muted)]">
+              <tr>
+                <th className="px-5 py-3 font-black">Course</th>
+                <th className="px-5 py-3 font-black">Cheval</th>
+                <th className="px-5 py-3 text-right font-black">Mise</th>
+                <th className="px-5 py-3 text-right font-black">Gain/Perte</th>
+              </tr>
+            </thead>
+            <tbody>
+              {history.map((row) => {
+                const profit = row.gain - row.stake;
+
+                return (
                   <tr
-                    className={`border-t border-white/10 ${row.won ? "bg-[#00C851]/8" : "bg-[#FF4D5A]/8"}`}
+                    className="border-b border-[var(--pmu-border)] last:border-b-0"
                     key={`${row.race}-${row.horse}-${row.stake}-${row.gain}`}
                   >
-                    <td className="px-4 py-3 font-black">{row.race}</td>
-                    <td className="px-4 py-3 font-bold">{row.horse}</td>
-                    <td className="px-4 py-3 text-right font-bold">{row.stake.toFixed(0)} EUR</td>
-                    <td className={`px-4 py-3 text-right font-black ${row.gain - row.stake >= 0 ? "text-[#00C851]" : "text-[#FF4D5A]"}`}>
-                      {formatEuro(row.gain - row.stake)}
+                    <td className="px-5 py-4 font-black text-[var(--pmu-text)]">
+                      {row.race}
+                    </td>
+                    <td className="px-5 py-4 font-bold text-[var(--pmu-text)]">
+                      {row.horse}
+                    </td>
+                    <td className="px-5 py-4 text-right font-bold text-[var(--pmu-text-soft)]">
+                      {row.stake.toFixed(0)} EUR
+                    </td>
+                    <td
+                      className="px-5 py-4 text-right font-black"
+                      style={{
+                        color: profit >= 0 ? "var(--pmu-primary)" : "var(--pmu-red)",
+                      }}
+                    >
+                      {formatEuro(profit)}
                     </td>
                   </tr>
-                ))}
-                {history.length === 0 ? (
-                  <tr className="border-t border-white/10">
-                    <td className="px-4 py-5 text-sm font-black text-slate-400" colSpan={4}>
-                      Aucun resultat officiel exploitable pour cette periode.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-        </section>
+                );
+              })}
+              {history.length === 0 ? (
+                <tr>
+                  <td
+                    className="px-5 py-8 text-center text-sm font-black text-[var(--pmu-text-soft)]"
+                    colSpan={4}
+                  >
+                    Aucun resultat officiel exploitable pour cette periode.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
       </section>
-    </main>
+    </div>
   );
 }
