@@ -1,6 +1,18 @@
 {
   "crons": [
     {
+      "path": "/api/cron/sync-cotes",
+      "schedule": "0/5 * * * *"
+    },
+    {
+      "path": "/api/cron/sync-results",
+      "schedule": "0/30 * * * *"
+    },
+    {
+      "path": "/api/cron/sync-programme",
+      "schedule": "0 7 * * *"
+    },
+    {
       "path": "/api/cron/morning",
       "schedule": "0 5 * * *"
     },

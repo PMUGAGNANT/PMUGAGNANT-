@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { getBearerToken } from "@/lib/request-utils";
 
-const CRON_QUERY_KEYS = ["token", "secret", "cron_secret", "cronSecret", "key"] as const;
-const CRON_HEADER_KEYS = ["x-cron-secret", "x-cron-token", "x-api-key"] as const;
-
 function safeSecretEqual(left: string, right: string) {
   const leftBuffer = Buffer.from(left);
   const rightBuffer = Buffer.from(right);
@@ -36,43 +33,18 @@ export function isCronSecretCandidateValid(
 }
 
 function getCronTokenCandidates(request: NextRequest) {
-  const url = new URL(request.url);
-  const queryCandidates = CRON_QUERY_KEYS.map((key) => url.searchParams.get(key));
-  const headerCandidates = CRON_HEADER_KEYS.map((key) => request.headers.get(key));
-
-  return [
-    getBearerToken(request.headers.get("authorization")),
-    ...queryCandidates,
-    ...headerCandidates,
-  ];
+  return [getBearerToken(request.headers.get("authorization"))];
 }
 
 export function ensureCronAuthorized(request: NextRequest) {
   const configuredSecret = process.env.CRON_SECRET;
   const candidates = getCronTokenCandidates(request);
 
-  if (process.env.NODE_ENV === "production") {
-    if (!configuredSecret) {
-      return NextResponse.json(
-        { success: false, error: "CRON_SECRET is required in production" },
-        { status: 503 }
-      );
-    }
-    if (isCronSecretCandidateValid(configuredSecret, candidates)) {
-      return null;
-    }
+  if (!configuredSecret) {
     return NextResponse.json(
-      {
-        success: false,
-        error: "CRON_SECRET invalide ou manquant.",
-        hint: "Envoyez le secret unique via Authorization: Bearer <CRON_SECRET>, x-cron-secret ou ?token=<CRON_SECRET>.",
-      },
+      { success: false, error: "CRON_SECRET absent." },
       { status: 401 }
     );
-  }
-
-  if (!configuredSecret) {
-    return null;
   }
 
   if (isCronSecretCandidateValid(configuredSecret, candidates)) {
@@ -83,7 +55,7 @@ export function ensureCronAuthorized(request: NextRequest) {
     {
       success: false,
       error: "CRON_SECRET invalide ou manquant.",
-      hint: "Envoyez le secret unique via Authorization: Bearer <CRON_SECRET>, x-cron-secret ou ?token=<CRON_SECRET>.",
+      hint: "Envoyez le secret via Authorization: Bearer <CRON_SECRET>.",
     },
     { status: 401 }
   );

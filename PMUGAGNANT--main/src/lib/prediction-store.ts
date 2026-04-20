@@ -619,18 +619,36 @@ export async function upsertRunnerOutcomes(rows: RunnerOutcomeRow[]) {
   }
 }
 
+export async function saveRunnerOutcome(rows: RunnerOutcomeRow | RunnerOutcomeRow[]): Promise<{ saved: number }>;
 export async function saveRunnerOutcome(
   dateStr: string,
   reunion: number,
   course: number,
   arriveData: number[] | null,
   rapportsData: CourseRapports | null
+): Promise<{ saved: number }>;
+export async function saveRunnerOutcome(
+  rowsOrDate: RunnerOutcomeRow | RunnerOutcomeRow[] | string,
+  reunion?: number,
+  course?: number,
+  arriveData?: number[] | null,
+  rapportsData?: CourseRapports | null
 ) {
+  if (typeof rowsOrDate !== "string") {
+    const payload = Array.isArray(rowsOrDate) ? rowsOrDate : [rowsOrDate];
+    await upsertRunnerOutcomes(payload);
+    return { saved: payload.length };
+  }
+
+  if (typeof reunion !== "number" || typeof course !== "number") {
+    throw new Error("Invalid runner outcome race identifier.");
+  }
+
   if (!arriveData || arriveData.length === 0) {
     return { saved: 0 };
   }
 
-  const date = toIsoDate(dateStr);
+  const date = toIsoDate(rowsOrDate);
   const createdAt = nowIso();
   const rows: RunnerOutcomeRow[] = arriveData.map((chevalNum, index) => {
     const ordreArrivee = index + 1;
@@ -649,8 +667,7 @@ export async function saveRunnerOutcome(
     };
   });
 
-  await upsertRunnerOutcomes(rows);
-  return { saved: rows.length };
+  return saveRunnerOutcome(rows);
 }
 
 export async function upsertPredictions(rows: PredictionRow[]) {

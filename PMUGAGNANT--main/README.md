@@ -181,17 +181,35 @@ Workflow déjà présent :
 
 ### Configuration cron-job.org
 
-Les routes cron sont protegees par `CRON_SECRET`. Pour cron-job.org, utiliser
-un secret sans caracteres speciaux, par exemple `TurfEdge2026PMUSecret123`, puis
-configurer les appels avec une des deux options :
+Les routes `/api/cron/*` sont protegees par `CRON_SECRET`. Toutes les requetes
+cron doivent envoyer exactement ce header :
 
-- URL : `https://votre-domaine.com/api/cron/morning?token=TurfEdge2026PMUSecret123`
-- Header : `Authorization: Bearer TurfEdge2026PMUSecret123`
+```text
+Authorization: Bearer <CRON_SECRET>
+```
 
-Les alias `?secret=`, `?cron_secret=`, `x-cron-secret` et `x-api-key` sont aussi
-acceptes pour eviter les erreurs de configuration. Si un ancien secret contient
-un `+`, il faut l'encoder en `%2B` dans l'URL ou le remplacer par un secret
-lettres/chiffres.
+Si `CRON_SECRET` est absent cote serveur, absent dans le header ou incorrect,
+la route retourne `401`. Les secrets en query string et les headers alternatifs
+ne sont pas acceptes.
+
+Variables minimales pour les crons et routes de donnees :
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `CRON_SECRET`
+- `NEXT_PUBLIC_SITE_URL`
+
+Variables optionnelles selon les integrations activees :
+
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_CHAT_ID`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_PRICE_ID`
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
+- `SUPPORT_EMAIL`
 
 ## Déploiement Vercel
 
