@@ -1,11 +1,14 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import { GLOSSARY, type GlossaryEntry } from "@/lib/beginner-labels";
 
 export function GlossaryPanel() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const disabled = pathname === "/login" || pathname.startsWith("/admin");
 
   const toggle = useCallback(() => setOpen((o) => !o), []);
 
@@ -18,6 +21,10 @@ export function GlossaryPanel() {
         e.definition.toLowerCase().includes(q)
     );
   }, [search]);
+
+  if (disabled) {
+    return null;
+  }
 
   return (
     <>

@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 
@@ -43,9 +44,11 @@ function setDismissed() {
 }
 
 export function PushNotificationPrompt() {
+  const pathname = usePathname();
   const [state, setState] = useState<"hidden" | "idle" | "loading" | "success">("hidden");
   const [message, setMessage] = useState("");
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const disabled = pathname === "/login" || pathname.startsWith("/admin");
 
   const supported = useMemo(
     () =>
@@ -78,6 +81,11 @@ export function PushNotificationPrompt() {
     let cancelled = false;
 
     async function evaluate() {
+      if (disabled) {
+        setState("hidden");
+        return;
+      }
+
       if (!VAPID_PUBLIC_KEY || !supported) {
         return;
       }
@@ -115,7 +123,7 @@ export function PushNotificationPrompt() {
     return () => {
       cancelled = true;
     };
-  }, [supported]);
+  }, [disabled, supported]);
 
   async function handleEnable() {
     if (!VAPID_PUBLIC_KEY) {
@@ -177,7 +185,7 @@ export function PushNotificationPrompt() {
     }
   }
 
-  if (!VAPID_PUBLIC_KEY || !supported || state === "hidden") {
+  if (disabled || !VAPID_PUBLIC_KEY || !supported || state === "hidden") {
     return null;
   }
 
