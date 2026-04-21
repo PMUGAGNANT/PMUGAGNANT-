@@ -48,8 +48,20 @@ function formatOdds(value: number | null | undefined) {
   return value.toFixed(1);
 }
 
+function normalizeBetType(value: string | null | undefined) {
+  const normalized = value
+    ?.normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z]/g, "")
+    .toUpperCase();
+
+  if (normalized?.includes("GAGNANT")) return "GAGNANT";
+  if (normalized?.includes("PLACE")) return "PLACE";
+  return null;
+}
+
 function formatBetType(value: string | null | undefined) {
-  return value === "PLACE" || value === "GAGNANT" ? value : "A PRECISER";
+  return normalizeBetType(value) ?? "PLACE";
 }
 
 export function buildTelegramStartMessage(chatId: string | number) {
