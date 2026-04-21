@@ -40,7 +40,7 @@ type TelegramUpdate = {
 };
 
 function getWebhookSecret() {
-  return process.env.TELEGRAM_WEBHOOK_SECRET ?? process.env.CRON_SECRET ?? null;
+  return process.env.TELEGRAM_WEBHOOK_SECRET ?? null;
 }
 
 function isWebhookAuthorized(request: NextRequest) {
