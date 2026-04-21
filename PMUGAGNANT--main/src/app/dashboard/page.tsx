@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import DashboardHeaderAccount from "@/components/dashboard/DashboardHeaderAccount";
+import { ThemeSwitchButton } from "@/components/ui/ThemeSwitchButton";
 import {
   formatRaceAnalysisId,
   getVmaxRaceStatus,
@@ -340,6 +341,7 @@ const EMPTY_RACES_MESSAGE =
 const DASHBOARD_CSS = `
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&family=Cormorant+Garamond:wght@600;700&display=swap');
 .dash{--gold:#D4AF37;--green:#00C851;--orange:#FF9F1C;--red:#FF4D5A;--blue:#4DC8FF;--muted:rgba(255,255,255,0.35);--bg:#080A12;--panel:#10131F;--panel2:#151928;--line:rgba(255,255,255,0.12);min-height:100vh;background:var(--bg);color:#fff;font-family:"DM Mono",monospace}
+[data-theme="cream"] .dash{--gold:#A9832E;--green:#075E36;--orange:#B77D22;--red:#C4543D;--blue:#075E36;--muted:#536157;--bg:#FAF7EF;--panel:#FFFDF8;--panel2:#F6F0E4;--line:rgba(20,45,29,.14);background:var(--bg);color:#172118}
 .dash-nav{position:sticky;top:0;z-index:50;display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:18px;border-bottom:1px solid rgba(212,175,55,.18);background:rgba(8,10,18,.92);padding:14px 32px;backdrop-filter:blur(16px)}
 .dash-logo{font-family:"Cormorant Garamond",serif;font-size:28px;font-weight:700;color:var(--gold);text-decoration:none;letter-spacing:.08em}
 .dash-live{display:inline-flex;align-items:center;border:1px solid rgba(0,200,81,.45);border-radius:999px;background:rgba(0,200,81,.12);color:var(--green);padding:5px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em}
@@ -347,6 +349,7 @@ const DASHBOARD_CSS = `
 .dash-links a{border-radius:8px;color:rgba(255,255,255,.72);font-size:12px;font-weight:700;letter-spacing:.08em;padding:9px 12px;text-decoration:none;text-transform:uppercase}
 .dash-links a:hover{background:rgba(255,255,255,.08);color:var(--gold)}
 .dash-burger{display:none;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.06);color:#fff;font-size:18px;padding:8px 11px}
+.dash-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px}
 .dash-shell{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;max-width:1480px;margin:0 auto;padding:24px}
 .dash-main{display:grid;gap:22px}
 .dash-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;min-height:360px;border:1px solid rgba(212,175,55,.35);border-radius:8px;background:radial-gradient(circle at 82% 18%,rgba(212,175,55,.24),transparent 28%),linear-gradient(135deg,#080A12 0%,#111827 58%,#080A12 100%);padding:34px;box-shadow:0 24px 60px rgba(0,0,0,.34)}
@@ -384,7 +387,20 @@ const DASHBOARD_CSS = `
 .dash-perf{width:100%;border-collapse:collapse;margin-top:10px}
 .dash-perf td{border-top:1px solid var(--line);font-size:11px;padding:10px 0;vertical-align:top}
 .dash-perf .gain{color:var(--green);font-weight:700;text-align:right}
-@media(max-width:768px){.dash-nav{grid-template-columns:auto auto 1fr auto;padding:12px 16px}.dash-logo{font-size:23px}.dash-links{display:none}.dash-burger{display:inline-flex}.dash-shell{grid-template-columns:1fr;padding:16px}.dash-hero{grid-template-columns:1fr;padding:16px}.dash-course-name{font-size:28px}.dash-bubble{width:52px;height:52px;font-size:26px}.dash-grid{grid-template-columns:1fr}.dash-side{grid-row:auto}.dash-hero-side{min-width:0}}
+[data-theme="cream"] .dash-nav{border-bottom-color:rgba(20,45,29,.10);background:rgba(255,253,248,.94)}
+[data-theme="cream"] .dash-links a{color:#536157}
+[data-theme="cream"] .dash-links a:hover{background:rgba(7,94,54,.08);color:#075E36}
+[data-theme="cream"] .dash-burger{background:#FFFDF8;color:#172118}
+[data-theme="cream"] .dash-hero{border-color:rgba(7,94,54,.16);background:radial-gradient(circle at 82% 18%,rgba(7,94,54,.12),transparent 28%),linear-gradient(135deg,#FFFDF8 0%,#F6F0E4 100%);box-shadow:0 24px 60px rgba(22,38,26,.10)}
+[data-theme="cream"] .dash-meta,[data-theme="cream"] .dash-stake,[data-theme="cream"] .dash-card-meta,[data-theme="cream"] .dash-empty{color:#536157}
+[data-theme="cream"] .dash-stake strong,[data-theme="cream"] .dash-card,[data-theme="cream"] .dash-course-name,[data-theme="cream"] .dash-title{color:#172118}
+[data-theme="cream"] .dash-card,[data-theme="cream"] .dash-empty,[data-theme="cream"] .dash-stat{background:var(--panel);box-shadow:0 18px 46px rgba(22,38,26,.08)}
+[data-theme="cream"] .dash-live{border-color:rgba(7,94,54,.24);background:rgba(7,94,54,.10)}
+[data-theme="cream"] .dash-bubble,[data-theme="cream"] .dash-mini.is-gold,[data-theme="cream"] .dash-mini.is-blue{background:rgba(7,94,54,.08);border-color:rgba(7,94,54,.22);color:#075E36}
+[data-theme="cream"] .dash-mini.is-muted{background:rgba(20,45,29,.06);border-color:var(--line);color:#536157}
+[data-theme="cream"] .dash-status.finished{border-color:rgba(20,45,29,.14);color:#536157}
+[data-theme="cream"] .dash-cta{background:#075E36;color:#FFFDF8;border:1px solid rgba(7,94,54,.24)}
+@media(max-width:768px){.dash-nav{grid-template-columns:auto auto 1fr;padding:12px 16px}.dash-logo{font-size:23px}.dash-links{display:none}.dash-burger{display:inline-flex}.dash-actions{grid-column:1 / -1;justify-content:space-between}.dash-shell{grid-template-columns:1fr;padding:16px}.dash-hero{grid-template-columns:1fr;padding:16px}.dash-course-name{font-size:28px}.dash-bubble{width:52px;height:52px;font-size:26px}.dash-grid{grid-template-columns:1fr}.dash-side{grid-row:auto}.dash-hero-side{min-width:0}}
 `;
 
 function Sparkline({ values }: { values: number[] }) {
@@ -515,7 +531,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           ))}
         </nav>
         <button className="dash-burger" type="button" aria-label="Menu">â˜°</button>
-        <DashboardHeaderAccount />
+        <div className="dash-actions">
+          <ThemeSwitchButton className="theme-switch-button--dash" />
+          <DashboardHeaderAccount />
+        </div>
       </header>
 
       <main className="dash-shell">

@@ -7,17 +7,26 @@ type ThemeSwitchButtonProps = {
 };
 
 export function ThemeSwitchButton({ className = "" }: ThemeSwitchButtonProps) {
-  const { theme, toggleTheme } = useTheme();
-  const label = theme === "cream" ? "Couleur actuelle" : "Couleur crème";
+  const { theme, setTheme } = useTheme();
 
   return (
-    <button
-      type="button"
-      onClick={toggleTheme}
-      className={`theme-switch-button ${className}`.trim()}
-      aria-label="Changer la palette du site"
-    >
-      {label}
-    </button>
+    <div className={`theme-switch-button ${className}`.trim()} role="group" aria-label="Palette du site">
+      <button
+        type="button"
+        onClick={() => setTheme("warm")}
+        aria-pressed={theme !== "cream"}
+        className={theme === "cream" ? undefined : "is-active"}
+      >
+        Sombre
+      </button>
+      <button
+        type="button"
+        onClick={() => setTheme("cream")}
+        aria-pressed={theme === "cream"}
+        className={theme === "cream" ? "is-active" : undefined}
+      >
+        Crème
+      </button>
+    </div>
   );
 }

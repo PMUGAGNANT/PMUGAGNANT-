@@ -6,6 +6,7 @@ import { GlossaryPanel } from "@/components/ui/Glossary";
 import { PriorityRacePushScheduler } from "@/components/ui/PriorityRacePushScheduler";
 import { ResponsibleGamingBar } from "@/components/ui/ResponsibleGamingBar";
 import { ServiceWorkerRegistration } from "@/components/ui/ServiceWorkerRegistration";
+import { SiteBootSplash } from "@/components/ui/SiteBootSplash";
 import { ThemeMetaColor } from "@/components/ui/ThemeMetaColor";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import "./globals.css";
@@ -125,6 +126,7 @@ export default function RootLayout({
           Aller au contenu
         </a>
         <ThemeProvider>
+          <SiteBootSplash />
           <ResponsibleGamingBar />
           <ComboProvider>
             <ThemeMetaColor />
