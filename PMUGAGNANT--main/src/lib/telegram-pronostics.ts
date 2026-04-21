@@ -48,6 +48,10 @@ function formatOdds(value: number | null | undefined) {
   return value.toFixed(1);
 }
 
+function formatBetType(value: string | null | undefined) {
+  return value === "PLACE" || value === "GAGNANT" ? value : "A PRECISER";
+}
+
 export function buildTelegramStartMessage(chatId: string | number) {
   return [
     "Bienvenue sur PMU Gagnant 🏇",
@@ -112,7 +116,7 @@ export async function buildTelegramPronosticMessage(date = getTodayDateStr()) {
   const lines = selections.map((row) => {
     const raceName = `R${row.reunion}C${row.course} ${row.hippodrome}`.trim();
     const horse = `#${row.cheval_num} ${row.cheval_nom}`;
-    return `🏇 ${raceName}, ${horse}, décision ${row.decision}, cote ${formatOdds(getPredictionOdds(row))}, mise ${formatCurrency(row.mise_simulee)}`;
+    return `🏇 ${raceName}, ${horse}, pari ${formatBetType(row.pari_conseille)}, décision ${row.decision}, cote ${formatOdds(getPredictionOdds(row))}, mise ${formatCurrency(row.mise_simulee)}`;
   });
 
   return ["PMU Gagnant", `Pronostics du jour ${date}`, "", ...lines].join("\n");
