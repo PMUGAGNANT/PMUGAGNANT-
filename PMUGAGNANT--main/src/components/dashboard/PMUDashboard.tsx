@@ -113,7 +113,7 @@ export default function PMUDashboard({
       <style>{CSS}</style>
       <div className="pmu-wrap">
         <header className="pmu-hd">
-          <div className="pmu-logo">PMU Gagnant <em>VMAX</em></div>
+          <div className="pmu-logo">TurfEdge <em>VMAX</em></div>
           <button className="pmu-tg-btn" onClick={() => setSent(true)} disabled={sent}>
             {sent ? 'Abonne !' : 'Recevoir sur Telegram'}
           </button>

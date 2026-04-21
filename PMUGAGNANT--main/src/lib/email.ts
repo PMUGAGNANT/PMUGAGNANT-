@@ -59,12 +59,12 @@ export async function sendSubscriptionActivatedEmail({
 }) {
   const siteUrl = getSiteUrl();
   const premiumUrl = `${siteUrl}/mes-paris`;
-  const subject = "Confirmation de ton abonnement PMU Gagnant";
+  const subject = "Confirmation de ton abonnement TurfEdge";
   const html = `
     <div style="background:#f5f7f8;padding:32px 16px;font-family:Arial,sans-serif;color:#171b1f;">
       <div style="max-width:620px;margin:0 auto;background:#ffffff;border-radius:20px;overflow:hidden;border:1px solid #e6ebef;">
         <div style="padding:24px 28px;border-bottom:1px solid #eef2f5;background:#ffffff;">
-          <div style="font-size:12px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#0b8f4d;">PMU Gagnant</div>
+          <div style="font-size:12px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#0b8f4d;">TurfEdge</div>
           <div style="margin-top:10px;font-size:28px;font-weight:800;line-height:1.2;color:#171b1f;">Ton abonnement premium est actif</div>
           <div style="margin-top:10px;font-size:15px;line-height:1.6;color:#4b5563;">
             Le paiement a bien été confirmé. Ton compte premium est maintenant actif.
@@ -88,7 +88,7 @@ export async function sendSubscriptionActivatedEmail({
   `;
 
   const text = [
-    "Confirmation de ton abonnement PMU Gagnant",
+    "Confirmation de ton abonnement TurfEdge",
     "",
     "Le paiement a bien été confirmé.",
     "Ton compte premium est maintenant actif.",

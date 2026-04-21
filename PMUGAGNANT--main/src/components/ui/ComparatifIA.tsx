@@ -69,7 +69,7 @@ export function ComparatifIA({ dateStr, reunion, course, nomCourse }: Comparatif
       ) : data ? (
         <div className="mt-4 space-y-2 text-sm font-semibold text-[var(--pmu-text)]">
           <p>
-            <span className="text-[var(--pmu-text-muted)]">PMU Gagnant IA</span> →{" "}
+            <span className="text-[var(--pmu-text-muted)]">TurfEdge IA</span> →{" "}
             <span className="font-black text-[var(--pmu-primary)]">{data.pmuGagnant}</span>
           </p>
           <p>

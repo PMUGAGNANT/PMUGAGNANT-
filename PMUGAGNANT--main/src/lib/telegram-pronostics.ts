@@ -128,7 +128,7 @@ async function loadLiveOddsForSelections(selections: PredictionRowLike[]) {
 
 export function buildTelegramStartMessage(chatId: string | number) {
   return [
-    "Bienvenue sur PMU Gagnant 🏇",
+    "Bienvenue sur TurfEdge 🏇",
     "",
     `Ton ID Telegram : ${chatId}`,
     "",
@@ -144,7 +144,7 @@ export function buildTelegramStartMessage(chatId: string | number) {
 
 export function buildTelegramHelpMessage() {
   return [
-    "PMU Gagnant - commandes Telegram",
+    "TurfEdge - commandes Telegram",
     "",
     "/start - activer le bot et afficher ton ID Telegram",
     "/pronostic - recevoir les pronostics Premium du jour",
@@ -180,7 +180,7 @@ export async function buildTelegramPronosticMessage(date = getTodayDateStr()) {
 
   if (selections.length === 0) {
     return [
-      "PMU Gagnant",
+      "TurfEdge",
       `Pronostics du jour ${date}`,
       "",
       "Aucune sélection disponible pour le moment.",
@@ -209,7 +209,7 @@ export async function buildTelegramPronosticMessage(date = getTodayDateStr()) {
   });
 
   return [
-    "🏆 PMU Gagnant",
+    "🏆 TurfEdge",
     `🎯 Pronostics du jour ${date}`,
     "Canal Premium · tickets propres et actionnables",
     "━━━━━━━━━━━━━━",

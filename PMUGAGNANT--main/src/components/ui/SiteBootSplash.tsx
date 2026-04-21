@@ -17,7 +17,7 @@ export function SiteBootSplash() {
   return (
     <div className="site-boot-splash" role="status" aria-live="polite">
       <div>
-        <span>PMU GAGNANT</span>
+        <span>TURFEDGE</span>
         <strong>Préparation des pronostics</strong>
         <i />
       </div>

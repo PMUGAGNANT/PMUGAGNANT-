@@ -97,7 +97,7 @@ async function alertCronFailure(route: string, message: string) {
   }
 
   try {
-    await sendTelegramMessage(`⚠️ ALERTE PMU GAGNANT: ${route} - ${message}`);
+    await sendTelegramMessage(`⚠️ ALERTE TURFEDGE: ${route} - ${message}`);
   } catch (error) {
     logger.error("cron.alert.failed", error, { route });
   }

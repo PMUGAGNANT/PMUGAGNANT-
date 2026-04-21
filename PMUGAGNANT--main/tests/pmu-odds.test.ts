@@ -34,7 +34,7 @@ test("parseLiveOddsDetailsFromParticipant lit la cote gagnant officielle et son 
     updatedAtMs: 1776780000000,
     updatedAt: "16:00",
   });
-  assert.equal(formatLiveOddsLabel(details), "Cote PMU GAGNANT 16:00");
+  assert.equal(formatLiveOddsLabel(details), "Cote TURFEDGE 16:00");
 });
 
 test("buildLiveOddsDetailsFromRecord couvre le fallback masse-enjeux", () => {

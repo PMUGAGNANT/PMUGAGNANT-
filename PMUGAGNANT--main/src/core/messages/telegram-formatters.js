@@ -13,7 +13,7 @@ function escapeHtml(value) {
 
 function formatMorningScanTelegram(dateStr, recommendations = [], watchlist = [], telegramMode = 'normal', summary = {}) {
     const lines = [
-        `<b>PMU AI - Analyse matinale ${escapeHtml(dateStr)}</b>`
+        `<b>TurfEdge - Analyse matinale ${escapeHtml(dateStr)}</b>`
     ];
 
     if (recommendations.length === 0 && watchlist.length === 0) {

@@ -130,7 +130,7 @@ export function buildDailyRecapSummary(
 export function formatDailyRecapTelegram(summary: DailyRecapSummary) {
   const mood = summary.netGain > 0 ? "🟢" : summary.netGain < 0 ? "🔴" : "⚪";
   const header = [
-    "🏆 PMU Gagnant",
+    "🏆 TurfEdge",
     `📌 Recap Premium ${summary.date}`,
     "━━━━━━━━━━━━━━",
     `${mood} ROI : ${formatPercent(summary.roi)}`,

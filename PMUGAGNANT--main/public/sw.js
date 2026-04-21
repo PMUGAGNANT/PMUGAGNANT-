@@ -1,6 +1,6 @@
 self.addEventListener("push", function (event) {
   const data = event.data ? event.data.json() : {};
-  const title = data.title || "PMU Gagnant";
+  const title = data.title || "TurfEdge";
   const options = {
     body: data.body || "Nouveau signal disponible",
     icon: data.icon || "/favicon.ico",

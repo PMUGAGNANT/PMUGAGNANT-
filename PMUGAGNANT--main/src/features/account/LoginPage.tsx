@@ -177,7 +177,7 @@ function LoginPageContent() {
               href="/"
               className="hidden rounded-lg border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_88%,transparent)] px-4 py-2 text-sm font-black text-[var(--pmu-text)] shadow-[var(--pmu-shadow-sm)] sm:inline-flex"
             >
-              PMU Gagnant
+              TurfEdge
             </Link>
           </div>
         </header>

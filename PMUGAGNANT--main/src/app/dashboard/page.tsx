@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import DashboardHeaderAccount from "@/components/dashboard/DashboardHeaderAccount";
@@ -18,9 +18,9 @@ import {
 import type { PredictionRow, RaceSummary, RunnerOutcomeRow } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Dashboard VMAX - PMU Gagnant",
+  title: "Dashboard VMAX - TurfEdge",
   description:
-    "Dashboard premium PMU Gagnant : Quinte du jour, courses pretes, value bets et statistiques live.",
+    "Dashboard premium TurfEdge : Quinte du jour, courses pretes, value bets et statistiques live.",
 };
 
 export const revalidate = 120;
@@ -523,7 +523,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     <div className="dash">
       <style>{DASHBOARD_CSS}</style>
       <header className="dash-nav">
-        <Link href="/dashboard" className="dash-logo">PMU GAGNANT</Link>
+        <Link href="/dashboard" className="dash-logo">TURFEDGE</Link>
         <span className="dash-live">{liveActive ? "LIVE" : "LIVE"}</span>
         <nav className="dash-links" aria-label="Navigation principale">
           {navItems.map((item) => (

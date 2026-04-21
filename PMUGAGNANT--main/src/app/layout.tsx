@@ -40,8 +40,8 @@ const monoFont = Roboto_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   applicationName: "TurfEdge",
-  creator: "PMU Gagnant",
-  publisher: "PMU Gagnant",
+  creator: "TurfEdge",
+  publisher: "TurfEdge",
   title: "TurfEdge - L'IA qui lit les courses PMU à ta place",
   description:
     "Chaque matin, TurfEdge analyse toutes les courses PMU et te dit exactement quoi jouer, quoi ignorer, et combien miser. Score de confiance, ticket optimisé, signal T-10min.",

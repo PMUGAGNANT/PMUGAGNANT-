@@ -159,7 +159,7 @@ async function handleCommand(message: TelegramMessage) {
       logger.error("telegram.pronostic_command_failed", error, { chatId });
       await safeSendTelegramMessage(
         chatId,
-        "PMU Gagnant\nLe pronostic est temporairement indisponible. Reessayez dans quelques minutes."
+        "TurfEdge\nLe pronostic est temporairement indisponible. Reessayez dans quelques minutes."
       );
     }
     return { handled: true, command };

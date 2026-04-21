@@ -686,7 +686,7 @@ function MesParisContent() {
               <div className="mt-5 rounded-[1.2rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_92%,transparent)] p-5">
                 <p className="app-kicker">Telegram Premium</p>
                 <h3 className="mt-2 text-2xl font-black leading-[1.02] text-[var(--pmu-text)]">
-                  Lier le bot PMU Gagnant
+                  Lier le bot TurfEdge
                 </h3>
                 <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">
                   Envoie /start a @pmugagnantbot, copie ton ID Telegram, puis

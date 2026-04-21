@@ -11,7 +11,7 @@ import { listPredictionsByDate } from "@/lib/prediction-store";
 import type { PredictionRow } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Value Bets du jour - PMU Gagnant",
+  title: "Value Bets du jour - TurfEdge",
   description:
     "Toutes les value bets PMU du jour detectees par l'IA TurfEdge, avec cote actuelle, cote fair et edge.",
 };

@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
 import DashboardHeaderAccount from "@/components/dashboard/DashboardHeaderAccount";
 import RaceAlertButton from "@/components/race/RaceAlertButton";
@@ -41,7 +41,7 @@ import type {
 } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Analyse course - PMU Gagnant",
+  title: "Analyse course - TurfEdge",
   description:
     "Analyse IA d'une course PMU : tableau des partants, scores, cotes, forme, mises conseillÃ©es et value bets.",
 };
@@ -550,7 +550,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
       <main className="grid min-h-screen place-items-center bg-[var(--pmu-bg)] px-4 text-[var(--pmu-text)]">
         <style>{CSS}</style>
         <section className="app-card max-w-xl p-6 text-center">
-          <p className="app-kicker">PMU Gagnant</p>
+          <p className="app-kicker">TurfEdge</p>
           <h1 className="mt-2 font-heading text-4xl font-black text-[var(--pmu-text)]">{title}</h1>
           <p className="mt-3 text-sm text-[var(--pmu-muted)]">{detail}</p>
           <Link className="app-button-primary mt-5 inline-flex" href="/dashboard">
@@ -607,7 +607,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
     <main className="rp-wrap">
       <style>{CSS}</style>
       <header className="rp-nav">
-        <Link href="/dashboard" className="rp-logo">PMU GAGNANT</Link>
+        <Link href="/dashboard" className="rp-logo">TURFEDGE</Link>
         <span className="rp-live">LIVE</span>
         <nav className="rp-links" aria-label="Navigation principale">
           {navItems.map((item) => (

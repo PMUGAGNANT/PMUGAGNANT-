@@ -205,7 +205,7 @@ function buildResultTelegram(rows: BetResultRow[]) {
   const row = firstWin ?? firstLoss ?? playable[0] ?? null;
 
   if (!row) {
-    return "RESULTATS PMU GAGNANT - Aucun pari valide a noter.";
+    return "RESULTATS TURFEDGE - Aucun pari valide a noter.";
   }
 
   if (row.result_status === "WON") {
@@ -224,7 +224,7 @@ function buildRichResultTelegram(rows: BetResultRow[]) {
 
   if (playable.length === 0) {
     return [
-      "🏁 Résultats PMU Gagnant",
+      "🏁 Résultats TurfEdge",
       "━━━━━━━━━━━━━━",
       "Aucun pari valide à noter.",
     ].join("\n");
@@ -246,7 +246,7 @@ function buildRichResultTelegram(rows: BetResultRow[]) {
     });
 
   return [
-    "🏁 Résultats PMU Gagnant",
+    "🏁 Résultats TurfEdge",
     "━━━━━━━━━━━━━━",
     `${totalProfit >= 0 ? "🟢" : "🔴"} Gain net : ${totalProfit >= 0 ? "+" : ""}${totalProfit.toFixed(2)}€`,
     `📊 ROI : ${roi >= 0 ? "+" : ""}${roi.toFixed(1)}%`,
@@ -354,7 +354,7 @@ export async function runCronHealthJob(dateStr = getTodayDateStr()) {
       ok: false,
       detail: "Configuration Supabase admin absente",
     };
-    await sendTelegramIfConfigured("⚠️ ALERTE PMU GAGNANT: Configuration Supabase admin absente");
+    await sendTelegramIfConfigured("⚠️ ALERTE TURFEDGE: Configuration Supabase admin absente");
     return {
       status: "degraded",
       date: dateStr,
@@ -405,7 +405,7 @@ export async function runCronHealthJob(dateStr = getTodayDateStr()) {
   const failed = Object.entries(checks).filter(([, check]) => !check.ok);
   if (failed.length > 0) {
     await sendTelegramIfConfigured(
-      `⚠️ ALERTE PMU GAGNANT: ${failed
+      `⚠️ ALERTE TURFEDGE: ${failed
         .map(([name, check]) => `${name}: ${check.detail}`)
         .join(" | ")}`
     );

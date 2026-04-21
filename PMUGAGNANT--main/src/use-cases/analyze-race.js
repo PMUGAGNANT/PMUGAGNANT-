@@ -87,7 +87,7 @@ async function runRaceAnalysis({
 
     if (sendTelegram && telegram?.sendMessage && analysis.selection) {
         await telegram.sendMessage(
-            `PMU AI\nR${safeReunion}C${safeCourse} ${analysis.courseInfo.hippodrome}\n` +
+            `TurfEdge\nR${safeReunion}C${safeCourse} ${analysis.courseInfo.hippodrome}\n` +
             `Selection: N${analysis.selection.runner.numero} ${analysis.selection.runner.nom}\n` +
             `Confiance ${analysis.scoreConfiance?.score || 0}/10`
         );

@@ -199,7 +199,7 @@ Si, après 100 courses loggées, un pattern apparaît clairement :
 Chaque dimanche soir, envoyer un rapport automatique sur Telegram :
 
 ```
-📊 BILAN HEBDO PMU AI v9.2 — Sem. 11
+📊 BILAN HEBDO TurfEdge v9.2 — Sem. 11
 
 Courses analysées: 238
 Validées: 12 | Surveillances: 28 | Rejetées: 198

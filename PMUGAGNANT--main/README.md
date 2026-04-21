@@ -1,4 +1,4 @@
-# PMU Gagnant
+# TurfEdge
 
 Application Next.js de pronostics PMU orientée décision, avec moteur de scoring, sélection des meilleures courses du jour, pipeline cron et stockage Supabase.
 

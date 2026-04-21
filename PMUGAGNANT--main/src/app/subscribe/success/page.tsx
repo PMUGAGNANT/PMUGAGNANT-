@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Abonnement active - PMU Gagnant PRO",
+  title: "Abonnement active - TurfEdge PRO",
   description:
-    "Confirmation de paiement PMU Gagnant PRO, activation de l'acces complet et invitation Telegram privee.",
+    "Confirmation de paiement TurfEdge PRO, activation de l'acces complet et invitation Telegram privee.",
   robots: {
     index: false,
     follow: false,
