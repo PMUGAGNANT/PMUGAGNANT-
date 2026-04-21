@@ -1,6 +1,7 @@
 import { fromIsoDate, toIsoDate } from "@/lib/date-utils";
 import { listPredictionsBetween } from "@/lib/prediction-store";
-import { isTelegramConfigured, sendTelegramMessage } from "@/lib/telegram";
+import { isTelegramBotConfigured } from "@/lib/telegram";
+import { sendTelegramMessageToPremiumChats } from "@/lib/telegram-pronostics";
 import type { PredictionRow } from "@/lib/types";
 
 export interface DailyRecapSummary {
@@ -30,6 +31,8 @@ export interface DailyRecapSummary {
     configured: boolean;
     sent: boolean;
     skipped: boolean;
+    recipients?: number;
+    failed?: number;
   };
 }
 
@@ -125,32 +128,35 @@ export function buildDailyRecapSummary(
 }
 
 export function formatDailyRecapTelegram(summary: DailyRecapSummary) {
+  const mood = summary.netGain > 0 ? "🟢" : summary.netGain < 0 ? "🔴" : "⚪";
   const header = [
-    "PMU Gagnant",
-    `Recap journalier ${summary.date}`,
-    `ROI : ${formatPercent(summary.roi)}`,
-    `Gain net : ${formatSignedCurrency(summary.netGain)}`,
-    `Mises : ${formatCurrency(summary.totalStake)} - Gains : ${formatCurrency(summary.totalGain)}`,
-    `Tickets joues : ${summary.playedPredictions} - Reussite : ${summary.hitRate.toFixed(1)}%`,
-    `Gagnants : ${summary.wins} - Places : ${summary.places} - Perdus : ${summary.losses}`,
+    "🏆 PMU Gagnant",
+    `📌 Recap Premium ${summary.date}`,
+    "━━━━━━━━━━━━━━",
+    `${mood} ROI : ${formatPercent(summary.roi)}`,
+    `💶 Gain net : ${formatSignedCurrency(summary.netGain)}`,
+    `🎟️ Tickets joués : ${summary.playedPredictions}`,
+    `✅ Réussite : ${summary.hitRate.toFixed(1)}%`,
+    `🥇 Gagnants : ${summary.wins} · Places : ${summary.places} · Perdus : ${summary.losses}`,
+    `📊 Mises : ${formatCurrency(summary.totalStake)} · Gains : ${formatCurrency(summary.totalGain)}`,
   ];
 
   if (summary.bestTickets.length === 0) {
-    return [...header, "Aucun ticket regle sur cette date."].join("\n");
+    return [...header, "━━━━━━━━━━━━━━", "Aucun ticket réglé sur cette date."].join("\n");
   }
 
   const ticketLines = summary.bestTickets.map(
     (ticket) =>
-      `${ticket.raceLabel} ${ticket.hippodrome} ${ticket.cheval} ${ticket.betType ?? "PARI"}: ${formatSignedCurrency(ticket.netGain)}`
+      `${ticket.netGain >= 0 ? "🟢" : "🔴"} ${ticket.raceLabel} ${ticket.hippodrome}\n🐎 ${ticket.cheval}\n🎯 ${ticket.betType ?? "PARI"} · ${formatSignedCurrency(ticket.netGain)}`
   );
 
-  return [...header, "Meilleurs tickets :", ...ticketLines].join("\n");
+  return [...header, "━━━━━━━━━━━━━━", "Meilleurs tickets :", ...ticketLines].join("\n");
 }
 
 export async function runDailyRecap(dateStr: string) {
   const isoDate = toIsoDate(dateStr);
   const rows = await listPredictionsBetween(isoDate, isoDate);
-  const configured = isTelegramConfigured();
+  const configured = isTelegramBotConfigured();
   const summary = buildDailyRecapSummary(rows, isoDate, {
     configured,
     sent: false,
@@ -161,13 +167,15 @@ export async function runDailyRecap(dateStr: string) {
     return summary;
   }
 
-  const delivery = await sendTelegramMessage(formatDailyRecapTelegram(summary));
+  const delivery = await sendTelegramMessageToPremiumChats(formatDailyRecapTelegram(summary));
   return {
     ...summary,
     telegram: {
       configured,
-      sent: delivery.sent === true,
+      sent: delivery.sent > 0,
       skipped: delivery.skipped === true,
+      recipients: delivery.activePremiumRecipients,
+      failed: delivery.failed,
     },
   };
 }

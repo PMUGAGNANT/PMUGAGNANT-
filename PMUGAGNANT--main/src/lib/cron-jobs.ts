@@ -215,6 +215,48 @@ function buildResultTelegram(rows: BetResultRow[]) {
   return `❌ RATÉ: ${row.cheval_nom} ${row.result_position ?? "position inconnue"}ème`;
 }
 
+function buildRichResultTelegram(rows: BetResultRow[]) {
+  if (process.env.PMU_LEGACY_RESULT_TELEGRAM === "1") {
+    return buildResultTelegram(rows);
+  }
+
+  const playable = rows.filter((row) => row.stake > 0);
+
+  if (playable.length === 0) {
+    return [
+      "🏁 Résultats PMU Gagnant",
+      "━━━━━━━━━━━━━━",
+      "Aucun pari valide à noter.",
+    ].join("\n");
+  }
+
+  const totalStake = roundCurrency(playable.reduce((sum, row) => sum + row.stake, 0));
+  const totalGain = roundCurrency(playable.reduce((sum, row) => sum + row.gain, 0));
+  const totalProfit = roundCurrency(totalGain - totalStake);
+  const roi = totalStake > 0 ? roundCurrency((totalProfit / totalStake) * 100) : 0;
+  const won = playable.filter((row) => row.result_status === "WON");
+  const lost = playable.filter((row) => row.result_status === "LOST");
+  const topRows = [...playable]
+    .sort((left, right) => right.profit - left.profit)
+    .slice(0, 5)
+    .map((row) => {
+      const icon = row.result_status === "WON" ? "🟢" : "🔴";
+      const position = row.result_position ? `${row.result_position}e` : "position inconnue";
+      return `${icon} R${row.reunion}C${row.course} #${row.cheval_num} ${row.cheval_nom}\n🎯 ${row.bet_type ?? "PARI"} · ${position} · ${row.profit >= 0 ? "+" : ""}${row.profit.toFixed(2)}€`;
+    });
+
+  return [
+    "🏁 Résultats PMU Gagnant",
+    "━━━━━━━━━━━━━━",
+    `${totalProfit >= 0 ? "🟢" : "🔴"} Gain net : ${totalProfit >= 0 ? "+" : ""}${totalProfit.toFixed(2)}€`,
+    `📊 ROI : ${roi >= 0 ? "+" : ""}${roi.toFixed(1)}%`,
+    `🎟️ Tickets : ${playable.length} · Gagnés : ${won.length} · Perdus : ${lost.length}`,
+    `💶 Mises : ${totalStake.toFixed(2)}€ · Gains : ${totalGain.toFixed(2)}€`,
+    "━━━━━━━━━━━━━━",
+    ...topRows,
+  ].join("\n");
+}
+
 export async function runCronMorningJob(dateStr = getTodayDateStr()) {
   const program = await syncProgramToSupabase(dateStr);
   const summary = await runMorningAnalysis(dateStr);
@@ -285,7 +327,7 @@ export async function runCronResultsJob(dateStr = getTodayDateStr()) {
   const summary = await runResultSync(dateStr);
   const betResults = await upsertBetResultsForDate(dateStr);
 
-  await sendTelegramIfConfigured(buildResultTelegram(betResults.rows));
+  await sendTelegramIfConfigured(buildRichResultTelegram(betResults.rows));
 
   return {
     date: dateStr,
