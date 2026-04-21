@@ -4,6 +4,7 @@ import { ComboPanel, ComboProvider } from "@/components/ComboBuilder";
 import { AppShell } from "@/features/layout/components/AppShell";
 import { GlossaryPanel } from "@/components/ui/Glossary";
 import { PriorityRacePushScheduler } from "@/components/ui/PriorityRacePushScheduler";
+import { ResponsibleGamingBar } from "@/components/ui/ResponsibleGamingBar";
 import { ServiceWorkerRegistration } from "@/components/ui/ServiceWorkerRegistration";
 import { ThemeMetaColor } from "@/components/ui/ThemeMetaColor";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
@@ -124,6 +125,7 @@ export default function RootLayout({
           Aller au contenu
         </a>
         <ThemeProvider>
+          <ResponsibleGamingBar />
           <ComboProvider>
             <ThemeMetaColor />
             <ServiceWorkerRegistration />

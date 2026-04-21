@@ -9,12 +9,20 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { THEME_STORAGE_KEY, type PmuTheme } from "@/lib/theme-preference";
+import { isPmuTheme, THEME_STORAGE_KEY, type PmuTheme } from "@/lib/theme-preference";
 
-function applyThemeToDocument() {
-  document.documentElement.dataset.theme = "warm";
+const DEFAULT_THEME: PmuTheme = "warm";
+
+function normalizeTheme(value: string | null): PmuTheme {
+  if (value === "dark") return DEFAULT_THEME;
+  return isPmuTheme(value) ? value : DEFAULT_THEME;
+}
+
+function applyThemeToDocument(theme: PmuTheme) {
+  const normalized = normalizeTheme(theme);
+  document.documentElement.dataset.theme = normalized;
   try {
-    localStorage.setItem(THEME_STORAGE_KEY, "warm");
+    localStorage.setItem(THEME_STORAGE_KEY, normalized);
   } catch {
     /* ignore */
   }
@@ -41,11 +49,15 @@ function emitChange() {
 }
 
 function getThemeFromStorage(): PmuTheme {
-  return "warm";
+  try {
+    return normalizeTheme(localStorage.getItem(THEME_STORAGE_KEY));
+  } catch {
+    return DEFAULT_THEME;
+  }
 }
 
 function getServerSnapshot(): PmuTheme {
-  return "warm";
+  return DEFAULT_THEME;
 }
 
 type ThemeContextValue = {
@@ -60,17 +72,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const theme = useSyncExternalStore(subscribe, getThemeFromStorage, getServerSnapshot);
 
   useEffect(() => {
-    applyThemeToDocument();
+    applyThemeToDocument(theme);
   }, [theme]);
 
   const setTheme = useCallback((next: PmuTheme) => {
-    void next;
-    applyThemeToDocument();
+    applyThemeToDocument(next);
     emitChange();
   }, []);
 
   const toggleTheme = useCallback(() => {
-    applyThemeToDocument();
+    applyThemeToDocument(getThemeFromStorage() === "cream" ? "warm" : "cream");
     emitChange();
   }, []);
 
