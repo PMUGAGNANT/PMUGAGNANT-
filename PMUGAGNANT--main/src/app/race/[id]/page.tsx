@@ -659,37 +659,37 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
           </section>
         ) : null}
 
+        <section className="rp-card">
+          <div className="rp-card-header">Bloc selection IA</div>
+          <div className="rp-sel-body">
+            <div className="rp-bubbles">
+              {top5Selection.map((row, index) => (
+                <div key={row.numero} className="rp-bubble-wrap">
+                  <div className={`rp-bubble ${selectionBubbleClasses[index]}`}>{row.numero}</div>
+                  <div className="rp-bubble-name">{row.cheval}</div>
+                </div>
+              ))}
+              {top5Selection.length === 0 ? <span className="rp-sub">Analyse en cours</span> : null}
+            </div>
+          </div>
+          <div className="rp-verdict-bar">
+            <div className="rp-vstat">
+              <div className="rp-vstat-label">Verdict</div>
+              <div className={`rp-vstat-val ${verdictToneClass}`}>{verdict.verdict}</div>
+            </div>
+            <div className="rp-vstat">
+              <div className="rp-vstat-label">Confiance</div>
+              <div className="rp-vstat-val">{verdict.scorePercent}%</div>
+            </div>
+            <div className="rp-vstat">
+              <div className="rp-vstat-label">Mise Kelly</div>
+              <div className="rp-vstat-val">{verdictStakeLabel}</div>
+            </div>
+          </div>
+        </section>
+
         <div className="rp-page-grid">
           <div className="rp-main">
-            <section className="rp-card">
-              <div className="rp-card-header">Bloc selection IA</div>
-              <div className="rp-sel-body">
-                <div className="rp-bubbles">
-                  {top5Selection.map((row, index) => (
-                    <div key={row.numero} className="rp-bubble-wrap">
-                      <div className={`rp-bubble ${selectionBubbleClasses[index]}`}>{row.numero}</div>
-                      <div className="rp-bubble-name">{row.cheval}</div>
-                    </div>
-                  ))}
-                  {top5Selection.length === 0 ? <span className="rp-sub">Analyse en cours</span> : null}
-                </div>
-              </div>
-              <div className="rp-verdict-bar">
-                <div className="rp-vstat">
-                  <div className="rp-vstat-label">Verdict</div>
-                  <div className={`rp-vstat-val ${verdictToneClass}`}>{verdict.verdict}</div>
-                </div>
-                <div className="rp-vstat">
-                  <div className="rp-vstat-label">Confiance</div>
-                  <div className="rp-vstat-val">{verdict.scorePercent}%</div>
-                </div>
-                <div className="rp-vstat">
-                  <div className="rp-vstat-label">Mise Kelly</div>
-                  <div className="rp-vstat-val">{verdictStakeLabel}</div>
-                </div>
-              </div>
-            </section>
-
             <section className="rp-card">
               <div className="rp-card-header">
                 <span>Tableau partants</span>
