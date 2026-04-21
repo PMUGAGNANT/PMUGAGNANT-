@@ -1,15 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import DashboardHeaderAccount from "@/components/dashboard/DashboardHeaderAccount";
-import RaceAlertButton from "@/components/race/RaceAlertButton";
+import { PremiumRacePanel } from "@/components/race/PremiumRacePanel";
 import RaceChat from "@/components/race/RaceChat";
 import ScoreGauge from "@/components/ui/ScoreGauge";
 import {
-  buildValueBets,
-  computeRaceVerdict,
   formatRaceAnalysisId,
-  formatOdds,
-  formatStakeEuro,
   getVmaxRaceStatus,
   parseRaceAnalysisId,
   type ParticipantTableRow,
@@ -332,35 +328,6 @@ async function loadLatestStoredRaceFallback(excluded: { dateIso: string; reunion
   };
 }
 
-function getRecommendedRow(rows: ParticipantTableRow[], analysis: RaceAnalysis | null) {
-  const v10Choice = rows.find((item) => item.scoreV10Role === "CHOIX");
-  if (v10Choice) return v10Choice;
-  const bestV10 = rows
-    .filter((item) => typeof item.scoreV10 === "number" && Number.isFinite(item.scoreV10))
-    .sort((left, right) => (right.scoreV10 ?? 0) - (left.scoreV10 ?? 0))[0];
-  if (bestV10) return bestV10;
-  const analysisPick = analysis?.favori?.numPmu ?? null;
-  if (analysisPick !== null) {
-    const row = rows.find((item) => item.numero === analysisPick);
-    if (row) return row;
-  }
-  return [...rows].sort((left, right) => (right.scoreIa ?? 0) - (left.scoreIa ?? 0))[0] ?? null;
-}
-
-async function countRaceAlerts(dateStr: string, reunion: number, course: number) {
-  const admin = getSupabaseAdminClient();
-  if (!admin) return null;
-  const { count, error } = await admin
-    .from("race_alerts")
-    .select("id", { count: "exact", head: true })
-    .eq("date_str", dateStr)
-    .eq("reunion", reunion)
-    .eq("course", course)
-    .eq("status", "ACTIVE");
-  if (error) return null;
-  return count ?? null;
-}
-
 function buildServerReactionSummaries(messageIds: string[], rows: RaceReactionRow[]) {
   const emojis: ReactionEmoji[] = ["🔥", "👀", "❌"];
   const grouped = new Map<RaceMessageRow["id"], RaceChatMessage["reactions"]>();
@@ -417,9 +384,6 @@ function getGaugeScore(analysis: RaceAnalysis | null, selectedRow: ParticipantTa
   return Math.max(0, Math.min(100, Math.round(selectedRow?.scoreIa ?? 0)));
 }
 
-function getValueExplanation(value: string | null | undefined) {
-  return value ?? "L'IA dÃ©tecte un Ã©cart positif entre le prix PMU et la probabilitÃ© estimÃ©e.";
-}
 
 function getRaceStatus(courseInfo: RaceSummary, predictions: PredictionRow[]) {
   const finished = predictions.some(
@@ -561,41 +525,23 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
     );
   }
 
-  const { courseInfo, analysis, rows, arrivee, cotesLive, cotesLiveAt } = state;
-  const selectedRow = getRecommendedRow(rows, analysis);
-  const selectedNumber = selectedRow?.numero ?? null;
+  const { courseInfo, rows, arrivee, cotesLive, cotesLiveAt } = state;
   const minutesUntilStart = getMinutesUntilStart(courseInfo.heureDepart, courseInfo.dateStr);
   const status = getVmaxRaceStatus(null, minutesUntilStart);
-  const gaugeScore = getGaugeScore(analysis, selectedRow);
-  const verdict = selectedRow
-    ? computeRaceVerdict({ numero: selectedRow.numero, cheval: selectedRow.cheval, cote: selectedRow.cote, score: selectedRow.scoreV10 ?? selectedRow.scoreIa })
-    : computeRaceVerdict({ numero: 0, cheval: "Selection indisponible", cote: null, score: 0 });
-  const stakeLabel = selectedRow ? formatStakeEuro(selectedRow.mise) : "--";
-  const verdictStakeLabel = verdict.stake > 0 ? formatStakeEuro(verdict.stake) : stakeLabel;
-  const verdictToneClass =
-    verdict.verdict === "JOUER" ? "grn" : verdict.verdict === "SURVEILLER" ? "orn" : "red";
+  const gaugeScore = getGaugeScore(null, null);
   const chatRaceId = formatRaceAnalysisId(courseInfo.reunion, courseInfo.course);
   const chatRaceDate = toIsoDate(courseInfo.dateStr);
-  const [alertCount, initialChatMessages] = await Promise.all([
-    countRaceAlerts(courseInfo.dateStr, courseInfo.reunion, courseInfo.course),
-    loadInitialRaceChatMessages(chatRaceId, chatRaceDate),
-  ]);
-  const valueBets = buildValueBets(rows.map((row) => ({ numero: row.numero, cheval: row.cheval, cote: row.cote, scoreIa: row.scoreIa, raison: row.topFacteur })));
-  const top5Selection = [...rows]
-    .filter((row) => row.scoreIa !== null)
-    .sort((left, right) => (right.scoreV10 ?? right.scoreIa ?? 0) - (left.scoreV10 ?? left.scoreIa ?? 0))
-    .slice(0, 5);
-  const selectionNumbers = new Set(top5Selection.map((row) => row.numero));
+  const initialChatMessages = await loadInitialRaceChatMessages(chatRaceId, chatRaceDate);
+  const previewSlots = [0, 1, 2];
   const statusClass = status === "live" ? "live" : status === "finished" ? "termine" : "upcoming";
   const statusLabel = status === "live" ? "EN COURS" : status === "finished" ? "TERMINE" : "A VENIR";
   const arrivalTop5 = arrivee?.slice(0, 5) ?? [];
   const arrivalRows = arrivalTop5.map((numero) => ({
     numero,
     cheval: rows.find((row) => row.numero === numero)?.cheval ?? `Cheval ${numero}`,
-    selectedByIa: selectionNumbers.has(numero),
   }));
   const arrivalBubbleClasses = ["gold", "silver", "bronze", "fourth", "fifth"];
-  const selectionBubbleClasses = ["r1", "r2", "r3", "r4", "r5"];
+  const selectionBubbleClasses = ["r1", "r2", "r3"];
   const navItems = [
     { label: "Dashboard", href: "/dashboard" },
     { label: "Value Bets", href: "/value-bets" },
@@ -638,9 +584,15 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
           </div>
           <div className="rp-header-right">
             <span className={`rp-course-badge ${statusClass}`}>{statusLabel}</span>
-            <ScoreGauge score={gaugeScore} label="confiance IA" />
+            <ScoreGauge score={gaugeScore} label="reserve PRO" />
           </div>
         </section>
+
+        <PremiumRacePanel
+          dateStr={courseInfo.dateStr}
+          reunion={courseInfo.reunion}
+          course={courseInfo.course}
+        />
 
         {arrivalRows.length > 0 ? (
           <section className="rp-official">
@@ -653,8 +605,8 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
                     <span className={`rp-arrival-num ${arrivalBubbleClasses[index]}`}>{row.numero}</span>
                   </div>
                   <strong className="rp-arrival-horse">{row.cheval}</strong>
-                  <span className={`rp-ai-badge ${row.selectedByIa ? "ok" : "ko"}`}>
-                    {row.selectedByIa ? "IA CORRECTE" : "IA INCORRECTE"}
+                  <span className="rp-ai-badge">
+                    RESULTAT PUBLIC
                   </span>
                 </div>
               ))}
@@ -666,27 +618,26 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
           <div className="rp-card-header">Bloc selection IA</div>
           <div className="rp-sel-body">
             <div className="rp-bubbles">
-              {top5Selection.map((row, index) => (
-                <div key={row.numero} className="rp-bubble-wrap">
-                  <div className={`rp-bubble ${selectionBubbleClasses[index]}`}>{row.numero}</div>
-                  <div className="rp-bubble-name">{row.cheval}</div>
+              {previewSlots.map((slot, index) => (
+                <div key={slot} className="rp-bubble-wrap">
+                  <div className={`rp-bubble ${selectionBubbleClasses[index]}`}>?</div>
+                  <div className="rp-bubble-name">Premium</div>
                 </div>
               ))}
-              {top5Selection.length === 0 ? <span className="rp-sub">Analyse en cours</span> : null}
             </div>
           </div>
           <div className="rp-verdict-bar">
             <div className="rp-vstat">
               <div className="rp-vstat-label">Verdict</div>
-              <div className={`rp-vstat-val ${verdictToneClass}`}>{verdict.verdict}</div>
+              <div className="rp-vstat-val orn">PREMIUM</div>
             </div>
             <div className="rp-vstat">
               <div className="rp-vstat-label">Confiance</div>
-              <div className="rp-vstat-val">{verdict.scorePercent}%</div>
+              <div className="rp-vstat-val">--</div>
             </div>
             <div className="rp-vstat">
               <div className="rp-vstat-label">Mise Kelly</div>
-              <div className="rp-vstat-val">{verdictStakeLabel}</div>
+              <div className="rp-vstat-val">--</div>
             </div>
           </div>
         </section>
@@ -711,28 +662,16 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((row) => {
-                      const active = row.mise !== null && row.mise > 0;
-                      const score = row.scoreV10 ?? row.scoreIa;
-                      const isSelected = row.numero === selectedNumber;
-                      return (
-                        <tr key={row.numero} className={`rp-tr ${isSelected ? "sel" : !active && score !== null && score < 50 ? "out" : ""}`}>
-                          <td className="rp-td"><div className={`rp-num ${isSelected ? "sel" : ""}`}>{row.numero}</div></td>
-                          <td className="rp-td"><div className="rp-horse">{row.cheval}</div></td>
-                          <td className="rp-td"><div className="rp-sub">{row.jockey}</div></td>
-                          <td className="rp-td r">
-                            {score !== null ? (
-                              <div className="rp-score-cell">
-                                <div className="rp-score-track"><div className={`rp-score-fill ${active ? "" : "lo"}`} style={{ width: `${Math.min(100, score)}%` }} /></div>
-                                <div className={`rp-score-num ${active ? "" : "lo"}`}>{Math.round(score)}</div>
-                              </div>
-                            ) : <span className="rp-sub">--</span>}
-                          </td>
-                          <td className="rp-td r"><span className="rp-cote">{row.cote ? formatOdds(row.cote) : "--"}</span></td>
-                          <td className="rp-td r">{active ? <span className="rp-mise">{formatStakeEuro(row.mise)}</span> : <span className="rp-mise none">pas joue</span>}</td>
-                        </tr>
-                      );
-                    })}
+                    {rows.map((row) => (
+                      <tr key={row.numero} className="rp-tr">
+                        <td className="rp-td"><div className="rp-num">{row.numero}</div></td>
+                        <td className="rp-td"><div className="rp-horse">{row.cheval}</div></td>
+                        <td className="rp-td"><div className="rp-sub">{row.jockey}</div></td>
+                        <td className="rp-td r"><span className="rp-sub">Reserve Premium</span></td>
+                        <td className="rp-td r"><span className="rp-sub">--</span></td>
+                        <td className="rp-td r"><span className="rp-mise none">Premium</span></td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -743,58 +682,29 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
             <section className="rp-scard">
               <div className="rp-stitle">Value Bets</div>
               <div className="rp-sbody">
-                {valueBets.length > 0 ? (
-                  <>
-                    {valueBets.slice(0, 1).map((bet) => (
-                      <div key={bet.numero}>
-                        <div className="rp-vbet">
-                          <div>
-                            <div className="rp-vbet-name">#{bet.numero} {bet.cheval}</div>
-                            <div className="rp-sub">PMU {formatOdds(bet.coteActuelle)} · fair {formatOdds(bet.coteFair)}</div>
-                          </div>
-                          <div className="rp-vbet-edge">+{Math.round(bet.edgePct)}%</div>
-                        </div>
-                        <div className="rp-sub" style={{ marginTop: "8px", lineHeight: 1.5 }}>{getValueExplanation(bet.explanation)}</div>
-                      </div>
-                    ))}
-                    {valueBets.length > 1 ? (
-                      <div className="rp-pro-lock">
-                        <p>{valueBets.length - 1} value bets masques PRO</p>
-                        <Link href="/premium" className="rp-pro-link">Passer PRO</Link>
-                      </div>
-                    ) : null}
-                  </>
-                ) : <div className="rp-sub">Aucun value bet net. Restez discipline.</div>}
+                <div className="rp-pro-lock">
+                  <p>Edge, cote fair et value bets sont reserves Premium.</p>
+                  <Link href="/premium" className="rp-pro-link">Passer Premium</Link>
+                </div>
               </div>
             </section>
 
             <section className="rp-scard">
               <div className="rp-stitle">Alerte Telegram</div>
-              <div className="rp-alert-btn">
-                <RaceAlertButton
-                  dateStr={courseInfo.dateStr}
-                  reunion={courseInfo.reunion}
-                  course={courseInfo.course}
-                  hippodrome={courseInfo.hippodrome}
-                  heureDepart={courseInfo.heureDepart}
-                  chevalNum={verdict.numero}
-                  chevalNom={verdict.cheval}
-                />
+              <div className="rp-sbody">
+                <div className="rp-pro-lock">
+                  <p>Les alertes exploitables partent aux membres Premium.</p>
+                  <Link href="/premium" className="rp-pro-link">Activer Premium</Link>
+                </div>
               </div>
-              {alertCount !== null && alertCount > 0 ? <div className="rp-sub" style={{ padding: "0 16px 16px" }}>{alertCount} abonnes suivent ce signal</div> : null}
             </section>
 
             <section className="rp-scard">
               <div className="rp-stitle">Plan de jeu</div>
               <div className="rp-sbody">
-                {analysis?.favori?.prediction.typePariConseille ? (
-                  <div className="rp-plan-row"><span className="rp-plan-lbl">Type conseille</span><span className="rp-plan-val">{analysis.favori.prediction.typePariConseille}</span></div>
-                ) : null}
-                {analysis?.prediction.lisibilite ? (
-                  <div className="rp-plan-row"><span className="rp-plan-lbl">Lisibilite</span><span className="rp-plan-val">{analysis.prediction.lisibilite}</span></div>
-                ) : null}
                 <div className="rp-plan-row"><span className="rp-plan-lbl">Course</span><span className="rp-plan-val">R{courseInfo.reunion}C{courseInfo.course}</span></div>
-                <div className="rp-plan-row"><span className="rp-plan-lbl">Cote selection</span><span className="rp-plan-val">{formatOdds(verdict.cote)}</span></div>
+                <div className="rp-plan-row"><span className="rp-plan-lbl">Type conseille</span><span className="rp-plan-val">Premium</span></div>
+                <div className="rp-plan-row"><span className="rp-plan-lbl">Cote selection</span><span className="rp-plan-val">--</span></div>
               </div>
             </section>
           </aside>
@@ -804,7 +714,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
           raceId={chatRaceId}
           raceDate={chatRaceDate}
           initialMessages={initialChatMessages}
-          pinnedVerdict={{ verdict: verdict.verdict, cheval: verdict.cheval, cote: formatOdds(verdict.cote), mise: verdictStakeLabel }}
+          pinnedVerdict={{ verdict: "PREMIUM", cheval: "Selection reservee", cote: "--", mise: "--" }}
         />
       </div>
     </main>

@@ -315,20 +315,6 @@ function getStatusLabel(status: VmaxRaceStatus) {
   return "A venir";
 }
 
-function getHeroVerdict(hero: DashboardRace | null) {
-  const best = hero?.predictions.find((prediction) => prediction.decision !== "REJET");
-  if (!best) return "SURVEILLER";
-  if (best.decision === "VALIDE") return "JOUER";
-  if (best.decision === "SURVEILLANCE") return "SURVEILLER";
-  return "PASSER";
-}
-
-function getVerdictClass(verdict: string) {
-  if (verdict === "JOUER") return "is-play";
-  if (verdict === "SURVEILLER") return "is-watch";
-  return "is-pass";
-}
-
 function getCompactBubbleClass(index: number) {
   if (index === 0) return "is-gold";
   if (index === 1) return "is-blue";
@@ -508,10 +494,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const latestPerformances: PerformanceRow[] = settled.slice(-5).reverse();
   const successRates = getSuccessRates(settled);
   const sparklineValues = getSparklineValues(settled);
-  const recommendedStake =
-    hero?.predictions.find((prediction) => (prediction.mise_simulee ?? 0) > 0)?.mise_simulee ??
-    null;
-  const heroVerdict = getHeroVerdict(hero);
   const navItems = [
     { label: "Dashboard", href: "/dashboard" },
     { label: "Value Bets", href: "/value-bets" },
@@ -548,22 +530,22 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   {hero.race.hippodrome} - {hero.race.discipline} - {hero.race.heureDepart}
                 </p>
                 <div className="dash-selection" aria-label="Selections IA">
-                  {hero.topNumbers.slice(0, 3).map((num) => (
-                    <span className="dash-bubble" key={num}>{num}</span>
+                  {[0, 1, 2].map((slot) => (
+                    <span className="dash-bubble" key={slot}>?</span>
                   ))}
                 </div>
               </div>
               <div className="dash-hero-side">
                 <div>
                   <p className="dash-label">Verdict</p>
-                  <strong className={`dash-verdict ${getVerdictClass(heroVerdict)}`}>{heroVerdict}</strong>
+                  <strong className="dash-verdict is-watch">PREMIUM</strong>
                 </div>
                 <p className="dash-stake">
                   Mise conseillee
-                  <strong>{recommendedStake !== null ? `${recommendedStake} EUR` : "--"}</strong>
+                  <strong>--</strong>
                 </p>
                 {heroHref ? (
-                  <Link className="dash-cta" href={heroHref}>Voir l&apos;analyse complete</Link>
+                  <Link className="dash-cta" href={heroHref}>Deverrouiller l&apos;analyse</Link>
                 ) : null}
               </div>
             </section>
@@ -593,11 +575,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     </p>
                     <div className="dash-card-row">
                       <div className="dash-mini-bubbles">
-                        {item.topNumbers.slice(0, 3).map((num, index) => (
-                          <span className={`dash-mini ${getCompactBubbleClass(index)}`} key={num}>{num}</span>
+                        {[0, 1, 2].map((slot, index) => (
+                          <span className={`dash-mini ${getCompactBubbleClass(index)}`} key={slot}>?</span>
                         ))}
                       </div>
-                      <span className="dash-label">Top IA</span>
+                      <span className="dash-label">Premium</span>
                     </div>
                   </Link>
                 ))}

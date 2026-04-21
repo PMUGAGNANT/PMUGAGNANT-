@@ -151,13 +151,15 @@ export async function GET(
       );
       analysis = isFinished || subscriptionState.isSubscribed ? computedAnalysis : null;
       const allowFullScore = subscriptionState.isSubscribed || isFinished;
-      const storedAvis = await fetchAvisExpertTop5(date, rNum, cNum);
-      const avisExpert = buildAvisExpertFromAnalysis(
-        computedAnalysis,
-        participants,
-        courseInfo as RaceSummary,
-        storedAvis
-      );
+      const storedAvis = allowFullScore ? await fetchAvisExpertTop5(date, rNum, cNum) : [];
+      const avisExpert = allowFullScore
+        ? buildAvisExpertFromAnalysis(
+            computedAnalysis,
+            participants,
+            courseInfo as RaceSummary,
+            storedAvis
+          )
+        : null;
       const liveCotes = allowFullScore
         ? await getLiveCotesSeries(
             date,
@@ -212,7 +214,7 @@ export async function GET(
         avisExpert,
         liveCotes,
         refreshPriority,
-        timelineSnapshots,
+        timelineSnapshots: allowFullScore ? timelineSnapshots : [],
         paywall:
           !isFinished && !subscriptionState.isSubscribed
             ? {
@@ -241,7 +243,7 @@ export async function GET(
       avisExpert: null,
       liveCotes: null,
       refreshPriority: null,
-      timelineSnapshots,
+      timelineSnapshots: subscriptionState.isSubscribed || isFinished ? timelineSnapshots : [],
       paywall: null,
     });
   } catch (error) {
