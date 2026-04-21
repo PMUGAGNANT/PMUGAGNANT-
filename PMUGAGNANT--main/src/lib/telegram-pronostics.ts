@@ -3,6 +3,7 @@ import {
   getPredictionOdds,
   getSelectedPredictions,
 } from "@/lib/public-performance";
+import { getCotesDirectes } from "@/lib/pmu-api";
 import { listPredictionsByDate } from "@/lib/prediction-store";
 import { logger } from "@/lib/server-logger";
 import { getSupabaseAdminClient, getSupabaseAdminConfigError } from "@/lib/supabase";
@@ -101,6 +102,29 @@ function formatPlanLine(betType: string, stake: number | null | undefined) {
   return `🧾 Plan : jouer ${betType} / mise ${formatCurrency(stake)}`;
 }
 
+function getRaceKey(row: Pick<PredictionRowLike, "date" | "reunion" | "course">) {
+  return `${row.date}:${row.reunion}:${row.course}`;
+}
+
+type PredictionRowLike = {
+  date: string;
+  reunion: number;
+  course: number;
+};
+
+async function loadLiveOddsForSelections(selections: PredictionRowLike[]) {
+  const raceKeys = new Set(selections.map(getRaceKey));
+  const entries = await Promise.all(
+    [...raceKeys].map(async (key) => {
+      const [date, reunion, course] = key.split(":");
+      const cotes = await getCotesDirectes(date, Number(reunion), Number(course));
+      return [key, cotes] as const;
+    })
+  );
+
+  return new Map(entries.filter((entry): entry is readonly [string, Map<number, number>] => entry[1] !== null));
+}
+
 export function buildTelegramStartMessage(chatId: string | number) {
   return [
     "Bienvenue sur PMU Gagnant 🏇",
@@ -162,17 +186,20 @@ export async function buildTelegramPronosticMessage(date = getTodayDateStr()) {
     ].join("\n");
   }
 
+  const liveOddsByRace = await loadLiveOddsForSelections(selections);
   const lines = selections.flatMap((row, index) => {
     const raceName = `R${row.reunion}C${row.course} ${row.hippodrome}`.trim();
     const horse = `#${row.cheval_num} ${row.cheval_nom}`;
     const betType = formatBetType(row.pari_conseille);
-    const odds = getPredictionOdds(row);
+    const liveOdds = liveOddsByRace.get(getRaceKey(row))?.get(row.cheval_num) ?? null;
+    const odds = liveOdds ?? getPredictionOdds(row);
+    const oddsLabel = liveOdds !== null ? "Cote PMU" : "Cote stockee";
     return [
       `${index === 0 ? "⭐" : "🏇"} ${raceName.toUpperCase()}`,
       `🐎 ${horse}`,
       formatBetLine(betType),
       formatDecisionLine(row.decision),
-      `📊 Cote : ${formatOdds(odds)} · Confiance : ${formatConfidence(row.confiance)}`,
+      `📊 ${oddsLabel} : ${formatOdds(odds)} · Confiance : ${formatConfidence(row.confiance)}`,
       formatRiskLine(row.confiance, odds),
       formatWhyLine(row.confiance, row.value),
       formatPlanLine(betType, row.mise_simulee),

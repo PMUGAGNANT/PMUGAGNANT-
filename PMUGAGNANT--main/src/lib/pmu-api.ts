@@ -672,21 +672,8 @@ export async function getRealtimeOdds(
   reunion: number,
   course: number
 ): Promise<Record<number, number>> {
-  try {
-    const rapports = await getFinalReports(dateStr, reunion, course);
-    const simpleGagnant = rapports.simpleGagnant;
-    return Object.fromEntries(
-      Object.entries(simpleGagnant).map(([key, value]) => [Number(key), value])
-    );
-  } catch (error) {
-    logger.warn("pmu_api.realtime_odds_unavailable", {
-      dateStr,
-      reunion,
-      course,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return {};
-  }
+  const cotes = await getCotesDirectes(dateStr, reunion, course);
+  return cotes ? Object.fromEntries(cotes.entries()) : {};
 }
 
 export async function getLiveCourseSnapshot(
@@ -1026,6 +1013,33 @@ export async function getCotesDirectes(
   reunion: number,
   course: number
 ): Promise<Map<number, number> | null> {
+  const getParticipantOdds = async () => {
+    const participants = await getParticipants(dateStr, reunion, course);
+    const cotes = new Map<number, number>();
+
+    for (const participant of participants) {
+      const cote = participant.cote ?? participant.coteDepart ?? participant.coteMatin ?? null;
+      if (typeof cote === "number" && Number.isFinite(cote) && cote > 0) {
+        cotes.set(participant.numPmu, cote);
+      }
+    }
+
+    return cotes.size > 0 ? cotes : null;
+  };
+
+  const participantOdds = await getParticipantOdds().catch((error) => {
+    logger.warn("pmu_api.participant_odds_unavailable", {
+      dateStr,
+      reunion,
+      course,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  });
+  if (participantOdds) {
+    return participantOdds;
+  }
+
   try {
     if (!isValidPmuDate(dateStr)) return null;
     const data = await fetchPmuJson<Record<string, unknown> | unknown[]>(
@@ -1041,7 +1055,13 @@ export async function getCotesDirectes(
       }
     }
     return cotes.size > 0 ? cotes : null;
-  } catch {
+  } catch (error) {
+    logger.warn("pmu_api.direct_odds_unavailable", {
+      dateStr,
+      reunion,
+      course,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return null;
   }
 }
