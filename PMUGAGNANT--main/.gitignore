@@ -43,3 +43,5 @@ next-env.d.ts
 
 # local archives
 src.zip
+
+.vercel
