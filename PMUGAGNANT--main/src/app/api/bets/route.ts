@@ -126,7 +126,7 @@ export async function GET(req: NextRequest) {
 
   const { data: profile, error: profileError } = await client
     .from("profiles")
-    .select(`solde,${PROFILE_SUBSCRIPTION_SELECT}`)
+    .select(`solde,telegram_chat_id,${PROFILE_SUBSCRIPTION_SELECT}`)
     .eq("id", user.id)
     .single();
 
@@ -152,6 +152,8 @@ export async function GET(req: NextRequest) {
     subscriptionStatus: subscriptionState.subscriptionStatus,
     stripeCustomerId: subscriptionState.stripeCustomerId,
     premiumAccessExpiresAt: subscriptionState.premiumAccessExpiresAt,
+    telegramChatId:
+      typeof profile?.telegram_chat_id === "string" ? profile.telegram_chat_id : null,
   });
 }
 

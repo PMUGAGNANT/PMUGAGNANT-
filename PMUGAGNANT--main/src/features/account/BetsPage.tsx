@@ -47,6 +47,10 @@ function MesParisContent() {
   const [billingNotice, setBillingNotice] = useState<BillingNotice | null>(null);
   const [fetchRevision, setFetchRevision] = useState(0);
   const [autoCheckoutStarted, setAutoCheckoutStarted] = useState(false);
+  const [telegramChatId, setTelegramChatId] = useState<string | null>(null);
+  const [telegramLinkInput, setTelegramLinkInput] = useState("");
+  const [telegramLinkLoading, setTelegramLinkLoading] = useState(false);
+  const [telegramLinkMessage, setTelegramLinkMessage] = useState("");
 
   const autoCheckoutRequested = searchParams.get("billing") === "checkout";
 
@@ -92,6 +96,7 @@ function MesParisContent() {
           accessSource?: "FREE" | "PAID" | "BONUS";
           subscriptionStatus?: string;
           premiumAccessExpiresAt?: string | null;
+          telegramChatId?: string | null;
           error?: string;
         } = await response.json();
 
@@ -116,6 +121,12 @@ function MesParisContent() {
           typeof payload.premiumAccessExpiresAt === "string"
             ? payload.premiumAccessExpiresAt
             : null
+        );
+        setTelegramChatId(
+          typeof payload.telegramChatId === "string" ? payload.telegramChatId : null
+        );
+        setTelegramLinkInput(
+          typeof payload.telegramChatId === "string" ? payload.telegramChatId : ""
         );
       } catch (loadError) {
         if (signal?.aborted) {
@@ -301,6 +312,62 @@ function MesParisContent() {
     const supabase = getSupabaseBrowserClient();
     await supabase.auth.signOut();
     router.push("/");
+  }
+
+  async function handleTelegramLink() {
+    if (!supabaseConfigured) {
+      setTelegramLinkMessage(getSupabaseConfigError());
+      return;
+    }
+
+    const chatId = telegramLinkInput.trim();
+    if (!/^-?\d{5,20}$/.test(chatId)) {
+      setTelegramLinkMessage("Entre l'ID Telegram affiche par /start.");
+      return;
+    }
+
+    setTelegramLinkLoading(true);
+    setTelegramLinkMessage("");
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        router.push(`/login?redirect=${encodeURIComponent("/mes-paris")}`);
+        return;
+      }
+
+      const response = await fetch("/api/telegram/link", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ chat_id: chatId }),
+      });
+      const payload: {
+        success?: boolean;
+        telegramChatId?: string;
+        error?: string;
+      } = await response.json();
+
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.error ?? "Liaison Telegram impossible.");
+      }
+
+      setTelegramChatId(payload.telegramChatId ?? chatId);
+      setTelegramLinkInput(payload.telegramChatId ?? chatId);
+      setTelegramLinkMessage("Compte Telegram lie. Les alertes Premium sont pretes.");
+    } catch (linkError) {
+      setTelegramLinkMessage(
+        linkError instanceof Error ? linkError.message : "Liaison Telegram impossible."
+      );
+    } finally {
+      setTelegramLinkLoading(false);
+    }
   }
 
   const handleBilling = useCallback(
@@ -613,6 +680,45 @@ function MesParisContent() {
                         : "Oui"
                       : "Non"}
                   </p>
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-[1.2rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_92%,transparent)] p-5">
+                <p className="app-kicker">Telegram Premium</p>
+                <h3 className="mt-2 text-2xl font-black leading-[1.02] text-[var(--pmu-text)]">
+                  Lier le bot PMU Gagnant
+                </h3>
+                <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">
+                  Envoie /start a @pmugagnantbot, copie ton ID Telegram, puis
+                  colle-le ici pour recevoir /pronostic et les alertes de 9h.
+                </p>
+
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                  <input
+                    type="text"
+                    value={telegramLinkInput}
+                    onChange={(event) => setTelegramLinkInput(event.target.value)}
+                    placeholder="Ex: 123456789"
+                    className="min-h-12 flex-1 rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] px-4 text-sm font-bold text-[var(--pmu-text)] outline-none transition focus:border-[var(--pmu-primary)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleTelegramLink}
+                    disabled={telegramLinkLoading}
+                    className="app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {telegramLinkLoading ? "Liaison..." : "Lier Telegram"}
+                  </button>
+                </div>
+
+                <div className="mt-3 space-y-2 text-sm leading-6 text-[var(--pmu-text-soft)]">
+                  <p>
+                    Statut :{" "}
+                    <span className="font-black text-[var(--pmu-text)]">
+                      {telegramChatId ? `lie (${telegramChatId})` : "non lie"}
+                    </span>
+                  </p>
+                  {telegramLinkMessage ? <p>{telegramLinkMessage}</p> : null}
                 </div>
               </div>
 

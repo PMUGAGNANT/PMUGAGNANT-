@@ -13,6 +13,10 @@
       "schedule": "0 7 * * *"
     },
     {
+      "path": "/api/cron/telegram-morning",
+      "schedule": "0 9 * * *"
+    },
+    {
       "path": "/api/cron/morning",
       "schedule": "0 5 * * *"
     },

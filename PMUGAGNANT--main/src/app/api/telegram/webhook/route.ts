@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isCronSecretCandidateValid } from "@/lib/cron-auth";
-import { getTodayDateStr } from "@/lib/date-utils";
-import {
-  getPredictionOdds,
-  getPredictionScore,
-  getSelectedPredictions,
-} from "@/lib/public-performance";
-import { listPredictionsByDate } from "@/lib/prediction-store";
 import { logger } from "@/lib/server-logger";
 import { getSupabaseAdminClient, getSupabaseAdminConfigError } from "@/lib/supabase";
 import { sendTelegramMessageToChat } from "@/lib/telegram";
+import {
+  buildTelegramHelpMessage,
+  buildTelegramStartMessage,
+  sendTelegramPronosticToPremiumChat,
+} from "@/lib/telegram-pronostics";
 
 export const dynamic = "force-dynamic";
 
@@ -91,39 +89,25 @@ async function upsertSubscription(message: TelegramMessage, active: boolean, com
   }
 }
 
-function formatCurrency(value: number | null | undefined) {
-  if (typeof value !== "number" || !Number.isFinite(value)) return "--";
-  return `${value.toFixed(2)} EUR`;
-}
+async function recordSubscriptionCommand(message: TelegramMessage, command: string) {
+  const chat = message.chat;
+  if (!chat?.id) return;
 
-function formatOdds(value: number | null | undefined) {
-  if (typeof value !== "number" || !Number.isFinite(value)) return "--";
-  return value.toFixed(1);
-}
+  const { error } = await getAdmin().from("telegram_subscriptions").upsert(
+    {
+      chat_id: String(chat.id),
+      username: message.from?.username ?? chat.username ?? null,
+      first_name: message.from?.first_name ?? chat.first_name ?? null,
+      last_name: message.from?.last_name ?? chat.last_name ?? null,
+      last_command: command,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "chat_id" }
+  );
 
-async function buildPronosticMessage() {
-  const date = getTodayDateStr();
-  const rows = await listPredictionsByDate(date);
-  const selections = getSelectedPredictions(rows).slice(0, 6);
-
-  if (selections.length === 0) {
-    return [
-      "PMU Gagnant",
-      `Pronostics du jour ${date}`,
-      "",
-      "Aucune selection disponible pour le moment.",
-    ].join("\n");
+  if (error) {
+    throw new Error(`Telegram subscription command update failed: ${error.message}`);
   }
-
-  const lines = selections.flatMap((row, index) => [
-    `${index + 1}. R${row.reunion}C${row.course} - ${row.hippodrome}`,
-    `#${row.cheval_num} ${row.cheval_nom}`,
-    `Decision: ${row.decision} - Pari: ${row.pari_conseille ?? "--"}`,
-    `Confiance: ${Math.round(getPredictionScore(row))}/100 - Cote: ${formatOdds(getPredictionOdds(row))} - Mise: ${formatCurrency(row.mise_simulee)}`,
-    "",
-  ]);
-
-  return ["PMU Gagnant", `Pronostics du jour ${date}`, "", ...lines].join("\n").trim();
 }
 
 async function handleCommand(message: TelegramMessage) {
@@ -135,37 +119,32 @@ async function handleCommand(message: TelegramMessage) {
 
   if (command === "/start") {
     await upsertSubscription(message, true, command);
-    await sendTelegramMessageToChat(
-      chatId,
-      [
-        "Bienvenue sur PMU Gagnant.",
-        "",
-        "Commandes disponibles :",
-        "/pronostic - recevoir les selections du jour",
-        "/stop - desactiver les messages du bot",
-      ].join("\n")
-    );
+    await sendTelegramMessageToChat(chatId, buildTelegramStartMessage(chatId));
     return { handled: true, command };
   }
 
   if (command === "/stop") {
     await upsertSubscription(message, false, command);
-    await sendTelegramMessageToChat(
-      chatId,
-      "Votre abonnement Telegram PMU Gagnant est desactive. Envoyez /start pour le reactiver."
-    );
+    await sendTelegramMessageToChat(chatId, "Vous avez été désinscrit ✅");
+    return { handled: true, command };
+  }
+
+  if (command === "/aide") {
+    await recordSubscriptionCommand(message, command);
+    await sendTelegramMessageToChat(chatId, buildTelegramHelpMessage());
     return { handled: true, command };
   }
 
   if (command === "/pronostic") {
-    const pronostic = await buildPronosticMessage();
-    await sendTelegramMessageToChat(chatId, pronostic);
+    await recordSubscriptionCommand(message, command);
+    await sendTelegramPronosticToPremiumChat(chatId);
     return { handled: true, command };
   }
 
+  await recordSubscriptionCommand(message, command);
   await sendTelegramMessageToChat(
     chatId,
-    "Commande inconnue. Envoyez /pronostic pour les selections du jour ou /stop pour arreter."
+    `Commande inconnue.\n\n${buildTelegramHelpMessage()}`
   );
   return { handled: true, command };
 }

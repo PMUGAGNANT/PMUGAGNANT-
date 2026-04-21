@@ -16,6 +16,7 @@ export type Database = {
           subscription_status: string | null;
           premium_access_expires_at: string | null;
           referral_count: number | null;
+          telegram_chat_id: string | null;
         };
         Insert: {
           id: string;
@@ -23,6 +24,7 @@ export type Database = {
           subscription_status?: string | null;
           premium_access_expires_at?: string | null;
           referral_count?: number | null;
+          telegram_chat_id?: string | null;
         };
         Update: {
           id?: string;
@@ -30,6 +32,7 @@ export type Database = {
           subscription_status?: string | null;
           premium_access_expires_at?: string | null;
           referral_count?: number | null;
+          telegram_chat_id?: string | null;
         };
         Relationships: [
           {
