@@ -18,7 +18,7 @@ import { analyzeRaceWithParameters } from "@/lib/analysis";
 import { loadAlgoParameters } from "@/lib/config";
 import { fromIsoDate, getMinutesUntilStart, getTodayDateStr, toIsoDate } from "@/lib/date-utils";
 import { attachFaultRates } from "@/lib/horse-faults";
-import { getAllRaces, getArriveeCourse, getCotesDirectes, getParticipants } from "@/lib/pmu-api";
+import { getAllRaces, getArriveeCourse, getCotesDirectesAvecDetails, getParticipants } from "@/lib/pmu-api";
 import {
   getRacePredictions,
   listLatestRunnerScoreSnapshotsForRace,
@@ -65,6 +65,7 @@ type RacePageState =
       dataBadge: "Supabase" | "DonnÃ©es J-1" | "Live PMU";
       arrivee: number[] | null;
       cotesLive: boolean;
+      cotesLiveAt: string | null;
     };
 
 type RaceMessageRow = Database["public"]["Tables"]["race_messages"]["Row"];
@@ -440,7 +441,7 @@ async function loadRacePageData(id: string, requestedDate: string): Promise<Race
     if (!courseInfo) {
       const fallback = await loadLatestStoredRaceFallback(excluded);
       if (fallback?.courseInfo && fallback.rows.length > 0) {
-        return { kind: "ready", courseInfo: fallback.courseInfo, analysis: null, rows: fallback.rows, dataBadge: "DonnÃ©es J-1", arrivee: null, cotesLive: false };
+        return { kind: "ready", courseInfo: fallback.courseInfo, analysis: null, rows: fallback.rows, dataBadge: "DonnÃ©es J-1", arrivee: null, cotesLive: false, cotesLiveAt: null };
       }
       return { kind: "not-found", date: requestedDate };
     }
@@ -454,7 +455,7 @@ async function loadRacePageData(id: string, requestedDate: string): Promise<Race
     if (storedRows.length === 0 && scoreSnapshots.length === 0) {
       const fallback = await loadLatestStoredRaceFallback(excluded);
       if (fallback?.courseInfo && fallback.rows.length > 0) {
-        return { kind: "ready", courseInfo: fallback.courseInfo, analysis: null, rows: fallback.rows, dataBadge: "DonnÃ©es J-1", arrivee: null, cotesLive: false };
+        return { kind: "ready", courseInfo: fallback.courseInfo, analysis: null, rows: fallback.rows, dataBadge: "DonnÃ©es J-1", arrivee: null, cotesLive: false, cotesLiveAt: null };
       }
     }
     const participants = await attachFaultRates(await getParticipants(requestedDate, parsed.reunion, parsed.course));
@@ -467,14 +468,15 @@ async function loadRacePageData(id: string, requestedDate: string): Promise<Race
         ? getArriveeCourse(requestedDate, parsed.reunion, parsed.course)
         : Promise.resolve(null),
       !shouldFetchArrivee
-        ? getCotesDirectes(requestedDate, parsed.reunion, parsed.course)
+        ? getCotesDirectesAvecDetails(requestedDate, parsed.reunion, parsed.course)
         : Promise.resolve(null),
     ]);
+    const cotesLiveAt = [...(cotesDirectes?.values() ?? [])].find((detail) => detail.updatedAt)?.updatedAt ?? null;
     const arrivee = pmuArrivee ?? (shouldFetchArrivee ? buildArriveeFromParticipants(participants) : null);
     const rows = buildParticipantRows(participants, analysis?.ranking ?? [], storedRows, scoreSnapshots)
       .map((row) => ({
         ...row,
-        cote: cotesDirectes?.get(row.numero) ?? row.cote,
+        cote: cotesDirectes?.get(row.numero)?.cote ?? row.cote,
       }));
     return {
       kind: "ready",
@@ -484,12 +486,13 @@ async function loadRacePageData(id: string, requestedDate: string): Promise<Race
       dataBadge: storedRows.length > 0 || scoreSnapshots.length > 0 ? "Supabase" : "Live PMU",
       arrivee,
       cotesLive: Boolean(cotesDirectes && cotesDirectes.size > 0),
+      cotesLiveAt,
     };
   } catch (error) {
     logger.error("race_page.load_failed", error, { id, requestedDate });
     const fallback = await loadLatestStoredRaceFallback(excluded).catch(() => null);
     if (fallback?.courseInfo && fallback.rows.length > 0) {
-      return { kind: "ready", courseInfo: fallback.courseInfo, analysis: null, rows: fallback.rows, dataBadge: "DonnÃ©es J-1", arrivee: null, cotesLive: false };
+      return { kind: "ready", courseInfo: fallback.courseInfo, analysis: null, rows: fallback.rows, dataBadge: "DonnÃ©es J-1", arrivee: null, cotesLive: false, cotesLiveAt: null };
     }
     return { kind: "error" };
   }
@@ -558,7 +561,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
     );
   }
 
-  const { courseInfo, analysis, rows, arrivee, cotesLive } = state;
+  const { courseInfo, analysis, rows, arrivee, cotesLive, cotesLiveAt } = state;
   const selectedRow = getRecommendedRow(rows, analysis);
   const selectedNumber = selectedRow?.numero ?? null;
   const minutesUntilStart = getMinutesUntilStart(courseInfo.heureDepart, courseInfo.dateStr);
@@ -693,7 +696,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
             <section className="rp-card">
               <div className="rp-card-header">
                 <span>Tableau partants</span>
-                {cotesLive ? <span className="rp-live-odds">Cotes live</span> : null}
+                {cotesLive ? <span className="rp-live-odds">Cotes PMU SG{cotesLiveAt ? ` ${cotesLiveAt}` : ""}</span> : null}
               </div>
               <div className="rp-table-wrap">
                 <table className="rp-table">

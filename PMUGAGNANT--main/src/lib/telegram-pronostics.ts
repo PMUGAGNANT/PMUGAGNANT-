@@ -3,7 +3,7 @@ import {
   getPredictionOdds,
   getSelectedPredictions,
 } from "@/lib/public-performance";
-import { getCotesDirectes } from "@/lib/pmu-api";
+import { getCotesDirectesAvecDetails, type LiveOddsDetails } from "@/lib/pmu-api";
 import { listPredictionsByDate } from "@/lib/prediction-store";
 import { logger } from "@/lib/server-logger";
 import { getSupabaseAdminClient, getSupabaseAdminConfigError } from "@/lib/supabase";
@@ -102,6 +102,12 @@ function formatPlanLine(betType: string, stake: number | null | undefined) {
   return `🧾 Plan : jouer ${betType} / mise ${formatCurrency(stake)}`;
 }
 
+function formatLiveOddsLabel(details: LiveOddsDetails | null) {
+  if (!details) return "Cote stockee";
+  const pari = details.typePari.includes("PLACE") ? "PLACE" : "GAGNANT";
+  return details.updatedAt ? `Cote PMU ${pari} ${details.updatedAt}` : `Cote PMU ${pari}`;
+}
+
 function getRaceKey(row: Pick<PredictionRowLike, "date" | "reunion" | "course">) {
   return `${row.date}:${row.reunion}:${row.course}`;
 }
@@ -117,12 +123,12 @@ async function loadLiveOddsForSelections(selections: PredictionRowLike[]) {
   const entries = await Promise.all(
     [...raceKeys].map(async (key) => {
       const [date, reunion, course] = key.split(":");
-      const cotes = await getCotesDirectes(date, Number(reunion), Number(course));
+      const cotes = await getCotesDirectesAvecDetails(date, Number(reunion), Number(course));
       return [key, cotes] as const;
     })
   );
 
-  return new Map(entries.filter((entry): entry is readonly [string, Map<number, number>] => entry[1] !== null));
+  return new Map(entries.filter((entry): entry is readonly [string, Map<number, LiveOddsDetails>] => entry[1] !== null));
 }
 
 export function buildTelegramStartMessage(chatId: string | number) {
@@ -192,8 +198,8 @@ export async function buildTelegramPronosticMessage(date = getTodayDateStr()) {
     const horse = `#${row.cheval_num} ${row.cheval_nom}`;
     const betType = formatBetType(row.pari_conseille);
     const liveOdds = liveOddsByRace.get(getRaceKey(row))?.get(row.cheval_num) ?? null;
-    const odds = liveOdds ?? getPredictionOdds(row);
-    const oddsLabel = liveOdds !== null ? "Cote PMU" : "Cote stockee";
+    const odds = liveOdds?.cote ?? getPredictionOdds(row);
+    const oddsLabel = formatLiveOddsLabel(liveOdds);
     return [
       `${index === 0 ? "⭐" : "🏇"} ${raceName.toUpperCase()}`,
       `🐎 ${horse}`,
