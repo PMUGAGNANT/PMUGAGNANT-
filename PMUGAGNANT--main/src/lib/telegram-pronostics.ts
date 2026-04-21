@@ -64,6 +64,19 @@ function formatBetType(value: string | null | undefined) {
   return normalizeBetType(value) ?? "PLACE";
 }
 
+function formatBetLine(value: string | null | undefined) {
+  const betType = formatBetType(value);
+  return betType === "GAGNANT"
+    ? "🔥 Pari conseillé : GAGNANT"
+    : "🟢 Pari conseillé : PLACE";
+}
+
+function formatDecisionLine(value: string | null | undefined) {
+  if (value === "VALIDE") return "✅ Décision : VALIDE";
+  if (value === "SURVEILLANCE") return "🟠 Décision : SURVEILLER";
+  return `⚪ Décision : ${value ?? "A PRECISER"}`;
+}
+
 export function buildTelegramStartMessage(chatId: string | number) {
   return [
     "Bienvenue sur PMU Gagnant 🏇",
@@ -125,13 +138,27 @@ export async function buildTelegramPronosticMessage(date = getTodayDateStr()) {
     ].join("\n");
   }
 
-  const lines = selections.map((row) => {
+  const lines = selections.flatMap((row, index) => {
     const raceName = `R${row.reunion}C${row.course} ${row.hippodrome}`.trim();
     const horse = `#${row.cheval_num} ${row.cheval_nom}`;
-    return `🏇 ${raceName}, ${horse}, pari ${formatBetType(row.pari_conseille)}, décision ${row.decision}, cote ${formatOdds(getPredictionOdds(row))}, mise ${formatCurrency(row.mise_simulee)}`;
+    return [
+      `${index === 0 ? "⭐" : "🏇"} ${raceName.toUpperCase()}`,
+      `🐎 ${horse}`,
+      formatBetLine(row.pari_conseille),
+      formatDecisionLine(row.decision),
+      `📊 Cote : ${formatOdds(getPredictionOdds(row))}`,
+      `💶 Mise : ${formatCurrency(row.mise_simulee)}`,
+      "━━━━━━━━━━━━━━",
+    ];
   });
 
-  return ["PMU Gagnant", `Pronostics du jour ${date}`, "", ...lines].join("\n");
+  return [
+    "🏆 PMU Gagnant",
+    `🎯 Pronostics du jour ${date}`,
+    "━━━━━━━━━━━━━━",
+    ...lines,
+    "Bonne chance, joue proprement.",
+  ].join("\n");
 }
 
 export async function sendTelegramPronosticToPremiumChat(chatId: string | number) {
