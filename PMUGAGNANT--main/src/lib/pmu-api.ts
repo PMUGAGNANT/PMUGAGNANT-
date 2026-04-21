@@ -2,6 +2,11 @@ import { getTodayDateStr as getTodayDateStrFromUtils, toIsoDate } from "@/lib/da
 import { isValidPmuDate } from "@/lib/request-utils";
 import { logger } from "@/lib/server-logger";
 import { getSupabaseAdminClient } from "@/lib/supabase";
+import {
+  buildLiveOddsDetailsFromRecord,
+  parseLiveOddsDetailsFromParticipant,
+  type LiveOddsDetails,
+} from "@/lib/pmu-odds";
 import type {
   LiveCourseSnapshot,
   Participant,
@@ -15,15 +20,6 @@ const BASE_URL = "https://online.turfinfo.api.pmu.fr/rest/client/1";
 const REQUEST_TIMEOUT_MS = 12_000;
 const MAX_REVALIDATE_SECONDS = 300;
 const PMU_RETRY_ATTEMPTS = 3;
-
-export type LiveOddsDetails = {
-  numero: number;
-  cote: number;
-  typePari: string;
-  source: "PMU_PARTICIPANTS" | "PMU_MASSE_ENJEUX";
-  updatedAtMs: number | null;
-  updatedAt: string | null;
-};
 
 class RetryablePmuError extends Error {
   constructor(message: string) {
@@ -734,14 +730,6 @@ export interface FinalReports {
 
 export type CourseRapports = Pick<FinalReports, "simpleGagnant" | "simplePlace">;
 
-function normalizePmuMoneyValue(value: unknown) {
-  if (typeof value !== "number" || Number.isNaN(value)) {
-    return null;
-  }
-
-  return value > 100 ? value / 100 : value;
-}
-
 function getHorseNumberFromRecord(record: Record<string, unknown>) {
   const candidate =
     record.numPmu ??
@@ -765,67 +753,6 @@ function getArrivalOrderFromRecord(record: Record<string, unknown>, fallback: nu
     fallback;
   const parsed = typeof candidate === "number" ? candidate : Number(candidate);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
-}
-
-function getOddsFromRecord(record: Record<string, unknown>) {
-  const coteDirect = asRecord(record.coteDirect);
-  const dernierRapportDirect = asRecord(record.dernierRapportDirect);
-  const rapportDirect = asRecord(record.rapportDirect);
-  return normalizePmuMoneyValue(
-    record.cote ??
-      record.cotePmu ??
-      record.coteActuelle ??
-      record.coteProbable ??
-      coteDirect.cotePmu ??
-      coteDirect.cote ??
-      dernierRapportDirect.rapport ??
-        rapportDirect.rapport
-    );
-  }
-
-function getParisTimeLabel(ms: unknown) {
-  if (typeof ms !== "number" || !Number.isFinite(ms) || ms <= 0) {
-    return null;
-  }
-
-  return new Date(ms).toLocaleTimeString("fr-FR", {
-    timeZone: "Europe/Paris",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-}
-
-function getLiveOddsDetailsFromParticipant(record: Record<string, unknown>): LiveOddsDetails | null {
-  const numero = getHorseNumberFromRecord(record);
-  if (numero === null) return null;
-
-  const dernierRapportDirect = asRecord(record.dernierRapportDirect);
-  const cote = normalizePmuMoneyValue(
-    dernierRapportDirect.rapport ??
-      asRecord(record.coteDirect).cotePmu ??
-      asRecord(record.rapportDirect).rapport ??
-      record.cotePmu
-  );
-  if (cote === null || cote <= 0) return null;
-
-  const updatedAtMs =
-    typeof dernierRapportDirect.dateRapport === "number" &&
-    Number.isFinite(dernierRapportDirect.dateRapport)
-      ? dernierRapportDirect.dateRapport
-      : null;
-
-  return {
-    numero,
-    cote,
-    typePari:
-      typeof dernierRapportDirect.typePari === "string"
-        ? dernierRapportDirect.typePari
-        : "SIMPLE_GAGNANT",
-    source: "PMU_PARTICIPANTS",
-    updatedAtMs,
-    updatedAt: getParisTimeLabel(updatedAtMs),
-  };
 }
 
 function buildArriveeFromParticipants(participants: Participant[]) {
@@ -1087,7 +1014,7 @@ export async function getCotesDirectesAvecDetails(
     const cotes = new Map<number, LiveOddsDetails>();
 
     for (const raw of data.participants ?? []) {
-      const detail = getLiveOddsDetailsFromParticipant(asRecord(raw));
+      const detail = parseLiveOddsDetailsFromParticipant(asRecord(raw));
       if (detail) {
         cotes.set(detail.numero, detail);
       }
@@ -1117,18 +1044,9 @@ export async function getCotesDirectesAvecDetails(
     );
     const cotes = new Map<number, LiveOddsDetails>();
     for (const record of collectRecords(data)) {
-      const numero = getHorseNumberFromRecord(record);
-      const cote = getOddsFromRecord(record);
-      if (numero !== null && cote !== null) {
-        cotes.set(numero, {
-          numero,
-          cote,
-          typePari:
-            typeof record.typePari === "string" ? record.typePari : "SIMPLE_GAGNANT",
-          source: "PMU_MASSE_ENJEUX",
-          updatedAtMs: null,
-          updatedAt: null,
-        });
+      const detail = buildLiveOddsDetailsFromRecord(record, "PMU_MASSE_ENJEUX");
+      if (detail) {
+        cotes.set(detail.numero, detail);
       }
     }
     return cotes.size > 0 ? cotes : null;

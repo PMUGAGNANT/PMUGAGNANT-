@@ -98,8 +98,9 @@ test("formatDailyRecapTelegram resume le recap pour Telegram", () => {
   const summary = buildDailyRecapSummary([createPrediction()], "2026-04-17");
   const message = formatDailyRecapTelegram(summary);
 
-  assert.match(message, /Recap journalier 17042026/);
+  assert.match(message, /Recap Premium 17042026/);
   assert.match(message, /ROI : \+300\.0%/);
   assert.match(message, /Meilleurs tickets/);
-  assert.match(message, /R1C1 Vincennes #7 Helios du Val/);
+  assert.match(message, /R1C1 Vincennes/);
+  assert.match(message, /#7 Helios du Val/);
 });

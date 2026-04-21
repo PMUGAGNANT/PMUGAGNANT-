@@ -3,7 +3,8 @@ import {
   getPredictionOdds,
   getSelectedPredictions,
 } from "@/lib/public-performance";
-import { getCotesDirectesAvecDetails, type LiveOddsDetails } from "@/lib/pmu-api";
+import { getCotesDirectesAvecDetails } from "@/lib/pmu-api";
+import { formatLiveOddsLabel, type LiveOddsDetails } from "@/lib/pmu-odds";
 import { listPredictionsByDate } from "@/lib/prediction-store";
 import { logger } from "@/lib/server-logger";
 import { getSupabaseAdminClient, getSupabaseAdminConfigError } from "@/lib/supabase";
@@ -100,12 +101,6 @@ function formatWhyLine(confidence: number | null | undefined, value: number | nu
 
 function formatPlanLine(betType: string, stake: number | null | undefined) {
   return `🧾 Plan : jouer ${betType} / mise ${formatCurrency(stake)}`;
-}
-
-function formatLiveOddsLabel(details: LiveOddsDetails | null) {
-  if (!details) return "Cote stockee";
-  const pari = details.typePari.includes("PLACE") ? "PLACE" : "GAGNANT";
-  return details.updatedAt ? `Cote PMU ${pari} ${details.updatedAt}` : `Cote PMU ${pari}`;
 }
 
 function getRaceKey(row: Pick<PredictionRowLike, "date" | "reunion" | "course">) {
