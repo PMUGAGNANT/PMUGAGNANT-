@@ -530,7 +530,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <Link href={item.href} key={item.label}>{item.label}</Link>
           ))}
         </nav>
-        <button className="dash-burger" type="button" aria-label="Menu">â˜°</button>
+        <button className="dash-burger" type="button" aria-label="Menu">{"\u2630"}</button>
         <div className="dash-actions">
           <ThemeSwitchButton className="theme-switch-button--dash" />
           <DashboardHeaderAccount />
@@ -545,7 +545,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <p className="dash-kicker">Analyse IA du jour</p>
                 <h1 className="dash-course-name">{hero.race.nomCourse}</h1>
                 <p className="dash-meta">
-                  {hero.race.hippodrome} Â· {hero.race.discipline} Â· {hero.race.heureDepart}
+                  {hero.race.hippodrome} - {hero.race.discipline} - {hero.race.heureDepart}
                 </p>
                 <div className="dash-selection" aria-label="Selections IA">
                   {hero.topNumbers.slice(0, 3).map((num) => (
@@ -589,7 +589,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                       <span className={`dash-status ${item.status}`}>{getStatusLabel(item.status)}</span>
                     </div>
                     <p className="dash-card-meta">
-                      {item.race.discipline} Â· {item.race.heureDepart} Â· {item.race.nombrePartants} partants
+                      {item.race.discipline} - {item.race.heureDepart} - {item.race.nombrePartants} partants
                     </p>
                     <div className="dash-card-row">
                       <div className="dash-mini-bubbles">
@@ -620,7 +620,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <p className="dash-label">Taux de reussite</p>
             <strong className="dash-stat-value pos">{formatRate(hitRate)}</strong>
             {successRates.map((item) => (
-              <p className="dash-card-meta" key={item.label}>{item.label} Â· {formatRate(item.value)}</p>
+              <p className="dash-card-meta" key={item.label}>{item.label} - {formatRate(item.value)}</p>
             ))}
           </section>
           <section className="dash-stat">
