@@ -8,6 +8,7 @@ import {
   appNavigationItems,
   isNavigationItemActive,
 } from "@/features/layout/config/navigation";
+import { ThemeSwitchButton } from "@/components/ui/ThemeSwitchButton";
 import { SidebarSearch } from "./SidebarSearch";
 
 export function TopNav() {
@@ -60,6 +61,7 @@ export function TopNav() {
         </nav>
 
         <div className="turf-topbar__actions">
+          <ThemeSwitchButton className="theme-switch-button--topbar" />
           <Link href="/premium" className="turf-premium-link">
             Passer premium
           </Link>

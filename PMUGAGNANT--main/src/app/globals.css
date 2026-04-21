@@ -104,43 +104,43 @@
 }
 
 [data-theme="cream"] {
-  --pmu-bg:               #FFF3D8;
-  --pmu-bg-mid:           #F1DFC0;
-  --pmu-surface:          #FFF9EC;
-  --pmu-surface-2:        #F7E9CF;
+  --pmu-bg:               #FAF7EF;
+  --pmu-bg-mid:           #F2EBDC;
+  --pmu-surface:          #FFFDF8;
+  --pmu-surface-2:        #F6F0E4;
   --pmu-surface-highlight:#FFFFFF;
 
-  --pmu-border:           rgba(91, 58, 24, 0.15);
-  --pmu-border-strong:    rgba(91, 58, 24, 0.28);
+  --pmu-border:           rgba(20, 45, 29, 0.10);
+  --pmu-border-strong:    rgba(20, 45, 29, 0.20);
 
-  --pmu-primary:          #6D4A18;
-  --pmu-primary-bright:   #8B6322;
-  --pmu-primary-soft:     rgba(109, 74, 24, 0.12);
-  --pmu-primary-fade:     rgba(109, 74, 24, 0.08);
-  --pmu-blue:             #6C6250;
-  --pmu-accent-blue:      #6D4A18;
-  --pmu-accent-violet:    #B27A21;
+  --pmu-primary:          #075E36;
+  --pmu-primary-bright:   #0E7A47;
+  --pmu-primary-soft:     rgba(7, 94, 54, 0.10);
+  --pmu-primary-fade:     rgba(7, 94, 54, 0.06);
+  --pmu-blue:             #4F5F56;
+  --pmu-accent-blue:      #075E36;
+  --pmu-accent-violet:    #A9832E;
 
-  --pmu-gold:             #B27A21;
-  --pmu-gold-light:       #FFF0BE;
-  --pmu-sand:             #C8A66E;
-  --pmu-earth-light:      #FFF2DE;
+  --pmu-gold:             #A9832E;
+  --pmu-gold-light:       #FFF4D6;
+  --pmu-sand:             #D5C7A8;
+  --pmu-earth-light:      #FFF0E8;
 
-  --pmu-text:             #211A10;
-  --pmu-text-soft:        #655A49;
-  --pmu-text-muted:       #92856F;
+  --pmu-text:             #172118;
+  --pmu-text-soft:        #536157;
+  --pmu-text-muted:       #8A907F;
 
-  --pmu-red:              #B84A37;
-  --pmu-orange:           #BE7418;
+  --pmu-red:              #C4543D;
+  --pmu-orange:           #B77D22;
 
-  --pmu-on-primary:       #FFF9EC;
-  --pmu-on-danger:        #FFF9EC;
+  --pmu-on-primary:       #FFFDF8;
+  --pmu-on-danger:        #FFFDF8;
 
-  --pmu-shadow:           0 18px 46px rgba(91, 58, 24, 0.13);
-  --pmu-shadow-sm:        0 8px 24px rgba(91, 58, 24, 0.09);
-  --pmu-glow:             0 0 0 1px rgba(109, 74, 24, 0.14);
-  --pmu-glow-soft:        0 0 0 1px rgba(109, 74, 24, 0.10);
-  --pmu-card-inset:       inset 0 1px 0 rgba(255,255,255,0.82);
+  --pmu-shadow:           0 18px 46px rgba(22, 38, 26, 0.10);
+  --pmu-shadow-sm:        0 8px 24px rgba(22, 38, 26, 0.07);
+  --pmu-glow:             0 0 0 1px rgba(7, 94, 54, 0.12);
+  --pmu-glow-soft:        0 0 0 1px rgba(7, 94, 54, 0.08);
+  --pmu-card-inset:       inset 0 1px 0 rgba(255,255,255,0.78);
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -184,7 +184,7 @@ body {
 
 html[data-theme="cream"] body {
   background:
-    linear-gradient(180deg, #FFF8EA 0%, var(--pmu-bg) 36%, #EEDBB9 100%);
+    linear-gradient(180deg, #FFFCF6 0%, var(--pmu-bg) 34%, #F4ECDC 100%);
 }
 
 h1, h2, h3, h4,
@@ -267,12 +267,16 @@ img, svg { display: block; }
   font-weight: 800;
 }
 
-.theme-swap-button {
+.theme-switch-button {
   display: inline-flex;
   min-height: 34px;
   align-items: center;
   justify-content: center;
   white-space: nowrap;
+  cursor: pointer;
+}
+
+.theme-switch-button--bar {
   border: 1px solid rgba(255, 255, 255, 0.36);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.12);
@@ -283,8 +287,27 @@ img, svg { display: block; }
   transition: transform 0.16s var(--pmu-ease-out), background 0.16s var(--pmu-ease-out);
 }
 
-.theme-swap-button:hover {
+.theme-switch-button--bar:hover {
   background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.theme-switch-button--topbar {
+  height: 44px;
+  border: 1px solid color-mix(in srgb, var(--pmu-primary) 26%, transparent);
+  border-radius: 8px;
+  background: var(--pmu-primary-soft);
+  color: var(--pmu-primary);
+  padding: 0 1rem;
+  font-size: 0.86rem;
+  font-weight: 800;
+  box-shadow: var(--pmu-shadow-sm);
+  transition: transform 0.16s var(--pmu-ease-out), border-color 0.16s var(--pmu-ease-out), background 0.16s var(--pmu-ease-out);
+}
+
+.theme-switch-button--topbar:hover {
+  border-color: var(--pmu-primary);
+  background: color-mix(in srgb, var(--pmu-primary) 16%, var(--pmu-surface));
   transform: translateY(-1px);
 }
 

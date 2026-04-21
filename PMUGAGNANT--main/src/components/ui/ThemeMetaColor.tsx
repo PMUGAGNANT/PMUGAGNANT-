@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { THEME_STORAGE_KEY } from "@/lib/theme-preference";
 
 const THEME_COLOR_LIGHT = "#FAF7EF";
-const THEME_COLOR_CREAM = "#FFF3D8";
+const THEME_COLOR_CREAM = "#FAF7EF";
 
 export function ThemeMetaColor() {
   useEffect(() => {
