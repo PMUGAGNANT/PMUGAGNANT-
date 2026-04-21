@@ -110,6 +110,22 @@ async function recordSubscriptionCommand(message: TelegramMessage, command: stri
   }
 }
 
+async function safeRecordSubscriptionCommand(message: TelegramMessage, command: string) {
+  try {
+    await recordSubscriptionCommand(message, command);
+  } catch (error) {
+    logger.error("telegram.subscription_command_failed", error, { command });
+  }
+}
+
+async function safeSendTelegramMessage(chatId: number, message: string) {
+  try {
+    await sendTelegramMessageToChat(chatId, message);
+  } catch (error) {
+    logger.error("telegram.command_reply_failed", error, { chatId });
+  }
+}
+
 async function handleCommand(message: TelegramMessage) {
   const chatId = message.chat?.id;
   const text = message.text?.trim() ?? "";
@@ -130,18 +146,26 @@ async function handleCommand(message: TelegramMessage) {
   }
 
   if (command === "/aide") {
-    await recordSubscriptionCommand(message, command);
+    await safeRecordSubscriptionCommand(message, command);
     await sendTelegramMessageToChat(chatId, buildTelegramHelpMessage());
     return { handled: true, command };
   }
 
   if (command === "/pronostic") {
-    await recordSubscriptionCommand(message, command);
-    await sendTelegramPronosticToPremiumChat(chatId);
+    await safeRecordSubscriptionCommand(message, command);
+    try {
+      await sendTelegramPronosticToPremiumChat(chatId);
+    } catch (error) {
+      logger.error("telegram.pronostic_command_failed", error, { chatId });
+      await safeSendTelegramMessage(
+        chatId,
+        "PMU Gagnant\nLe pronostic est temporairement indisponible. Reessayez dans quelques minutes."
+      );
+    }
     return { handled: true, command };
   }
 
-  await recordSubscriptionCommand(message, command);
+  await safeRecordSubscriptionCommand(message, command);
   await sendTelegramMessageToChat(
     chatId,
     `Commande inconnue.\n\n${buildTelegramHelpMessage()}`
@@ -161,6 +185,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, ...result });
   } catch (error) {
     logger.error("telegram.webhook_failed", error);
-    return NextResponse.json({ success: false, error: "Telegram webhook failed." }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Telegram webhook failed." }, { status: 200 });
   }
 }
