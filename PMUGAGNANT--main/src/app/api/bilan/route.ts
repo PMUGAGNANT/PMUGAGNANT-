@@ -144,6 +144,12 @@ function outcomeRaceKey(row: Pick<RunnerOutcomeRow, "date" | "reunion" | "course
   return `${row.date}-${row.reunion}-${row.course}`;
 }
 
+function outcomeRunnerKey(
+  row: Pick<RunnerOutcomeRow, "date" | "reunion" | "course" | "cheval_num">
+) {
+  return `${outcomeRaceKey(row)}-${row.cheval_num}`;
+}
+
 function predictionRaceKey(row: Pick<PredictionRow, "date" | "reunion" | "course">) {
   return `${row.date}-${row.reunion}-${row.course}`;
 }
@@ -160,7 +166,7 @@ async function loadMissingLiveOutcomes(
   existingOutcomes: RunnerOutcomeRow[],
   range: { startIso: string; endIso: string }
 ) {
-  const existingRaceKeys = new Set(existingOutcomes.map(outcomeRaceKey));
+  const existingRunnerKeys = new Set(existingOutcomes.map(outcomeRunnerKey));
   const recentStartIso = getRecentFallbackStartIso(range.endIso);
   const racesToFetch = new Map<
     string,
@@ -176,7 +182,8 @@ async function loadMissingLiveOutcomes(
     }
 
     const raceKey = predictionRaceKey(prediction);
-    if (!existingRaceKeys.has(raceKey)) {
+    const runnerKey = `${raceKey}-${prediction.cheval_num}`;
+    if (!existingRunnerKeys.has(runnerKey)) {
       racesToFetch.set(raceKey, {
         date: prediction.date,
         reunion: prediction.reunion,
@@ -190,17 +197,36 @@ async function loadMissingLiveOutcomes(
     const dateStr = fromIsoDate(race.date);
 
     try {
-      const [arrivee, reports] = await Promise.all([
+      const [arrivee, reports, participants] = await Promise.all([
         getArriveeCourse(dateStr, race.reunion, race.course),
         getRapportsCourse(dateStr, race.reunion, race.course),
+        getParticipants(dateStr, race.reunion, race.course),
       ]);
 
-      if (!arrivee || arrivee.length === 0) {
+      if ((!arrivee || arrivee.length === 0) && participants.length === 0) {
         continue;
       }
 
-      const rows: RunnerOutcomeRow[] = arrivee.map((chevalNum, index) => {
-        const ordreArrivee = index + 1;
+      const orderByHorse = new Map<number, number>();
+      for (const [index, chevalNum] of (arrivee ?? []).entries()) {
+        orderByHorse.set(chevalNum, index + 1);
+      }
+
+      const rows: RunnerOutcomeRow[] = (participants.length > 0
+        ? participants.map((participant) => ({
+            chevalNum: participant.numPmu,
+            ordreArrivee:
+              typeof participant.ordreArrivee === "number"
+                ? participant.ordreArrivee
+                : orderByHorse.get(participant.numPmu) ?? null,
+            nonPartant: Boolean(participant.nonPartant),
+          }))
+        : (arrivee ?? []).map((chevalNum, index) => ({
+            chevalNum,
+            ordreArrivee: index + 1,
+            nonPartant: false,
+          }))
+      ).map(({ chevalNum, ordreArrivee, nonPartant }) => {
         return {
           date: race.date,
           reunion: race.reunion,
@@ -208,10 +234,10 @@ async function loadMissingLiveOutcomes(
           cheval_num: chevalNum,
           ordre_arrivee: ordreArrivee,
           resultat_gagnant: ordreArrivee === 1,
-          resultat_place: ordreArrivee <= 3,
+          resultat_place: ordreArrivee !== null && ordreArrivee <= 3,
           rapport_gagnant: reports?.simpleGagnant[chevalNum] ?? null,
           rapport_place: reports?.simplePlace[chevalNum] ?? null,
-          non_partant: false,
+          non_partant: nonPartant,
         };
       });
 

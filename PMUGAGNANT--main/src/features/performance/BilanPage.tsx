@@ -90,20 +90,21 @@ function formatResult(value: string) {
   return "Perdu";
 }
 
-function formatFinishPosition(value: number | null) {
-  if (!value) return "--";
+function formatFinishPosition(value: number | null, result: string) {
+  if (!value) return result === "PERDU" ? "NC" : "--";
   return value === 1 ? "1er" : `${value}e`;
 }
 
-function FinishPositionBadge({ position }: { position: number | null }) {
+function FinishPositionBadge({ position, result }: { position: number | null; result: string }) {
   const known = typeof position === "number" && position > 0;
   const isWinner = position === 1;
   const isPlaced = known && position <= 3;
+  const isUnranked = !known && result === "PERDU";
   const color = isWinner
     ? "var(--pmu-primary)"
     : isPlaced
       ? "var(--pmu-gold)"
-      : known
+      : known || isUnranked
         ? "var(--pmu-text-soft)"
         : "var(--pmu-text-muted)";
   const borderColor = isWinner
@@ -122,7 +123,7 @@ function FinishPositionBadge({ position }: { position: number | null }) {
       className="inline-flex min-w-14 justify-center rounded-lg border px-3 py-2 text-sm font-black"
       style={{ color, borderColor, background }}
     >
-      {formatFinishPosition(position)}
+      {formatFinishPosition(position, result)}
     </span>
   );
 }
@@ -736,7 +737,7 @@ function BilanPageContent() {
                         </td>
                         <td className="px-5 py-4 font-black text-[var(--pmu-text)]">{row.cheval}</td>
                         <td className="px-5 py-4">
-                          <FinishPositionBadge position={row.finishPosition} />
+                          <FinishPositionBadge position={row.finishPosition} result={row.result} />
                         </td>
                         <td className="px-5 py-4 text-[var(--pmu-text-soft)]">{row.betType ?? "--"}</td>
                         <td className="px-5 py-4 text-[var(--pmu-text-soft)]">{row.decision}</td>

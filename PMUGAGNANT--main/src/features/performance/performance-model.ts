@@ -407,13 +407,15 @@ function buildComparisonRows(
           ? getGain(row)
           : getOutcomeGain(row, outcome, actualStake) ?? getGain(row);
       const outcomeResult =
-        finishPosition === null
-          ? null
-          : finishPosition === 1
+        finishPosition !== null
+          ? finishPosition === 1
             ? "GAGNANT"
             : finishPosition <= 3
               ? "PLACE"
-              : "PERDU";
+              : "PERDU"
+          : outcome && !outcome.non_partant
+            ? "PERDU"
+            : null;
       const result =
         outcomeResult ??
         (!isSettled(row)
