@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import DashboardHeaderAccount from "@/components/dashboard/DashboardHeaderAccount";
+import { DashboardPremiumOverview } from "@/components/dashboard/DashboardPremiumOverview";
 import { ThemeSwitchButton } from "@/components/ui/ThemeSwitchButton";
 import {
-  formatRaceAnalysisId,
   getVmaxRaceStatus,
   type VmaxRaceStatus,
 } from "@/features/vmax/vmax-model";
@@ -309,18 +309,6 @@ function formatRate(value: number | null) {
   return `${Math.round(value)}%`;
 }
 
-function getStatusLabel(status: VmaxRaceStatus) {
-  if (status === "live") return "En cours";
-  if (status === "finished") return "Termine";
-  return "A venir";
-}
-
-function getCompactBubbleClass(index: number) {
-  if (index === 0) return "is-gold";
-  if (index === 1) return "is-blue";
-  return "is-muted";
-}
-
 const EMPTY_RACES_MESSAGE =
   "Aucune course disponible pour aujourd'hui. Les pronostics du prochain Quinte seront disponibles demain matin.";
 
@@ -386,6 +374,20 @@ const DASHBOARD_CSS = `
 [data-theme="cream"] .dash-mini.is-muted{background:rgba(20,45,29,.06);border-color:var(--line);color:#536157}
 [data-theme="cream"] .dash-status.finished{border-color:rgba(20,45,29,.14);color:#536157}
 [data-theme="cream"] .dash-cta{background:#075E36;color:#FFFDF8;border:1px solid rgba(7,94,54,.24)}
+html[data-theme="cream"] .dash{--gold:#A9832E;--green:#075E36;--orange:#B77D22;--red:#C4543D;--blue:#075E36;--muted:#536157;--bg:#FAF7EF;--panel:#FFFDF8;--panel2:#F6F0E4;--line:rgba(20,45,29,.14);background:linear-gradient(180deg,#FFFCF6 0%,#FAF7EF 48%,#F4ECDC 100%);color:#172118}
+html[data-theme="cream"] .dash-nav{border-bottom-color:rgba(20,45,29,.10);background:rgba(255,253,248,.94)}
+html[data-theme="cream"] .dash-links a{color:#536157}
+html[data-theme="cream"] .dash-links a:hover{background:rgba(7,94,54,.08);color:#075E36}
+html[data-theme="cream"] .dash-burger{background:#FFFDF8;color:#172118}
+html[data-theme="cream"] .dash-hero{border-color:rgba(7,94,54,.16);background:radial-gradient(circle at 82% 18%,rgba(7,94,54,.12),transparent 28%),linear-gradient(135deg,#FFFDF8 0%,#F6F0E4 100%);box-shadow:0 24px 60px rgba(22,38,26,.10)}
+html[data-theme="cream"] .dash-meta,html[data-theme="cream"] .dash-stake,html[data-theme="cream"] .dash-card-meta,html[data-theme="cream"] .dash-empty{color:#536157}
+html[data-theme="cream"] .dash-stake strong,html[data-theme="cream"] .dash-card,html[data-theme="cream"] .dash-course-name,html[data-theme="cream"] .dash-title{color:#172118}
+html[data-theme="cream"] .dash-card,html[data-theme="cream"] .dash-empty,html[data-theme="cream"] .dash-stat{background:#FFFDF8;box-shadow:0 18px 46px rgba(22,38,26,.08)}
+html[data-theme="cream"] .dash-live{border-color:rgba(7,94,54,.24);background:rgba(7,94,54,.10)}
+html[data-theme="cream"] .dash-bubble,html[data-theme="cream"] .dash-mini.is-gold,html[data-theme="cream"] .dash-mini.is-blue{background:rgba(7,94,54,.08);border-color:rgba(7,94,54,.22);color:#075E36}
+html[data-theme="cream"] .dash-mini.is-muted{background:rgba(20,45,29,.06);border-color:var(--line);color:#536157}
+html[data-theme="cream"] .dash-status.finished{border-color:rgba(20,45,29,.14);color:#536157}
+html[data-theme="cream"] .dash-cta{background:#075E36;color:#FFFDF8;border:1px solid rgba(7,94,54,.24)}
 @media(max-width:768px){.dash-nav{grid-template-columns:auto auto 1fr;padding:12px 16px}.dash-logo{font-size:23px}.dash-links{display:none}.dash-burger{display:inline-flex}.dash-actions{grid-column:1 / -1;justify-content:space-between}.dash-shell{grid-template-columns:1fr;padding:16px}.dash-hero{grid-template-columns:1fr;padding:16px}.dash-course-name{font-size:28px}.dash-bubble{width:52px;height:52px;font-size:26px}.dash-grid{grid-template-columns:1fr}.dash-side{grid-row:auto}.dash-hero-side{min-width:0}}
 `;
 
@@ -484,10 +486,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const visibleRaces = filteredRaces
     .filter((item) => getRaceKeyFromSummary(item.race) !== heroKey)
     .slice(0, 9);
+  const heroShell = hero ? { race: hero.race, status: hero.status } : null;
+  const visibleRaceShells = visibleRaces.map((item) => ({
+    race: item.race,
+    status: item.status,
+  }));
   const liveActive = races.some((item) => item.status === "live");
-  const heroHref = hero
-    ? `/race/${formatRaceAnalysisId(hero.race.reunion, hero.race.course)}?date=${hero.race.dateStr}`
-    : null;
   const settled = buildSettledSelections(history, outcomes);
   const roi = getRoiFromSettledSelections(settled);
   const hitRate = getHitRateFromSettledSelections(settled);
@@ -521,73 +525,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
       <main className="dash-shell">
         <section className="dash-main">
-          {hero ? (
-            <section className="dash-hero">
-              <div>
-                <p className="dash-kicker">Analyse IA du jour</p>
-                <h1 className="dash-course-name">{hero.race.nomCourse}</h1>
-                <p className="dash-meta">
-                  {hero.race.hippodrome} - {hero.race.discipline} - {hero.race.heureDepart}
-                </p>
-                <div className="dash-selection" aria-label="Selections IA">
-                  {[0, 1, 2].map((slot) => (
-                    <span className="dash-bubble" key={slot}>?</span>
-                  ))}
-                </div>
-              </div>
-              <div className="dash-hero-side">
-                <div>
-                  <p className="dash-label">Verdict</p>
-                  <strong className="dash-verdict is-watch">PREMIUM</strong>
-                </div>
-                <p className="dash-stake">
-                  Mise conseillee
-                  <strong>--</strong>
-                </p>
-                {heroHref ? (
-                  <Link className="dash-cta" href={heroHref}>Deverrouiller l&apos;analyse</Link>
-                ) : null}
-              </div>
-            </section>
-          ) : (
-            <section className="dash-empty">{EMPTY_RACES_MESSAGE}</section>
-          )}
-
-          <section>
-            <div className="dash-section-head">
-              <h2 className="dash-title">Autres courses du jour</h2>
-              <p className="dash-label">{visibleRaces.length} courses</p>
-            </div>
-            {visibleRaces.length > 0 ? (
-              <div className="dash-grid">
-                {visibleRaces.map((item) => (
-                  <Link
-                    href={`/race/${formatRaceAnalysisId(item.race.reunion, item.race.course)}?date=${item.race.dateStr}`}
-                    key={`${item.race.reunion}-${item.race.course}`}
-                    className="dash-card"
-                  >
-                    <div className="dash-card-row">
-                      <strong className="dash-card-title">{item.race.hippodrome}</strong>
-                      <span className={`dash-status ${item.status}`}>{getStatusLabel(item.status)}</span>
-                    </div>
-                    <p className="dash-card-meta">
-                      {item.race.discipline} - {item.race.heureDepart} - {item.race.nombrePartants} partants
-                    </p>
-                    <div className="dash-card-row">
-                      <div className="dash-mini-bubbles">
-                        {[0, 1, 2].map((slot, index) => (
-                          <span className={`dash-mini ${getCompactBubbleClass(index)}`} key={slot}>?</span>
-                        ))}
-                      </div>
-                      <span className="dash-label">Premium</span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="dash-empty">{EMPTY_RACES_MESSAGE}</div>
-            )}
-          </section>
+          <DashboardPremiumOverview
+            hero={heroShell}
+            visibleRaces={visibleRaceShells}
+            emptyMessage={EMPTY_RACES_MESSAGE}
+          />
         </section>
 
         <aside className="dash-side">

@@ -128,7 +128,7 @@ export async function GET(
     const timelineSnapshots = await listPredictionStageSnapshots(date, rNum, cNum).catch(() => []);
     const minutesUntil = getMinutesUntilStart(courseInfo.heureDepart, courseInfo.dateStr);
     const isFinished = officialArrival.length > 0 || minutesUntil < -10;
-    const pronoAvailable = isFinished || minutesUntil <= 30;
+    const pronoAvailable = isFinished || minutesUntil <= 30 || subscriptionState.isSubscribed;
 
     let analysis = null;
     if (pronoAvailable && participants.length > 0) {

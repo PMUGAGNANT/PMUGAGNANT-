@@ -118,7 +118,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" data-theme="warm">
+    <html lang="fr" data-theme="warm" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var t=localStorage.getItem('pmu-theme-v2');document.documentElement.dataset.theme=t==='cream'?'cream':'warm'}catch(e){}",
+          }}
+        />
+      </head>
       <body
         className={`${uiFont.variable} ${displayFont.variable} ${monoFont.variable} min-h-screen text-[var(--pmu-text)] antialiased`}
       >
