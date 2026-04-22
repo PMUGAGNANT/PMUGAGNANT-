@@ -376,66 +376,180 @@ img, svg { display: block; }
   display: grid;
   place-items: center;
   background:
-    radial-gradient(circle at 50% 20%, color-mix(in srgb, var(--pmu-primary) 14%, transparent), transparent 24rem),
+    radial-gradient(circle at 50% 15%, color-mix(in srgb, var(--pmu-primary) 18%, transparent), transparent 24rem),
+    radial-gradient(circle at 20% 82%, color-mix(in srgb, var(--pmu-gold) 16%, transparent), transparent 22rem),
     var(--pmu-bg);
   color: var(--pmu-text);
+  overflow: hidden;
 }
 
 .route-loading-screen {
   min-height: 100vh;
 }
 
-.site-boot-splash div,
-.route-loading-screen div {
+.site-boot-splash::before,
+.route-loading-screen::before {
+  content: "";
+  position: absolute;
+  inset: -30%;
+  background:
+    linear-gradient(115deg, transparent 0 42%, color-mix(in srgb, var(--pmu-primary) 10%, transparent) 48%, transparent 54% 100%);
+  animation: bootSweep 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.boot-loader {
+  position: relative;
+  z-index: 1;
   display: grid;
-  min-width: min(24rem, calc(100vw - 2rem));
-  gap: 0.8rem;
+  width: min(25rem, calc(100vw - 2rem));
+  justify-items: center;
+  gap: 0.9rem;
   border: 1px solid var(--pmu-border);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--pmu-surface) 94%, transparent);
-  padding: 1.5rem;
-  box-shadow: var(--pmu-shadow);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--pmu-surface) 92%, transparent), color-mix(in srgb, var(--pmu-surface-2) 84%, transparent));
+  padding: 1.35rem 1.45rem 1.2rem;
+  box-shadow: var(--pmu-shadow), inset 0 1px 0 rgba(255,255,255,0.7);
   text-align: center;
+  backdrop-filter: blur(18px);
 }
 
-.site-boot-splash span,
-.route-loading-screen span {
+.boot-loader__mark {
+  position: relative;
+  display: grid;
+  width: 5rem;
+  height: 5rem;
+  place-items: center;
+}
+
+.boot-loader__mark img {
+  position: relative;
+  z-index: 2;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 8px;
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--pmu-primary) 18%, transparent);
+}
+
+.boot-loader__mark::before {
+  content: "";
+  position: absolute;
+  inset: 0.15rem;
+  border-radius: 50%;
+  background:
+    conic-gradient(from 0deg, transparent 0 18%, var(--pmu-primary) 28%, var(--pmu-gold) 38%, transparent 54% 100%);
+  animation: bootSpin 1.15s linear infinite;
+}
+
+.boot-loader__mark::after {
+  content: "";
+  position: absolute;
+  inset: 0.55rem;
+  border-radius: 50%;
+  background: var(--pmu-surface);
+}
+
+.boot-loader__orbit {
+  position: absolute;
+  inset: 0.35rem;
+  z-index: 3;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--pmu-primary) 22%, transparent);
+  animation: bootPulse 1.4s ease-in-out infinite;
+}
+
+.boot-loader__copy {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.boot-loader__copy span {
   color: var(--pmu-primary);
   font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
-  font-size: 1.6rem;
+  font-size: 1.9rem;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
+  line-height: 1;
 }
 
-.site-boot-splash strong,
-.route-loading-screen strong {
+.boot-loader__copy strong {
   color: var(--pmu-text-soft);
   font-size: 0.9rem;
+  font-weight: 800;
 }
 
-.site-boot-splash i,
-.route-loading-screen i {
-  display: block;
-  height: 0.35rem;
+.boot-loader__scan {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.boot-loader__scan span {
+  position: relative;
+  height: 0.34rem;
   overflow: hidden;
   border-radius: 999px;
-  background: var(--pmu-primary-soft);
+  background: color-mix(in srgb, var(--pmu-primary) 12%, transparent);
 }
 
-.site-boot-splash i::after,
-.route-loading-screen i::after {
+.boot-loader__scan span::after {
   content: "";
-  display: block;
-  width: 42%;
+  position: absolute;
+  inset: 0;
+  width: 52%;
   height: 100%;
   border-radius: inherit;
-  background: var(--pmu-primary);
-  animation: pmuLoadingBar 0.85s ease-in-out infinite alternate;
+  background: linear-gradient(90deg, var(--pmu-primary), var(--pmu-gold));
+  animation: bootScan 1.05s ease-in-out infinite;
 }
 
-@keyframes pmuLoadingBar {
-  from { transform: translateX(0); }
-  to { transform: translateX(140%); }
+.boot-loader__scan span:nth-child(2)::after {
+  animation-delay: 0.12s;
+}
+
+.boot-loader__scan span:nth-child(3)::after {
+  animation-delay: 0.24s;
+}
+
+.boot-loader p {
+  margin: 0;
+  color: var(--pmu-text-muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+@keyframes bootSpin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes bootPulse {
+  0%, 100% { transform: scale(0.94); opacity: 0.45; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+
+@keyframes bootScan {
+  0% { transform: translateX(-105%); opacity: 0; }
+  25%, 80% { opacity: 1; }
+  100% { transform: translateX(200%); opacity: 0; }
+}
+
+@keyframes bootSweep {
+  0%, 100% { transform: translateX(-18%) rotate(0deg); opacity: 0.35; }
+  50% { transform: translateX(18%) rotate(3deg); opacity: 0.75; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-boot-splash::before,
+  .route-loading-screen::before,
+  .boot-loader__mark::before,
+  .boot-loader__orbit,
+  .boot-loader__scan span::after {
+    animation: none;
+  }
 }
 
 @media (max-width: 720px) {
