@@ -62,6 +62,46 @@
   --vmax-text:            #F6F2E8;
 }
 
+[data-theme="warm"] {
+  --pmu-bg:               #080A12;
+  --pmu-bg-mid:           #101827;
+  --pmu-surface:          #101827;
+  --pmu-surface-2:        #151928;
+  --pmu-surface-highlight:#1B2232;
+
+  --pmu-border:           rgba(212, 175, 55, 0.18);
+  --pmu-border-strong:    rgba(212, 175, 55, 0.34);
+
+  --pmu-primary:          #00C851;
+  --pmu-primary-bright:   #31E981;
+  --pmu-primary-soft:     rgba(0, 200, 81, 0.12);
+  --pmu-primary-fade:     rgba(0, 200, 81, 0.07);
+  --pmu-blue:             #4DC8FF;
+  --pmu-accent-blue:      #4DC8FF;
+  --pmu-accent-violet:    #D4AF37;
+
+  --pmu-gold:             #D4AF37;
+  --pmu-gold-light:       rgba(212, 175, 55, 0.14);
+  --pmu-sand:             #D4AF37;
+  --pmu-earth-light:      rgba(212, 175, 55, 0.08);
+
+  --pmu-text:             #F6F2E8;
+  --pmu-text-soft:        rgba(246, 242, 232, 0.72);
+  --pmu-text-muted:       rgba(246, 242, 232, 0.46);
+
+  --pmu-red:              #FF4D5A;
+  --pmu-orange:           #FF9F1C;
+
+  --pmu-on-primary:       #08110D;
+  --pmu-on-danger:        #FFFDF8;
+
+  --pmu-shadow:           0 24px 60px rgba(0, 0, 0, 0.34);
+  --pmu-shadow-sm:        0 16px 36px rgba(0, 0, 0, 0.24);
+  --pmu-glow:             0 0 0 1px rgba(212, 175, 55, 0.18);
+  --pmu-glow-soft:        0 0 0 1px rgba(212, 175, 55, 0.10);
+  --pmu-card-inset:       inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
 /* ── Alias clair pour les anciens utilisateurs ayant stocké "dark" ── */
 [data-theme="dark"] {
   --pmu-bg:               #FAF7EF;
@@ -160,7 +200,11 @@ html {
 }
 
 html[data-theme="dark"] {
-  color-scheme: light;
+  color-scheme: dark;
+}
+
+html[data-theme="warm"] {
+  color-scheme: dark;
 }
 
 html[data-theme="cream"] {
@@ -180,6 +224,12 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+}
+
+html[data-theme="warm"] body {
+  background:
+    radial-gradient(circle at 85% 0%, rgba(212, 175, 55, 0.14), transparent 24rem),
+    linear-gradient(180deg, #080A12 0%, #0A0E1A 52%, #080A12 100%);
 }
 
 html[data-theme="cream"] body {
@@ -1269,7 +1319,8 @@ img, svg { display: block; }
 .value-page {
   min-height: 100vh;
   background:
-    linear-gradient(180deg, #FFFCF6 0%, var(--pmu-bg) 42%, #F4ECDC 100%);
+    radial-gradient(circle at 82% 0%, rgba(212, 175, 55, 0.14), transparent 24rem),
+    linear-gradient(180deg, #080A12 0%, #0A0E1A 48%, #080A12 100%);
   color: var(--pmu-text);
   padding: clamp(1rem, 3vw, 2rem) clamp(1rem, 4vw, 2.75rem) 4rem;
 }
@@ -1438,7 +1489,34 @@ img, svg { display: block; }
 }
 
 html[data-theme="warm"] .value-page {
-  background: linear-gradient(180deg, #FFFCF6 0%, var(--pmu-bg) 42%, #F4ECDC 100%);
+  background:
+    radial-gradient(circle at 82% 0%, rgba(212, 175, 55, 0.14), transparent 24rem),
+    linear-gradient(180deg, #080A12 0%, #0A0E1A 48%, #080A12 100%);
+}
+
+html[data-theme="warm"] .value-hero,
+html[data-theme="warm"] .value-lock-card,
+html[data-theme="warm"] .value-state-card,
+html[data-theme="warm"] .value-bet-card {
+  border-color: rgba(212, 175, 55, 0.18);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02)),
+    var(--pmu-surface);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
+}
+
+html[data-theme="warm"] .value-metric {
+  border-color: rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+}
+
+html[data-theme="warm"] .value-metric--edge {
+  border-color: rgba(0, 200, 81, 0.28);
+  background: rgba(0, 200, 81, 0.10);
+}
+
+html[data-theme="cream"] .value-page {
+  background: linear-gradient(180deg, #FFFCF6 0%, #FAF7EF 42%, #F4ECDC 100%);
 }
 
 @media (max-width: 1100px) {
