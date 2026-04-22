@@ -8,6 +8,7 @@ import {
   getBilanDashboardHistoryRange,
   listCourseRecordsBetween,
   listPredictionsBetween,
+  listRunnerOutcomesBetween,
 } from "@/lib/prediction-store";
 import {
   buildPerformanceDashboard,
@@ -281,9 +282,10 @@ export async function GET(request: Request) {
     const fetchRange = getPerformanceDateRange(period === "all" ? "all" : "90j");
 
     try {
-      const [predictions, courses] = await Promise.all([
+      const [predictions, courses, outcomes] = await Promise.all([
         listPredictionsBetween(fetchRange.startIso, fetchRange.endIso),
         listCourseRecordsBetween(fetchRange.startIso, fetchRange.endIso),
+        listRunnerOutcomesBetween(fetchRange.startIso, fetchRange.endIso),
       ]);
 
       return NextResponse.json({
@@ -295,7 +297,7 @@ export async function GET(request: Request) {
           betType,
           hippodrome,
           distance,
-        }, new Date().toISOString(), displayRange),
+        }, new Date().toISOString(), displayRange, outcomes),
       });
     } catch (error) {
       return serverError("Echec du chargement du cockpit performance.", error, {

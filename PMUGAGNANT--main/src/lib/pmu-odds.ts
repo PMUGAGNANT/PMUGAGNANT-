@@ -125,6 +125,9 @@ export function buildLiveOddsDetailsFromRecord(
 
 export function formatLiveOddsLabel(details: LiveOddsDetails | null) {
   if (!details) return "Cote stockee";
+  if (details.source === "PMU_PARTICIPANTS") {
+    return details.updatedAt ? `Cote TURFEDGE ${details.updatedAt}` : "Cote TURFEDGE";
+  }
   const pari = details.typePari.includes("PLACE") ? "PLACE" : "GAGNANT";
   return details.updatedAt ? `Cote PMU ${pari} ${details.updatedAt}` : `Cote PMU ${pari}`;
 }

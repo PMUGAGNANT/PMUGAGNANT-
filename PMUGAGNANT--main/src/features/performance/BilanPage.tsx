@@ -90,6 +90,43 @@ function formatResult(value: string) {
   return "Perdu";
 }
 
+function formatFinishPosition(value: number | null) {
+  if (!value) return "--";
+  return value === 1 ? "1er" : `${value}e`;
+}
+
+function FinishPositionBadge({ position }: { position: number | null }) {
+  const known = typeof position === "number" && position > 0;
+  const isWinner = position === 1;
+  const isPlaced = known && position <= 3;
+  const color = isWinner
+    ? "var(--pmu-primary)"
+    : isPlaced
+      ? "var(--pmu-gold)"
+      : known
+        ? "var(--pmu-text-soft)"
+        : "var(--pmu-text-muted)";
+  const borderColor = isWinner
+    ? "rgba(0, 200, 81, 0.34)"
+    : isPlaced
+      ? "rgba(212, 175, 55, 0.34)"
+      : "var(--pmu-border)";
+  const background = isWinner
+    ? "rgba(0, 200, 81, 0.10)"
+    : isPlaced
+      ? "rgba(212, 175, 55, 0.10)"
+      : "var(--pmu-surface-2)";
+
+  return (
+    <span
+      className="inline-flex min-w-14 justify-center rounded-lg border px-3 py-2 text-sm font-black"
+      style={{ color, borderColor, background }}
+    >
+      {formatFinishPosition(position)}
+    </span>
+  );
+}
+
 function KpiCard({
   label,
   value,
@@ -673,12 +710,13 @@ function BilanPageContent() {
             </div>
             {data.comparisonRows.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[70rem] text-left text-sm">
+                <table className="w-full min-w-[76rem] text-left text-sm">
                   <thead className="border-y border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] text-[var(--pmu-text-muted)]">
                     <tr>
                       <th className="px-5 py-3">Date</th>
                       <th className="px-5 py-3">Course</th>
                       <th className="px-5 py-3">Cheval</th>
+                      <th className="px-5 py-3">Arrivee</th>
                       <th className="px-5 py-3">Pari</th>
                       <th className="px-5 py-3">Decision</th>
                       <th className="px-5 py-3">Mise conseillee</th>
@@ -697,6 +735,9 @@ function BilanPageContent() {
                           <p className="text-xs text-[var(--pmu-text-muted)]">{row.hippodrome}</p>
                         </td>
                         <td className="px-5 py-4 font-black text-[var(--pmu-text)]">{row.cheval}</td>
+                        <td className="px-5 py-4">
+                          <FinishPositionBadge position={row.finishPosition} />
+                        </td>
                         <td className="px-5 py-4 text-[var(--pmu-text-soft)]">{row.betType ?? "--"}</td>
                         <td className="px-5 py-4 text-[var(--pmu-text-soft)]">{row.decision}</td>
                         <td className="px-5 py-4 text-[var(--pmu-text-soft)]">{formatCurrency(row.suggestedStake)}</td>

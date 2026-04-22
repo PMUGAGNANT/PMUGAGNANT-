@@ -1,5 +1,11 @@
 import { getRaceSegmentKey } from "@/lib/engine-v6";
-import type { CourseRecordRow, PredictionRow, RaceSummary, SegmentKey } from "@/lib/types";
+import type {
+  CourseRecordRow,
+  PredictionRow,
+  RaceSummary,
+  RunnerOutcomeRow,
+  SegmentKey,
+} from "@/lib/types";
 
 export const PERFORMANCE_SEGMENTS: SegmentKey[] = [
   "TROT_ATTELE",
@@ -99,6 +105,7 @@ export interface PerformanceComparisonRow {
   raceLabel: string;
   hippodrome: string;
   cheval: string;
+  finishPosition: number | null;
   betType: "GAGNANT" | "PLACE" | null;
   decision: PredictionRow["decision"];
   suggestedStake: number;
@@ -238,6 +245,12 @@ function predictionKey(row: Pick<PredictionRow, "date" | "reunion" | "course">) 
   return `${row.date}-${row.reunion}-${row.course}`;
 }
 
+function runnerOutcomeKey(
+  row: Pick<RunnerOutcomeRow, "date" | "reunion" | "course" | "cheval_num">
+) {
+  return `${row.date}-${row.reunion}-${row.course}-${row.cheval_num}`;
+}
+
 function isDateInRange(date: string, startIso: string, endIso: string) {
   return date >= startIso && date <= endIso;
 }
@@ -351,7 +364,10 @@ function buildRangeSummary(
   };
 }
 
-function buildComparisonRows(rows: PredictionRow[]): PerformanceComparisonRow[] {
+function buildComparisonRows(
+  rows: PredictionRow[],
+  outcomeMap: Map<string, RunnerOutcomeRow>
+): PerformanceComparisonRow[] {
   return rows
     .filter((row) => row.decision !== "REJET" && getStake(row) > 0)
     .sort((left, right) => {
@@ -364,6 +380,13 @@ function buildComparisonRows(rows: PredictionRow[]): PerformanceComparisonRow[] 
     .map((row) => {
       const actualStake = getStake(row);
       const gain = getGain(row);
+      const outcome = outcomeMap.get(
+        `${row.date}-${row.reunion}-${row.course}-${row.cheval_num}`
+      );
+      const finishPosition =
+        typeof outcome?.ordre_arrivee === "number" && outcome.ordre_arrivee > 0
+          ? outcome.ordre_arrivee
+          : null;
       const result =
         !isSettled(row)
           ? "EN_ATTENTE"
@@ -379,6 +402,7 @@ function buildComparisonRows(rows: PredictionRow[]): PerformanceComparisonRow[] 
         raceLabel: `R${row.reunion}C${row.course}`,
         hippodrome: row.hippodrome,
         cheval: `#${row.cheval_num} ${row.cheval_nom}`,
+        finishPosition,
         betType: row.pari_conseille ?? null,
         decision: row.decision,
         suggestedStake: actualStake,
@@ -396,9 +420,11 @@ export function buildPerformanceDashboard(
   courses: CourseRecordRow[],
   filters: PerformanceFilters,
   generatedAt = new Date().toISOString(),
-  range: { startIso: string; endIso: string } | null = null
+  range: { startIso: string; endIso: string } | null = null,
+  outcomes: RunnerOutcomeRow[] = []
 ): PerformanceDashboard {
   const courseMap = new Map(courses.map((course) => [predictionKey(course), course] as const));
+  const outcomeMap = new Map(outcomes.map((outcome) => [runnerOutcomeKey(outcome), outcome] as const));
   const segmentByRace = new Map<string, SegmentKey>(
     courses.map((course) => [predictionKey(course), getSegmentForCourse(course)] as const)
   );
@@ -568,7 +594,7 @@ export function buildPerformanceDashboard(
     timeline,
     segments,
     calibration,
-    comparisonRows: buildComparisonRows(segmentFiltered),
+    comparisonRows: buildComparisonRows(segmentFiltered, outcomeMap),
     availableHippodromes,
     generatedAt,
   };
