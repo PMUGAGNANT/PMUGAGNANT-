@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { getAllRaces, getParticipants, getTodayDateStr } from "@/lib/pmu-api";
+import {
+  getAllRaces,
+  getArriveeCourse,
+  getParticipants,
+  getRapportsCourse,
+  getTodayDateStr,
+} from "@/lib/pmu-api";
 import { analyzeRaceWithParameters, getMinutesUntilStart } from "@/lib/analysis";
 import { attachFaultRates } from "@/lib/horse-faults";
 import { loadAlgoParameters } from "@/lib/config";
@@ -9,6 +15,7 @@ import {
   listCourseRecordsBetween,
   listPredictionsBetween,
   listRunnerOutcomesBetween,
+  saveRunnerOutcome,
 } from "@/lib/prediction-store";
 import {
   buildPerformanceDashboard,
@@ -24,6 +31,8 @@ import { normalizeRequestedDate, parsePositiveInteger } from "@/lib/request-util
 import { logger } from "@/lib/server-logger";
 import { CONFIDENCE_BUCKET_HIGH, CONFIDENCE_BUCKET_MEDIUM } from "@/lib/scoring-policy";
 import { loadElitePerformers } from "@/lib/predictions/signals";
+import { fromIsoDate } from "@/lib/date-utils";
+import type { PredictionRow, RunnerOutcomeRow } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -127,6 +136,98 @@ function round2(value: number) {
 function getRoi(stake: number, gain: number) {
   if (stake <= 0) return 0;
   return round2(((gain - stake) / stake) * 100);
+}
+
+const MAX_LIVE_OUTCOME_FALLBACK_RACES = 18;
+
+function outcomeRaceKey(row: Pick<RunnerOutcomeRow, "date" | "reunion" | "course">) {
+  return `${row.date}-${row.reunion}-${row.course}`;
+}
+
+function predictionRaceKey(row: Pick<PredictionRow, "date" | "reunion" | "course">) {
+  return `${row.date}-${row.reunion}-${row.course}`;
+}
+
+function getRecentFallbackStartIso(endIso: string) {
+  const end = new Date(`${endIso}T00:00:00.000Z`);
+  if (Number.isNaN(end.getTime())) return endIso;
+  end.setUTCDate(end.getUTCDate() - 2);
+  return end.toISOString().slice(0, 10);
+}
+
+async function loadMissingLiveOutcomes(
+  predictions: PredictionRow[],
+  existingOutcomes: RunnerOutcomeRow[],
+  range: { startIso: string; endIso: string }
+) {
+  const existingRaceKeys = new Set(existingOutcomes.map(outcomeRaceKey));
+  const recentStartIso = getRecentFallbackStartIso(range.endIso);
+  const racesToFetch = new Map<
+    string,
+    { date: string; reunion: number; course: number }
+  >();
+
+  for (const prediction of predictions) {
+    if (prediction.decision === "REJET" || (prediction.mise_simulee ?? 0) <= 0) {
+      continue;
+    }
+    if (prediction.date < recentStartIso || prediction.date > range.endIso) {
+      continue;
+    }
+
+    const raceKey = predictionRaceKey(prediction);
+    if (!existingRaceKeys.has(raceKey)) {
+      racesToFetch.set(raceKey, {
+        date: prediction.date,
+        reunion: prediction.reunion,
+        course: prediction.course,
+      });
+    }
+  }
+
+  const fetchedRows: RunnerOutcomeRow[] = [];
+  for (const race of [...racesToFetch.values()].slice(0, MAX_LIVE_OUTCOME_FALLBACK_RACES)) {
+    const dateStr = fromIsoDate(race.date);
+
+    try {
+      const [arrivee, reports] = await Promise.all([
+        getArriveeCourse(dateStr, race.reunion, race.course),
+        getRapportsCourse(dateStr, race.reunion, race.course),
+      ]);
+
+      if (!arrivee || arrivee.length === 0) {
+        continue;
+      }
+
+      const rows: RunnerOutcomeRow[] = arrivee.map((chevalNum, index) => {
+        const ordreArrivee = index + 1;
+        return {
+          date: race.date,
+          reunion: race.reunion,
+          course: race.course,
+          cheval_num: chevalNum,
+          ordre_arrivee: ordreArrivee,
+          resultat_gagnant: ordreArrivee === 1,
+          resultat_place: ordreArrivee <= 3,
+          rapport_gagnant: reports?.simpleGagnant[chevalNum] ?? null,
+          rapport_place: reports?.simplePlace[chevalNum] ?? null,
+          non_partant: false,
+        };
+      });
+
+      fetchedRows.push(...rows);
+      await saveRunnerOutcome(rows);
+    } catch (error) {
+      logger.warn("bilan.performance.live_outcome_fallback_failed", {
+        date: race.date,
+        reunion: race.reunion,
+        course: race.course,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  return fetchedRows;
 }
 
 function buildHistoricalDashboard(
@@ -287,6 +388,8 @@ export async function GET(request: Request) {
         listCourseRecordsBetween(fetchRange.startIso, fetchRange.endIso),
         listRunnerOutcomesBetween(fetchRange.startIso, fetchRange.endIso),
       ]);
+      const liveOutcomes = await loadMissingLiveOutcomes(predictions, outcomes, displayRange);
+      const mergedOutcomes = liveOutcomes.length > 0 ? [...outcomes, ...liveOutcomes] : outcomes;
 
       return NextResponse.json({
         success: true,
@@ -297,7 +400,7 @@ export async function GET(request: Request) {
           betType,
           hippodrome,
           distance,
-        }, new Date().toISOString(), displayRange, outcomes),
+        }, new Date().toISOString(), displayRange, mergedOutcomes),
       });
     } catch (error) {
       return serverError("Echec du chargement du cockpit performance.", error, {

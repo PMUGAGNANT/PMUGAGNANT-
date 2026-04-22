@@ -278,6 +278,22 @@ function getGain(row: PredictionRow) {
   return Math.max(0, Number(row.gain_simule ?? 0));
 }
 
+function getOutcomeGain(row: PredictionRow, outcome: RunnerOutcomeRow | undefined, stake: number) {
+  if (!outcome) return null;
+  const rapport =
+    row.pari_conseille === "GAGNANT"
+      ? outcome.rapport_gagnant
+      : row.pari_conseille === "PLACE"
+        ? outcome.rapport_place
+        : null;
+
+  if (typeof rapport !== "number" || !Number.isFinite(rapport) || rapport <= 0) {
+    return outcome.resultat_gagnant || outcome.resultat_place ? null : 0;
+  }
+
+  return round2(stake * rapport);
+}
+
 function getOdds(row: PredictionRow) {
   const odds = row.cote_depart ?? row.cote_matin ?? null;
   return odds !== null && Number.isFinite(odds) && odds > 0 ? odds : null;
@@ -379,7 +395,6 @@ function buildComparisonRows(
     .slice(0, 60)
     .map((row) => {
       const actualStake = getStake(row);
-      const gain = getGain(row);
       const outcome = outcomeMap.get(
         `${row.date}-${row.reunion}-${row.course}-${row.cheval_num}`
       );
@@ -387,14 +402,27 @@ function buildComparisonRows(
         typeof outcome?.ordre_arrivee === "number" && outcome.ordre_arrivee > 0
           ? outcome.ordre_arrivee
           : null;
+      const gain =
+        row.gain_simule !== null
+          ? getGain(row)
+          : getOutcomeGain(row, outcome, actualStake) ?? getGain(row);
+      const outcomeResult =
+        finishPosition === null
+          ? null
+          : finishPosition === 1
+            ? "GAGNANT"
+            : finishPosition <= 3
+              ? "PLACE"
+              : "PERDU";
       const result =
-        !isSettled(row)
+        outcomeResult ??
+        (!isSettled(row)
           ? "EN_ATTENTE"
           : row.resultat_gagnant
             ? "GAGNANT"
             : row.resultat_place
               ? "PLACE"
-              : "PERDU";
+              : "PERDU");
 
       return {
         id: `${row.date}-${row.reunion}-${row.course}-${row.cheval_num}`,
