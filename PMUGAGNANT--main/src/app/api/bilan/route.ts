@@ -193,7 +193,14 @@ async function loadMissingLiveOutcomes(
   }
 
   const fetchedRows: RunnerOutcomeRow[] = [];
-  for (const race of [...racesToFetch.values()].slice(0, MAX_LIVE_OUTCOME_FALLBACK_RACES)) {
+  const prioritizedRaces = [...racesToFetch.values()].sort((left, right) => {
+    const dateCompare = right.date.localeCompare(left.date);
+    if (dateCompare !== 0) return dateCompare;
+    if (right.reunion !== left.reunion) return right.reunion - left.reunion;
+    return right.course - left.course;
+  });
+
+  for (const race of prioritizedRaces.slice(0, MAX_LIVE_OUTCOME_FALLBACK_RACES)) {
     const dateStr = fromIsoDate(race.date);
 
     try {
