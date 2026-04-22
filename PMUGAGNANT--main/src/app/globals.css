@@ -1265,6 +1265,203 @@ img, svg { display: block; }
   transform: translateY(-1px);
 }
 
+/* Page Value Bets */
+.value-page {
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, #FFFCF6 0%, var(--pmu-bg) 42%, #F4ECDC 100%);
+  color: var(--pmu-text);
+  padding: clamp(1rem, 3vw, 2rem) clamp(1rem, 4vw, 2.75rem) 4rem;
+}
+
+.value-shell {
+  display: grid;
+  width: min(92rem, 100%);
+  gap: 1.25rem;
+  margin: 0 auto;
+}
+
+.value-hero,
+.value-lock-card,
+.value-state-card,
+.value-bet-card {
+  border: 1px solid var(--pmu-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.82), rgba(255,253,248,0.96)),
+    var(--pmu-surface);
+  box-shadow: var(--pmu-shadow-sm);
+}
+
+.value-hero {
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+.value-back-link,
+.value-kicker,
+.value-race-label,
+.value-metric p {
+  color: var(--pmu-primary);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.value-hero h1,
+.value-lock-card h2 {
+  margin: 0.65rem 0 0;
+  max-width: 58rem;
+  color: var(--pmu-text);
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(3rem, 7vw, 5.2rem);
+  font-weight: 800;
+  line-height: 0.92;
+}
+
+.value-hero p,
+.value-lock-copy {
+  max-width: 44rem;
+  margin: 1rem 0 0;
+  color: var(--pmu-text-soft);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.8;
+}
+
+.value-bets-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.value-bet-card {
+  display: grid;
+  gap: 1.1rem;
+  padding: 1.15rem;
+  color: var(--pmu-text);
+  text-decoration: none;
+  transition: border-color 0.18s var(--pmu-ease-out), box-shadow 0.18s var(--pmu-ease-out), transform 0.18s var(--pmu-ease-out);
+}
+
+.value-bet-card:hover {
+  border-color: var(--pmu-border-strong);
+  box-shadow: var(--pmu-shadow);
+  transform: translateY(-2px);
+}
+
+.value-bet-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.value-bet-card h2 {
+  margin: 0.45rem 0 0;
+  color: var(--pmu-text);
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 0.95;
+}
+
+.value-runner-number {
+  display: grid;
+  width: 3.6rem;
+  height: 3.6rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--pmu-primary) 22%, transparent);
+  border-radius: 50%;
+  background: var(--pmu-primary-soft);
+  color: var(--pmu-primary);
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-size: 1.45rem;
+  font-weight: 900;
+}
+
+.value-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.value-metric {
+  min-height: 5.2rem;
+  border: 1px solid var(--pmu-border);
+  border-radius: 8px;
+  background: var(--pmu-surface-2);
+  padding: 0.85rem;
+}
+
+.value-metric strong {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--pmu-text);
+  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.value-metric:first-child strong {
+  color: var(--pmu-gold);
+}
+
+.value-metric--edge {
+  border-color: color-mix(in srgb, var(--pmu-primary) 22%, transparent);
+  background: var(--pmu-primary-soft);
+}
+
+.value-metric--edge strong,
+.value-metric--edge p {
+  color: var(--pmu-primary);
+}
+
+.value-lock-card,
+.value-state-card {
+  padding: 1.5rem;
+}
+
+.value-lock-count {
+  margin: 0.75rem 0 0;
+  color: var(--pmu-primary);
+  font-weight: 900;
+}
+
+.value-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+html[data-theme="warm"] .value-page {
+  background: linear-gradient(180deg, #FFFCF6 0%, var(--pmu-bg) 42%, #F4ECDC 100%);
+}
+
+@media (max-width: 1100px) {
+  .value-bets-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .value-page {
+    padding: 1rem;
+  }
+
+  .value-bets-grid,
+  .value-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .value-bet-head {
+    align-items: center;
+  }
+}
+
 /* Input */
 .app-input {
   width: 100%;

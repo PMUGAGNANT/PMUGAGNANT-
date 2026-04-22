@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import {
   formatOdds,
   formatRaceAnalysisId,
-  getRunnerNumberClass,
 } from "@/features/vmax/vmax-model";
 import {
   getSupabaseBrowserClient,
@@ -141,7 +140,7 @@ export function PremiumValueBetsPanel() {
 
   if (state.status === "loading") {
     return (
-      <section className="rounded-lg border border-white/10 bg-[#101827] p-6 text-sm font-black text-slate-400">
+      <section className="value-state-card">
         Verification de l&apos;acces Premium...
       </section>
     );
@@ -149,32 +148,30 @@ export function PremiumValueBetsPanel() {
 
   if (state.status === "locked") {
     return (
-      <section className="rounded-lg border border-[#D4AF37]/25 bg-[#101827] p-6">
-        <p className="text-xs font-black uppercase tracking-[0.16em] text-[#D4AF37]">
-          Privilege membre
-        </p>
-        <h2 className="mt-2 font-[var(--font-display)] text-4xl font-black leading-none text-[#F6F2E8]">
+      <section className="value-lock-card">
+        <p className="value-kicker">Privilege membre</p>
+        <h2>
           Les value bets completes sont Premium.
         </h2>
-        <p className="mt-3 max-w-2xl text-sm font-bold leading-7 text-slate-400">
+        <p className="value-lock-copy">
           {state.message}
         </p>
         {state.previewCount !== null ? (
-          <p className="mt-2 text-sm font-black text-[#D4AF37]">
+          <p className="value-lock-count">
             {state.previewCount} signal{state.previewCount > 1 ? "s" : ""} detecte
             {state.previewCount > 1 ? "s" : ""} aujourd&apos;hui.
           </p>
         ) : null}
-        <div className="mt-5 flex flex-wrap gap-3">
+        <div className="value-actions">
           <Link
             href="/premium"
-            className="rounded-lg bg-[#D4AF37] px-5 py-3 text-sm font-black uppercase tracking-wide text-[#0A0E1A]"
+            className="app-button-primary"
           >
             Passer Premium
           </Link>
           <Link
             href="/login?redirect=%2Fvalue-bets"
-            className="rounded-lg border border-white/10 px-5 py-3 text-sm font-black uppercase tracking-wide text-[#F6F2E8]"
+            className="app-button-secondary"
           >
             Me connecter
           </Link>
@@ -185,7 +182,7 @@ export function PremiumValueBetsPanel() {
 
   if (state.status === "error") {
     return (
-      <section className="rounded-lg border border-white/10 bg-[#101827] p-6 text-sm font-black text-slate-400">
+      <section className="value-state-card">
         {state.message}
       </section>
     );
@@ -193,60 +190,58 @@ export function PremiumValueBetsPanel() {
 
   if (state.valueBets.length === 0) {
     return (
-      <section className="rounded-lg border border-white/10 bg-[#101827] p-6 text-sm font-black text-slate-400">
+      <section className="value-state-card">
         Analyse en cours : aucune value bet nette n&apos;est disponible pour le moment.
       </section>
     );
   }
 
   return (
-    <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <section className="value-bets-grid">
       {state.valueBets.map((card) => (
         <Link
           href={`/race/${formatRaceAnalysisId(card.reunion, card.course)}?date=${formatDateForRaceLink(card.date)}`}
           key={`${card.date}-${card.reunion}-${card.course}-${card.chevalNum}`}
-          className="group rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-4 shadow-xl shadow-black/20 transition hover:-translate-y-1 hover:border-[#D4AF37]/45"
+          className="value-bet-card"
         >
-          <div className="flex items-start justify-between gap-3">
+          <div className="value-bet-head">
             <div>
-              <p className="text-xs font-black uppercase text-[#D4AF37]">
+              <p className="value-race-label">
                 R{card.reunion}C{card.course} - {card.hippodrome}
               </p>
-              <h2 className="mt-2 text-2xl font-black leading-tight text-[#F6F2E8]">
+              <h2>
                 {card.cheval}
               </h2>
             </div>
-            <span
-              className={`grid aspect-square w-10 shrink-0 place-items-center rounded-full font-[var(--font-display)] text-xl font-black ${getRunnerNumberClass(card.chevalNum)}`}
-            >
+            <span className="value-runner-number">
               {card.chevalNum}
             </span>
           </div>
 
-          <div className="mt-4 grid grid-cols-4 gap-2">
-            <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
-              <p className="text-[0.65rem] font-black uppercase text-slate-500">PMU</p>
-              <p className="font-[var(--font-display)] text-2xl font-black text-[#D4AF37]">
+          <div className="value-metrics">
+            <div className="value-metric">
+              <p>PMU</p>
+              <strong>
                 {formatOdds(card.cotePmu)}
-              </p>
+              </strong>
             </div>
-            <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
-              <p className="text-[0.65rem] font-black uppercase text-slate-500">Fair</p>
-              <p className="font-[var(--font-display)] text-2xl font-black text-[#F6F2E8]">
+            <div className="value-metric">
+              <p>Fair</p>
+              <strong>
                 {formatOdds(card.coteEstimee)}
-              </p>
+              </strong>
             </div>
-            <div className="rounded-lg border border-[#00C851]/25 bg-[#00C851]/10 p-3">
-              <p className="text-[0.65rem] font-black uppercase text-[#00C851]">Edge</p>
-              <p className="font-[var(--font-display)] text-2xl font-black text-[#00C851]">
+            <div className="value-metric value-metric--edge">
+              <p>Edge</p>
+              <strong>
                 +{card.edge.toFixed(0)}%
-              </p>
+              </strong>
             </div>
-            <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
-              <p className="text-[0.65rem] font-black uppercase text-slate-500">Mise</p>
-              <p className="font-[var(--font-display)] text-2xl font-black text-[#F6F2E8]">
+            <div className="value-metric">
+              <p>Mise</p>
+              <strong>
                 {formatStake(card.miseConseillee)}
-              </p>
+              </strong>
             </div>
           </div>
         </Link>

@@ -12,16 +12,14 @@ export const dynamic = "force-dynamic";
 
 export default function ValueBetsPage() {
   return (
-    <main className="min-h-screen bg-[#0A0E1A] px-4 py-6 text-[#F6F2E8]">
-      <section className="mx-auto grid w-full max-w-[92rem] gap-5">
-        <header className="rounded-lg border border-[#D4AF37]/20 bg-[#101827] p-5 shadow-2xl shadow-black/25 md:p-7">
-          <Link href="/dashboard" className="text-xs font-black uppercase text-[#D4AF37]">
+    <main className="value-page">
+      <section className="value-shell">
+        <header className="value-hero">
+          <Link href="/dashboard" className="value-back-link">
             Retour dashboard
           </Link>
-          <h1 className="mt-3 font-[var(--font-display)] text-5xl font-black leading-none md:text-7xl">
-            Value Bets du jour
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm font-bold leading-7 text-slate-400">
+          <h1>Value Bets du jour</h1>
+          <p>
             Les chevaux dont la cote PMU semble superieure a la cote fair calculee par
             l&apos;IA. Discipline d&apos;abord : une value bet n&apos;est pas une garantie.
           </p>
