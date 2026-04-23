@@ -2,7 +2,15 @@
 
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useCallback, useMemo, useRef, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 
 type CoachRole = "assistant" | "user";
@@ -71,6 +79,8 @@ const DEFAULT_SUGGESTIONS = [
   "Compare la course principale",
   "Je suis Premium, qu'est-ce que je debloque ?",
 ];
+
+const COACH_TIMEOUT_MS = 25000;
 
 function createMessageId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -151,92 +161,128 @@ export function TurfEdgeCoach() {
   const [loading, setLoading] = useState(false);
   const [lastAccessLevel, setLastAccessLevel] = useState<"premium" | "preview" | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const messagesRef = useRef<HTMLDivElement | null>(null);
 
   const disabled = pathname === "/login" || pathname.startsWith("/admin");
   const canSubmit = draft.trim().length > 0 && !loading;
 
   const statusLabel = useMemo(() => {
-    if (loading) return "Lecture des signaux";
+    if (loading) return "Analyse en cours...";
     if (lastAccessLevel === "premium") return "Premium: details complets";
     if (lastAccessLevel === "preview") return "Apercu: mise masquee";
     return "Supabase Brain actif";
   }, [lastAccessLevel, loading]);
 
-  const askCoach = useCallback(async (question: string) => {
-    const cleanQuestion = question.trim();
-    if (!cleanQuestion || loading) return;
+  useEffect(() => {
+    const node = messagesRef.current;
+    if (!node) return;
 
-    const userMessage: CoachMessage = {
-      id: createMessageId(),
-      role: "user",
-      content: cleanQuestion,
-    };
+    node.scrollTo({
+      top: node.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [messages, loading, open]);
 
-    setMessages((current) => [...current, userMessage]);
-    setDraft("");
-    setLoading(true);
+  const askCoach = useCallback(
+    async (question: string) => {
+      const cleanQuestion = question.trim();
+      if (!cleanQuestion || loading) return;
 
-    try {
-      const token = await getAccessToken();
-      const response = await fetch("/api/coach", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ question: cleanQuestion }),
-      });
-      const payload = (await response.json()) as CoachApiResponse;
+      const userMessage: CoachMessage = {
+        id: createMessageId(),
+        role: "user",
+        content: cleanQuestion,
+      };
 
-      if (!response.ok || !payload.success) {
-        throw new Error(payload.error ?? "Coach IA indisponible.");
+      setMessages((current) => [...current, userMessage]);
+      setDraft("");
+      setLoading(true);
+
+      let timeoutId: number | null = null;
+
+      try {
+        const token = await getAccessToken();
+        const controller = new AbortController();
+        timeoutId = window.setTimeout(() => controller.abort(), COACH_TIMEOUT_MS);
+
+        const response = await fetch("/api/coach", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          signal: controller.signal,
+          body: JSON.stringify({ question: cleanQuestion }),
+        });
+        const payload = (await response.json()) as CoachApiResponse;
+
+        if (!response.ok || !payload.success) {
+          throw new Error(payload.error ?? "Coach IA indisponible.");
+        }
+
+        setLastAccessLevel(payload.accessLevel ?? null);
+        if (payload.suggestedQuestions?.length) {
+          setSuggestions(payload.suggestedQuestions);
+        }
+
+        const setupMeta = payload.needsSetup
+          ? "Configuration OpenAI a verifier: reponse de secours basee sur les donnees."
+          : payload.fallback
+            ? "Reponse de secours: l'IA n'a pas repondu correctement."
+            : payload.provider === "supabase"
+              ? "Moteur TurfEdge Supabase: donnees reelles, zero blabla invente."
+              : payload.model
+                ? `Modele: ${payload.model}`
+                : undefined;
+
+        setMessages((current) => [
+          ...current,
+          {
+            id: createMessageId(),
+            role: "assistant",
+            content: payload.answer ?? "Donnees insuffisantes pour repondre.",
+            meta: setupMeta,
+            insight: payload.insight ?? null,
+          },
+        ]);
+      } catch (error) {
+        setMessages((current) => [
+          ...current,
+          {
+            id: createMessageId(),
+            role: "assistant",
+            content:
+              error instanceof Error && error.name === "AbortError"
+                ? "La reponse prend trop de temps. Reessaie tout de suite, je relance l'analyse."
+                : error instanceof Error
+                  ? error.message
+                  : "Coach IA indisponible pour le moment.",
+          },
+        ]);
+      } finally {
+        if (timeoutId !== null) {
+          window.clearTimeout(timeoutId);
+        }
+        setLoading(false);
       }
+    },
+    [loading]
+  );
 
-      setLastAccessLevel(payload.accessLevel ?? null);
-      if (payload.suggestedQuestions?.length) {
-        setSuggestions(payload.suggestedQuestions);
-      }
-
-      const setupMeta = payload.needsSetup
-        ? "Configuration OpenAI a verifier: reponse de secours basee sur les donnees."
-        : payload.fallback
-          ? "Reponse de secours: l'IA n'a pas repondu correctement."
-          : payload.provider === "supabase"
-            ? "Moteur TurfEdge Supabase: donnees reelles, zero blabla invente."
-            : payload.model
-              ? `Modele: ${payload.model}`
-              : undefined;
-
-      setMessages((current) => [
-        ...current,
-        {
-          id: createMessageId(),
-          role: "assistant",
-          content: payload.answer ?? "Donnees insuffisantes pour repondre.",
-          meta: setupMeta,
-          insight: payload.insight ?? null,
-        },
-      ]);
-    } catch (error) {
-      setMessages((current) => [
-        ...current,
-        {
-          id: createMessageId(),
-          role: "assistant",
-          content:
-            error instanceof Error
-              ? error.message
-              : "Coach IA indisponible pour le moment.",
-        },
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  }, [loading]);
+  function submitDraft() {
+    void askCoach(draft);
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    void askCoach(draft);
+    submitDraft();
+  }
+
+  function handleDraftKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      submitDraft();
+    }
   }
 
   function openCoach() {
@@ -256,8 +302,14 @@ export function TurfEdgeCoach() {
         onClick={openCoach}
         aria-label="Ouvrir le Coach IA TurfEdge"
       >
-        <span className="turf-coach-trigger__mark">IA</span>
-        <span className="turf-coach-trigger__text">Coach TurfEdge</span>
+        <span className="turf-coach-trigger__logo">
+          <Image src="/logo-turfedge.png" alt="" width={56} height={56} />
+        </span>
+        <span className="turf-coach-trigger__copy">
+          <strong>Ouvrir le Coach IA</strong>
+          <small>Chevaux, value, comparaisons</small>
+        </span>
+        <span className="turf-coach-trigger__pulse" aria-hidden="true" />
       </button>
     );
   }
@@ -273,6 +325,7 @@ export function TurfEdgeCoach() {
             <p className="turf-coach-panel__status">{statusLabel}</p>
           </div>
         </div>
+
         <div className="turf-coach-panel__actions" aria-label="Actions du Coach IA">
           <button
             type="button"
@@ -281,7 +334,7 @@ export function TurfEdgeCoach() {
             aria-label="Retour a la page"
             title="Retour"
           >
-            ←
+            {"\u2190"}
           </button>
           <button
             type="button"
@@ -290,7 +343,7 @@ export function TurfEdgeCoach() {
             aria-label="Fermer le Coach IA"
             title="Fermer"
           >
-            ×
+            {"\u00D7"}
           </button>
         </div>
       </header>
@@ -301,7 +354,7 @@ export function TurfEdgeCoach() {
         <span>Arrivee</span>
       </div>
 
-      <div className="turf-coach-panel__messages">
+      <div className="turf-coach-panel__messages" ref={messagesRef}>
         {messages.map((message) => (
           <article
             key={message.id}
@@ -312,6 +365,7 @@ export function TurfEdgeCoach() {
             {message.meta ? <span>{message.meta}</span> : null}
           </article>
         ))}
+
         {loading ? (
           <article className="turf-coach-message turf-coach-message--assistant turf-coach-message--loading">
             <div className="turf-coach-loading-orbit" aria-hidden="true" />
@@ -342,6 +396,7 @@ export function TurfEdgeCoach() {
           id="turf-coach-question"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={handleDraftKeyDown}
           placeholder="Ex: Pourquoi R9C6 #5 ? Compare R1C4. Je suis Premium pourquoi c'est flou ?"
           maxLength={700}
           rows={3}

@@ -3066,15 +3066,66 @@ html[data-theme="cream"] .value-page {
 
 /* Coach IA TurfEdge v2 */
 .turf-coach-trigger {
-  min-height: 3.25rem;
-  padding: 0.62rem 1rem 0.62rem 0.7rem;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  min-width: min(20rem, calc(100vw - 2.5rem));
+  min-height: 4.25rem;
+  gap: 0.8rem;
+  padding: 0.7rem 0.9rem;
   border-color: color-mix(in srgb, var(--pmu-gold) 42%, var(--pmu-primary));
   background:
     linear-gradient(135deg, var(--pmu-primary) 0%, color-mix(in srgb, var(--pmu-primary) 76%, #000) 56%, var(--pmu-gold) 180%);
 }
 
-.turf-coach-trigger__mark {
+.turf-coach-trigger__logo {
+  position: relative;
+  display: inline-grid;
+  width: 3.2rem;
+  height: 3.2rem;
+  place-items: center;
   border: 1px solid color-mix(in srgb, var(--pmu-on-primary) 24%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--pmu-on-primary) 10%, transparent);
+  overflow: hidden;
+}
+
+.turf-coach-trigger__logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.turf-coach-trigger__copy {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+  text-align: left;
+}
+
+.turf-coach-trigger__copy strong {
+  color: var(--pmu-on-primary);
+  font-size: 0.94rem;
+  font-weight: 900;
+  line-height: 1.05;
+}
+
+.turf-coach-trigger__copy small {
+  color: color-mix(in srgb, var(--pmu-on-primary) 76%, transparent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.turf-coach-trigger__pulse {
+  position: relative;
+  display: inline-grid;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 999px;
+  background: #4dff92;
+  box-shadow: 0 0 0 0 color-mix(in srgb, #4dff92 56%, transparent);
+  animation: turfCoachPulse 1.6s ease-out infinite;
 }
 
 .turf-coach-panel {
@@ -3171,6 +3222,7 @@ html[data-theme="cream"] .value-page {
 .turf-coach-panel__messages {
   max-height: 25rem;
   gap: 0.8rem;
+  scroll-behavior: smooth;
 }
 
 .turf-coach-message {
@@ -3393,7 +3445,27 @@ html[data-theme="cream"] .value-page {
   to { transform: rotate(360deg); }
 }
 
+@keyframes turfCoachPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 color-mix(in srgb, #4dff92 56%, transparent);
+  }
+  70% {
+    transform: scale(1.03);
+    box-shadow: 0 0 0 12px color-mix(in srgb, #4dff92 0%, transparent);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 color-mix(in srgb, #4dff92 0%, transparent);
+  }
+}
+
 @media (max-width: 640px) {
+  .turf-coach-trigger {
+    min-width: min(17rem, calc(100vw - 1.5rem));
+    min-height: 3.9rem;
+  }
+
   .turf-coach-panel__modes,
   .turf-coach-insight__metrics,
   .turf-coach-panel__form {
@@ -3407,6 +3479,14 @@ html[data-theme="cream"] .value-page {
 
   .turf-coach-panel__title {
     font-size: 1.45rem;
+  }
+
+  .turf-coach-trigger__copy strong {
+    font-size: 0.88rem;
+  }
+
+  .turf-coach-trigger__copy small {
+    font-size: 0.68rem;
   }
 
   .turf-coach-message--user {
