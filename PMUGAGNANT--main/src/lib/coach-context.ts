@@ -23,7 +23,18 @@ export interface CoachContextItem {
   premiumLocked: boolean;
 }
 
-export type CoachIntent = "horse" | "best" | "value" | "result" | "compare" | "avoid" | "general";
+export type CoachIntent =
+  | "horse"
+  | "best"
+  | "value"
+  | "result"
+  | "compare"
+  | "avoid"
+  | "why"
+  | "help"
+  | "premium"
+  | "greeting"
+  | "general";
 
 export interface CoachInsight {
   intent: CoachIntent;
@@ -67,11 +78,29 @@ function normalizeText(value: string) {
     .trim();
 }
 
+function hasTurfSignal(question: string) {
+  const normalized = normalizeText(question);
+  const hint = extractRaceHint(question);
+
+  return (
+    hint.reunion !== null ||
+    hint.course !== null ||
+    hint.horseNumber !== null ||
+    /\b(cheval|course|partant|hippodrome|pmu|pari|parier|mise|cote|value|edge|selection|ticket|pronostic|resultat|arrivee|gagnant|place|perdu|jouer|surveiller|eviter|rival|compare|score)\b/.test(
+      normalized
+    )
+  );
+}
+
 function getCoachIntent(question: string): CoachIntent {
   const normalized = normalizeText(question);
+  const hint = extractRaceHint(question);
 
   if (/\b(value|edge|cote|prix|surevalue|sure value|opportunite)\b/.test(normalized)) {
     return "value";
+  }
+  if (/\b(compare|comparaison|contre|versus|vs|rival|rivaux)\b/.test(normalized)) {
+    return "compare";
   }
   if (/\b(resultat|arrive|arrivee|fini|termine|place|gagnant|perdu)\b/.test(normalized)) {
     return "result";
@@ -79,14 +108,24 @@ function getCoachIntent(question: string): CoachIntent {
   if (/\b(eviter|piege|danger|mauvais|risque|tocard|passer)\b/.test(normalized)) {
     return "avoid";
   }
-  if (/\b(compare|comparaison|contre|versus|vs|rival|rivaux)\b/.test(normalized)) {
-    return "compare";
+  if (/\b(premium|abonnement|abonne|pro|membre|gratuit|prive|flou|masque|cache|debloque|deverrouille)\b/.test(normalized)) {
+    return "premium";
+  }
+  if (/\b(pourquoi|explique|explication|raison|argument|detail|analyse detaillee|choisir|choix)\b/.test(normalized)) {
+    return "why";
   }
   if (/\b(meilleur|top|selection|prioritaire|cheval du jour|ticket du jour)\b/.test(normalized)) {
     return "best";
   }
-
-  const hint = extractRaceHint(question);
+  if (/\b(aide|comment|fonctionne|marche|utiliser|sert|tu fais quoi|commande|question)\b/.test(normalized)) {
+    return "help";
+  }
+  if (
+    /\b(bonjour|salut|hello|coucou|yo|bjr|bonsoir)\b/.test(normalized) &&
+    !hasTurfSignal(question)
+  ) {
+    return "greeting";
+  }
   if (hint.reunion !== null || hint.course !== null || hint.horseNumber !== null) {
     return "horse";
   }
@@ -97,7 +136,7 @@ function getCoachIntent(question: string): CoachIntent {
 function extractRaceHint(question: string): RaceHint {
   const normalized = normalizeText(question);
   const raceMatch = normalized.match(/\br\s*(\d{1,2})\s*c\s*(\d{1,2})\b/);
-  const hashHorseMatch = normalized.match(/#\s*(\d{1,2})\b/);
+  const hashHorseMatch = question.match(/#\s*(\d{1,2})\b/);
   const horseMatch =
     hashHorseMatch ??
     normalized.match(/\b(?:cheval|numero|n|no)\s*(\d{1,2})\b/);
@@ -525,6 +564,235 @@ function getPrimaryVerdict(item: CoachContextItem) {
   return "Passer";
 }
 
+function joinAnswer(lines: string[]) {
+  return lines.filter(Boolean).join("\n");
+}
+
+function getRunnerLabel(item: CoachContextItem) {
+  return `${item.race} #${item.horseNumber} ${item.horseName}`;
+}
+
+function getShortStake(item: CoachContextItem, accessLevel: CoachAccessLevel) {
+  if (accessLevel !== "premium") return "mise reservee Premium";
+  if (item.stake === null || item.stake <= 0) return "mise --";
+  return `mise ${formatValue(item.stake, " EUR")}`;
+}
+
+function getShortOdds(item: CoachContextItem) {
+  return item.odds === null ? "cote --" : `cote ${item.odds}`;
+}
+
+function getShortValue(item: CoachContextItem) {
+  return item.value === null ? "value --" : `value ${item.value}`;
+}
+
+function getShortRunnerLine(item: CoachContextItem, accessLevel: CoachAccessLevel) {
+  return `${getRunnerLabel(item)}: ${item.decision}, score ${item.score}/100, ${getShortOdds(
+    item
+  )}, ${getShortValue(item)}, ${getShortStake(item, accessLevel)}.`;
+}
+
+function getNoContextAnswer(intent: CoachIntent) {
+  if (intent === "result") {
+    return joinAnswer([
+      "Je n'ai pas encore assez d'arrivee consolidee pour ce cheval ou cette course.",
+      "Donne-moi un format precis du type R1C4 #7, ou reessaie quand les resultats PMU sont synchronises.",
+      "Jeu responsable: un resultat passe sert a mesurer, pas a garantir le prochain.",
+    ]);
+  }
+
+  if (intent === "compare") {
+    return joinAnswer([
+      "Je n'ai pas assez de chevaux dans la meme course pour faire une vraie comparaison.",
+      "Donne-moi une course precise comme R1C4, ou un cheval avec son numero, et je compare les rivaux directs.",
+      "Jeu responsable: une comparaison reduit le bruit, elle ne supprime jamais le risque.",
+    ]);
+  }
+
+  return joinAnswer([
+    "Je n'ai pas assez de donnees TurfEdge pour repondre proprement a cette question.",
+    "Donne-moi un format du type R1C4 #7, le nom exact du cheval, ou demande: meilleur cheval, value bet, cheval a eviter.",
+    "Jeu responsable: un pronostic reste une aide a la decision, jamais une garantie.",
+  ]);
+}
+
+function buildBestAnswer(context: CoachContextItem[], accessLevel: CoachAccessLevel) {
+  const first = context[0];
+  const challengers = context.slice(1, 4);
+
+  return joinAnswer([
+    `La selection la plus propre maintenant: ${getRunnerLabel(first)}.`,
+    `Pourquoi: ${getDecisionLabel(first)}, score ${first.score}/100, confiance ${formatConfidence(
+      first.confidence
+    )}, ${getShortOdds(first)}, ${getShortValue(first)}.`,
+    getStakeRead(first, accessLevel),
+    challengers.length
+      ? `Derriere lui: ${challengers
+          .map((item) => `${getRunnerLabel(item)} (${item.score}/100)`)
+          .join(", ")}.`
+      : "Derriere lui: donnees insuffisantes pour hierarchiser proprement.",
+    getFinalAdvice(first),
+    "Jeu responsable: mise petite, decision froide.",
+  ]);
+}
+
+function buildValueAnswer(context: CoachContextItem[], accessLevel: CoachAccessLevel) {
+  const valueItems = context
+    .filter((item) => item.value !== null && item.value > 0)
+    .slice(0, 3);
+  const items = valueItems.length ? valueItems : context.slice(0, 3);
+  const first = items[0];
+
+  return joinAnswer([
+    "Je te reponds sur la value: je cherche le prix qui paye mieux que le risque estime.",
+    ...items.map((item, index) => `${index + 1}. ${getShortRunnerLine(item, accessLevel)}`),
+    first ? `Mon choix value: ${getRunnerLabel(first)} si la cote reste stable.` : "",
+    first ? getRiskRead(first) : "",
+    "Jeu responsable: value ne veut pas dire certitude, ca veut dire meilleur prix relatif.",
+  ]);
+}
+
+function buildAvoidAnswer(context: CoachContextItem[]) {
+  const items = context.slice(0, 3);
+  const first = items[0];
+
+  return joinAnswer([
+    first
+      ? `Celui que je laisse de cote en priorite: ${getRunnerLabel(first)}.`
+      : "Je n'ai pas de rejet net dans les donnees actuelles.",
+    ...items.map((item, index) => {
+      const valueRead =
+        item.value === null ? "value indisponible" : `value ${item.value}`;
+      return `${index + 1}. ${getRunnerLabel(item)}: ${item.decision}, score ${item.score}/100, ${valueRead}.`;
+    }),
+    first ? getRiskRead(first) : "",
+    "Ma decision: pas de mise tant que le prix ou le signal ne change pas.",
+    "Jeu responsable: savoir passer une course, c'est deja gagner du controle.",
+  ]);
+}
+
+function buildResultAnswer(context: CoachContextItem[]) {
+  const first = context[0];
+  const others = context
+    .slice(1, 4)
+    .filter((item) => item.result !== "EN_ATTENTE");
+
+  return joinAnswer([
+    `${getRunnerLabel(first)}: ${getResultRead(first)}`,
+    first.finishPosition ? `Place exacte: ${formatFinishPosition(first.finishPosition)}.` : "",
+    others.length
+      ? `Autres resultats trouves: ${others
+          .map((item) => `${getRunnerLabel(item)} ${item.result}${item.finishPosition ? ` ${formatFinishPosition(item.finishPosition)}` : ""}`)
+          .join(", ")}.`
+      : "Je n'ai pas d'autre arrivee consolidee utile dans ce contexte.",
+    "Jeu responsable: les resultats servent a verifier la methode, pas a courir apres les pertes.",
+  ]);
+}
+
+function buildCompareAnswer(context: CoachContextItem[], accessLevel: CoachAccessLevel) {
+  const first = context[0];
+  const rivals = getSameRaceRivals(first, context);
+  const fallbackRivals = rivals.length ? rivals : context.slice(1, 4);
+
+  return joinAnswer([
+    `Comparaison autour de ${getRunnerLabel(first)}.`,
+    `Base: ${getShortRunnerLine(first, accessLevel)}`,
+    fallbackRivals.length
+      ? `Rivaux: ${fallbackRivals
+          .map((item) => `${getRunnerLabel(item)} (${item.score}/100, ${getShortValue(item)})`)
+          .join(" | ")}.`
+      : "Rivaux: donnees insuffisantes pour comparer proprement.",
+    fallbackRivals[0] && first.score - fallbackRivals[0].score < 5
+      ? "Lecture: ecart faible, je ne surmiserais pas ce cheval sans cote interessante."
+      : "Lecture: le premier garde l'avantage dans les signaux disponibles.",
+    getFinalAdvice(first),
+    "Jeu responsable: comparer sert a choisir moins souvent, mais mieux.",
+  ]);
+}
+
+function buildWhyAnswer(context: CoachContextItem[], accessLevel: CoachAccessLevel) {
+  const first = context[0];
+
+  return joinAnswer([
+    `Pourquoi je lis ${getRunnerLabel(first)} comme ca:`,
+    `1. Decision: ${first.decision}, donc ${getDecisionLabel(first)}.`,
+    `2. Niveau: score ${first.score}/100 et confiance ${formatConfidence(first.confidence)}.`,
+    `3. Prix: ${getShortOdds(first)} et ${getShortValue(first)}.`,
+    `4. Discipline de mise: ${getShortStake(first, accessLevel)}.`,
+    getRiskRead(first),
+    getRivalRead(first, context),
+    getFinalAdvice(first),
+    "Jeu responsable: l'analyse explique un choix, elle ne transforme pas une course en certitude.",
+  ]);
+}
+
+function buildHorseAnswer(context: CoachContextItem[], accessLevel: CoachAccessLevel) {
+  const first = context[0];
+
+  return joinAnswer([
+    `Sur ${getRunnerLabel(first)}, ma lecture est: ${getPrimaryVerdict(first)}.`,
+    `Les chiffres utiles: score ${first.score}/100, confiance ${formatConfidence(first.confidence)}, ${getShortOdds(
+      first
+    )}, ${getShortValue(first)}.`,
+    getStakeRead(first, accessLevel),
+    getRiskRead(first),
+    getResultRead(first),
+    getRivalRead(first, context),
+    getFinalAdvice(first),
+    "Jeu responsable: pas de mise automatique, seulement si la cote reste correcte.",
+  ]);
+}
+
+export function buildDirectCoachAnswer(
+  question: string,
+  accessLevel: CoachAccessLevel
+) {
+  const intent = getCoachIntent(question);
+
+  if (intent === "greeting") {
+    return joinAnswer([
+      "Salut, je suis le Coach TurfEdge.",
+      "Pose-moi une vraie question libre: un cheval, une course, une value, un resultat, ou meme pourquoi un profil est flou.",
+      "Exemples: R1C4 #7, compare R3C2, quel cheval eviter aujourd'hui ?",
+    ]);
+  }
+
+  if (intent === "help") {
+    return joinAnswer([
+      "Je fonctionne avec les donnees Supabase TurfEdge: predictions, scores, cotes, value, mises et arrivees.",
+      "Tu peux me demander: avis sur un cheval, meilleure selection, value bet, cheval a eviter, resultat, ou comparaison dans une course.",
+      "Formats rapides: R1C4 #7, nom du cheval, compare R1C4, pourquoi cette selection ?",
+      accessLevel === "premium"
+        ? "Ton mode Premium permet les details complets: score, edge, mise et analyse."
+        : "En apercu, je garde les mises et details sensibles pour les membres Premium.",
+    ]);
+  }
+
+  if (intent === "premium") {
+    return accessLevel === "premium"
+      ? joinAnswer([
+          "Je te vois en mode Premium quand ton token de session arrive bien jusqu'a l'API.",
+          "En Premium, tu dois avoir: top complet, scores, edge/value, mises conseillees, analyses detaillees et Telegram premium.",
+          "Si une zone reste floue alors que tu es connecte, le souci vient souvent d'une session non rafraichie ou d'un appel sans token. Deconnexion/reconnexion corrige souvent ca.",
+        ])
+      : joinAnswer([
+          "La, je te vois en apercu.",
+          "Un non-abonne peut comprendre la logique generale, mais les mises, edges complets et analyses profondes restent bloques.",
+          "Pour tout debloquer: passe Premium puis reconnecte-toi pour que le site renvoie bien ton token au coach.",
+        ]);
+  }
+
+  if (intent === "general" && !hasTurfSignal(question)) {
+    return joinAnswer([
+      "Je peux te repondre, mais j'ai besoin d'un angle TurfEdge pour etre utile.",
+      "Donne-moi un cheval, une course, un resultat, une comparaison, ou demande le meilleur value bet du jour.",
+      "Exemple concret: Tu penses quoi de R1C4 #7 ?",
+    ]);
+  }
+
+  return null;
+}
+
 export function buildCoachInsight(
   question: string,
   context: CoachContextItem[],
@@ -602,29 +870,23 @@ export function buildFallbackCoachAnswer(
   context: CoachContextItem[],
   accessLevel: CoachAccessLevel
 ) {
-  if (context.length === 0) {
-    return [
-      "Je n'ai pas assez de donnees TurfEdge pour repondre proprement a cette question.",
-      "Donne-moi un format du type R1C4 #7 ou le nom exact du cheval, et je pourrai cibler l'analyse.",
-      "Jeu responsable: un pronostic reste une aide a la decision, jamais une garantie.",
-    ].join("\n");
+  const directAnswer = buildDirectCoachAnswer(question, accessLevel);
+  if (directAnswer) {
+    return directAnswer;
   }
 
-  const first = context[0];
-  const oddsRead =
-    first.odds === null ? "Cote observee: donnees insuffisantes." : `Cote observee: ${first.odds}.`;
-  const metaRead = first.meta ? `${first.hippodrome} - ${first.meta}` : first.hippodrome;
+  const intent = getCoachIntent(question);
 
-  return [
-    `Lecture TurfEdge sur ${first.race} #${first.horseNumber} ${first.horseName}: ${getDecisionLabel(first)}.`,
-    `Score: ${first.score}/100. Confiance: ${formatConfidence(first.confidence)}. Pari conseille: ${first.betType ?? "donnees insuffisantes"}.`,
-    `${oddsRead} ${getValueRead(first)}`,
-    getStakeRead(first, accessLevel),
-    getRiskRead(first),
-    getResultRead(first),
-    `Contexte: ${metaRead}.`,
-    getRivalRead(first, context),
-    getFinalAdvice(first),
-    "Jeu responsable: ne mise que ce que tu peux perdre.",
-  ].join("\n");
+  if (context.length === 0) {
+    return getNoContextAnswer(intent);
+  }
+
+  if (intent === "best") return buildBestAnswer(context, accessLevel);
+  if (intent === "value") return buildValueAnswer(context, accessLevel);
+  if (intent === "avoid") return buildAvoidAnswer(context);
+  if (intent === "result") return buildResultAnswer(context);
+  if (intent === "compare") return buildCompareAnswer(context, accessLevel);
+  if (intent === "why") return buildWhyAnswer(context, accessLevel);
+
+  return buildHorseAnswer(context, accessLevel);
 }

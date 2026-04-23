@@ -8,7 +8,18 @@ import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 type CoachRole = "assistant" | "user";
 
 type CoachInsight = {
-  intent: "horse" | "best" | "value" | "result" | "compare" | "avoid" | "general";
+  intent:
+    | "horse"
+    | "best"
+    | "value"
+    | "result"
+    | "compare"
+    | "avoid"
+    | "why"
+    | "help"
+    | "premium"
+    | "greeting"
+    | "general";
   title: string;
   subtitle: string;
   verdict: string;
@@ -52,13 +63,13 @@ const INITIAL_MESSAGE: CoachMessage = {
   id: "welcome",
   role: "assistant",
   content:
-    "Je lis les donnees TurfEdge en direct: scores, value, cotes, resultats et arrivees. Pose une question, je te sors une decision claire.",
+    "Ecris librement. Je peux analyser un cheval, comparer une course, expliquer un choix, lire une arrivee ou t'aider sur Premium.",
 };
 
 const DEFAULT_SUGGESTIONS = [
-  "Donne-moi la selection la plus propre maintenant",
-  "Quel value bet a le meilleur edge ?",
-  "Quel cheval faut-il eviter aujourd'hui ?",
+  "Pourquoi cette selection est forte ?",
+  "Compare la course principale",
+  "Je suis Premium, qu'est-ce que je debloque ?",
 ];
 
 function createMessageId() {
@@ -319,7 +330,7 @@ export function TurfEdgeCoach() {
           id="turf-coach-question"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder="Ex: Tu penses quoi de R9C6 #5 ?"
+          placeholder="Ex: Pourquoi R9C6 #5 ? Compare R1C4. Je suis Premium pourquoi c'est flou ?"
           maxLength={700}
           rows={3}
         />

@@ -6,6 +6,7 @@ import {
   buildCoachInsight,
   buildCoachSystemPrompt,
   buildCoachUserPrompt,
+  buildDirectCoachAnswer,
   buildFallbackCoachAnswer,
   getCoachDateWindow,
   type CoachAccessLevel,
@@ -44,9 +45,9 @@ function getAccessLevel(isSubscribed: boolean): CoachAccessLevel {
 
 function getSuggestedQuestions() {
   return [
-    "Donne-moi la selection la plus propre maintenant",
-    "Quel value bet a le meilleur edge ?",
-    "Quel cheval faut-il eviter aujourd'hui ?",
+    "Pourquoi cette selection est forte ?",
+    "Compare la course principale",
+    "Je suis Premium, qu'est-ce que je debloque ?",
   ];
 }
 
@@ -153,6 +154,30 @@ export async function POST(request: Request) {
       request.headers.get("authorization")
     );
     const accessLevel = getAccessLevel(state.isSubscribed);
+    const directAnswer = buildDirectCoachAnswer(question, accessLevel);
+
+    if (directAnswer) {
+      return NextResponse.json(
+        {
+          success: true,
+          answer: directAnswer,
+          insight: null,
+          accessLevel,
+          contextCount: 0,
+          fallback: false,
+          needsSetup: false,
+          model: LOCAL_COACH_MODEL,
+          provider: "supabase",
+          suggestedQuestions: getSuggestedQuestions(),
+        },
+        {
+          headers: {
+            "Cache-Control": "private, no-store",
+          },
+        }
+      );
+    }
+
     const todayIso = toIsoDate(getTodayDateStr());
     const range = getCoachDateWindow(todayIso);
     const [predictions, courses, outcomes] = await Promise.all([
