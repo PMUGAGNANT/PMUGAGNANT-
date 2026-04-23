@@ -414,8 +414,13 @@ export function buildCoachSystemPrompt(accessLevel: CoachAccessLevel) {
     "- Reponds uniquement avec les donnees du CONTEXTE_TURFEDGE.",
     "- Si une information manque, dis clairement: donnees insuffisantes.",
     "- Ne promets jamais un gain et ne donne jamais de certitude.",
-    "- Reponds en francais simple, direct, utile, structure, en 8 a 12 lignes maximum.",
-    "- Termine avec une phrase courte de jeu responsable.",
+    "- Reponds en francais simple, direct et structure.",
+    "- Donne d'abord une lecture courte en une phrase.",
+    "- Puis structure la reponse avec 3 a 5 points maximum: signal, prix/cote, risque, action.",
+    "- Fais des phrases courtes. Pas de paragraphe geant.",
+    "- Si tu cites plusieurs chevaux, hierarchise clairement base / rival / outsider / evitement.",
+    "- N'affiche jamais de jargon technique sur le modele, l'API ou l'infrastructure.",
+    "- Termine par une phrase courte de jeu responsable.",
   ].join("\n");
 }
 
