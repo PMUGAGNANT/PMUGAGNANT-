@@ -213,7 +213,7 @@ Variables optionnelles selon les integrations activees :
 - `RESEND_FROM_EMAIL`
 - `SUPPORT_EMAIL`
 - `OPENAI_API_KEY`
-- `OPENAI_MODEL` optionnel, par defaut `gpt-4o-mini`
+- `OPENAI_MODEL` optionnel, par defaut `gpt-4.1-mini`
 
 ## Déploiement Vercel
 
@@ -234,7 +234,7 @@ Variables optionnelles selon les integrations activees :
 - `RESEND_FROM_EMAIL`
 - `SUPPORT_EMAIL`
 - `OPENAI_API_KEY`
-- `OPENAI_MODEL` optionnel, par defaut `gpt-4o-mini`
+- `OPENAI_MODEL` optionnel, par defaut `gpt-4.1-mini`
 
 ### Étapes
 

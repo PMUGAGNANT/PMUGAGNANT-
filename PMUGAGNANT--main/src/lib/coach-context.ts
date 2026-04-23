@@ -259,6 +259,11 @@ function formatValue(value: number | null, suffix = "") {
   return value === null || !Number.isFinite(value) ? "--" : `${value}${suffix}`;
 }
 
+function formatConfidence(value: number) {
+  const rounded = round1(value);
+  return rounded <= 10 ? `${rounded}/10` : `${rounded}/100`;
+}
+
 export function buildFallbackCoachAnswer(
   question: string,
   context: CoachContextItem[],
@@ -284,7 +289,7 @@ export function buildFallbackCoachAnswer(
 
   return [
     `Mon avis rapide sur ${first.race} #${first.horseNumber} ${first.horseName}: ${first.decision}.`,
-    `Confiance: ${first.confidence}/100. Score TurfEdge: ${first.score}/100.`,
+    `Confiance: ${formatConfidence(first.confidence)}. Score TurfEdge: ${first.score}/100.`,
     `Pari conseille: ${first.betType ?? "donnees insuffisantes"}. Cote observee: ${formatValue(first.odds)}.`,
     `Value/edge: ${formatValue(first.value)}. ${stakeLine}`,
     resultLine,

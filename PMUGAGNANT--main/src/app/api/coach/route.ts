@@ -15,13 +15,14 @@ import {
   listPredictionsBetween,
   listRunnerOutcomesBetween,
 } from "@/lib/prediction-store";
+import { logger } from "@/lib/server-logger";
 import { getRequestSubscriptionState } from "@/lib/subscription";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const MAX_QUESTION_LENGTH = 700;
-const DEFAULT_MODEL = "gpt-4o-mini";
+const DEFAULT_MODEL = "gpt-4.1-mini";
 
 type CoachRequestBody = {
   question?: unknown;
@@ -47,6 +48,19 @@ function getSuggestedQuestions() {
   ];
 }
 
+function getModelCandidates() {
+  const configured = process.env.OPENAI_MODEL?.trim();
+  return [...new Set([configured, DEFAULT_MODEL, "gpt-4o-mini"].filter(Boolean))] as string[];
+}
+
+function getOpenAiErrorSummary(error: unknown) {
+  if (error instanceof Error) {
+    return error.message.slice(0, 400);
+  }
+
+  return String(error).slice(0, 400);
+}
+
 async function buildCoachAnswer(
   question: string,
   accessLevel: CoachAccessLevel,
@@ -64,34 +78,49 @@ async function buildCoachAnswer(
     };
   }
 
-  const model = process.env.OPENAI_MODEL?.trim() || DEFAULT_MODEL;
+  const modelCandidates = getModelCandidates();
 
-  try {
-    const client = new OpenAI({ apiKey });
-    const completion = await client.chat.completions.create({
-      model,
-      messages: [
-        { role: "system", content: buildCoachSystemPrompt(accessLevel) },
-        { role: "user", content: buildCoachUserPrompt(question, context) },
-      ],
-      max_tokens: 520,
-    });
-    const answer = completion.choices[0]?.message?.content?.trim();
+  const client = new OpenAI({ apiKey });
+  let lastError: unknown = null;
 
-    return {
-      answer: answer || fallbackAnswer,
-      model,
-      fallback: false,
-      needsSetup: false,
-    };
-  } catch {
-    return {
-      answer: fallbackAnswer,
-      model,
-      fallback: true,
-      needsSetup: false,
-    };
+  for (const model of modelCandidates) {
+    try {
+      const completion = await client.chat.completions.create({
+        model,
+        messages: [
+          { role: "system", content: buildCoachSystemPrompt(accessLevel) },
+          { role: "user", content: buildCoachUserPrompt(question, context) },
+        ],
+        max_tokens: 520,
+      });
+      const answer = completion.choices[0]?.message?.content?.trim();
+
+      return {
+        answer: answer || fallbackAnswer,
+        model,
+        fallback: false,
+        needsSetup: false,
+      };
+    } catch (error) {
+      lastError = error;
+      logger.warn("coach.openai_model_failed", {
+        model,
+        error: getOpenAiErrorSummary(error),
+      });
+    }
   }
+
+  logger.warn("coach.openai_failed", {
+    models: modelCandidates,
+    error: getOpenAiErrorSummary(lastError),
+  });
+
+  return {
+    answer: fallbackAnswer,
+    model: modelCandidates[0] ?? null,
+    fallback: true,
+    needsSetup: true,
+  };
 }
 
 export async function POST(request: Request) {

@@ -118,7 +118,7 @@ export function TurfEdgeCoach() {
       }
 
       const setupMeta = payload.needsSetup
-        ? "Il manque OPENAI_API_KEY: reponse de secours basee sur les donnees."
+        ? "Configuration OpenAI a verifier: reponse de secours basee sur les donnees."
         : payload.fallback
           ? "Reponse de secours: l'IA n'a pas repondu correctement."
           : payload.model
