@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { badRequest, serverError } from "@/lib/api-response";
 import {
   buildCoachContext,
+  buildCoachInsight,
   buildCoachSystemPrompt,
   buildCoachUserPrompt,
   buildFallbackCoachAnswer,
@@ -43,9 +44,9 @@ function getAccessLevel(isSubscribed: boolean): CoachAccessLevel {
 
 function getSuggestedQuestions() {
   return [
-    "Tu penses quoi du meilleur cheval du jour ?",
-    "Quel value bet est le plus interessant ?",
-    "Analyse R1C1 #5 avec les donnees TurfEdge",
+    "Donne-moi la selection la plus propre maintenant",
+    "Quel value bet a le meilleur edge ?",
+    "Quel cheval faut-il eviter aujourd'hui ?",
   ];
 }
 
@@ -166,12 +167,14 @@ export async function POST(request: Request) {
       outcomes,
       accessLevel
     );
+    const insight = buildCoachInsight(question, context, accessLevel);
     const answerPayload = await buildCoachAnswer(question, accessLevel, context);
 
     return NextResponse.json(
       {
         success: true,
         answer: answerPayload.answer,
+        insight,
         accessLevel,
         contextCount: context.length,
         fallback: answerPayload.fallback,
