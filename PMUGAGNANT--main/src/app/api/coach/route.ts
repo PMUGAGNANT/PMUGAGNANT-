@@ -23,6 +23,7 @@ export const runtime = "nodejs";
 
 const MAX_QUESTION_LENGTH = 700;
 const DEFAULT_MODEL = "gpt-4.1-mini";
+const LOCAL_COACH_MODEL = "turfedge-supabase-brain";
 
 type CoachRequestBody = {
   question?: unknown;
@@ -67,12 +68,25 @@ async function buildCoachAnswer(
   context: ReturnType<typeof buildCoachContext>
 ) {
   const fallbackAnswer = buildFallbackCoachAnswer(question, context, accessLevel);
+  const useOpenAi = process.env.COACH_AI_PROVIDER?.trim().toLowerCase() === "openai";
+
+  if (!useOpenAi) {
+    return {
+      answer: fallbackAnswer,
+      model: LOCAL_COACH_MODEL,
+      provider: "supabase" as const,
+      fallback: false,
+      needsSetup: false,
+    };
+  }
+
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
     return {
       answer: fallbackAnswer,
       model: null,
+      provider: "supabase" as const,
       fallback: true,
       needsSetup: true,
     };
@@ -98,6 +112,7 @@ async function buildCoachAnswer(
       return {
         answer: answer || fallbackAnswer,
         model,
+        provider: "openai" as const,
         fallback: false,
         needsSetup: false,
       };
@@ -117,9 +132,10 @@ async function buildCoachAnswer(
 
   return {
     answer: fallbackAnswer,
-    model: modelCandidates[0] ?? null,
-    fallback: true,
-    needsSetup: true,
+    model: LOCAL_COACH_MODEL,
+    provider: "supabase" as const,
+    fallback: false,
+    needsSetup: false,
   };
 }
 
@@ -161,6 +177,7 @@ export async function POST(request: Request) {
         fallback: answerPayload.fallback,
         needsSetup: answerPayload.needsSetup,
         model: answerPayload.model,
+        provider: answerPayload.provider,
         suggestedQuestions: getSuggestedQuestions(),
       },
       {

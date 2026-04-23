@@ -264,6 +264,111 @@ function formatConfidence(value: number) {
   return rounded <= 10 ? `${rounded}/10` : `${rounded}/100`;
 }
 
+function formatFinishPosition(value: number | null) {
+  if (!value) return "";
+  if (value === 1) return "1er";
+  return `${value}e`;
+}
+
+function getDecisionLabel(item: CoachContextItem) {
+  if (item.decision === "VALIDE") {
+    return "feu vert TurfEdge";
+  }
+  if (item.decision === "SURVEILLANCE") {
+    return "profil a surveiller";
+  }
+  return "profil a eviter pour le moment";
+}
+
+function getValueRead(item: CoachContextItem) {
+  if (item.value === null || !Number.isFinite(item.value)) {
+    return "Value: donnees insuffisantes.";
+  }
+  if (item.value >= 0.15) {
+    return `Value: positive (${item.value}), le prix semble interessant.`;
+  }
+  if (item.value >= 0.05) {
+    return `Value: legere (${item.value}), jouable mais sans forcer.`;
+  }
+  if (item.value >= 0) {
+    return `Value: neutre (${item.value}), il faut rester prudent.`;
+  }
+  return `Value: negative (${item.value}), la cote n'offre pas beaucoup de marge.`;
+}
+
+function getStakeRead(item: CoachContextItem, accessLevel: CoachAccessLevel) {
+  if (accessLevel !== "premium") {
+    return "Mise conseillee: masquee en apercu, reservee Premium.";
+  }
+
+  if (item.stake === null || item.stake <= 0) {
+    return "Mise conseillee: donnees insuffisantes.";
+  }
+
+  return `Mise conseillee: ${formatValue(item.stake, " EUR")}.`;
+}
+
+function getResultRead(item: CoachContextItem) {
+  if (item.result === "EN_ATTENTE") {
+    return "Resultat: pas encore consolide dans Supabase.";
+  }
+
+  const finish = formatFinishPosition(item.finishPosition);
+  return `Resultat: ${item.result}${finish ? `, arrive ${finish}` : ""}.`;
+}
+
+function getRiskRead(item: CoachContextItem) {
+  const confidence = item.confidence;
+  const odds = item.odds ?? 0;
+  const value = item.value ?? 0;
+
+  if (item.decision === "REJET") {
+    return "Lecture risque: trop faible pour en faire une selection principale.";
+  }
+  if (confidence >= 8 && value >= 0.1) {
+    return "Lecture risque: tres bon signal, mais ca reste une course hippique.";
+  }
+  if (odds >= 10) {
+    return "Lecture risque: cote haute, donc potentiel sympa mais variance elevee.";
+  }
+  if (value < 0) {
+    return "Lecture risque: bon cheval possible, mauvais prix possible.";
+  }
+
+  return "Lecture risque: profil jouable, a calibrer avec la cote finale.";
+}
+
+function getSameRaceRivals(item: CoachContextItem, context: CoachContextItem[]) {
+  return context
+    .filter((candidate) => candidate.id !== item.id && candidate.race === item.race)
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 2);
+}
+
+function getRivalRead(item: CoachContextItem, context: CoachContextItem[]) {
+  const rivals = getSameRaceRivals(item, context);
+  if (rivals.length === 0) {
+    return "Comparaison course: donnees insuffisantes sur les rivaux directs.";
+  }
+
+  return `Rivaux a garder a l'oeil: ${rivals
+    .map((rival) => `#${rival.horseNumber} ${rival.horseName} (${rival.score}/100)`)
+    .join(", ")}.`;
+}
+
+function getFinalAdvice(item: CoachContextItem) {
+  if (item.decision === "VALIDE" && (item.value ?? 0) >= 0.05) {
+    return "Ma decision: selection prioritaire, surtout si la cote ne s'effondre pas.";
+  }
+  if (item.decision === "VALIDE") {
+    return "Ma decision: bon profil, mais je surveille le prix avant de charger.";
+  }
+  if (item.decision === "SURVEILLANCE") {
+    return "Ma decision: attente, seulement interessant si la cote devient meilleure.";
+  }
+  return "Ma decision: je passe tant qu'un signal nouveau ne change pas la lecture.";
+}
+
 export function buildFallbackCoachAnswer(
   question: string,
   context: CoachContextItem[],
@@ -278,25 +383,20 @@ export function buildFallbackCoachAnswer(
   }
 
   const first = context[0];
-  const stakeLine =
-    accessLevel === "premium"
-      ? `Mise conseillee: ${formatValue(first.stake, " EUR")}.`
-      : "Mise conseillee: reservee aux membres Premium.";
-  const resultLine =
-    first.result === "EN_ATTENTE"
-      ? "Resultat: en attente."
-      : `Resultat: ${first.result}${first.finishPosition ? `, arrive ${first.finishPosition}e` : ""}.`;
+  const oddsRead =
+    first.odds === null ? "Cote observee: donnees insuffisantes." : `Cote observee: ${first.odds}.`;
+  const metaRead = first.meta ? `${first.hippodrome} - ${first.meta}` : first.hippodrome;
 
   return [
-    `Mon avis rapide sur ${first.race} #${first.horseNumber} ${first.horseName}: ${first.decision}.`,
-    `Confiance: ${formatConfidence(first.confidence)}. Score TurfEdge: ${first.score}/100.`,
-    `Pari conseille: ${first.betType ?? "donnees insuffisantes"}. Cote observee: ${formatValue(first.odds)}.`,
-    `Value/edge: ${formatValue(first.value)}. ${stakeLine}`,
-    resultLine,
-    `Terrain de lecture: ${first.hippodrome}${first.meta ? ` - ${first.meta}` : ""}.`,
-    question.trim().length > 0
-      ? "Je peux aussi comparer ce cheval avec les autres partants de la meme course."
-      : "Pose-moi une question precise pour aller plus loin.",
+    `Lecture TurfEdge sur ${first.race} #${first.horseNumber} ${first.horseName}: ${getDecisionLabel(first)}.`,
+    `Score: ${first.score}/100. Confiance: ${formatConfidence(first.confidence)}. Pari conseille: ${first.betType ?? "donnees insuffisantes"}.`,
+    `${oddsRead} ${getValueRead(first)}`,
+    getStakeRead(first, accessLevel),
+    getRiskRead(first),
+    getResultRead(first),
+    `Contexte: ${metaRead}.`,
+    getRivalRead(first, context),
+    getFinalAdvice(first),
     "Jeu responsable: ne mise que ce que tu peux perdre.",
   ].join("\n");
 }

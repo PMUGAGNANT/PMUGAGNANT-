@@ -95,6 +95,7 @@ RESEND_FROM_EMAIL=
 SUPPORT_EMAIL=
 OPENAI_API_KEY=
 OPENAI_MODEL=
+COACH_AI_PROVIDER=
 ```
 
 ### 3. Initialiser Supabase
@@ -214,6 +215,7 @@ Variables optionnelles selon les integrations activees :
 - `SUPPORT_EMAIL`
 - `OPENAI_API_KEY`
 - `OPENAI_MODEL` optionnel, par defaut `gpt-4.1-mini`
+- `COACH_AI_PROVIDER` optionnel. Laisser vide pour utiliser le coach Supabase natif, mettre `openai` pour brancher OpenAI.
 
 ## Déploiement Vercel
 
@@ -235,6 +237,7 @@ Variables optionnelles selon les integrations activees :
 - `SUPPORT_EMAIL`
 - `OPENAI_API_KEY`
 - `OPENAI_MODEL` optionnel, par defaut `gpt-4.1-mini`
+- `COACH_AI_PROVIDER` optionnel. Laisser vide pour utiliser le coach Supabase natif, mettre `openai` pour brancher OpenAI.
 
 ### Étapes
 

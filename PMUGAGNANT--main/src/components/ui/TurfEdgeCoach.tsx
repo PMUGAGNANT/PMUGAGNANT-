@@ -22,6 +22,7 @@ type CoachApiResponse = {
   fallback?: boolean;
   needsSetup?: boolean;
   model?: string | null;
+  provider?: "supabase" | "openai";
   suggestedQuestions?: string[];
 };
 
@@ -121,6 +122,8 @@ export function TurfEdgeCoach() {
         ? "Configuration OpenAI a verifier: reponse de secours basee sur les donnees."
         : payload.fallback
           ? "Reponse de secours: l'IA n'a pas repondu correctement."
+          : payload.provider === "supabase"
+            ? "Moteur TurfEdge Supabase: donnees reelles, zero blabla invente."
           : payload.model
             ? `Modele: ${payload.model}`
             : undefined;
