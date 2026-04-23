@@ -8,7 +8,7 @@ import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 type CoachRole = "assistant" | "user";
 
 type CoachInsight = {
-  intent: "horse" | "best" | "value" | "result" | "compare" | "general";
+  intent: "horse" | "best" | "value" | "result" | "compare" | "avoid" | "general";
   title: string;
   subtitle: string;
   verdict: string;

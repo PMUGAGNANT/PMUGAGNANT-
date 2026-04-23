@@ -23,7 +23,7 @@ export interface CoachContextItem {
   premiumLocked: boolean;
 }
 
-export type CoachIntent = "horse" | "best" | "value" | "result" | "compare" | "general";
+export type CoachIntent = "horse" | "best" | "value" | "result" | "compare" | "avoid" | "general";
 
 export interface CoachInsight {
   intent: CoachIntent;
@@ -75,6 +75,9 @@ function getCoachIntent(question: string): CoachIntent {
   }
   if (/\b(resultat|arrive|arrivee|fini|termine|place|gagnant|perdu)\b/.test(normalized)) {
     return "result";
+  }
+  if (/\b(eviter|piege|danger|mauvais|risque|tocard|passer)\b/.test(normalized)) {
+    return "avoid";
   }
   if (/\b(compare|comparaison|contre|versus|vs|rival|rivaux)\b/.test(normalized)) {
     return "compare";
@@ -181,6 +184,12 @@ function getOutcomeSortBoost(row: PredictionRow, outcome: RunnerOutcomeRow | und
   return 3;
 }
 
+function isResolvedRunner(row: PredictionRow, outcome: RunnerOutcomeRow | undefined) {
+  return (
+    outcome?.ordre_arrivee !== null && outcome?.ordre_arrivee !== undefined
+  ) || row.resultat_gagnant !== null || row.resultat_place !== null;
+}
+
 function getOpportunityScore(row: PredictionRow, outcome: RunnerOutcomeRow | undefined) {
   const value = row.value ?? 0;
   const odds = getOdds(row) ?? 0;
@@ -283,10 +292,25 @@ export function buildCoachContext(
     ? scored
     : scored.filter((item) => item.row.date === latestDate);
   const source = scoped.length > 0 ? scoped : scored;
+  const hasPendingOpportunity = source.some((item) => {
+    const outcome = outcomeByRunner.get(getRunnerKey(item.row));
+    return (
+      item.row.decision !== "REJET" &&
+      !isResolvedRunner(item.row, outcome) &&
+      (intent !== "value" || (item.row.value ?? 0) > 0)
+    );
+  });
   const selected = scored
     .filter((item) => source.includes(item))
     .filter((item) => {
       if (hasDirectMatch) return item.relevance > 0;
+      const outcome = outcomeByRunner.get(getRunnerKey(item.row));
+      if ((intent === "value" || intent === "best") && hasPendingOpportunity) {
+        if (isResolvedRunner(item.row, outcome)) return false;
+      }
+      if (intent === "avoid") {
+        return item.row.decision === "REJET" || (item.row.value ?? 0) < 0;
+      }
       if (intent === "result") return item.row.decision !== "REJET";
       if (intent === "value") return item.row.decision !== "REJET" && (item.row.value ?? 0) > 0;
       return item.row.decision !== "REJET";
@@ -307,6 +331,11 @@ export function buildCoachContext(
         const rightResolved = rightOutcome?.ordre_arrivee ? 1 : 0;
         const leftResolved = leftOutcome?.ordre_arrivee ? 1 : 0;
         if (rightResolved !== leftResolved) return rightResolved - leftResolved;
+      }
+      if (intent === "avoid") {
+        const leftRisk = (left.row.value ?? 0) + getPredictionScore(left.row) / 100;
+        const rightRisk = (right.row.value ?? 0) + getPredictionScore(right.row) / 100;
+        return leftRisk - rightRisk;
       }
 
       const dateCompare = right.row.date.localeCompare(left.row.date);
