@@ -63,7 +63,7 @@ type CoachApiResponse = {
   fallback?: boolean;
   needsSetup?: boolean;
   model?: string | null;
-  provider?: "supabase" | "openai";
+  provider?: "supabase" | "openai-compatible";
   suggestedQuestions?: string[];
 };
 
@@ -193,6 +193,13 @@ export function TurfEdgeCoach() {
         role: "user",
         content: cleanQuestion,
       };
+      const recentHistory = messages
+        .filter((message) => message.role === "assistant" || message.role === "user")
+        .slice(-6)
+        .map((message) => ({
+          role: message.role,
+          content: message.content,
+        }));
 
       setMessages((current) => [...current, userMessage]);
       setDraft("");
@@ -212,7 +219,10 @@ export function TurfEdgeCoach() {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           signal: controller.signal,
-          body: JSON.stringify({ question: cleanQuestion }),
+          body: JSON.stringify({
+            question: cleanQuestion,
+            messages: recentHistory,
+          }),
         });
         const payload = (await response.json()) as CoachApiResponse;
 
@@ -266,7 +276,7 @@ export function TurfEdgeCoach() {
         setLoading(false);
       }
     },
-    [loading]
+    [loading, messages]
   );
 
   function submitDraft() {

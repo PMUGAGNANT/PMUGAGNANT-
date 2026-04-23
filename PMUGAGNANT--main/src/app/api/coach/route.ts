@@ -1,6 +1,9 @@
-import OpenAI from "openai";
 import { NextResponse } from "next/server";
 import { badRequest, serverError } from "@/lib/api-response";
+import {
+  generateCoachAiAnswer,
+  type CoachHistoryMessage,
+} from "@/lib/coach-ai-provider";
 import {
   buildCoachContext,
   buildCoachInsight,
@@ -24,11 +27,12 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const MAX_QUESTION_LENGTH = 700;
-const DEFAULT_MODEL = "gpt-4.1-mini";
 const LOCAL_COACH_MODEL = "turfedge-supabase-brain";
+const MAX_HISTORY_MESSAGES = 6;
 
 type CoachRequestBody = {
   question?: unknown;
+  messages?: unknown;
 };
 
 function getQuestion(body: CoachRequestBody | null) {
@@ -51,100 +55,46 @@ function getSuggestedQuestions() {
   ];
 }
 
-function getModelCandidates() {
-  const configured = process.env.OPENAI_MODEL?.trim();
-  return [...new Set([configured, DEFAULT_MODEL, "gpt-4o-mini"].filter(Boolean))] as string[];
-}
-
-function getOpenAiErrorSummary(error: unknown) {
-  if (error instanceof Error) {
-    return error.message.slice(0, 400);
+function getConversationHistory(body: CoachRequestBody | null): CoachHistoryMessage[] {
+  if (!Array.isArray(body?.messages)) {
+    return [];
   }
 
-  return String(error).slice(0, 400);
+  return body.messages
+    .filter((message): message is { role: unknown; content: unknown } => Boolean(message))
+    .map(
+      (message): CoachHistoryMessage => ({
+        role: message.role === "assistant" ? "assistant" : "user",
+        content:
+          typeof message.content === "string"
+            ? message.content.trim().slice(0, MAX_QUESTION_LENGTH)
+            : "",
+      })
+    )
+    .filter((message) => message.content.length > 0)
+    .slice(-MAX_HISTORY_MESSAGES);
 }
 
 async function buildCoachAnswer(
   question: string,
   accessLevel: CoachAccessLevel,
-  context: ReturnType<typeof buildCoachContext>
+  context: ReturnType<typeof buildCoachContext>,
+  history: CoachHistoryMessage[]
 ) {
   const fallbackAnswer = buildFallbackCoachAnswer(question, context, accessLevel);
-  const useOpenAi = process.env.COACH_AI_PROVIDER?.trim().toLowerCase() === "openai";
-
-  if (!useOpenAi) {
-    return {
-      answer: fallbackAnswer,
-      model: LOCAL_COACH_MODEL,
-      provider: "supabase" as const,
-      fallback: false,
-      needsSetup: false,
-    };
-  }
-
-  const apiKey = process.env.OPENAI_API_KEY;
-
-  if (!apiKey) {
-    return {
-      answer: fallbackAnswer,
-      model: null,
-      provider: "supabase" as const,
-      fallback: true,
-      needsSetup: true,
-    };
-  }
-
-  const modelCandidates = getModelCandidates();
-
-  const client = new OpenAI({ apiKey });
-  let lastError: unknown = null;
-
-  for (const model of modelCandidates) {
-    try {
-      const completion = await client.chat.completions.create({
-        model,
-        messages: [
-          { role: "system", content: buildCoachSystemPrompt(accessLevel) },
-          { role: "user", content: buildCoachUserPrompt(question, context) },
-        ],
-        max_tokens: 520,
-      });
-      const answer = completion.choices[0]?.message?.content?.trim();
-
-      return {
-        answer: answer || fallbackAnswer,
-        model,
-        provider: "openai" as const,
-        fallback: false,
-        needsSetup: false,
-      };
-    } catch (error) {
-      lastError = error;
-      logger.warn("coach.openai_model_failed", {
-        model,
-        error: getOpenAiErrorSummary(error),
-      });
-    }
-  }
-
-  logger.warn("coach.openai_failed", {
-    models: modelCandidates,
-    error: getOpenAiErrorSummary(lastError),
+  return generateCoachAiAnswer({
+    systemPrompt: buildCoachSystemPrompt(accessLevel),
+    userPrompt: buildCoachUserPrompt(question, context),
+    history,
+    fallbackAnswer,
   });
-
-  return {
-    answer: fallbackAnswer,
-    model: LOCAL_COACH_MODEL,
-    provider: "supabase" as const,
-    fallback: false,
-    needsSetup: false,
-  };
 }
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json().catch(() => null)) as CoachRequestBody | null;
     const question = getQuestion(body);
+    const history = getConversationHistory(body);
 
     if (!question) {
       return badRequest("Question vide. Pose une question sur une course ou un cheval.");
@@ -193,7 +143,17 @@ export async function POST(request: Request) {
       accessLevel
     );
     const insight = buildCoachInsight(question, context, accessLevel);
-    const answerPayload = await buildCoachAnswer(question, accessLevel, context);
+    const answerPayload = await buildCoachAnswer(question, accessLevel, context, history);
+
+    logger.info("coach.response_ready", {
+      accessLevel,
+      contextCount: context.length,
+      historyCount: history.length,
+      provider: answerPayload.provider,
+      model: answerPayload.model,
+      fallback: answerPayload.fallback,
+      needsSetup: answerPayload.needsSetup,
+    });
 
     return NextResponse.json(
       {
