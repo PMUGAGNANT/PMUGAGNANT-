@@ -2820,3 +2820,243 @@ html[data-theme="cream"] .value-page {
     break-inside: avoid;
   }
 }
+
+/* Coach IA TurfEdge */
+.turf-coach-trigger {
+  position: fixed;
+  left: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 880;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 3rem;
+  border: 1px solid color-mix(in srgb, var(--pmu-primary) 42%, var(--pmu-border));
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--pmu-primary), var(--pmu-primary-bright));
+  color: var(--pmu-on-primary);
+  padding: 0.62rem 0.9rem;
+  font: inherit;
+  font-weight: 800;
+  box-shadow: var(--pmu-shadow-sm);
+  cursor: pointer;
+}
+
+.turf-coach-trigger__mark {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--pmu-on-primary) 18%, transparent);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.8rem;
+}
+
+.turf-coach-trigger__text {
+  font-size: 0.92rem;
+}
+
+.turf-coach-panel {
+  position: fixed;
+  left: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 920;
+  display: grid;
+  width: min(27rem, calc(100vw - 2.5rem));
+  max-height: min(42rem, calc(100vh - 2.5rem));
+  overflow: hidden;
+  border: 1px solid var(--pmu-border-strong);
+  border-radius: 8px;
+  background:
+    linear-gradient(168deg, var(--pmu-surface-highlight) 0%, var(--pmu-surface) 100%);
+  color: var(--pmu-text);
+  box-shadow: var(--pmu-shadow);
+}
+
+.turf-coach-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--pmu-border);
+  padding: 1rem;
+}
+
+.turf-coach-panel__eyebrow,
+.turf-coach-panel__status {
+  margin: 0;
+  color: var(--pmu-primary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.turf-coach-panel__title {
+  margin: 0.15rem 0 0;
+  color: var(--pmu-text);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.55rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.turf-coach-panel__status {
+  margin-top: 0.35rem;
+  color: var(--pmu-text-muted);
+  text-transform: none;
+}
+
+.turf-coach-panel__close {
+  border: 1px solid var(--pmu-border);
+  border-radius: 8px;
+  background: var(--pmu-surface-2);
+  color: var(--pmu-text-soft);
+  padding: 0.48rem 0.72rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.turf-coach-panel__messages {
+  display: grid;
+  gap: 0.65rem;
+  max-height: 22rem;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.turf-coach-message {
+  max-width: 92%;
+  border: 1px solid var(--pmu-border);
+  border-radius: 8px;
+  padding: 0.78rem 0.85rem;
+}
+
+.turf-coach-message p {
+  margin: 0;
+  white-space: pre-wrap;
+  color: var(--pmu-text-soft);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.turf-coach-message span {
+  display: block;
+  margin-top: 0.45rem;
+  color: var(--pmu-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.turf-coach-message--assistant {
+  justify-self: start;
+  background: var(--pmu-surface-2);
+}
+
+.turf-coach-message--user {
+  justify-self: end;
+  border-color: color-mix(in srgb, var(--pmu-primary) 30%, var(--pmu-border));
+  background: var(--pmu-primary-soft);
+}
+
+.turf-coach-message--user p {
+  color: var(--pmu-text);
+  font-weight: 700;
+}
+
+.turf-coach-panel__suggestions {
+  display: grid;
+  gap: 0.45rem;
+  border-top: 1px solid var(--pmu-border);
+  padding: 0.85rem 1rem 0;
+}
+
+.turf-coach-panel__suggestions button {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--pmu-primary) 22%, var(--pmu-border));
+  border-radius: 8px;
+  background: var(--pmu-primary-fade);
+  color: var(--pmu-primary);
+  padding: 0.58rem 0.7rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.turf-coach-panel__suggestions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.turf-coach-panel__form {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem 0;
+}
+
+.turf-coach-panel__form textarea {
+  width: 100%;
+  min-height: 5.25rem;
+  resize: vertical;
+  border: 1px solid var(--pmu-border-strong);
+  border-radius: 8px;
+  background: var(--pmu-surface-highlight);
+  color: var(--pmu-text);
+  padding: 0.78rem;
+  font: inherit;
+  font-size: 0.92rem;
+  outline: none;
+}
+
+.turf-coach-panel__form textarea:focus {
+  border-color: var(--pmu-primary);
+  box-shadow: 0 0 0 3px var(--pmu-primary-soft);
+}
+
+.turf-coach-panel__form button {
+  border: 1px solid var(--pmu-primary);
+  border-radius: 8px;
+  background: var(--pmu-primary);
+  color: var(--pmu-on-primary);
+  padding: 0.76rem 1rem;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.turf-coach-panel__form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.turf-coach-panel__legal {
+  margin: 0;
+  padding: 0.75rem 1rem 1rem;
+  color: var(--pmu-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .turf-coach-trigger {
+    left: 0.75rem;
+    bottom: 5.25rem;
+  }
+
+  .turf-coach-panel {
+    right: 0.75rem;
+    left: 0.75rem;
+    bottom: 5.25rem;
+    width: auto;
+    max-height: calc(100vh - 6.5rem);
+  }
+
+  .turf-coach-panel__messages {
+    max-height: 18rem;
+  }
+}

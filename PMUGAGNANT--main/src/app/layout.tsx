@@ -9,6 +9,7 @@ import { ServiceWorkerRegistration } from "@/components/ui/ServiceWorkerRegistra
 import { SiteBootSplash } from "@/components/ui/SiteBootSplash";
 import { ThemeMetaColor } from "@/components/ui/ThemeMetaColor";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
+import { TurfEdgeCoach } from "@/components/ui/TurfEdgeCoach";
 import "./globals.css";
 
 const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
@@ -141,6 +142,7 @@ export default function RootLayout({
             <ServiceWorkerRegistration />
             <PriorityRacePushScheduler />
             <AppShell>{children}</AppShell>
+            <TurfEdgeCoach />
             <GlossaryPanel />
             <ComboPanel />
           </ComboProvider>

@@ -93,6 +93,8 @@ STRIPE_PRICE_ID=
 RESEND_API_KEY=
 RESEND_FROM_EMAIL=
 SUPPORT_EMAIL=
+OPENAI_API_KEY=
+OPENAI_MODEL=
 ```
 
 ### 3. Initialiser Supabase
@@ -210,6 +212,8 @@ Variables optionnelles selon les integrations activees :
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
 - `SUPPORT_EMAIL`
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL` optionnel, par defaut `gpt-4o-mini`
 
 ## Déploiement Vercel
 
@@ -229,6 +233,8 @@ Variables optionnelles selon les integrations activees :
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
 - `SUPPORT_EMAIL`
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL` optionnel, par defaut `gpt-4o-mini`
 
 ### Étapes
 
