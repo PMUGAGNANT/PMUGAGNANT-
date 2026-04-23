@@ -2875,6 +2875,9 @@ html[data-theme="cream"] .value-page {
 }
 
 .turf-coach-panel__header {
+  position: sticky;
+  top: 0;
+  z-index: 4;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -3104,6 +3107,41 @@ html[data-theme="cream"] .value-page {
   object-fit: contain;
   padding: 0.25rem;
   box-shadow: var(--pmu-shadow-sm);
+}
+
+.turf-coach-panel__actions {
+  display: flex;
+  gap: 0.42rem;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.turf-coach-panel__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  border: 1px solid var(--pmu-border-strong);
+  border-radius: 8px;
+  background: var(--pmu-surface-2);
+  color: var(--pmu-text);
+  font: inherit;
+  font-size: 1.28rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--pmu-shadow-sm);
+}
+
+.turf-coach-panel__icon:hover,
+.turf-coach-panel__icon:focus-visible {
+  border-color: var(--pmu-primary);
+  color: var(--pmu-primary);
+  outline: none;
+}
+
+.turf-coach-panel__icon--close {
+  background: color-mix(in srgb, var(--pmu-red) 10%, var(--pmu-surface-2));
 }
 
 .turf-coach-panel__title {

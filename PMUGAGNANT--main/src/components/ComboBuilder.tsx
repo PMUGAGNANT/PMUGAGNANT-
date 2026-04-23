@@ -526,23 +526,50 @@ export function ComboPanel() {
               : `${selections.length} cheval${selections.length > 1 ? "x" : ""} sélectionné${selections.length > 1 ? "s" : ""} — max ${MAX_SELECTIONS}`}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={closePanel}
-          style={{
-            border: "1px solid var(--pmu-border)",
-            borderRadius: "6px",
-            background: "var(--pmu-surface-highlight)",
-            color: "var(--pmu-text-soft)",
-            padding: "6px 12px",
-            fontSize: "0.8rem",
-            fontWeight: 500,
-            cursor: "pointer",
-            flexShrink: 0,
-          }}
-        >
-          Fermer
-        </button>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center", flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={closePanel}
+            aria-label="Retour a la page"
+            title="Retour"
+            style={{
+              width: "38px",
+              height: "38px",
+              border: "1px solid var(--pmu-border-strong)",
+              borderRadius: "8px",
+              background: "var(--pmu-surface-highlight)",
+              color: "var(--pmu-text)",
+              fontSize: "1.25rem",
+              fontWeight: 900,
+              lineHeight: 1,
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            ←
+          </button>
+          <button
+            type="button"
+            onClick={closePanel}
+            aria-label="Fermer le ticket multi"
+            title="Fermer"
+            style={{
+              width: "38px",
+              height: "38px",
+              border: "1px solid var(--pmu-border-strong)",
+              borderRadius: "8px",
+              background: "color-mix(in srgb, var(--pmu-red) 10%, var(--pmu-surface-highlight))",
+              color: "var(--pmu-text)",
+              fontSize: "1.35rem",
+              fontWeight: 900,
+              lineHeight: 1,
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            ×
+          </button>
+        </div>
       </div>
 
       {/* Liste des chevaux */}

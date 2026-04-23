@@ -273,14 +273,26 @@ export function TurfEdgeCoach() {
             <p className="turf-coach-panel__status">{statusLabel}</p>
           </div>
         </div>
-        <button
-          type="button"
-          className="turf-coach-panel__close"
-          onClick={() => setOpen(false)}
-          aria-label="Fermer le Coach IA"
-        >
-          Fermer
-        </button>
+        <div className="turf-coach-panel__actions" aria-label="Actions du Coach IA">
+          <button
+            type="button"
+            className="turf-coach-panel__icon"
+            onClick={() => setOpen(false)}
+            aria-label="Retour a la page"
+            title="Retour"
+          >
+            ←
+          </button>
+          <button
+            type="button"
+            className="turf-coach-panel__icon turf-coach-panel__icon--close"
+            onClick={() => setOpen(false)}
+            aria-label="Fermer le Coach IA"
+            title="Fermer"
+          >
+            ×
+          </button>
+        </div>
       </header>
 
       <div className="turf-coach-panel__modes" aria-label="Capacites du Coach IA">
