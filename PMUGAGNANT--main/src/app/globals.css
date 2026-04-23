@@ -3339,6 +3339,47 @@ html[data-theme="cream"] .value-page {
   border-color: color-mix(in srgb, var(--pmu-red) 44%, var(--pmu-border));
 }
 
+.turf-coach-insight__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.turf-coach-pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--pmu-border);
+  border-radius: 999px;
+  padding: 0.28rem 0.62rem;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.turf-coach-pill--green {
+  border-color: color-mix(in srgb, var(--pmu-primary) 26%, var(--pmu-border));
+  background: var(--pmu-primary-fade);
+  color: var(--pmu-primary);
+}
+
+.turf-coach-pill--orange {
+  border-color: color-mix(in srgb, var(--pmu-orange) 30%, var(--pmu-border));
+  background: color-mix(in srgb, var(--pmu-orange) 10%, var(--pmu-surface));
+  color: var(--pmu-orange);
+}
+
+.turf-coach-pill--red {
+  border-color: color-mix(in srgb, var(--pmu-red) 30%, var(--pmu-border));
+  background: color-mix(in srgb, var(--pmu-red) 8%, var(--pmu-surface));
+  color: var(--pmu-red);
+}
+
+.turf-coach-pill--neutral {
+  background: var(--pmu-surface);
+  color: var(--pmu-text-soft);
+}
+
 .turf-coach-insight__head {
   display: flex;
   justify-content: space-between;
@@ -3425,7 +3466,7 @@ html[data-theme="cream"] .value-page {
   gap: 0.35rem;
 }
 
-.turf-coach-insight__facts span,
+.turf-coach-fact,
 .turf-coach-insight__rivals {
   border: 1px solid var(--pmu-border);
   border-radius: 8px;
@@ -3435,6 +3476,27 @@ html[data-theme="cream"] .value-page {
   font-size: 0.78rem;
   font-weight: 750;
   line-height: 1.35;
+}
+
+.turf-coach-fact {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.turf-coach-fact strong {
+  color: var(--pmu-text);
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.turf-coach-fact span {
+  display: block;
+  margin: 0;
+  color: var(--pmu-text-soft);
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
 .turf-coach-insight__rivals {
