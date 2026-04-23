@@ -2945,12 +2945,76 @@ html[data-theme="cream"] .value-page {
   line-height: 1.45;
 }
 
-.turf-coach-message span {
-  display: block;
-  margin-top: 0.45rem;
+.turf-coach-message__body {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.turf-coach-message__block {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.turf-coach-message__block p {
+  line-height: 1.55;
+}
+
+.turf-coach-message__body strong {
+  color: var(--pmu-text);
+  font-weight: 900;
+}
+
+.turf-coach-message__body span {
+  display: inline;
+}
+
+.turf-coach-message__list {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding-left: 1rem;
+  color: var(--pmu-text-soft);
+  font-size: 0.92rem;
+}
+
+.turf-coach-message__list li {
+  padding-left: 0.15rem;
+  line-height: 1.5;
+}
+
+.turf-coach-message__list--ordered {
+  padding-left: 1.15rem;
+}
+
+.turf-coach-source {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 0.7rem;
+  border: 1px solid var(--pmu-border);
+  border-radius: 999px;
+  padding: 0.28rem 0.65rem;
   color: var(--pmu-text-muted);
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.turf-coach-source--success {
+  border-color: color-mix(in srgb, var(--pmu-primary) 24%, var(--pmu-border));
+  background: var(--pmu-primary-fade);
+  color: var(--pmu-primary);
+}
+
+.turf-coach-source--warning {
+  border-color: color-mix(in srgb, var(--pmu-orange) 32%, var(--pmu-border));
+  background: color-mix(in srgb, var(--pmu-orange) 10%, var(--pmu-surface));
+  color: var(--pmu-orange);
+}
+
+.turf-coach-source--danger {
+  border-color: color-mix(in srgb, var(--pmu-red) 30%, var(--pmu-border));
+  background: color-mix(in srgb, var(--pmu-red) 8%, var(--pmu-surface));
+  color: var(--pmu-red);
 }
 
 .turf-coach-message--assistant {

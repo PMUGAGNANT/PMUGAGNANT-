@@ -106,6 +106,90 @@ async function getAccessToken() {
   }
 }
 
+function renderInlineText(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
+
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={`${part}-${index}`}>{part.slice(2, -2)}</strong>;
+    }
+
+    return <span key={`${part}-${index}`}>{part}</span>;
+  });
+}
+
+function renderCoachBody(content: string) {
+  const blocks = content
+    .split(/\n{2,}/)
+    .map((block) =>
+      block
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+    )
+    .filter((block) => block.length > 0);
+
+  return blocks.map((lines, blockIndex) => {
+    const isBulletList = lines.every((line) => /^[-•]\s+/.test(line));
+    const isNumberedList = lines.every((line) => /^\d+\.\s+/.test(line));
+
+    if (isBulletList) {
+      return (
+        <ul key={`block-${blockIndex}`} className="turf-coach-message__list">
+          {lines.map((line, lineIndex) => (
+            <li key={`bullet-${blockIndex}-${lineIndex}`}>
+              {renderInlineText(line.replace(/^[-•]\s+/, ""))}
+            </li>
+          ))}
+        </ul>
+      );
+    }
+
+    if (isNumberedList) {
+      return (
+        <ol key={`block-${blockIndex}`} className="turf-coach-message__list turf-coach-message__list--ordered">
+          {lines.map((line, lineIndex) => (
+            <li key={`ordered-${blockIndex}-${lineIndex}`}>
+              {renderInlineText(line.replace(/^\d+\.\s+/, ""))}
+            </li>
+          ))}
+        </ol>
+      );
+    }
+
+    return (
+      <div key={`block-${blockIndex}`} className="turf-coach-message__block">
+        {lines.map((line, lineIndex) => (
+          <p key={`paragraph-${blockIndex}-${lineIndex}`}>{renderInlineText(line)}</p>
+        ))}
+      </div>
+    );
+  });
+}
+
+function getMetaTone(meta?: string) {
+  if (!meta) return "neutral";
+  if (meta.includes("secours")) return "warning";
+  if (meta.includes("Configuration")) return "danger";
+  return "success";
+}
+
+function getResponseMeta(payload: CoachApiResponse) {
+  if (payload.needsSetup) {
+    return "Configuration IA à vérifier";
+  }
+
+  if (payload.fallback) {
+    return "Réponse de secours";
+  }
+
+  if (payload.provider === "supabase") {
+    return "Analyse données TurfEdge";
+  }
+
+  return "Réponse IA enrichie";
+}
+
 function CoachInsightCard({ insight }: { insight: CoachInsight }) {
   return (
     <div className={`turf-coach-insight turf-coach-insight--${insight.tone}`}>
@@ -167,10 +251,10 @@ export function TurfEdgeCoach() {
   const canSubmit = draft.trim().length > 0 && !loading;
 
   const statusLabel = useMemo(() => {
-    if (loading) return "Analyse en cours...";
-    if (lastAccessLevel === "premium") return "Premium: details complets";
-    if (lastAccessLevel === "preview") return "Apercu: mise masquee";
-    return "Supabase Brain actif";
+    if (loading) return "Lecture TurfEdge en cours...";
+    if (lastAccessLevel === "premium") return "Premium : lecture complète";
+    if (lastAccessLevel === "preview") return "Aperçu : mise masquée";
+    return "Coach prêt pour la prochaine course";
   }, [lastAccessLevel, loading]);
 
   useEffect(() => {
@@ -235,23 +319,13 @@ export function TurfEdgeCoach() {
           setSuggestions(payload.suggestedQuestions);
         }
 
-        const setupMeta = payload.needsSetup
-          ? "Configuration OpenAI a verifier: reponse de secours basee sur les donnees."
-          : payload.fallback
-            ? "Reponse de secours: l'IA n'a pas repondu correctement."
-            : payload.provider === "supabase"
-              ? "Moteur TurfEdge Supabase: donnees reelles, zero blabla invente."
-              : payload.model
-                ? `Modele: ${payload.model}`
-                : undefined;
-
         setMessages((current) => [
           ...current,
           {
             id: createMessageId(),
             role: "assistant",
             content: payload.answer ?? "Donnees insuffisantes pour repondre.",
-            meta: setupMeta,
+            meta: getResponseMeta(payload),
             insight: payload.insight ?? null,
           },
         ]);
@@ -331,7 +405,7 @@ export function TurfEdgeCoach() {
           <Image src="/logo-turfedge.png" alt="" width={64} height={64} />
           <div>
             <p className="turf-coach-panel__eyebrow">Coach IA TurfEdge</p>
-            <h2 className="turf-coach-panel__title">Supabase Brain</h2>
+            <h2 className="turf-coach-panel__title">Coach TurfEdge</h2>
             <p className="turf-coach-panel__status">{statusLabel}</p>
           </div>
         </div>
@@ -359,9 +433,9 @@ export function TurfEdgeCoach() {
       </header>
 
       <div className="turf-coach-panel__modes" aria-label="Capacites du Coach IA">
-        <span>Analyse cheval</span>
+        <span>Base solide</span>
         <span>Value bet</span>
-        <span>Arrivee</span>
+        <span>Arrivée</span>
       </div>
 
       <div className="turf-coach-panel__messages" ref={messagesRef}>
@@ -371,8 +445,12 @@ export function TurfEdgeCoach() {
             className={`turf-coach-message turf-coach-message--${message.role}`}
           >
             {message.insight ? <CoachInsightCard insight={message.insight} /> : null}
-            <p>{message.content}</p>
-            {message.meta ? <span>{message.meta}</span> : null}
+            <div className="turf-coach-message__body">{renderCoachBody(message.content)}</div>
+            {message.meta ? (
+              <span className={`turf-coach-source turf-coach-source--${getMetaTone(message.meta)}`}>
+                {message.meta}
+              </span>
+            ) : null}
           </article>
         ))}
 
