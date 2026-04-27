@@ -1,4 +1,7 @@
 import { getRaceTimestamp, getTodayDateStr, toIsoDate } from "@/lib/date-utils";
+import {
+  buildMorningHighlightNotification,
+} from "@/lib/push-campaigns";
 import { syncProgramToSupabase } from "@/lib/cron-program-sync";
 import { getAllRaces } from "@/lib/pmu-api";
 import {
@@ -10,6 +13,7 @@ import {
   runPreRaceSecondPass,
   runResultSync,
 } from "@/lib/prediction-pipeline";
+import { sendPushNotificationToAll } from "@/lib/push-notifications";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { isTelegramConfigured, sendTelegramMessage } from "@/lib/telegram";
 import type { PredictionRow, RaceSummary } from "@/lib/types";
@@ -264,6 +268,14 @@ export async function runCronMorningJob(dateStr = getTodayDateStr()) {
     typeof summary.racesProcessed === "number" ? summary.racesProcessed : 0;
   const predictionsStored =
     typeof summary.predictionsStored === "number" ? summary.predictionsStored : 0;
+  const [races, rows] = await Promise.all([
+    getAllRaces(dateStr),
+    listPredictionsByDate(dateStr),
+  ]);
+  const morningPush = buildMorningHighlightNotification(dateStr, races, rows);
+  const pushDelivery = morningPush
+    ? await sendPushNotificationToAll(morningPush)
+    : { sent: 0, removed: 0, skipped: true };
 
   await sendTelegramIfConfigured(
     `✅ ${racesProcessed} courses analysées, ${predictionsStored} partants scorés`
@@ -275,6 +287,7 @@ export async function runCronMorningJob(dateStr = getTodayDateStr()) {
     runnersScored: predictionsStored,
     program,
     summary,
+    push: pushDelivery,
   };
 }
 

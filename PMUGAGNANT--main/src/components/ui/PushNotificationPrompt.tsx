@@ -176,7 +176,7 @@ export function PushNotificationPrompt() {
         throw new Error("Impossible d'activer les alertes.");
       }
 
-      setMessage("✅ Alertes activées !");
+      setMessage("Alertes activees !");
       setState("success");
       window.setTimeout(() => setState("hidden"), 2400);
     } catch (error) {
@@ -195,7 +195,7 @@ export function PushNotificationPrompt() {
       role="region"
       aria-label="Activer les alertes push"
     >
-      <style>{`@keyframes pmuPushPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(0,255,136,0.0); } 50% { transform: scale(1.04); box-shadow: 0 0 0.85rem rgba(0,255,136,0.18); } }`}</style>
+      <style>{`@keyframes pmuPushPulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(0,255,136,0); } 50% { transform: scale(1.04); box-shadow: 0 0 0.85rem rgba(0,255,136,0.18); } }`}</style>
       <div
         className="app-card"
         style={{
@@ -217,17 +217,19 @@ export function PushNotificationPrompt() {
               background: "var(--pmu-primary-fade)",
               color: "var(--pmu-primary)",
               fontSize: 20,
+              fontWeight: 900,
               animation: prefersReducedMotion ? "none" : "pmuPushPulse 1.8s ease-in-out infinite",
             }}
           >
-            🔔
+            !
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-lg font-black text-[var(--pmu-text)]">
-              Recevez les signaux en direct sur votre téléphone
+              Recois le cheval du jour et les alertes TurfEdge
             </div>
             <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">
-              Sans installer d&apos;app — directement dans votre navigateur.
+              Recois la course du jour, le cheval du jour et un rappel 30 min avant le depart,
+              directement dans ton navigateur.
             </p>
           </div>
         </div>

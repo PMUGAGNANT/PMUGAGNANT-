@@ -10,6 +10,15 @@ type PushSendBody = {
   body?: string;
   url?: string;
   tag?: string;
+  icon?: string;
+  badge?: string;
+  image?: string;
+  renotify?: boolean;
+  requireInteraction?: boolean;
+  actions?: Array<{
+    action: string;
+    title: string;
+  }>;
 };
 
 type StoredPushSubscription = {
@@ -67,6 +76,8 @@ export async function POST(request: NextRequest) {
   const message = body.body?.trim();
   const url = body.url?.trim() || "/";
   const tag = body.tag?.trim() || "pmu-signal";
+  const icon = body.icon?.trim() || "/logo-turfedge.png";
+  const badge = body.badge?.trim() || "/favicon.ico";
 
   if (!title || !message) {
     return badRequest("Payload push incomplet.");
@@ -104,6 +115,12 @@ export async function POST(request: NextRequest) {
           body: message,
           url,
           tag,
+          icon,
+          badge,
+          image: body.image,
+          renotify: body.renotify ?? false,
+          requireInteraction: body.requireInteraction ?? false,
+          actions: body.actions ?? [],
         })
       );
       sent += 1;
