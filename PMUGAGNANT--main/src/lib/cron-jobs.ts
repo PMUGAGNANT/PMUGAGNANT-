@@ -1,8 +1,11 @@
 import { getRaceTimestamp, getTodayDateStr, toIsoDate } from "@/lib/date-utils";
 import {
   buildMorningHighlightNotification,
+  buildPreRaceHighlightNotification,
+  buildResultsRecapNotification,
 } from "@/lib/push-campaigns";
 import { syncProgramToSupabase } from "@/lib/cron-program-sync";
+import { claimPushDelivery } from "@/lib/push-delivery-log";
 import { getAllRaces } from "@/lib/pmu-api";
 import {
   getRacePredictions,
@@ -102,6 +105,14 @@ function buildPreRaceMessage(race: RaceSummary, prediction: PredictionRow) {
     `🥇 JOUER: ${prediction.cheval_nom} N°${prediction.cheval_num} — Cote ${odds ? odds.toFixed(1) : "n/d"} — Mise ${stake}€`,
     `📊 Confiance: ${formatPct(getScorePercent(prediction))} — Edge: ${formatPct(edge)}`,
   ].join("\n");
+}
+
+function buildPreRaceDeliveryKey(
+  dateStr: string,
+  race: Pick<RaceSummary, "reunion" | "course">,
+  row: Pick<PredictionRow, "cheval_num" | "decision">
+) {
+  return `prerace:${dateStr}:${race.reunion}:${race.course}:${row.cheval_num}:${row.decision}`;
 }
 
 function getRaceHorseKey(row: Pick<PredictionRow, "reunion" | "course" | "cheval_num">) {
@@ -307,6 +318,26 @@ export async function runCronPreRaceJob(dateStr = getTodayDateStr()) {
 
     if (primary) {
       await sendTelegramIfConfigured(buildPreRaceMessage(race, primary));
+
+      const deliveryKey = buildPreRaceDeliveryKey(dateStr, race, primary);
+      const claim = await claimPushDelivery(deliveryKey, "pre-race", {
+        dateStr,
+        reunion: race.reunion,
+        course: race.course,
+        chevalNum: primary.cheval_num,
+        decision: primary.decision,
+      });
+
+      if (claim.claimed) {
+        const minutesUntilStart = Math.max(1, Math.round(getMinutesUntilRace(race, now)));
+        const notification = buildPreRaceHighlightNotification(
+          dateStr,
+          race,
+          primary,
+          minutesUntilStart
+        );
+        await sendPushNotificationToAll(notification);
+      }
     }
 
     predictionsUpdated +=
@@ -339,6 +370,25 @@ export async function runCronPreRaceJob(dateStr = getTodayDateStr()) {
 export async function runCronResultsJob(dateStr = getTodayDateStr()) {
   const summary = await runResultSync(dateStr);
   const betResults = await upsertBetResultsForDate(dateStr);
+  const resultsPush = buildResultsRecapNotification(
+    dateStr,
+    betResults.rows,
+    betResults.totalProfit,
+    betResults.roi
+  );
+
+  if (resultsPush) {
+    const claim = await claimPushDelivery(`results:${dateStr}`, "results", {
+      dateStr,
+      roi: betResults.roi,
+      totalProfit: betResults.totalProfit,
+      rows: betResults.rows.length,
+    });
+
+    if (claim.claimed) {
+      await sendPushNotificationToAll(resultsPush);
+    }
+  }
 
   await sendTelegramIfConfigured(buildRichResultTelegram(betResults.rows));
 

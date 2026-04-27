@@ -38,6 +38,22 @@ function getMorningTopSelection(rows: PredictionRow[]) {
   })[0] ?? null;
 }
 
+function getRaceCode(reunion: number, course: number) {
+  return `R${reunion}C${course}`;
+}
+
+function getSignalTitle(row: PredictionRow) {
+  if (row.decision === "SURVEILLANCE") {
+    return "OUTSIDER A SURVEILLER";
+  }
+
+  if ((row.value ?? 0) >= 8) {
+    return "VALUE BET DU MOMENT";
+  }
+
+  return "BASE SOLIDE A JOUER";
+}
+
 export function buildMorningHighlightNotification(
   dateStr: string,
   races: RaceSummary[],
@@ -54,7 +70,7 @@ export function buildMorningHighlightNotification(
     return null;
   }
 
-  const raceCode = `R${race.reunion}C${race.course}`;
+  const raceCode = getRaceCode(race.reunion, race.course);
   const title = topSelection.decision === "VALIDE" ? "CHEVAL DU JOUR" : "COURSE DU JOUR";
   const body = `${race.hippodrome} ${raceCode} a ${race.heureDepart} - #${topSelection.cheval_num} ${topSelection.cheval_nom} - pari ${getBetTypeLabel(topSelection.pari_conseille)} - confiance ${getConfidenceLabel(topSelection.confiance)}`;
   const url = `/course/${race.reunion}/${race.course}?date=${dateStr}`;
@@ -86,11 +102,11 @@ export function buildPreRaceHighlightNotification(
   row: PredictionRow,
   minutesUntilStart: number
 ): PushNotificationPayload {
-  const raceCode = `R${race.reunion}C${race.course}`;
+  const raceCode = getRaceCode(race.reunion, race.course);
   const url = `/course/${race.reunion}/${race.course}?date=${dateStr}`;
 
   return {
-    title: "DEPART DANS 30 MIN",
+    title: getSignalTitle(row),
     body: `${race.hippodrome} ${raceCode} - #${row.cheval_num} ${row.cheval_nom} - pari ${getBetTypeLabel(row.pari_conseille)} - confiance ${getConfidenceLabel(row.confiance)} - depart dans ${minutesUntilStart} min`,
     url,
     icon: "/logo-turfedge.png",
@@ -108,6 +124,55 @@ export function buildPreRaceHighlightNotification(
       kind: "prerace-highlight",
       raceCode,
       horseNumber: row.cheval_num,
+    },
+  };
+}
+
+type ResultRecapRow = {
+  reunion: number;
+  course: number;
+  cheval_num: number;
+  cheval_nom: string;
+  result_status: string;
+  profit: number;
+};
+
+export function buildResultsRecapNotification(
+  dateStr: string,
+  rows: ResultRecapRow[],
+  totalProfit: number,
+  roi: number
+): PushNotificationPayload | null {
+  const playable = rows.filter((row) => Number.isFinite(row.profit));
+  if (playable.length === 0) {
+    return null;
+  }
+
+  const topWin =
+    playable.find((row) => row.result_status === "WON") ??
+    [...playable].sort((left, right) => right.profit - left.profit)[0];
+
+  const raceCode = getRaceCode(topWin.reunion, topWin.course);
+  const title = totalProfit >= 0 ? "RESULTATS DU JOUR" : "BILAN DU JOUR";
+  const body = `${raceCode} - #${topWin.cheval_num} ${topWin.cheval_nom} - ${topWin.profit >= 0 ? "+" : ""}${topWin.profit.toFixed(2)} EUR - ROI ${roi >= 0 ? "+" : ""}${roi.toFixed(1)}%`;
+
+  return {
+    title,
+    body,
+    url: `/dashboard?date=${dateStr}`,
+    icon: "/logo-turfedge.png",
+    badge: "/favicon.ico",
+    tag: `turfedge-results-${dateStr}`,
+    actions: [
+      { action: "open-home", title: "Voir le bilan" },
+      { action: "open-race", title: "Voir la course" },
+    ],
+    data: {
+      url: `/course/${topWin.reunion}/${topWin.course}?date=${dateStr}`,
+      actionUrl: `/dashboard?date=${dateStr}`,
+      kind: "results-recap",
+      raceCode,
+      horseNumber: topWin.cheval_num,
     },
   };
 }
