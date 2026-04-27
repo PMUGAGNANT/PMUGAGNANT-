@@ -7,6 +7,7 @@ import { asArray } from "@/lib/array-utils";
 import { BetHistoryCard } from "@/features/account/components/BetHistoryCard";
 import { BillingNoticeCard } from "@/features/account/components/BillingNoticeCard";
 import { AccountSummaryCard } from "@/features/account/components/AccountSummaryCard";
+import { PushPreferencesCard } from "@/features/account/components/PushPreferencesCard";
 import {
   formatBonusExpiry,
   formatEuros,
@@ -720,6 +721,10 @@ function MesParisContent() {
                   </p>
                   {telegramLinkMessage ? <p>{telegramLinkMessage}</p> : null}
                 </div>
+              </div>
+
+              <div className="mt-5">
+                <PushPreferencesCard />
               </div>
 
               <div className="mt-5 rounded-[1.2rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_92%,transparent)] p-5">

@@ -19,6 +19,8 @@ export type PushNotificationPayload = {
   data?: Record<string, unknown>;
 };
 
+export type PushCampaign = "morning" | "pre-race" | "results";
+
 type StoredPushSubscription = {
   id: string;
   endpoint: string;
@@ -113,16 +115,29 @@ export async function sendPushNotification(
 }
 
 export async function sendPushNotificationToAll(
-  payload: PushNotificationPayload
+  payload: PushNotificationPayload,
+  options?: {
+    campaign?: PushCampaign;
+  }
 ): Promise<{ sent: number; removed: number; skipped: boolean }> {
   const admin = getSupabaseAdminClient();
   if (!admin || !configureWebPush()) {
     return { sent: 0, removed: 0, skipped: true };
   }
 
-  const { data, error } = await admin
+  let query = admin
     .from("push_subscriptions")
     .select("id,endpoint,keys_p256dh,keys_auth");
+
+  if (options?.campaign === "morning") {
+    query = query.eq("morning_enabled", true);
+  } else if (options?.campaign === "pre-race") {
+    query = query.eq("prerace_enabled", true);
+  } else if (options?.campaign === "results") {
+    query = query.eq("results_enabled", true);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     logger.error("push.broadcast_fetch_failed", error);

@@ -49,6 +49,9 @@ export async function POST(request: NextRequest) {
       keys_p256dh: p256dh,
       keys_auth: authKey,
       user_id: auth.user?.id ?? null,
+      morning_enabled: true,
+      prerace_enabled: true,
+      results_enabled: true,
     },
     {
       onConflict: "endpoint",

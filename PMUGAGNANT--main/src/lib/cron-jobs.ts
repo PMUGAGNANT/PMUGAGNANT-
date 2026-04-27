@@ -285,7 +285,7 @@ export async function runCronMorningJob(dateStr = getTodayDateStr()) {
   ]);
   const morningPush = buildMorningHighlightNotification(dateStr, races, rows);
   const pushDelivery = morningPush
-    ? await sendPushNotificationToAll(morningPush)
+    ? await sendPushNotificationToAll(morningPush, { campaign: "morning" })
     : { sent: 0, removed: 0, skipped: true };
 
   await sendTelegramIfConfigured(
@@ -336,7 +336,7 @@ export async function runCronPreRaceJob(dateStr = getTodayDateStr()) {
           primary,
           minutesUntilStart
         );
-        await sendPushNotificationToAll(notification);
+        await sendPushNotificationToAll(notification, { campaign: "pre-race" });
       }
     }
 
@@ -386,7 +386,7 @@ export async function runCronResultsJob(dateStr = getTodayDateStr()) {
     });
 
     if (claim.claimed) {
-      await sendPushNotificationToAll(resultsPush);
+      await sendPushNotificationToAll(resultsPush, { campaign: "results" });
     }
   }
 
