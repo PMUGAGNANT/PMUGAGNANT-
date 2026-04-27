@@ -138,7 +138,7 @@ export default async function SubscribePage() {
                 Telegram prive inclus
               </span>
             </div>
-            <p className="app-kicker mt-7">PMU Gagnant PRO</p>
+            <p className="app-kicker mt-7">TurfEdge PRO</p>
             <h1 className="mt-3 max-w-3xl text-[2.65rem] font-black leading-[0.94] text-[var(--pmu-text)] md:text-[5rem]">
               Les bons tickets, avant tout le monde.
             </h1>

@@ -1,5 +1,11 @@
 import { getRaceTimestamp, getTodayDateStr, toIsoDate } from "@/lib/date-utils";
+import {
+  buildMorningHighlightNotification,
+  buildPreRaceHighlightNotification,
+  buildResultsRecapNotification,
+} from "@/lib/push-campaigns";
 import { syncProgramToSupabase } from "@/lib/cron-program-sync";
+import { claimPushDelivery } from "@/lib/push-delivery-log";
 import { getAllRaces } from "@/lib/pmu-api";
 import {
   getRacePredictions,
@@ -10,6 +16,7 @@ import {
   runPreRaceSecondPass,
   runResultSync,
 } from "@/lib/prediction-pipeline";
+import { sendPushNotificationToAll } from "@/lib/push-notifications";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import { isTelegramConfigured, sendTelegramMessage } from "@/lib/telegram";
 import type { PredictionRow, RaceSummary } from "@/lib/types";
@@ -98,6 +105,14 @@ function buildPreRaceMessage(race: RaceSummary, prediction: PredictionRow) {
     `🥇 JOUER: ${prediction.cheval_nom} N°${prediction.cheval_num} — Cote ${odds ? odds.toFixed(1) : "n/d"} — Mise ${stake}€`,
     `📊 Confiance: ${formatPct(getScorePercent(prediction))} — Edge: ${formatPct(edge)}`,
   ].join("\n");
+}
+
+function buildPreRaceDeliveryKey(
+  dateStr: string,
+  race: Pick<RaceSummary, "reunion" | "course">,
+  row: Pick<PredictionRow, "cheval_num" | "decision">
+) {
+  return `prerace:${dateStr}:${race.reunion}:${race.course}:${row.cheval_num}:${row.decision}`;
 }
 
 function getRaceHorseKey(row: Pick<PredictionRow, "reunion" | "course" | "cheval_num">) {
@@ -205,7 +220,7 @@ function buildResultTelegram(rows: BetResultRow[]) {
   const row = firstWin ?? firstLoss ?? playable[0] ?? null;
 
   if (!row) {
-    return "RESULTATS PMU GAGNANT - Aucun pari valide a noter.";
+    return "RESULTATS TURFEDGE - Aucun pari valide a noter.";
   }
 
   if (row.result_status === "WON") {
@@ -224,7 +239,7 @@ function buildRichResultTelegram(rows: BetResultRow[]) {
 
   if (playable.length === 0) {
     return [
-      "🏁 Résultats PMU Gagnant",
+      "🏁 Résultats TurfEdge",
       "━━━━━━━━━━━━━━",
       "Aucun pari valide à noter.",
     ].join("\n");
@@ -246,7 +261,7 @@ function buildRichResultTelegram(rows: BetResultRow[]) {
     });
 
   return [
-    "🏁 Résultats PMU Gagnant",
+    "🏁 Résultats TurfEdge",
     "━━━━━━━━━━━━━━",
     `${totalProfit >= 0 ? "🟢" : "🔴"} Gain net : ${totalProfit >= 0 ? "+" : ""}${totalProfit.toFixed(2)}€`,
     `📊 ROI : ${roi >= 0 ? "+" : ""}${roi.toFixed(1)}%`,
@@ -264,6 +279,14 @@ export async function runCronMorningJob(dateStr = getTodayDateStr()) {
     typeof summary.racesProcessed === "number" ? summary.racesProcessed : 0;
   const predictionsStored =
     typeof summary.predictionsStored === "number" ? summary.predictionsStored : 0;
+  const [races, rows] = await Promise.all([
+    getAllRaces(dateStr),
+    listPredictionsByDate(dateStr),
+  ]);
+  const morningPush = buildMorningHighlightNotification(dateStr, races, rows);
+  const pushDelivery = morningPush
+    ? await sendPushNotificationToAll(morningPush, { campaign: "morning" })
+    : { sent: 0, removed: 0, skipped: true };
 
   await sendTelegramIfConfigured(
     `✅ ${racesProcessed} courses analysées, ${predictionsStored} partants scorés`
@@ -275,6 +298,7 @@ export async function runCronMorningJob(dateStr = getTodayDateStr()) {
     runnersScored: predictionsStored,
     program,
     summary,
+    push: pushDelivery,
   };
 }
 
@@ -294,6 +318,26 @@ export async function runCronPreRaceJob(dateStr = getTodayDateStr()) {
 
     if (primary) {
       await sendTelegramIfConfigured(buildPreRaceMessage(race, primary));
+
+      const deliveryKey = buildPreRaceDeliveryKey(dateStr, race, primary);
+      const claim = await claimPushDelivery(deliveryKey, "pre-race", {
+        dateStr,
+        reunion: race.reunion,
+        course: race.course,
+        chevalNum: primary.cheval_num,
+        decision: primary.decision,
+      });
+
+      if (claim.claimed) {
+        const minutesUntilStart = Math.max(1, Math.round(getMinutesUntilRace(race, now)));
+        const notification = buildPreRaceHighlightNotification(
+          dateStr,
+          race,
+          primary,
+          minutesUntilStart
+        );
+        await sendPushNotificationToAll(notification, { campaign: "pre-race" });
+      }
     }
 
     predictionsUpdated +=
@@ -326,6 +370,25 @@ export async function runCronPreRaceJob(dateStr = getTodayDateStr()) {
 export async function runCronResultsJob(dateStr = getTodayDateStr()) {
   const summary = await runResultSync(dateStr);
   const betResults = await upsertBetResultsForDate(dateStr);
+  const resultsPush = buildResultsRecapNotification(
+    dateStr,
+    betResults.rows,
+    betResults.totalProfit,
+    betResults.roi
+  );
+
+  if (resultsPush) {
+    const claim = await claimPushDelivery(`results:${dateStr}`, "results", {
+      dateStr,
+      roi: betResults.roi,
+      totalProfit: betResults.totalProfit,
+      rows: betResults.rows.length,
+    });
+
+    if (claim.claimed) {
+      await sendPushNotificationToAll(resultsPush, { campaign: "results" });
+    }
+  }
 
   await sendTelegramIfConfigured(buildRichResultTelegram(betResults.rows));
 
@@ -354,7 +417,7 @@ export async function runCronHealthJob(dateStr = getTodayDateStr()) {
       ok: false,
       detail: "Configuration Supabase admin absente",
     };
-    await sendTelegramIfConfigured("⚠️ ALERTE PMU GAGNANT: Configuration Supabase admin absente");
+    await sendTelegramIfConfigured("⚠️ ALERTE TURFEDGE: Configuration Supabase admin absente");
     return {
       status: "degraded",
       date: dateStr,
@@ -405,7 +468,7 @@ export async function runCronHealthJob(dateStr = getTodayDateStr()) {
   const failed = Object.entries(checks).filter(([, check]) => !check.ok);
   if (failed.length > 0) {
     await sendTelegramIfConfigured(
-      `⚠️ ALERTE PMU GAGNANT: ${failed
+      `⚠️ ALERTE TURFEDGE: ${failed
         .map(([name, check]) => `${name}: ${check.detail}`)
         .join(" | ")}`
     );

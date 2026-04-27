@@ -1,5 +1,5 @@
 /**
- * Politique de scoring centralisée — PMU AI
+ * Politique de scoring centralisée — TurfEdge
  *
  * NIVEAU 2 : seuils décisionnels UI (paliers jouable / surveillance) et
  * buckets de confiance partagés (bilan, expert, proxy cote client, rapports).

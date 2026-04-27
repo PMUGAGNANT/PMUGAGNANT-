@@ -39,7 +39,7 @@ La cote reflète combien le public parie sur un cheval. Plus un cheval est joué
 
 Le plus simple pour débuter : le **pari Placé**. Votre cheval doit simplement finir dans les 3 premiers. C'est moins risqué qu'un pari Gagnant et ça vous permet d'apprendre en douceur.
 
-Chez PMU Gagnant, on vous recommande exactement quel cheval jouer et quel type de pari choisir. Vous n'avez qu'à suivre le signal.`,
+Chez TurfEdge, on vous recommande exactement quel cheval jouer et quel type de pari choisir. Vous n'avez qu'à suivre le signal.`,
   },
   {
     slug: "gagnant-place-couple-quel-pari-choisir",
@@ -57,7 +57,7 @@ Votre cheval doit finir dans les **3 premiers** (ou 2 premiers si moins de 8 par
 
 ## Le Pari Simple Gagnant
 
-Votre cheval doit finir **1er**. Plus risqué mais plus rémunérateur. Chez PMU Gagnant, on ne recommande le Gagnant que sur nos signaux les plus forts (confiance 8+/10).
+Votre cheval doit finir **1er**. Plus risqué mais plus rémunérateur. Chez TurfEdge, on ne recommande le Gagnant que sur nos signaux les plus forts (confiance 8+/10).
 
 ## Le Couplé
 
@@ -87,7 +87,7 @@ Le **Trio** demande de trouver les 3 premiers. Le **Quinté+** demande les 5 pre
     keywords: ["pronostic", "comprendre", "signal", "confiance"],
     body: `## Le code couleur
 
-Quand vous ouvrez PMU Gagnant, chaque course a une couleur :
+Quand vous ouvrez TurfEdge, chaque course a une couleur :
 
 🟢 **Coup sûr** — Notre meilleure opportunité du jour. On joue.
 🟡 **Bonne opportunité** — Intéressant mais moins certain. À jouer avec prudence.
@@ -133,7 +133,7 @@ Ce budget s'appelle votre **bankroll**.
 
 Si votre bankroll est de 100€, ne misez jamais plus de 5€ sur un seul pari. Cette règle vous protège des mauvaises séries (et il y en aura, même avec un bon moteur).
 
-Chez PMU Gagnant, nos mises conseillées respectent toujours cette règle.
+Chez TurfEdge, nos mises conseillées respectent toujours cette règle.
 
 ## Règle n°3 : pas de rattrapage
 
@@ -147,7 +147,7 @@ Certains jours, notre moteur ne trouve aucune bonne opportunité. C'est normal e
 
 Notez chaque pari, chaque gain, chaque perte. Au bout d'un mois, calculez votre ROI (retour sur investissement). C'est la seule façon de savoir si votre stratégie fonctionne.
 
-Chez PMU Gagnant, on fait ce suivi pour vous avec le bilan hebdomadaire.`,
+Chez TurfEdge, on fait ce suivi pour vous avec le bilan hebdomadaire.`,
   },
   {
     slug: "les-erreurs-du-debutant",
@@ -183,7 +183,7 @@ Si vous ne savez pas combien vous avez misé et gagné sur le mois, vous ne save
 
 ## Erreur n°7 : croire aux garanties
 
-Aucun système ne garantit un gain. Quiconque vous promet 100% de réussite vous ment. Chez PMU Gagnant, on publie nos vrais résultats, gains ET pertes.`,
+Aucun système ne garantit un gain. Quiconque vous promet 100% de réussite vous ment. Chez TurfEdge, on publie nos vrais résultats, gains ET pertes.`,
   },
   {
     slug: "lire-un-programme-pmu-sans-se-perdre",
@@ -207,7 +207,7 @@ Un bon programme ne sert pas à tout analyser : il sert à repérer **2 ou 3 lec
 
 Jouer pour « se faire plaisir » sur une course catalogue, multiplier les réunions sans edge, confondre **opinion** et **probabilité**.
 
-Chez PMU Gagnant, l'objectif reste identique : **moins de paris, mieux cadrés**.`,
+Chez TurfEdge, l'objectif reste identique : **moins de paris, mieux cadrés**.`,
   },
   {
     slug: "quinte-value-bet-favori-fragile",
@@ -247,7 +247,7 @@ Sur mobile, chaque scroll coûte du temps. Une fiche course doit livrer **verdic
 - boutons d'action clairs ;
 - réduction du bruit.
 
-L'application PMU Gagnant vise **décision rapide** sans sacrifier la profondeur.`,
+L'application TurfEdge vise **décision rapide** sans sacrifier la profondeur.`,
   },
 ];
 

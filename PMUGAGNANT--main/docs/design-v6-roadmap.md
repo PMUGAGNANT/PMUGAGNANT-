@@ -1,8 +1,8 @@
-# PMU Gagnant - Roadmap Design / Structure V6
+# TurfEdge - Roadmap Design / Structure V6
 
 ## Objectif
 
-Faire passer PMU Gagnant d'une application "fonctionnelle avec une belle couche UI"
+Faire passer TurfEdge d'une application "fonctionnelle avec une belle couche UI"
 a un vrai produit V6 :
 
 - plus clair

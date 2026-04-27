@@ -4,6 +4,7 @@ import { getTodayDateStr } from "@/lib/date-utils";
 import { getPredictionOdds, getPredictionScore } from "@/lib/public-performance";
 import { listPredictionsByDate } from "@/lib/prediction-store";
 import { serverError } from "@/lib/api-response";
+import { getRequestSubscriptionState } from "@/lib/subscription";
 import type { PredictionRow } from "@/lib/types";
 
 export const revalidate = 300;
@@ -13,8 +14,11 @@ function getRaceKey(row: PredictionRow) {
   return `${row.date}-${row.reunion}-${row.course}`;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { state: subscriptionState } = await getRequestSubscriptionState(
+      request.headers.get("authorization")
+    );
     const date = getTodayDateStr();
     const rows = (await listPredictionsByDate(date)).filter(
       (row) => (row.value ?? 0) > 0.1 && !row.non_partant
@@ -67,11 +71,32 @@ export async function GET() {
       })
       .sort((left, right) => right.edge - left.edge);
 
+    if (!subscriptionState.isSubscribed) {
+      return NextResponse.json(
+        {
+          success: true,
+          generatedAt: new Date().toISOString(),
+          date,
+          valueBets: [],
+          paywall: {
+            required: true,
+            previewCount: valueBets.length,
+            message: "Value bets, edge et mises conseillees reserves aux membres Premium.",
+          },
+        },
+        {
+          headers: {
+            "Cache-Control": "private, no-store",
+          },
+        }
+      );
+    }
+
     return NextResponse.json(
       { success: true, generatedAt: new Date().toISOString(), date, valueBets },
       {
         headers: {
-          "Cache-Control": "s-maxage=300, stale-while-revalidate=300",
+          "Cache-Control": "private, no-store",
         },
       }
     );

@@ -200,7 +200,7 @@ export function formatMorningTelegram(
     rolesV101?: RaceRoleV10Selection[];
   }>
 ) {
-  const header = [`PMU Gagnant`, `Analyse du matin ${date}`];
+  const header = [`TurfEdge`, `Analyse du matin ${date}`];
   if (rows.length === 0) {
     return [...header, "Aucun ticket validé ce matin."].join("\n");
   }
@@ -261,7 +261,7 @@ export function formatPreRaceTelegram(
     extra: string[];
   }>
 ) {
-  const header = [`PMU Gagnant`, `Mise à jour T-10 ${date}`];
+  const header = [`TurfEdge`, `Mise à jour T-10 ${date}`];
   if (rows.length === 0) {
     return [...header, "Aucun signal T-10 notable."].join("\n");
   }
@@ -286,7 +286,7 @@ export function formatWeeklyTelegram(
   const bestPari = Object.entries(report.roi_by_pari ?? {})
     .sort((left, right) => right[1] - left[1])[0] ?? null;
   const header = [
-    "PMU Gagnant",
+    "TurfEdge",
     `Rapport hebdo ${report.week_start} -> ${report.week_end}`,
     `ROI total : ${report.roi_total}%`,
     `Échantillon : ${report.sample_size} prédictions`,
@@ -317,7 +317,7 @@ export async function alerteTerrainChange(
 
   await sendTelegramMessage(
     [
-      "PMU Gagnant",
+      "TurfEdge",
       `Alerte terrain - ${course} ${hippodrome}`,
       `${meteo.description}, ${meteo.temperature}C, vent ${meteo.vent_kmh} km/h, humidite ${meteo.humidite}%`,
       meteo.alerte ?? "Terrain defavorable prevu.",

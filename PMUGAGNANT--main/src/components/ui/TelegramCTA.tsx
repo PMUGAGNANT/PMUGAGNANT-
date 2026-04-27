@@ -22,7 +22,7 @@ export function TelegramCTA() {
     <section
       className="app-card overflow-hidden border border-[color-mix(in_srgb,#0088CC_35%,transparent)] p-6 md:p-8"
       style={{ background: "color-mix(in srgb, #0088CC 12%, var(--pmu-surface))" }}
-      aria-label="Canal Telegram PMU Gagnant"
+      aria-label="Canal Telegram TurfEdge"
     >
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>

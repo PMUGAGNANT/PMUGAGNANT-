@@ -4,7 +4,9 @@ import { ComboPanel, ComboProvider } from "@/components/ComboBuilder";
 import { AppShell } from "@/features/layout/components/AppShell";
 import { GlossaryPanel } from "@/components/ui/Glossary";
 import { PriorityRacePushScheduler } from "@/components/ui/PriorityRacePushScheduler";
+import { ResponsibleGamingBar } from "@/components/ui/ResponsibleGamingBar";
 import { ServiceWorkerRegistration } from "@/components/ui/ServiceWorkerRegistration";
+import { SiteBootSplash } from "@/components/ui/SiteBootSplash";
 import { ThemeMetaColor } from "@/components/ui/ThemeMetaColor";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
 import { TurfEdgeCoach } from "@/components/ui/TurfEdgeCoach";
@@ -76,7 +78,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "PMU Gagnant - L'IA qui trie les courses PMU",
     description:
-      "Analyse IA des courses PMU. Score de confiance, ticket conseille, signal T-10min et suivi des performances.",
+      "Analyse IA de toutes les courses PMU. Score de confiance, ticket optimisé, signal T-10min. Essai gratuit.",
     url: siteUrl,
     siteName: "PMU Gagnant",
     type: "website",
@@ -95,7 +97,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "PMU Gagnant - L'IA qui trie les courses PMU",
     description:
-      "Score de confiance, ticket conseille, signal T-10min et bilan de performance.",
+      "Courses triees, confiance IA, tickets jouables et courses a eviter.",
   },
   appleWebApp: {
     title: "PMU Gagnant",
@@ -117,7 +119,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" data-theme="warm">
+    <html lang="fr" data-theme="warm" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var t=localStorage.getItem('pmu-theme-v2');document.documentElement.dataset.theme=t==='cream'?'cream':'warm'}catch(e){}",
+          }}
+        />
+      </head>
       <body
         className={`${uiFont.variable} ${displayFont.variable} ${monoFont.variable} min-h-screen text-[var(--pmu-text)] antialiased`}
       >
@@ -125,6 +135,8 @@ export default function RootLayout({
           Aller au contenu
         </a>
         <ThemeProvider>
+          <SiteBootSplash />
+          <ResponsibleGamingBar />
           <ComboProvider>
             <ThemeMetaColor />
             <ServiceWorkerRegistration />

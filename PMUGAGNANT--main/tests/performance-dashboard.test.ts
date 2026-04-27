@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { buildPerformanceDashboard } from "../src/features/performance/performance-model";
-import type { CourseRecordRow, PredictionRow } from "../src/lib/types";
+import type { CourseRecordRow, PredictionRow, RunnerOutcomeRow } from "../src/lib/types";
 
 function createCourse(overrides: Partial<CourseRecordRow> = {}): CourseRecordRow {
   return {
@@ -59,6 +59,22 @@ function createPrediction(overrides: Partial<PredictionRow> = {}): PredictionRow
     rapport_gagnant: 4,
     gain_simule: 40,
     stage: "RESULTAT",
+    ...overrides,
+  };
+}
+
+function createOutcome(overrides: Partial<RunnerOutcomeRow> = {}): RunnerOutcomeRow {
+  return {
+    date: "2026-04-10",
+    reunion: 1,
+    course: 1,
+    cheval_num: 1,
+    ordre_arrivee: 7,
+    resultat_gagnant: false,
+    resultat_place: false,
+    rapport_gagnant: null,
+    rapport_place: null,
+    non_partant: false,
     ...overrides,
   };
 }
@@ -168,7 +184,15 @@ test("buildPerformanceDashboard filtre hippodrome et distance puis expose les mi
       hippodrome: "Chantilly",
       distance: "SPRINT",
     },
-    "2026-04-15T12:00:00.000Z"
+    "2026-04-15T12:00:00.000Z",
+    null,
+    [
+      createOutcome({
+        ordre_arrivee: 1,
+        resultat_gagnant: true,
+        resultat_place: true,
+      }),
+    ]
   );
 
   assert.equal(dashboard.kpis.validatedBets, 1);
@@ -179,5 +203,34 @@ test("buildPerformanceDashboard filtre hippodrome et distance puis expose les mi
   assert.equal(dashboard.comparisonRows[0]?.suggestedStake, 8);
   assert.equal(dashboard.comparisonRows[0]?.actualStake, 8);
   assert.equal(dashboard.comparisonRows[0]?.result, "GAGNANT");
+  assert.equal(dashboard.comparisonRows[0]?.finishPosition, 1);
   assert.ok(dashboard.availableHippodromes.includes("Chantilly"));
+});
+
+test("buildPerformanceDashboard affiche la place exacte hors podium depuis les arrivees", () => {
+  const dashboard = buildPerformanceDashboard(
+    [
+      createPrediction({
+        date: "2026-04-10",
+        mise_simulee: 8,
+        resultat_gagnant: null,
+        resultat_place: null,
+        gain_simule: null,
+      }),
+    ],
+    [
+      createCourse({
+        date: "2026-04-10",
+      }),
+    ],
+    { period: "30j", segment: "ALL", betType: "ALL" },
+    "2026-04-15T12:00:00.000Z",
+    null,
+    [createOutcome()]
+  );
+
+  assert.equal(dashboard.comparisonRows[0]?.finishPosition, 7);
+  assert.equal(dashboard.comparisonRows[0]?.result, "PERDU");
+  assert.equal(dashboard.comparisonRows[0]?.gain, 0);
+  assert.equal(dashboard.comparisonRows[0]?.netGain, -8);
 });

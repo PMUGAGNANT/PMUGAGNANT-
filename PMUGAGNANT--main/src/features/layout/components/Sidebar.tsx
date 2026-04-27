@@ -187,7 +187,7 @@ export function Sidebar() {
                 </div>
                 <div className="min-w-0">
                   <p className="app-brand-wordmark truncate text-[1.12rem] font-black text-[var(--pmu-text)]">
-                    PMU Gagnant
+                    TurfEdge
                   </p>
                   <p className="truncate text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--pmu-text-muted)]">
                     Control room V6

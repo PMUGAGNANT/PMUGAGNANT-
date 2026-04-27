@@ -119,7 +119,7 @@ export function ReferralCard() {
     }
 
     const shareText = encodeURIComponent(
-      `PMU Gagnant offre 7 jours premium gratuits avec mon code ${state.data.referral_code}. ${state.data.share_url}`
+      `TurfEdge offre 7 jours premium gratuits avec mon code ${state.data.referral_code}. ${state.data.share_url}`
     );
 
     return {
@@ -127,7 +127,7 @@ export function ReferralCard() {
       telegram: `https://t.me/share/url?url=${encodeURIComponent(
         state.data.share_url
       )}&text=${encodeURIComponent(
-        `Rejoins PMU Gagnant avec mon code ${state.data.referral_code}`
+        `Rejoins TurfEdge avec mon code ${state.data.referral_code}`
       )}`,
     };
   }, [state]);

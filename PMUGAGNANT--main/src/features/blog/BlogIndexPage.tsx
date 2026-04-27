@@ -4,7 +4,7 @@ import { PageNextStepCard } from "@/components/ui/PageNextStepCard";
 import { blogPosts } from "@/lib/blog-posts";
 
 export const metadata: Metadata = {
-  title: "Blog turf et pronostics | PMU Gagnant",
+  title: "Blog turf et pronostics | TurfEdge",
   description:
     "Articles courts pour mieux lire un programme PMU, comprendre le Quinte et jouer avec methode.",
 };

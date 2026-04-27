@@ -2,6 +2,10 @@
 
 import { useEffect } from "react";
 import {
+  buildMorningHighlightNotification,
+  buildPreRaceHighlightNotification,
+} from "@/lib/push-campaigns";
+import {
   buildFeaturedRaces,
   coerceRaceSummaries,
   sortFeaturedRaces,
@@ -18,6 +22,7 @@ import { getRaceTimestamp, getTodayDateStr } from "@/lib/date-utils";
 
 const ALERT_SENT_PREFIX = "turfedge-priority-alert";
 const MAX_ALERTS_PER_LOAD = 5;
+const DAY_HIGHLIGHT_PREFIX = "turfedge-day-highlight";
 
 function raceStartDate(dateStr: string, heureDepart?: string | null) {
   if (!/^\d{8}$/.test(dateStr) || !heureDepart) {
@@ -57,6 +62,11 @@ async function showPriorityNotification(input: {
   title: string;
   body: string;
   url: string;
+  tag?: string;
+  icon?: string;
+  badge?: string;
+  requireInteraction?: boolean;
+  data?: Record<string, unknown>;
 }) {
   if (Notification.permission !== "granted" || alreadySent(input.key)) {
     return;
@@ -66,10 +76,11 @@ async function showPriorityNotification(input: {
   const registration = await navigator.serviceWorker.ready;
   await registration.showNotification(input.title, {
     body: input.body,
-    icon: "/logo-turfedge.png",
-    badge: "/favicon.ico",
-    tag: input.key,
-    data: { url: input.url },
+    icon: input.icon ?? "/logo-turfedge.png",
+    badge: input.badge ?? "/favicon.ico",
+    tag: input.tag ?? input.key,
+    requireInteraction: input.requireInteraction ?? false,
+    data: { url: input.url, ...(input.data ?? {}) },
   });
 }
 
@@ -102,13 +113,71 @@ export function PriorityRacePushScheduler() {
         scoresResponse?.success ? scoresResponse.scores ?? null : null,
         dateStr
       );
+      const races = coerceRaceSummaries(racesResponse.races);
       const scoreMap = new Map(scores.map((score) => [`${score.reunion}-${score.course}`, score]));
       const featured = sortFeaturedRaces(
-        buildFeaturedRaces(coerceRaceSummaries(racesResponse.races), scoreMap),
+        buildFeaturedRaces(races, scoreMap),
         "score"
       )
         .filter((item) => item.status === "jouable" && item.score?.pick)
         .slice(0, MAX_ALERTS_PER_LOAD);
+
+      const localRows = scores.filter((score) => score.pick?.numPmu);
+      const dayHighlight = buildMorningHighlightNotification(
+        dateStr,
+        races,
+        localRows.flatMap((score) =>
+          score.pick?.numPmu
+            ? [
+                {
+                  date: dateStr,
+                  reunion: score.reunion,
+                  course: score.course,
+                  hippodrome:
+                    races.find(
+                      (race) => race.reunion === score.reunion && race.course === score.course
+                    )?.hippodrome ?? "",
+                  cheval_num: score.pick.numPmu,
+                  cheval_nom: score.pick.nom ?? "Selection TurfEdge",
+                  score_cheval: score.score ?? 0,
+                  score_blended: score.score ?? null,
+                  score_final_pari: score.score ?? null,
+                  confiance: score.pick.confidence ?? score.score ?? 0,
+                  qualite: score.score ?? 0,
+                  lisibilite: score.lisibilite,
+                  value: score.pick.edge ?? null,
+                  cote_matin: score.pick.cote ?? null,
+                  cote_depart: score.pick.cote ?? null,
+                  variation_cote: null,
+                  signal_variation: null,
+                  decision: score.decision,
+                  pari_conseille:
+                    score.pick.betType === "GAGNANT" ? "GAGNANT" : "PLACE",
+                  outsider: false,
+                  mise_simulee: score.pick.stake ?? 0,
+                  resultat_place: null,
+                  resultat_gagnant: null,
+                  rapport_place: null,
+                  rapport_gagnant: null,
+                  gain_simule: null,
+                },
+              ]
+            : []
+        )
+      );
+
+      if (dayHighlight) {
+        void showPriorityNotification({
+          key: `${DAY_HIGHLIGHT_PREFIX}-${dateStr}`,
+          title: dayHighlight.title,
+          body: dayHighlight.body,
+          url: dayHighlight.url,
+          tag: dayHighlight.tag,
+          icon: dayHighlight.icon,
+          badge: dayHighlight.badge,
+          data: dayHighlight.data,
+        });
+      }
 
       for (const item of featured) {
         const start = raceStartDate(dateStr, item.race.heureDepart);
@@ -122,16 +191,54 @@ export function PriorityRacePushScheduler() {
 
         const pick = item.score?.pick;
         const raceCode = `R${item.race.reunion}C${item.race.course}`;
-        const confidence = pick?.confidence ?? item.confidence;
         const key = `${ALERT_SENT_PREFIX}-${dateStr}-${raceCode}`;
-        const body = `${raceCode} demarre dans 30min - ${pick?.nom ?? "Favori"} favori confiance ${confidence.toFixed(1)}/10`;
-        const url = `/course/${item.race.reunion}/${item.race.course}?date=${dateStr}`;
+        if (!pick?.numPmu || !pick?.nom) {
+          continue;
+        }
+        const notification = buildPreRaceHighlightNotification(
+          dateStr,
+          item.race,
+          {
+            date: dateStr,
+            reunion: item.race.reunion,
+            course: item.race.course,
+            hippodrome: item.race.hippodrome,
+            cheval_num: pick.numPmu,
+            cheval_nom: pick.nom,
+            score_cheval: item.score?.score ?? item.confidence,
+            score_blended: item.score?.score ?? null,
+            score_final_pari: item.score?.score ?? null,
+            confiance: pick.confidence ?? item.confidence,
+            qualite: item.score?.score ?? item.confidence,
+            lisibilite: item.score?.lisibilite ?? "LISIBLE",
+            value: pick.edge ?? null,
+            cote_matin: pick.cote ?? null,
+            cote_depart: pick.cote ?? null,
+            variation_cote: null,
+            signal_variation: null,
+            decision: item.score?.decision ?? "VALIDE",
+            pari_conseille: pick.betType === "GAGNANT" ? "GAGNANT" : "PLACE",
+            outsider: false,
+            mise_simulee: pick.stake ?? 0,
+            resultat_place: null,
+            resultat_gagnant: null,
+            rapport_place: null,
+            rapport_gagnant: null,
+            gain_simule: null,
+          },
+          Math.max(1, Math.round(delay / 60000))
+        );
         const fire = () => {
           void showPriorityNotification({
             key,
-            title: "Signal prioritaire TurfEdge",
-            body,
-            url,
+            title: notification.title,
+            body: notification.body,
+            url: notification.url,
+            tag: notification.tag,
+            icon: notification.icon,
+            badge: notification.badge,
+            requireInteraction: notification.requireInteraction,
+            data: notification.data,
           });
         };
 

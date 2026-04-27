@@ -21,6 +21,10 @@
       "schedule": "0 5 * * *"
     },
     {
+      "path": "/api/cron/pre-race",
+      "schedule": "*/15 9-19 * * *"
+    },
+    {
       "path": "/api/cron/health",
       "schedule": "0 6 * * *"
     },

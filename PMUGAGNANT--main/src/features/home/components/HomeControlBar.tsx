@@ -55,13 +55,13 @@ export function HomeControlBar({
             P
           </span>
           <div className="turf-signature-banner__copy">
-            <p className="turf-signature-banner__eyebrow">Signature PMU Gagnant</p>
+            <p className="turf-signature-banner__eyebrow">Signature TurfEdge</p>
             <p className="turf-signature-banner__title">L&apos;intelligence du terrain</p>
             <p className="turf-signature-banner__meta">ALGO V9.2 - lecture bankroll</p>
           </div>
           <blockquote className="turf-devise">
             <p>Jouer juste, jouer rare, jouer fort</p>
-            <cite>PMU Gagnant</cite>
+            <cite>TurfEdge</cite>
           </blockquote>
         </div>
 

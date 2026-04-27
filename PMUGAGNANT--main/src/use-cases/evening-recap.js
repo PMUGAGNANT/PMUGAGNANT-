@@ -31,7 +31,7 @@ async function runEveningRecap({
         };
 
         if (telegram && (!previousRecap?.telegramSentAt || force)) {
-            await telegram.sendMessage(`<b>PMU AI - BILAN ${dateStr}</b>\nAucune selection moderne aujourd'hui.`);
+            await telegram.sendMessage(`<b>TurfEdge - BILAN ${dateStr}</b>\nAucune selection moderne aujourd'hui.`);
         }
 
         return empty;
@@ -342,7 +342,7 @@ function hydrateSelection(item, participants) {
 
 function buildEveningRecapMessage(result) {
     const lines = [
-        `<b>PMU AI v9.2 - BILAN ${result.dateStr}</b>`,
+        `<b>TurfEdge v9.2 - BILAN ${result.dateStr}</b>`,
         `Selections: <b>${result.totalSelections}</b>`,
         `Places: <b>${result.places}</b> | Gagnants: <b>${result.wins}</b>`,
         `Taux gagne: <b>${result.winRate}%</b> | Taux place: <b>${result.placeRate}%</b> | Taux perdu: <b>${result.lossRate}%</b>`,
@@ -367,7 +367,7 @@ function buildEveningRecapMessage(result) {
 
 function buildWeeklyReportMessage(report) {
     const lines = [
-        `<b>📊 BILAN HEBDO PMU AI v9.2 — Sem. ${report.weekNumber}</b>`,
+        `<b>📊 BILAN HEBDO TurfEdge v9.2 — Sem. ${report.weekNumber}</b>`,
         '',
         `Courses analysees: <b>${report.totalCourses}</b>`,
         `Validees: <b>${report.valides}</b> | Surveillances: <b>${report.surveillances}</b> | Rejetees: <b>${report.rejets}</b>`,

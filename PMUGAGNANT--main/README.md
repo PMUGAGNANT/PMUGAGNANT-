@@ -1,4 +1,4 @@
-# PMU Gagnant
+# TurfEdge
 
 Application Next.js de pronostics PMU orientée décision, avec moteur de scoring, sélection des meilleures courses du jour, pipeline cron et stockage Supabase.
 
@@ -93,6 +93,9 @@ STRIPE_PRICE_ID=
 RESEND_API_KEY=
 RESEND_FROM_EMAIL=
 SUPPORT_EMAIL=
+OPENAI_API_KEY=
+OPENAI_MODEL=
+COACH_AI_PROVIDER=
 ```
 
 ### 3. Initialiser Supabase
@@ -210,6 +213,9 @@ Variables optionnelles selon les integrations activees :
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
 - `SUPPORT_EMAIL`
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL` optionnel, par defaut `gpt-4.1-mini`
+- `COACH_AI_PROVIDER` optionnel. Laisser vide pour utiliser le coach Supabase natif, mettre `openai` pour brancher OpenAI.
 
 ## Déploiement Vercel
 
@@ -229,6 +235,9 @@ Variables optionnelles selon les integrations activees :
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
 - `SUPPORT_EMAIL`
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL` optionnel, par defaut `gpt-4.1-mini`
+- `COACH_AI_PROVIDER` optionnel. Laisser vide pour utiliser le coach Supabase natif, mettre `openai` pour brancher OpenAI.
 
 ### Étapes
 

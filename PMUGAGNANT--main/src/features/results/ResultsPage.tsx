@@ -5,7 +5,7 @@ import { PageNextStepCard } from "@/components/ui/PageNextStepCard";
 import { ResultsDashboard } from "@/components/ui/ResultsDashboard";
 
 const RESULTS_URL = "https://pmugagnant.vercel.app/resultats";
-const RESULTS_TITLE = "Resultats reels | PMU Gagnant";
+const RESULTS_TITLE = "Resultats reels | TurfEdge";
 const RESULTS_DESCRIPTION =
   "Performances verifiables : taux de reussite, ROI et historique complet, gains comme pertes.";
 

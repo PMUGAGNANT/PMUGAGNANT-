@@ -1,5 +1,5 @@
 /**
- * Beginner-friendly labels — PMU Gagnant
+ * Beginner-friendly labels — TurfEdge
  *
  * Mapping central : termes techniques → français simple.
  * Utilisé quand le mode débutant est activé, ou pour les tooltips.

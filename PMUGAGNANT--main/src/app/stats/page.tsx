@@ -8,7 +8,7 @@ import {
 import type { PredictionRow, RunnerOutcomeRow } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Stats PMU Gagnant - ROI et historique",
+  title: "Stats TurfEdge - ROI et historique",
   description:
     "Statistiques TurfEdge : ROI global, taux de reussite, historique des dernieres selections et performances PMU.",
 };

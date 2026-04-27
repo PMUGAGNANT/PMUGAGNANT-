@@ -7,8 +7,7 @@ import { asArray } from "@/lib/array-utils";
 import { BetHistoryCard } from "@/features/account/components/BetHistoryCard";
 import { BillingNoticeCard } from "@/features/account/components/BillingNoticeCard";
 import { AccountSummaryCard } from "@/features/account/components/AccountSummaryCard";
-import { AccountNextActionCard } from "@/features/account/components/AccountNextActionCard";
-import { buildAccountOverview } from "@/features/account/lib/account-overview";
+import { PushPreferencesCard } from "@/features/account/components/PushPreferencesCard";
 import {
   formatBonusExpiry,
   formatEuros,
@@ -479,13 +478,6 @@ function MesParisContent() {
     : hasBonusAccess
       ? "Acces bonus actif"
       : "Compte gratuit";
-  const accountOverview = buildAccountOverview({
-    bets,
-    isStripeSubscribed,
-    accessSource,
-    subscriptionStatus,
-    premiumAccessExpiresAt,
-  });
 
   return (
     <div className="mx-auto flex w-full max-w-[96rem] flex-col gap-6 lg:gap-8">
@@ -540,52 +532,66 @@ function MesParisContent() {
             </div>
           </div>
 
-          <div className="grid gap-4">
-            <aside className="app-card p-5 md:p-6">
-              <p className="app-kicker">Solde actuel</p>
-              <div className="mt-4 text-[3.35rem] font-black leading-none text-[var(--pmu-text)]">
-                {formatEuros(solde)}
+          <aside className="app-card p-5 md:p-6">
+            <p className="app-kicker">Solde actuel</p>
+            <div className="mt-4 text-[3.35rem] font-black leading-none text-[var(--pmu-text)]">
+              {formatEuros(solde)}
+            </div>
+            <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">
+              {user?.email ?? "Compte utilisateur"}
+            </p>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <div className="app-card-muted px-4 py-4">
+                <p className="app-label">Tickets gagnes</p>
+                <p className="mt-2 text-2xl font-black text-[var(--pmu-primary)]">
+                  {wonCount}
+                </p>
+              </div>
+              <div className="app-card-muted px-4 py-4">
+                <p className="app-label">Tickets places</p>
+                <p className="mt-2 text-2xl font-black text-[var(--pmu-orange)]">
+                  {placedCount}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-[1.2rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_90%,transparent)] p-4">
+              <div className="inline-flex rounded-full border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_88%,transparent)] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-[var(--pmu-text-soft)]">
+                {accessBadge}
               </div>
               <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">
-                {user?.email ?? "Compte utilisateur"}
+                {isStripeSubscribed
+                  ? "Ton espace premium est actif: pronostics complets, mises, tickets detailles et gestion Stripe."
+                  : hasBonusAccess
+                    ? `Ton acces bonus est actif${
+                        bonusExpiryLabel ? ` jusqu'au ${bonusExpiryLabel}` : ""
+                      }. Tu peux deja voir les pronostics complets ou passer au mensuel quand tu veux.`
+                    : "Passe en premium pour debloquer les opportunites value filtrees, les mises Kelly et la lecture complete des tickets."}
               </p>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <div className="app-card-muted px-4 py-4">
-                  <p className="app-label">Tickets gagnes</p>
-                  <p className="mt-2 text-2xl font-black text-[var(--pmu-primary)]">
-                    {wonCount}
-                  </p>
-                </div>
-                <div className="app-card-muted px-4 py-4">
-                  <p className="app-label">Tickets places</p>
-                  <p className="mt-2 text-2xl font-black text-[var(--pmu-orange)]">
-                    {placedCount}
-                  </p>
-                </div>
+              <div className="mt-4 flex flex-wrap gap-3">
+                {isStripeSubscribed ? (
+                  <button
+                    type="button"
+                    onClick={() => handleBilling("portal")}
+                    disabled={billingLoading}
+                    className="app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {billingLoading ? "Ouverture..." : "Gerer l'abonnement"}
+                  </button>
+                ) : (
+                  <Link href="/premium" className="app-button-primary">
+                    Passer PRO
+                  </Link>
+                )}
+                {!isStripeSubscribed ? (
+                  <Link href="/premium" className="app-button-secondary">
+                    Voir l&apos;offre
+                  </Link>
+                ) : null}
               </div>
-            </aside>
-
-            <AccountNextActionCard
-              overview={accountOverview}
-              onPrimaryAction={
-                accountOverview.primaryActionHref === "#settle-bets"
-                  ? handleSettle
-                  : accountOverview.primaryActionHref === "#manage-billing"
-                    ? () => {
-                        void handleBilling("portal");
-                      }
-                    : undefined
-              }
-              onSecondaryAction={
-                accountOverview.secondaryActionHref === "#manage-billing"
-                  ? () => {
-                      void handleBilling("portal");
-                    }
-                  : undefined
-              }
-            />
-          </div>
+            </div>
+          </aside>
         </div>
       </section>
 
@@ -681,7 +687,7 @@ function MesParisContent() {
               <div className="mt-5 rounded-[1.2rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_92%,transparent)] p-5">
                 <p className="app-kicker">Telegram Premium</p>
                 <h3 className="mt-2 text-2xl font-black leading-[1.02] text-[var(--pmu-text)]">
-                  Lier le bot PMU Gagnant
+                  Lier le bot TurfEdge
                 </h3>
                 <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">
                   Envoie /start a @pmugagnantbot, copie ton ID Telegram, puis
@@ -715,6 +721,10 @@ function MesParisContent() {
                   </p>
                   {telegramLinkMessage ? <p>{telegramLinkMessage}</p> : null}
                 </div>
+              </div>
+
+              <div className="mt-5">
+                <PushPreferencesCard />
               </div>
 
               <div className="mt-5 rounded-[1.2rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_92%,transparent)] p-5">

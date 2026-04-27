@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const delivery = await sendTelegramMessageToChat(
       chatId,
       [
-        "PMU Gagnant",
+        "TurfEdge",
         "Message de test du bot @pmugagnantbot.",
         "Si vous recevez ce message, la connexion Telegram fonctionne.",
       ].join("\n")

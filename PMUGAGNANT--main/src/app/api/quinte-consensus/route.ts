@@ -53,7 +53,7 @@ function consensusMessage(a: number[], b: number[], c: number[]): string {
     .slice(0, 4)
     .map(([n]) => n);
   if (top.length === 0) {
-    return "Peu de recoupement entre les modèles — rester sur le ticket PMU Gagnant.";
+    return "Peu de recoupement entre les modèles — rester sur le ticket TurfEdge.";
   }
   return `Consensus : N°${top.join(", N°")} reviennent dans plusieurs listes → BASES À CONFIRMER ✅`;
 }

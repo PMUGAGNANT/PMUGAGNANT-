@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const post = getPostBySlug(slug);
   if (!post) return { title: "Article introuvable" };
   return {
-    title: `${post.title} | PMU Gagnant`,
+    title: `${post.title} | TurfEdge`,
     description: post.description,
     keywords: post.keywords,
   };

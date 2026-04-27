@@ -522,7 +522,7 @@ export default function RaceChat({
 
   const pinnedText = useMemo(
     () =>
-      `🤖 PMU GAGNANT IA · VERDICT — ${pinnedVerdict.verdict} le ${pinnedVerdict.cheval} — Cote ${pinnedVerdict.cote} — Mise: ${pinnedVerdict.mise}`,
+      `🤖 TURFEDGE IA · VERDICT — ${pinnedVerdict.verdict} le ${pinnedVerdict.cheval} — Cote ${pinnedVerdict.cote} — Mise: ${pinnedVerdict.mise}`,
     [pinnedVerdict]
   );
 
