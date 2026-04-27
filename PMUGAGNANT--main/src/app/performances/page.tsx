@@ -1,10 +1,5 @@
-import type { Metadata } from "next";
-import PersonalPerformancesPage from "@/features/performance/PersonalPerformancesPage";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Performances personnelles - PMU Gagnant",
-  description:
-    "Historique personnel des 30 derniers paris TurfEdge avec mise, cote, résultat, gain, perte et ROI.",
-};
-
-export default PersonalPerformancesPage;
+export default function PerformancesPage() {
+  redirect("/mes-paris");
+}

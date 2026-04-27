@@ -88,13 +88,13 @@ export function HomeHero({
             </div>
 
             <h1 className="mt-5 max-w-4xl text-[2.5rem] font-black leading-[0.95] text-[var(--pmu-text)] md:text-[4.2rem]">
-              L&apos;IA qui te dit exactement quoi jouer au PMU.
+              Les courses PMU triees avant de miser.
             </h1>
 
             <p className="mt-5 max-w-2xl text-base leading-8 text-[var(--pmu-text-soft)] md:text-lg">
-              TurfEdge analyse les courses, sort le cheval a jouer, explique la
-              confiance et calcule la mise. En 30 secondes, tu sais si tu joues
-              ou si tu passes.
+              PMU Gagnant analyse le programme, isole les courses jouables,
+              affiche le cheval conseille et calcule une mise cadree. En 30
+              secondes, tu sais surtout quand passer.
             </p>
 
             <div className="mt-7 grid gap-3 sm:grid-cols-3">
@@ -143,6 +143,18 @@ export function HomeHero({
                 Voir la meilleure course
               </button>
             </div>
+
+            <div className="mt-5 grid gap-2 text-sm font-bold text-[var(--pmu-text-soft)] sm:grid-cols-3">
+              <span className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] px-3 py-2">
+                1. Choisir la course
+              </span>
+              <span className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] px-3 py-2">
+                2. Lire le cheval et la mise
+              </span>
+              <span className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] px-3 py-2">
+                3. Jouer ou passer
+              </span>
+            </div>
           </div>
 
           <div className="rounded-lg border border-[color-mix(in_srgb,var(--pmu-primary)_18%,transparent)] bg-[var(--pmu-primary-fade)] p-4">
@@ -168,8 +180,8 @@ export function HomeHero({
               ))}
               {proofItems.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-[var(--pmu-border-strong)] bg-[var(--pmu-surface)] p-4 text-sm leading-6 text-[var(--pmu-text-soft)] md:col-span-3">
-                  Les tickets gagnants remontent ici des que les arrivees
-                  officielles sont enregistrees.
+                  Les resultats remontent ici des que les arrivees officielles
+                  sont enregistrees.
                 </div>
               ) : null}
             </div>
@@ -179,7 +191,7 @@ export function HomeHero({
         <div className="relative min-h-[28rem] overflow-hidden border-t border-[var(--pmu-border)] bg-[var(--pmu-primary)] xl:border-l xl:border-t-0">
           <Image
             src="/promo-poster.jpg"
-            alt="Parieur consultant TurfEdge avant une course PMU"
+            alt="Parieur consultant PMU Gagnant avant une course PMU"
             fill
             priority
             sizes="(min-width: 1280px) 48vw, 100vw"
@@ -221,7 +233,7 @@ export function HomeHero({
               </div>
               <p className="mt-4 text-sm leading-6 text-[var(--pmu-text-soft)]">
                 {focusRace?.hint ??
-                  "Le moteur transforme le programme PMU en decisions simples."}
+                  "Le moteur transforme le programme PMU en decisions simples, sans garantie de gain."}
               </p>
             </div>
           </div>

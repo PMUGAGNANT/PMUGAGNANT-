@@ -7,6 +7,7 @@ import { PriorityRacePushScheduler } from "@/components/ui/PriorityRacePushSched
 import { ServiceWorkerRegistration } from "@/components/ui/ServiceWorkerRegistration";
 import { ThemeMetaColor } from "@/components/ui/ThemeMetaColor";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
+import { TurfEdgeCoach } from "@/components/ui/TurfEdgeCoach";
 import "./globals.css";
 
 const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
@@ -37,12 +38,12 @@ const monoFont = Roboto_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  applicationName: "TurfEdge",
+  applicationName: "PMU Gagnant",
   creator: "PMU Gagnant",
   publisher: "PMU Gagnant",
-  title: "TurfEdge - L'IA qui lit les courses PMU à ta place",
+  title: "PMU Gagnant - L'IA qui trie les courses PMU",
   description:
-    "Chaque matin, TurfEdge analyse toutes les courses PMU et te dit exactement quoi jouer, quoi ignorer, et combien miser. Score de confiance, ticket optimisé, signal T-10min.",
+    "Chaque matin, PMU Gagnant analyse les courses PMU, affiche les tickets jouables, les courses a eviter, la confiance IA et la mise conseillee.",
   keywords: [
     "PMU",
     "pronostic",
@@ -73,11 +74,11 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "TurfEdge - L'IA qui lit les courses PMU à ta place",
+    title: "PMU Gagnant - L'IA qui trie les courses PMU",
     description:
-      "Analyse IA de toutes les courses PMU. Score de confiance, ticket optimisé, signal T-10min. Essai gratuit.",
+      "Analyse IA des courses PMU. Score de confiance, ticket conseille, signal T-10min et suivi des performances.",
     url: siteUrl,
-    siteName: "TurfEdge",
+    siteName: "PMU Gagnant",
     type: "website",
     locale: "fr_FR",
     images: [
@@ -85,19 +86,19 @@ export const metadata: Metadata = {
         url: defaultOgImage,
         width: 1200,
         height: 630,
-        alt: "TurfEdge analyse les courses PMU avec l'IA",
+        alt: "PMU Gagnant analyse les courses PMU avec l'IA",
       },
     ],
   },
   twitter: {
     images: [defaultOgImage],
     card: "summary_large_image",
-    title: "TurfEdge - L'IA qui lit les courses PMU",
+    title: "PMU Gagnant - L'IA qui trie les courses PMU",
     description:
-      "Score de confiance, ticket optimisé, signal T-10min. IA hippique actionnable.",
+      "Score de confiance, ticket conseille, signal T-10min et bilan de performance.",
   },
   appleWebApp: {
-    title: "TurfEdge",
+    title: "PMU Gagnant",
     capable: true,
     statusBarStyle: "black-translucent",
   },
@@ -129,6 +130,7 @@ export default function RootLayout({
             <ServiceWorkerRegistration />
             <PriorityRacePushScheduler />
             <AppShell>{children}</AppShell>
+            <TurfEdgeCoach />
             <GlossaryPanel />
             <ComboPanel />
           </ComboProvider>

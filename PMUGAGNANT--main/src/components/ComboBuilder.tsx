@@ -108,15 +108,15 @@ function buildTicketText(
   potentialGain: number
 ) {
   return [
-    "🎯 Ticket combo TurfEdge",
-    `Mise : ${round2(stake)} €`,
-    `Cote combinée : ${combinedOdds.toFixed(1)}x`,
-    `Probabilité estimée : ${formatPercent(estimatedProbability)}`,
-    `Gain potentiel : ${round2(potentialGain)} €`,
+    "Ticket combo PMU Gagnant",
+    `Mise : ${round2(stake)} EUR`,
+    `Cote combinee : ${combinedOdds.toFixed(1)}x`,
+    `Probabilite estimee : ${formatPercent(estimatedProbability)}`,
+    `Gain potentiel : ${round2(potentialGain)} EUR`,
     "",
     ...selections.map(
       (s, i) =>
-        `${i + 1}. ${s.courseLabel} — N°${s.cheval_num} ${s.cheval_nom} (${s.role}) @ ${s.cote.toFixed(1)}x`
+        `${i + 1}. ${s.courseLabel} - N${s.cheval_num} ${s.cheval_nom} (${s.role}) @ ${s.cote.toFixed(1)}x`
     ),
   ].join("\n");
 }

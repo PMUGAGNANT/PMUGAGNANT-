@@ -30,5 +30,14 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    ".next",
+    "out",
+    "build",
+    "coverage",
+    "coach-api-push",
+    "PMUGAGNANT--main",
+    "pull-backup-*"
+  ]
 }

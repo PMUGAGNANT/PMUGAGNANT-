@@ -37,11 +37,11 @@ export default function PromoVideo() {
           onClick={toggleSound}
           className="absolute bottom-3 right-3 rounded-full bg-black/60 px-3 py-1 text-xs text-white backdrop-blur-sm"
         >
-          {muted ? "🔊 Activer le son" : "🔇 Couper le son"}
+          {muted ? "Activer le son" : "Couper le son"}
         </button>
       </div>
       <p className="mt-3 text-center text-sm opacity-60">
-        TurfEdge — L&apos;intelligence du terrain
+        PMU Gagnant - pronostics mesures, bankroll protegee
       </p>
     </div>
   );

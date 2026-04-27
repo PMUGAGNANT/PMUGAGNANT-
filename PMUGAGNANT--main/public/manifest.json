@@ -1,7 +1,7 @@
 {
   "name": "PMU Gagnant",
-  "short_name": "PMU AI",
-  "description": "Pronostics IA courses hippiques",
+  "short_name": "PMU Gagnant",
+  "description": "Pronostics IA PMU avec suivi des performances",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#060606",
