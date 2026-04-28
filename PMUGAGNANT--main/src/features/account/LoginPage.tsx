@@ -192,7 +192,7 @@ function LoginPageContent() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="auth-page relative min-h-screen overflow-hidden">
       <div className="mx-auto flex min-h-screen w-full max-w-[96rem] flex-col px-4 pb-10 pt-5 sm:px-6 lg:px-8">
         <header className="mb-6 flex items-center justify-between gap-3 md:mb-8">
           <button
@@ -209,7 +209,7 @@ function LoginPageContent() {
               href="/"
               className="hidden rounded-lg border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_88%,transparent)] px-4 py-2 text-sm font-black text-[var(--pmu-text)] shadow-[var(--pmu-shadow-sm)] sm:inline-flex"
             >
-              TurfEdge
+              PMU Gagnant
             </Link>
           </div>
         </header>
