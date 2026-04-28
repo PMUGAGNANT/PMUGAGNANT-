@@ -1814,6 +1814,11 @@ html[data-theme="cream"] .value-page {
 }
 
 html[data-theme="warm"] .auth-page .app-card,
+html[data-theme="warm"] .app-card,
+html[data-theme="warm"] .app-surface,
+html[data-theme="warm"] .premium-surface,
+html[data-theme="warm"] .dark-surface,
+html[data-theme="warm"] .app-page-hero,
 html[data-theme="warm"] .auth-page .app-page-hero {
   border-color: rgba(212, 175, 55, 0.20);
   background:
@@ -1823,6 +1828,7 @@ html[data-theme="warm"] .auth-page .app-page-hero {
 }
 
 html[data-theme="warm"] .auth-page .app-card-muted,
+html[data-theme="warm"] .app-card-muted,
 html[data-theme="warm"] .auth-page .app-stat-card {
   border-color: rgba(255,255,255,0.10);
   background:
@@ -1831,7 +1837,20 @@ html[data-theme="warm"] .auth-page .app-stat-card {
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
+html[data-theme="warm"] .app-stat-card {
+  border-color: rgba(255,255,255,0.10);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.025)),
+    var(--pmu-surface-2);
+}
+
 html[data-theme="warm"] .auth-page .app-input {
+  border-color: rgba(255,255,255,0.16);
+  background: #111827;
+  color: #FFFFFF;
+}
+
+html[data-theme="warm"] .app-input {
   border-color: rgba(255,255,255,0.16);
   background: #111827;
   color: #FFFFFF;
@@ -1841,10 +1860,27 @@ html[data-theme="warm"] .auth-page .app-input::placeholder {
   color: rgba(255,255,255,0.46);
 }
 
+html[data-theme="warm"] .app-input::placeholder {
+  color: rgba(255,255,255,0.46);
+}
+
 html[data-theme="warm"] .auth-page .app-pill {
   border-color: rgba(255,255,255,0.12);
   background: rgba(255,255,255,0.055);
   box-shadow: none;
+}
+
+html[data-theme="warm"] .app-pill {
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.055);
+  box-shadow: none;
+}
+
+html[data-theme="warm"] .premium-ticket-shell {
+  border-color: rgba(212, 175, 55, 0.20);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.025)),
+    var(--pmu-surface);
 }
 
 .premium-ticket-shell {

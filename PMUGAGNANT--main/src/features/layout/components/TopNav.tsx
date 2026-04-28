@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -21,19 +20,14 @@ export function TopNav() {
     <header className="turf-topbar">
       <div className="turf-topbar__inner">
         <Link href="/" className="turf-brand" aria-label="PMU Gagnant">
-          <Image
-            src="/logo-turfedge.png"
-            alt="PMU Gagnant"
-            width={56}
-            height={56}
-            className="turf-brand__logo"
-            priority
-          />
+          <span className="turf-logo-mark" aria-hidden>
+            PG
+          </span>
           <span className="min-w-0">
             <span className="turf-brand__name">
-              Turf<span>Edge</span>
+              PMU<span>Gagnant</span>
             </span>
-            <span className="turf-brand__tagline">L&apos;intelligence du terrain</span>
+            <span className="turf-brand__tagline">L&apos;IA qui trie les courses</span>
           </span>
         </Link>
 
