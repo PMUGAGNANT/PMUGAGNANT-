@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { AccordionPanel } from "@/components/ui/AccordionPanel";
 import { DayRadar } from "@/features/home/components/DayRadar";
 import { HomeControlBar } from "@/features/home/components/HomeControlBar";
 import { HomeHero } from "@/features/home/components/HomeHero";
@@ -179,7 +180,6 @@ function PageContent() {
         stats={stats}
         liveStats={liveStats.data}
         focusRace={focusRace}
-        proofItems={topParisItems}
         onOpenPremium={() => router.push("/premium")}
         onOpenFocus={() => (focusRace ? navigateToRace(focusRace.race) : router.push("/premium"))}
       />
@@ -199,9 +199,37 @@ function PageContent() {
             </section>
           ) : (
             <>
-              <PriorityTickets focusRace={focusRace} focusDetail={focusDetail} focusParticipants={focusParticipants} isFocusLoading={isFocusLoading} sortMode={sortMode} onOpenRace={navigateToRace} onOpenPremium={() => router.push("/premium")} />
-              {topParisItems.length > 0 ? <TopParisStrip items={topParisItems} /> : null}
-              <ProgrammeTable quickFilter={quickFilter} quickFilterOptions={quickFilterOptions} lanes={lanes} playableCount={stats.playable} onQuickFilterChange={setQuickFilter} onOpenRace={navigateToRace} />
+              <AccordionPanel
+                kicker="Fenetre principale"
+                title="Ticket prioritaire"
+                summary={focusRace ? `${formatRaceCode(focusRace.race)} · ${focusRace.status}` : "En attente"}
+                defaultOpen
+                bodyClassName="px-0 py-0"
+              >
+                <PriorityTickets focusRace={focusRace} focusDetail={focusDetail} focusParticipants={focusParticipants} isFocusLoading={isFocusLoading} sortMode={sortMode} onOpenRace={navigateToRace} onOpenPremium={() => router.push("/premium")} />
+              </AccordionPanel>
+
+              {topParisItems.length > 0 ? (
+                <AccordionPanel
+                  kicker="Sous-fenetre"
+                  title="Top decisions"
+                  summary={`${topParisItems.length} tickets`}
+                  defaultOpen
+                  bodyClassName="px-0 py-0"
+                >
+                  <TopParisStrip items={topParisItems} />
+                </AccordionPanel>
+              ) : null}
+
+              <AccordionPanel
+                kicker="Sous-fenetre"
+                title="Programme range par filtres"
+                summary={`${filteredFeaturedRaces.length} courses`}
+                defaultOpen
+                bodyClassName="px-0 py-0"
+              >
+                <ProgrammeTable quickFilter={quickFilter} quickFilterOptions={quickFilterOptions} lanes={lanes} playableCount={stats.playable} onQuickFilterChange={setQuickFilter} onOpenRace={navigateToRace} />
+              </AccordionPanel>
             </>
           )}
         </div>

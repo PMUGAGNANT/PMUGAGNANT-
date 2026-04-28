@@ -1,7 +1,4 @@
-import Image from "next/image";
-
 import type { HomeStats } from "@/features/home/components/home-page-types";
-import type { TopParisItem } from "@/features/home/components/TopParisStrip";
 import { formatStake, type FeaturedRace } from "@/features/home/lib/home-page-model";
 import { formatLiveRoi, hasLiveStatsData, type LiveStatsSnapshot } from "@/lib/live-stats";
 
@@ -9,7 +6,6 @@ type HomeHeroProps = {
   stats: HomeStats;
   liveStats: LiveStatsSnapshot;
   focusRace: FeaturedRace | null;
-  proofItems: TopParisItem[];
   onOpenPremium: () => void;
   onOpenFocus: () => void;
 };
@@ -50,7 +46,6 @@ export function HomeHero({
   stats,
   liveStats,
   focusRace,
-  proofItems,
   onOpenPremium,
   onOpenFocus,
 }: HomeHeroProps) {
@@ -74,170 +69,125 @@ export function HomeHero({
       : "Ticket du jour";
 
   return (
-    <section className="app-page-hero overflow-hidden p-0">
-      <div className="grid gap-0 xl:grid-cols-[1.05fr,0.95fr]">
-        <div className="flex min-h-[34rem] flex-col justify-between gap-8 p-6 md:p-8 lg:p-10">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="turf-decision-badge" data-tone="success">
-                IA PMU V9.2
-              </span>
-              <span className="turf-decision-badge" data-tone={decision.tone}>
-                {decision.label}
-              </span>
-            </div>
-
-            <h1 className="mt-5 max-w-4xl text-[2.5rem] font-black leading-[0.95] text-[var(--pmu-text)] md:text-[4.2rem]">
-              Les courses PMU triees avant de miser.
-            </h1>
-
-            <p className="mt-5 max-w-2xl text-base leading-8 text-[var(--pmu-text-soft)] md:text-lg">
-              PMU Gagnant analyse le programme, isole les courses jouables,
-              affiche le cheval conseille et calcule une mise cadree. En 30
-              secondes, tu sais surtout quand passer.
-            </p>
-
-            <div className="mt-7 grid gap-3 sm:grid-cols-3">
-              <div className="app-card-muted px-4 py-3">
-                <p className="app-label">ROI reel 30 jours</p>
-                <p className="mt-1 text-3xl font-black text-[var(--pmu-primary)]">
-                  {performanceValue}
-                </p>
-                <span className="text-xs font-semibold text-[var(--pmu-text-muted)]">
-                  {performanceLabel}
-                </span>
-              </div>
-              <div className="app-card-muted px-4 py-3">
-                <p className="app-label">Aujourd&apos;hui</p>
-                <p className="mt-1 text-3xl font-black text-[var(--pmu-text)]">
-                  {stats.playable}
-                </p>
-                <span className="text-xs font-semibold text-[var(--pmu-text-muted)]">
-                  tickets valides sur {stats.total || "--"}
-                </span>
-              </div>
-              <div className="app-card-muted px-4 py-3">
-                <p className="app-label">Gain 7 jours</p>
-                <p className="mt-1 text-3xl font-black text-[var(--pmu-gold)]">
-                  {weeklyGain}
-                </p>
-                <span className="text-xs font-semibold text-[var(--pmu-text-muted)]">
-                  {hasStats ? `${liveStats.predictions7d} tickets mesures` : decision.text}
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <button
-                type="button"
-                className="app-button-primary min-h-12 w-full sm:w-auto"
-                onClick={onOpenPremium}
-              >
-                Debloquer les tickets premium
-              </button>
-              <button
-                type="button"
-                className="app-button-secondary min-h-12 w-full sm:w-auto"
-                onClick={onOpenFocus}
-              >
-                Voir la meilleure course
-              </button>
-            </div>
-
-            <div className="mt-5 grid gap-2 text-sm font-bold text-[var(--pmu-text-soft)] sm:grid-cols-3">
-              <span className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] px-3 py-2">
-                1. Choisir la course
-              </span>
-              <span className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] px-3 py-2">
-                2. Lire le cheval et la mise
-              </span>
-              <span className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] px-3 py-2">
-                3. Jouer ou passer
-              </span>
-            </div>
+    <section className="app-page-hero p-5 md:p-6">
+      <div className="grid gap-4 xl:grid-cols-[1fr,0.82fr]">
+        <div className="app-card p-5 md:p-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="turf-decision-badge" data-tone="success">
+              IA PMU V9.2
+            </span>
+            <span className="turf-decision-badge" data-tone={decision.tone}>
+              {decision.label}
+            </span>
           </div>
 
-          <div className="rounded-lg border border-[color-mix(in_srgb,var(--pmu-primary)_18%,transparent)] bg-[var(--pmu-primary-fade)] p-4">
-            <p className="app-kicker">Dernieres selections fortes</p>
-            <div className="mt-3 grid gap-3 md:grid-cols-3">
-              {(proofItems.length > 0 ? proofItems.slice(0, 3) : []).map((item) => (
-                <button
-                  key={`${item.rank}-${item.raceCode}`}
-                  type="button"
-                  onClick={item.onClick}
-                  className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] p-3 text-left shadow-[var(--pmu-shadow-sm)] transition duration-200 hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--pmu-primary)_34%,transparent)]"
-                >
-                  <span className="text-[0.72rem] font-black uppercase text-[var(--pmu-primary)]">
-                    {item.raceCode}
-                  </span>
-                  <p className="mt-1 truncate text-sm font-black text-[var(--pmu-text)]">
-                    {item.horse}
-                  </p>
-                  <p className="mt-1 text-xs font-semibold text-[var(--pmu-text-muted)]">
-                    {item.stake} conseillee - confiance {item.confidence.toFixed(1)}/10
-                  </p>
-                </button>
-              ))}
-              {proofItems.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-[var(--pmu-border-strong)] bg-[var(--pmu-surface)] p-4 text-sm leading-6 text-[var(--pmu-text-soft)] md:col-span-3">
-                  Les resultats remontent ici des que les arrivees officielles
-                  sont enregistrees.
-                </div>
-              ) : null}
+          <h1 className="mt-4 max-w-4xl text-[2.35rem] font-black leading-[0.95] text-[var(--pmu-text)] md:text-[3.55rem]">
+            Cockpit PMU du jour.
+          </h1>
+          <p className="mt-4 max-w-3xl text-base leading-7 text-[var(--pmu-text-soft)]">
+            Tout est range en fenetres : decision, ticket, radar, programme et
+            preuves. Tu ouvres seulement le panneau utile.
+          </p>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            <div className="app-card-muted px-4 py-3">
+              <p className="app-label">ROI 30 jours</p>
+              <p className="mt-1 text-3xl font-black text-[var(--pmu-primary)]">
+                {performanceValue}
+              </p>
+              <span className="text-xs font-semibold text-[var(--pmu-text-muted)]">
+                {performanceLabel}
+              </span>
+            </div>
+            <div className="app-card-muted px-4 py-3">
+              <p className="app-label">A traiter</p>
+              <p className="mt-1 text-3xl font-black text-[var(--pmu-text)]">
+                {stats.playable}
+              </p>
+              <span className="text-xs font-semibold text-[var(--pmu-text-muted)]">
+                tickets valides sur {stats.total || "--"}
+              </span>
+            </div>
+            <div className="app-card-muted px-4 py-3">
+              <p className="app-label">Gain 7 jours</p>
+              <p className="mt-1 text-3xl font-black text-[var(--pmu-gold)]">
+                {weeklyGain}
+              </p>
+              <span className="text-xs font-semibold text-[var(--pmu-text-muted)]">
+                {hasStats ? `${liveStats.predictions7d} tickets mesures` : decision.text}
+              </span>
             </div>
           </div>
         </div>
 
-        <div className="relative min-h-[28rem] overflow-hidden border-t border-[var(--pmu-border)] bg-[var(--pmu-primary)] xl:border-l xl:border-t-0">
-          <Image
-            src="/promo-poster.jpg"
-            alt="Parieur consultant PMU Gagnant avant une course PMU"
-            fill
-            priority
-            sizes="(min-width: 1280px) 48vw, 100vw"
-            className="object-cover opacity-45"
-          />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,94,54,0.18),rgba(7,94,54,0.82))]" />
-          <div className="relative z-[1] flex h-full min-h-[28rem] items-end p-6 md:p-8">
-            <div className="w-full rounded-lg border border-white/18 bg-[rgba(255,253,248,0.94)] p-5 shadow-[0_22px_46px_rgba(0,0,0,0.16)]">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="app-label">Ticket clair</p>
-                  <p className="mt-1 text-3xl font-black text-[var(--pmu-text)]">
-                    {focusHorse}
-                  </p>
-                </div>
-                <span className="turf-decision-badge" data-tone={decision.tone}>
-                  {decision.label}
-                </span>
-              </div>
-              <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                <div className="result-chip px-3 py-3">
-                  <p className="app-label">Mise</p>
-                  <p className="mt-1 text-xl font-black text-[var(--pmu-gold)]">
-                    {focusStake}
-                  </p>
-                </div>
-                <div className="result-chip px-3 py-3">
-                  <p className="app-label">Confiance</p>
-                  <p className="mt-1 text-xl font-black text-[var(--pmu-primary)]">
-                    {focusRace ? `${focusRace.scoreValue.toFixed(1)}/10` : "--"}
-                  </p>
-                </div>
-                <div className="result-chip px-3 py-3">
-                  <p className="app-label">Prochaine etape</p>
-                  <p className="mt-1 text-xl font-black text-[var(--pmu-text)]">
-                    Ouvrir
-                  </p>
-                </div>
-              </div>
-              <p className="mt-4 text-sm leading-6 text-[var(--pmu-text-soft)]">
-                {focusRace?.hint ??
-                  "Le moteur transforme le programme PMU en decisions simples, sans garantie de gain."}
+        <div className="app-card p-5 md:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="app-kicker">Fenetre prioritaire</p>
+              <h2 className="mt-2 text-2xl font-black leading-tight text-[var(--pmu-text)]">
+                {focusHorse}
+              </h2>
+            </div>
+            <span className="turf-decision-badge" data-tone={decision.tone}>
+              {decision.label}
+            </span>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="result-chip px-3 py-3">
+              <p className="app-label">Mise</p>
+              <p className="mt-1 text-xl font-black text-[var(--pmu-gold)]">
+                {focusStake}
+              </p>
+            </div>
+            <div className="result-chip px-3 py-3">
+              <p className="app-label">Confiance</p>
+              <p className="mt-1 text-xl font-black text-[var(--pmu-primary)]">
+                {focusRace ? `${focusRace.scoreValue.toFixed(1)}/10` : "--"}
+              </p>
+            </div>
+            <div className="result-chip px-3 py-3">
+              <p className="app-label">Action</p>
+              <p className="mt-1 text-xl font-black text-[var(--pmu-text)]">
+                Ouvrir
               </p>
             </div>
           </div>
+
+          <p className="mt-4 text-sm leading-6 text-[var(--pmu-text-soft)]">
+            {focusRace?.hint ??
+              "Le moteur transforme le programme PMU en decisions simples, sans garantie de gain."}
+          </p>
+
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              className="app-button-primary min-h-12 w-full sm:w-auto"
+              onClick={onOpenFocus}
+            >
+              Ouvrir la fenetre course
+            </button>
+            <button
+              type="button"
+              className="app-button-secondary min-h-12 w-full sm:w-auto"
+              onClick={onOpenPremium}
+            >
+              Debloquer premium
+            </button>
+          </div>
         </div>
+      </div>
+
+      <div className="mt-4 grid gap-2 text-sm font-bold text-[var(--pmu-text-soft)] sm:grid-cols-3">
+        <span className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] px-3 py-2">
+          1. Decision prioritaire
+        </span>
+        <span className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] px-3 py-2">
+          2. Programme classe
+        </span>
+        <span className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] px-3 py-2">
+          3. Preuves repliees
+        </span>
       </div>
     </section>
   );
