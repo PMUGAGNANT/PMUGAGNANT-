@@ -22,7 +22,7 @@
     },
     {
       "path": "/api/cron/pre-race",
-      "schedule": "*/15 9-19 * * *"
+      "schedule": "0 10 * * *"
     },
     {
       "path": "/api/cron/health",

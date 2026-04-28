@@ -43,23 +43,6 @@ function IconBlog() {
   );
 }
 
-function IconResultats() {
-  return (
-    <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M7 20V10m5 10V4m5 16v-7M4 20h16" />
-    </svg>
-  );
-}
-
-function IconTelegram() {
-  return (
-    <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M21 4L3.8 10.6a1 1 0 00.06 1.9l4.84 1.5 1.5 4.84a1 1 0 001.9.06L20 3.98A.75.75 0 0021 4z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8.72 13.28L20.5 4.5" />
-    </svg>
-  );
-}
-
 function IconPremium() {
   return (
     <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -70,49 +53,34 @@ function IconPremium() {
 
 export const appNavigationItems: AppNavigationItem[] = [
   {
-    href: "/",
-    label: "Courses",
-    description: "Radar, priorites et programme du jour",
+    href: "/dashboard",
+    label: "Dashboard",
+    description: "Lecture rapide des courses et priorites du jour",
     Icon: IconCourses,
     showOnMobile: true,
   },
   {
-    href: "/mes-paris",
-    label: "Mes paris",
-    mobileLabel: "Paris",
-    description: "Suivi personnel, tickets et bankroll",
-    Icon: IconParis,
+    href: "/value-bets",
+    label: "Value Bets",
+    mobileLabel: "Value",
+    description: "Opportunites de cotes et profils de value",
+    Icon: IconBlog,
     showOnMobile: true,
   },
   {
-    href: "/bilan",
-    label: "Bilan",
-    description: "ROI, segments et performance moteur",
+    href: "/stats",
+    label: "Stats",
+    description: "ROI, historique et performance du moteur",
     Icon: IconBilan,
     showOnMobile: true,
   },
   {
-    href: "/resultats",
-    label: "Resultats",
-    description: "Historique, preuves et courses terminees",
-    Icon: IconResultats,
+    href: "/mes-paris",
+    label: "Mon compte",
+    mobileLabel: "Compte",
+    description: "Suivi personnel, tickets, bankroll et premium",
+    Icon: IconParis,
     showOnMobile: true,
-  },
-  {
-    href: "https://t.me/pmupredictionbot?start=pmugagnant",
-    label: "Telegram",
-    description: "Alertes rapides et bot compagnon",
-    Icon: IconTelegram,
-    external: true,
-    meta: "Bot",
-    showOnMobile: false,
-  },
-  {
-    href: "/blog",
-    label: "Blog",
-    description: "Methodes, guides et contenu d'acquisition",
-    Icon: IconBlog,
-    showOnMobile: false,
   },
   {
     href: "/premium",

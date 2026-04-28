@@ -37,7 +37,7 @@ import type {
 } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Analyse course - TurfEdge",
+  title: "Analyse course - PMU Gagnant",
   description:
     "Analyse IA d'une course PMU : tableau des partants, scores, cotes, forme, mises conseillÃ©es et value bets.",
 };
@@ -564,7 +564,7 @@ export default async function RacePage({ params, searchParams }: RacePageProps) 
     <main className="rp-wrap">
       <style>{CSS}</style>
       <header className="rp-nav">
-        <Link href="/dashboard" className="rp-logo">TURFEDGE</Link>
+        <Link href="/dashboard" className="rp-logo">PMU GAGNANT</Link>
         <span className="rp-live">LIVE</span>
         <nav className="rp-links" aria-label="Navigation principale">
           {navItems.map((item) => (

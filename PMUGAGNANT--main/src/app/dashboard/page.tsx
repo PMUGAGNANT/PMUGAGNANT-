@@ -18,9 +18,9 @@ import {
 import type { PredictionRow, RaceSummary, RunnerOutcomeRow } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Dashboard VMAX - TurfEdge",
+  title: "Dashboard VMAX - PMU Gagnant",
   description:
-    "Dashboard premium TurfEdge : Quinte du jour, courses pretes, value bets et statistiques live.",
+    "Dashboard premium PMU Gagnant : Quinte du jour, courses pretes, value bets et statistiques live.",
 };
 
 export const revalidate = 120;
@@ -509,7 +509,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     <div className="dash">
       <style>{DASHBOARD_CSS}</style>
       <header className="dash-nav">
-        <Link href="/dashboard" className="dash-logo">TURFEDGE</Link>
+        <Link href="/dashboard" className="dash-logo">PMU GAGNANT</Link>
         <span className="dash-live">{liveActive ? "LIVE" : "LIVE"}</span>
         <nav className="dash-links" aria-label="Navigation principale">
           {navItems.map((item) => (

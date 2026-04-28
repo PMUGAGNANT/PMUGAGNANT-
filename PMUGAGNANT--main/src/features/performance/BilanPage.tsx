@@ -14,6 +14,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { PageNextStepCard } from "@/components/ui/PageNextStepCard";
 import {
   PERFORMANCE_SEGMENTS,
   normalizePerformanceBetType,
@@ -759,6 +760,16 @@ function BilanPageContent() {
               </div>
             )}
           </section>
+
+          <PageNextStepCard
+            kicker="Prochaine etape"
+            title="Le bilan valide le moteur. Le dashboard te sert a jouer aujourd'hui."
+            text="Une fois le ROI et les comparaisons verifies, reviens sur les courses du jour pour lire les spots actuels, ou ouvre le premium si tu veux les tickets complets et les mises prêtes."
+            primaryHref="/dashboard"
+            primaryLabel="Revenir au dashboard"
+            secondaryHref="/premium"
+            secondaryLabel="Voir le premium"
+          />
         </>
       ) : null}
     </div>

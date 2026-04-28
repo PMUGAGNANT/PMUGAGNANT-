@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "coach-api-push/**",
+    "PMUGAGNANT--main/**",
+    "pull-backup-*/**",
     // Legacy/archived code paths kept for reference but not used by the app router build.
     "src/app.js",
     "src/core/**",

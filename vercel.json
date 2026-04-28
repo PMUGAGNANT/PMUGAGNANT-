@@ -6,7 +6,31 @@
     },
     {
       "path": "/api/cron/sync-results",
-      "schedule": "0 20 * * *"
+      "schedule": "30 19 * * *"
+    },
+    {
+      "path": "/api/cron/sync-programme",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/telegram-morning",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/morning",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/health",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/results",
+      "schedule": "0 19 * * *"
+    },
+    {
+      "path": "/api/cron/recap",
+      "schedule": "45 19 * * *"
     }
   ]
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import PromoVideo from "@/components/PromoVideo";
 import { ReferralCard } from "@/components/ui/ReferralCard";
+import { PremiumDecisionStrip } from "@/features/premium/components/PremiumDecisionStrip";
 import {
   PREMIUM_MONTHLY_PRICE_CURRENCY_SUFFIX,
   PREMIUM_MONTHLY_PRICE_DISPLAY_MAIN,
@@ -20,7 +21,7 @@ const FEATURES = [
   {
     label: "Mise Kelly",
     title: "La mise conseillee en euros",
-    text: "TurfEdge calcule une mise lisible sur bankroll 100 EUR avec Kelly 25%, pour garder une gestion de risque propre.",
+    text: "PMU Gagnant calcule une mise lisible sur bankroll 100 EUR avec Kelly 25%, pour garder une gestion de risque propre.",
   },
   {
     label: "Pourquoi",
@@ -57,7 +58,7 @@ const PREMIUM_EXAMPLES = [
     horse: "R3C6 - lot trop ouvert",
     stake: "Mise 0 EUR",
     gain: "Bankroll protegee",
-    detail: "TurfEdge dit PASSER quand le risque est trop haut.",
+    detail: "PMU Gagnant dit PASSER quand le risque est trop haut.",
   },
   {
     title: "Semaine suivie",
@@ -68,18 +69,18 @@ const PREMIUM_EXAMPLES = [
   },
 ];
 
-const TESTIMONIALS = [
+const TRUST_ITEMS = [
   {
-    quote: "Je regarde le verdict, la mise, puis les trois raisons. En 20 secondes je sais si je joue ou si je passe.",
-    name: "Marc, parieur trot en Ile-de-France",
+    title: "Les pertes restent visibles",
+    text: "Le bilan affiche les mises, les gains, les pertes et le ROI. Une mauvaise serie ne doit jamais etre maquillee.",
   },
   {
-    quote: "Le vrai gain pour moi, c'est d'eviter les courses pieges. Le bouton PASSER m'a fait economiser beaucoup de tickets inutiles.",
-    name: "Nadia, joueuse Quinte le week-end",
+    title: "Le bouton PASSER compte autant que JOUER",
+    text: "Une course floue doit rester une course evitee. La vraie valeur du service, c'est aussi de reduire les tickets forces.",
   },
   {
-    quote: "Je ne suis pas expert data. Le bilan me montre juste ce que j'ai mise, ce qui est revenu, et si je progresse.",
-    name: "Julien, abonne premium depuis 3 mois",
+    title: "La mise reste cadree",
+    text: "Les mises conseillees sont limitees par une logique de bankroll. PMU Gagnant ne pousse pas a augmenter apres une perte.",
   },
 ];
 
@@ -97,8 +98,8 @@ const COMPARE_ROWS = [
 
 const FAQ_ITEMS = [
   {
-    q: "Est-ce que TurfEdge garantit les gains ?",
-    a: "Non. Un pari reste risque. TurfEdge donne un cadre, une selection et une mise calculee pour jouer avec plus de discipline.",
+    q: "Est-ce que PMU Gagnant garantit les gains ?",
+    a: "Non. Un pari reste risque. PMU Gagnant donne un cadre, une selection et une mise calculee pour jouer avec plus de discipline.",
   },
   {
     q: "Qu'est-ce que je debloque en premium ?",
@@ -109,7 +110,7 @@ const FAQ_ITEMS = [
     a: "Oui. L'abonnement est gere par Stripe et peut etre annule depuis ton espace en quelques clics.",
   },
   {
-    q: "Pour qui est fait TurfEdge ?",
+    q: "Pour qui est fait PMU Gagnant ?",
     a: "Pour les parieurs qui veulent une decision claire, pas un tableau interminable a interpreter.",
   },
 ];
@@ -198,13 +199,14 @@ export default function PremiumPage() {
                 Offre fondateur limitee
               </span>
             </div>
-            <p className="app-kicker mt-6">TurfEdge Premium - {activeSubscribersLabel} abonnes actifs ce mois</p>
+            <p className="app-kicker mt-6">PMU Gagnant Premium - {activeSubscribersLabel} abonnes actifs ce mois</p>
             <h1 className="mt-3 max-w-3xl text-[2.45rem] font-black leading-[0.95] text-[var(--pmu-text)] md:text-[4.25rem]">
-              Les parieurs qui gagnent utilisent TurfEdge.
+              Les bons parieurs savent surtout quelles courses eviter.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-[var(--pmu-text-soft)]">
               Premium transforme chaque course en decision claire : quoi jouer,
-              combien miser, pourquoi l&apos;IA est confiante, et quand passer sans regret.
+              combien miser, pourquoi l&apos;IA est confiante, et quand passer
+              pour proteger la bankroll.
             </p>
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -217,7 +219,7 @@ export default function PremiumPage() {
             </div>
 
             <p className="mt-4 text-xs font-semibold text-[var(--pmu-text-muted)]">
-              Prix public <span className="line-through">{crossedPriceLabel}</span>. Offre fondateur {priceLabel}. Garantie satisfait ou rembourse 7 jours.
+              Prix public <span className="line-through">{crossedPriceLabel}</span>. Offre fondateur {priceLabel}. Garantie 7 jours. Aucun pari n&apos;est garanti.
             </p>
           </div>
           <div className="border-t border-[var(--pmu-border)] bg-[var(--pmu-primary-fade)] p-4 lg:border-l lg:border-t-0">
@@ -257,7 +259,7 @@ export default function PremiumPage() {
                 <p className="mt-1 text-2xl font-black text-[var(--pmu-text)]">{example.stake}</p>
               </div>
               <div className="result-chip px-4 py-3">
-                <p className="app-label">Resultat attendu</p>
+                <p className="app-label">Projection</p>
                 <p className="mt-1 text-2xl font-black text-[var(--pmu-primary)]">{example.gain}</p>
               </div>
             </div>
@@ -265,6 +267,8 @@ export default function PremiumPage() {
           </article>
         ))}
       </section>
+
+      <PremiumDecisionStrip />
 
       <section className="app-card p-5 md:p-6">
         <div className="app-section-heading">
@@ -312,16 +316,27 @@ export default function PremiumPage() {
         ))}
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        {TESTIMONIALS.map((item) => (
-          <article key={item.name} className="app-card p-5">
-            <p className="text-lg font-black leading-7 text-[var(--pmu-text)]">
-              &quot;{item.quote}&quot;
-            </p>
-            <p className="mt-4 text-sm font-bold text-[var(--pmu-primary)]">{item.name}</p>
-            <p className="mt-1 text-xs text-[var(--pmu-text-muted)]">Temoignage representatif</p>
-          </article>
-        ))}
+      <section className="app-card p-5 md:p-6">
+        <div className="app-section-heading">
+          <div>
+            <p className="app-kicker">Confiance</p>
+            <h2 className="app-section-title">Ce qui doit rester honnete</h2>
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {TRUST_ITEMS.map((item) => (
+            <article key={item.title} className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] p-4">
+              <h3 className="text-xl font-black leading-tight text-[var(--pmu-text)]">{item.title}</h3>
+              <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">{item.text}</p>
+            </article>
+          ))}
+        </div>
+        <div className="mt-4 rounded-lg border border-[color-mix(in_srgb,var(--pmu-red)_20%,transparent)] bg-[color-mix(in_srgb,var(--pmu-red)_7%,var(--pmu-surface))] p-4 text-sm font-semibold leading-7 text-[var(--pmu-text-soft)]">
+          Le jeu comporte des risques: endettement, isolement, dependance. Fixe une limite avant de jouer et consulte la page jeu responsable si le pari prend trop de place.
+          <Link href="/jeu-responsable" className="ml-2 font-black text-[var(--pmu-red)] underline">
+            Jeu responsable
+          </Link>
+        </div>
       </section>
 
       <section className="app-page-hero p-6 text-center md:p-9">
@@ -334,7 +349,7 @@ export default function PremiumPage() {
           le depart : JOUER, PASSER, mise, gain potentiel.
         </p>
         <div className="mx-auto mt-5 max-w-xl rounded-[8px] border border-[var(--pmu-gold)] bg-[var(--pmu-gold-light)] px-5 py-4 text-sm font-black text-[var(--pmu-text)]">
-          Garantie 7 jours : si TurfEdge ne t&apos;aide pas a mieux trier tes courses, remboursement simple.
+          Garantie 7 jours : si PMU Gagnant ne t&apos;aide pas a mieux trier tes courses, remboursement simple.
         </div>
         <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
           <Link href={checkoutHref} className="app-button-primary min-h-12 w-full sm:w-auto">

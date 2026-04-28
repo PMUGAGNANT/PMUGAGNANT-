@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { PageNextStepCard } from "@/components/ui/PageNextStepCard";
 import { ResultsDashboard } from "@/components/ui/ResultsDashboard";
 
 const RESULTS_URL = "https://pmugagnant.vercel.app/resultats";
@@ -122,18 +123,15 @@ export default function ResultatsPage() {
         donnees historiques.
       </section>
 
-      <section className="app-card p-6 text-center md:p-8">
-        <p className="app-kicker">Passer a l&apos;action</p>
-        <h2 className="mt-2 text-3xl font-black tracking-tight text-[var(--pmu-text)] md:text-4xl">
-          Convaincu ? Essaie gratuitement
-        </h2>
-        <p className="mt-3 text-sm leading-7 text-[var(--pmu-text-soft)]">
-          1 pronostic gratuit par jour - pas de carte bancaire
-        </p>
-        <Link href="/login" className="app-button-primary mt-5 inline-flex">
-          Essayer gratuitement
-        </Link>
-      </section>
+      <PageNextStepCard
+        kicker="Passer a l'action"
+        title="Verifier les chiffres, puis ouvrir une vraie course"
+        text="Les resultats servent a valider le moteur. L'etape utile ensuite, c'est d'aller sur le dashboard pour lire les courses du jour ou d'ouvrir l'offre premium si tu veux les tickets complets."
+        primaryHref="/dashboard"
+        primaryLabel="Ouvrir le dashboard"
+        secondaryHref="/premium"
+        secondaryLabel="Voir l'offre premium"
+      />
     </div>
   );
 }

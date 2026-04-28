@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "TurfEdge - Dashboard IA VMAX",
+  title: "PMU Gagnant - Lire une course en 30 secondes",
   description:
-    "Dashboard premium TurfEdge : Quinté du jour, courses prêtes, value bets et statistiques live.",
+    "PMU Gagnant t'aide a comprendre vite la course, les chevaux importants, les outsiders, les profils a ecarter et quand il vaut mieux passer.",
   openGraph: {
-    title: "TurfEdge - Dashboard IA VMAX",
+    title: "PMU Gagnant - Lire une course en 30 secondes",
     description:
-      "Une interface premium pour lire les courses PMU, repérer les value bets et agir vite.",
+      "Une entree claire pour comprendre quoi jouer, quoi surveiller et quoi ignorer avant d'ouvrir le ticket detaille.",
   },
 };
 
 export const dynamic = "force-dynamic";
 
-export { default } from "./dashboard/page";
+export { default } from "@/features/home/HomePage";

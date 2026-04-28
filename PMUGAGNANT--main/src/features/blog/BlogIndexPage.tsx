@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { PageNextStepCard } from "@/components/ui/PageNextStepCard";
 import { blogPosts } from "@/lib/blog-posts";
 
 export const metadata: Metadata = {
@@ -84,6 +85,16 @@ export default function BlogIndexPage() {
           </Link>
         ))}
       </section>
+
+      <PageNextStepCard
+        kicker="Prochaine etape"
+        title="Comprendre, puis passer a une vraie decision"
+        text="Le blog sert a mieux lire les courses. Pour transformer cette lecture en action, ouvre le dashboard ou regarde comment le premium simplifie le ticket."
+        primaryHref="/dashboard"
+        primaryLabel="Ouvrir le dashboard"
+        secondaryHref="/premium"
+        secondaryLabel="Voir le premium"
+      />
     </div>
   );
 }

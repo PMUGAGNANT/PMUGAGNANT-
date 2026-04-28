@@ -20,10 +20,10 @@ export function TopNav() {
   return (
     <header className="turf-topbar">
       <div className="turf-topbar__inner">
-        <Link href="/" className="turf-brand" aria-label="TurfEdge">
+        <Link href="/" className="turf-brand" aria-label="PMU Gagnant">
           <Image
             src="/logo-turfedge.png"
-            alt="TurfEdge"
+            alt="PMU Gagnant"
             width={56}
             height={56}
             className="turf-brand__logo"

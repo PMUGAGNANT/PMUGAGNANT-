@@ -411,7 +411,7 @@ export function buildCoachSystemPrompt(accessLevel: CoachAccessLevel) {
     "Si une information manque, tu le dis clairement sans inventer.",
     premiumRule,
     "Regles strictes:",
-    "- Reponds uniquement avec les donnees du CONTEXTE_TURFEDGE.",
+    "- Reponds uniquement avec les donnees du CONTEXTE_PMU_GAGNANT.",
     "- Si une information manque, dis clairement: donnees insuffisantes.",
     "- Ne promets jamais un gain et ne donne jamais de certitude.",
     "- Reponds en francais simple, direct et structure.",
@@ -420,14 +420,14 @@ export function buildCoachSystemPrompt(accessLevel: CoachAccessLevel) {
     "- Fais des phrases courtes. Pas de paragraphe geant.",
     "- Si tu cites plusieurs chevaux, hierarchise clairement base / rival / outsider / evitement.",
     "- N'affiche jamais de jargon technique sur le modele, l'API ou l'infrastructure.",
-    "- Termine avec une phrase courte de jeu responsable.",
+    "- Termine par une phrase courte de jeu responsable.",
   ].join("\n");
 }
 
 export function buildCoachUserPrompt(question: string, context: CoachContextItem[]) {
   return [
     `QUESTION_CLIENT: ${question}`,
-    "CONTEXTE_TURFEDGE:",
+    "CONTEXTE_PMU_GAGNANT:",
     JSON.stringify(context, null, 2),
   ].join("\n\n");
 }
@@ -449,7 +449,7 @@ function formatFinishPosition(value: number | null) {
 
 function getDecisionLabel(item: CoachContextItem) {
   if (item.decision === "VALIDE") {
-    return "feu vert TurfEdge";
+    return "feu vert PMU Gagnant";
   }
   if (item.decision === "SURVEILLANCE") {
     return "profil a surveiller";
@@ -619,7 +619,7 @@ function getNoContextAnswer(intent: CoachIntent) {
   }
 
   return joinAnswer([
-    "Je n'ai pas assez de donnees TurfEdge pour repondre proprement a cette question.",
+    "Je n'ai pas assez de donnees PMU Gagnant pour repondre proprement a cette question.",
     "Donne-moi un format du type R1C4 #7, le nom exact du cheval, ou demande: meilleur cheval, value bet, cheval a eviter.",
     "Jeu responsable: un pronostic reste une aide a la decision, jamais une garantie.",
   ]);
@@ -760,7 +760,7 @@ export function buildDirectCoachAnswer(
 
   if (intent === "greeting") {
     return joinAnswer([
-      "Salut, je suis le Coach TurfEdge.",
+      "Salut, je suis le Coach PMU Gagnant.",
       "Pose-moi une vraie question libre: un cheval, une course, une value, un resultat, ou meme pourquoi un profil est flou.",
       "Exemples: R1C4 #7, compare R3C2, quel cheval eviter aujourd'hui ?",
     ]);
@@ -768,7 +768,7 @@ export function buildDirectCoachAnswer(
 
   if (intent === "help") {
     return joinAnswer([
-      "Je fonctionne avec les donnees Supabase TurfEdge: predictions, scores, cotes, value, mises et arrivees.",
+      "Je fonctionne avec les donnees Supabase PMU Gagnant: predictions, scores, cotes, value, mises et arrivees.",
       "Tu peux me demander: avis sur un cheval, meilleure selection, value bet, cheval a eviter, resultat, ou comparaison dans une course.",
       "Formats rapides: R1C4 #7, nom du cheval, compare R1C4, pourquoi cette selection ?",
       accessLevel === "premium"
@@ -793,7 +793,7 @@ export function buildDirectCoachAnswer(
 
   if (intent === "general" && !hasTurfSignal(question)) {
     return joinAnswer([
-      "Je peux te repondre, mais j'ai besoin d'un angle TurfEdge pour etre utile.",
+      "Je peux te repondre, mais j'ai besoin d'un angle PMU Gagnant pour etre utile.",
       "Donne-moi un cheval, une course, un resultat, une comparaison, ou demande le meilleur value bet du jour.",
       "Exemple concret: Tu penses quoi de R1C4 #7 ?",
     ]);

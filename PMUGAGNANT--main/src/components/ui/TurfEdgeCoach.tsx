@@ -190,73 +190,12 @@ function getResponseMeta(payload: CoachApiResponse) {
   return "Réponse IA enrichie";
 }
 
-function getIntentLabel(intent: CoachInsight["intent"]) {
-  switch (intent) {
-    case "best":
-      return "Base solide";
-    case "value":
-      return "Value bet";
-    case "avoid":
-      return "À éviter";
-    case "compare":
-      return "Comparatif";
-    case "result":
-      return "Arrivée";
-    case "premium":
-      return "Premium";
-    case "why":
-      return "Lecture";
-    case "horse":
-      return "Cheval";
-    default:
-      return "Analyse";
-  }
-}
-
-function getVerdictPill(insight: CoachInsight) {
-  if (insight.tone === "green") {
-    return "Jouable";
-  }
-  if (insight.tone === "orange") {
-    return "À surveiller";
-  }
-  if (insight.tone === "red") {
-    return "À écarter";
-  }
-  return "Neutre";
-}
-
-function splitFact(fact: string) {
-  const separatorIndex = fact.indexOf(":");
-
-  if (separatorIndex === -1) {
-    return {
-      label: "Lecture",
-      value: fact,
-    };
-  }
-
-  return {
-    label: fact.slice(0, separatorIndex).trim(),
-    value: fact.slice(separatorIndex + 1).trim(),
-  };
-}
-
 function CoachInsightCard({ insight }: { insight: CoachInsight }) {
   return (
     <div className={`turf-coach-insight turf-coach-insight--${insight.tone}`}>
-      <div className="turf-coach-insight__badges">
-        <span className={`turf-coach-pill turf-coach-pill--${insight.tone}`}>
-          {getIntentLabel(insight.intent)}
-        </span>
-        <span className="turf-coach-pill turf-coach-pill--neutral">
-          {getVerdictPill(insight)}
-        </span>
-      </div>
-
       <div className="turf-coach-insight__head">
         <div>
-          <span>{getIntentLabel(insight.intent)}</span>
+          <span>{insight.intent}</span>
           <strong>{insight.title}</strong>
           <small>{insight.subtitle}</small>
         </div>
@@ -276,16 +215,9 @@ function CoachInsightCard({ insight }: { insight: CoachInsight }) {
       </div>
 
       <div className="turf-coach-insight__facts">
-        {insight.facts.slice(0, 3).map((fact) => {
-          const parsedFact = splitFact(fact);
-
-          return (
-            <div key={fact} className="turf-coach-fact">
-              <strong>{parsedFact.label}</strong>
-              <span>{parsedFact.value}</span>
-            </div>
-          );
-        })}
+        {insight.facts.slice(0, 3).map((fact) => (
+          <span key={fact}>{fact}</span>
+        ))}
       </div>
 
       {insight.rivals.length > 0 ? (

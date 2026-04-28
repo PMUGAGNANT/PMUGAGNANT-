@@ -57,7 +57,7 @@ test("coach repond directement aux questions non hippiques", () => {
   const answer = buildDirectCoachAnswer("bonjour", "premium");
 
   assert.ok(answer);
-  assert.match(answer, /Salut, je suis le Coach TurfEdge/);
+  assert.match(answer, /Salut, je suis le Coach PMU Gagnant/);
   assert.doesNotMatch(answer, /score \d+\/100/);
 });
 

@@ -64,11 +64,11 @@ function getConversationHistory(body: CoachRequestBody | null): CoachHistoryMess
     .filter((message): message is { role: unknown; content: unknown } => Boolean(message))
     .map(
       (message): CoachHistoryMessage => ({
-        role: message.role === "assistant" ? "assistant" : "user",
-        content:
-          typeof message.content === "string"
-            ? message.content.trim().slice(0, MAX_QUESTION_LENGTH)
-            : "",
+      role: message.role === "assistant" ? "assistant" : "user",
+      content:
+        typeof message.content === "string"
+          ? message.content.trim().slice(0, MAX_QUESTION_LENGTH)
+          : "",
       })
     )
     .filter((message) => message.content.length > 0)

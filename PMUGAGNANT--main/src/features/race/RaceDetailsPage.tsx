@@ -214,6 +214,10 @@ function RaceDetailsContent({
           ) : (
             <AnalysisPendingCard />
           )}
+          <p className="mt-3 rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-4 py-3 text-xs font-semibold leading-5 text-[var(--pmu-text-muted)]">
+            Lecture pratique: decision, cheval, mise et raisons. Un pari reste
+            risque; PMU Gagnant sert d&apos;aide au tri, pas de garantie de gain.
+          </p>
         </section>
 
         <RaceHeroSection

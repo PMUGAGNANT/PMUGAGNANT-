@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { BottomNav } from "./BottomNav";
 import { TopNav } from "./TopNav";
 
-const shellDisabledRoutes = new Set(["/", "/login", "/admin", "/dashboard"]);
+const shellDisabledRoutes = new Set(["/login", "/admin", "/dashboard"]);
 
 type AppShellProps = {
   children: ReactNode;

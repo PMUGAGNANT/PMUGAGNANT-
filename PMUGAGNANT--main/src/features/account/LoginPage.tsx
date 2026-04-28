@@ -76,6 +76,7 @@ function LoginPageContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
   const [error, setError] = useState("");
 
   const redirectTo = useMemo(
@@ -156,6 +157,37 @@ function LoginPageContent() {
       setError(getFriendlyAuthError(message));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    setError("");
+
+    if (!supabaseConfigured) {
+      setError(getSupabaseConfigError());
+      return;
+    }
+
+    setOauthLoading(true);
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const redirectUrl = new URL(redirectTo, window.location.origin).toString();
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: redirectUrl,
+        },
+      });
+
+      if (oauthError) {
+        throw oauthError;
+      }
+    } catch (authError: unknown) {
+      const message =
+        authError instanceof Error ? authError.message : "Connexion Google impossible";
+      setError(getFriendlyAuthError(message));
+      setOauthLoading(false);
     }
   }
 
@@ -329,6 +361,28 @@ function LoginPageContent() {
                 Ajoute les variables Supabase dans Vercel pour activer la connexion.
               </div>
             ) : null}
+
+            <div className="mt-6 space-y-3">
+              <button
+                type="button"
+                onClick={() => {
+                  void handleGoogleSignIn();
+                }}
+                disabled={oauthLoading || loading || !supabaseConfigured}
+                className="flex w-full items-center justify-center gap-3 rounded-[1.2rem] border border-[var(--pmu-border-strong)] bg-white px-4 py-3 text-sm font-black text-[#0B1020] shadow-[var(--pmu-shadow-sm)] transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <span className="grid h-7 w-7 place-items-center rounded-full bg-[#F3F4F6] text-base">
+                  G
+                </span>
+                {oauthLoading ? "Ouverture Google..." : "Continuer avec Google"}
+              </button>
+
+              <div className="flex items-center gap-3 text-xs uppercase tracking-[0.16em] text-[var(--pmu-text-muted)]">
+                <span className="h-px flex-1 bg-[var(--pmu-border)]" />
+                <span>ou avec email</span>
+                <span className="h-px flex-1 bg-[var(--pmu-border)]" />
+              </div>
+            </div>
 
             <form onSubmit={handleSubmit} aria-busy={loading} className="mt-6 space-y-5">
               <label className="block">
