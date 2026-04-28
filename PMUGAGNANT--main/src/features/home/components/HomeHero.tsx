@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import type { HomeStats } from "@/features/home/components/home-page-types";
 import { formatCourseMeta, formatStake, type FeaturedRace } from "@/features/home/lib/home-page-model";
 import { formatLiveRoi, hasLiveStatsData, type LiveStatsSnapshot } from "@/lib/live-stats";
@@ -168,6 +170,31 @@ export function HomeHero({
             <span className="turf-decision-badge" data-tone={decision.tone}>
               {decision.label}
             </span>
+          </div>
+
+          <div className="pmu-waiting-scene relative mt-5 h-36 overflow-hidden rounded-lg border border-[var(--pmu-border)] bg-black">
+            <Image
+              src="/pmu-waiting-race.png"
+              alt="Chevaux au depart en attente du signal PMU"
+              fill
+              sizes="(min-width: 1280px) 25rem, 100vw"
+              className="pmu-waiting-scene__image object-cover opacity-80"
+            />
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,11,24,0.78),rgba(5,11,24,0.16)),linear-gradient(180deg,transparent,rgba(5,11,24,0.68))]" />
+            <div className="pmu-waiting-scene__scan" aria-hidden />
+            <div className="absolute right-3 top-3 flex items-center gap-1.5" aria-hidden>
+              <span className="pmu-waiting-dot" />
+              <span className="pmu-waiting-dot [animation-delay:0.18s]" />
+              <span className="pmu-waiting-dot [animation-delay:0.36s]" />
+            </div>
+            <div className="absolute bottom-3 left-3 right-3">
+              <p className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-[var(--pmu-primary)]">
+                En attente du feu vert
+              </p>
+              <p className="mt-1 text-sm font-black text-white">
+                Le moteur garde la course sous surveillance.
+              </p>
+            </div>
           </div>
 
           <div className="mt-5 space-y-3">

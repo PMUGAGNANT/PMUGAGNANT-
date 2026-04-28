@@ -186,7 +186,7 @@ export function PromoVideoSection() {
                   ref={videoRef}
                   className="relative z-0 h-auto w-full rounded-[1.55rem] object-cover"
                   src={shouldLoad ? "/promo.mp4" : undefined}
-                  poster="/promo-poster.jpg"
+                  poster="/pmu-waiting-race.png"
                   aria-label={COPY.videoLabel}
                   autoPlay
                   controls
