@@ -1935,6 +1935,79 @@ html[data-theme="warm"] .premium-ticket-shell {
   background: color-mix(in srgb, var(--pmu-surface-highlight) 86%, var(--pmu-bg));
 }
 
+.pmu-waiting-scene {
+  isolation: isolate;
+}
+
+.pmu-waiting-scene__image {
+  animation: pmuWaitingDrift 12s ease-in-out infinite alternate;
+  transform-origin: 52% 50%;
+}
+
+.pmu-waiting-scene__scan {
+  position: absolute;
+  inset: -20% auto -20% -35%;
+  width: 34%;
+  z-index: 2;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.14),
+    color-mix(in srgb, var(--pmu-primary) 24%, transparent),
+    transparent
+  );
+  filter: blur(2px);
+  transform: skewX(-14deg);
+  animation: pmuWaitingScan 4.8s ease-in-out infinite;
+}
+
+.pmu-waiting-dot {
+  display: block;
+  height: 0.55rem;
+  width: 0.55rem;
+  border-radius: 999px;
+  background: var(--pmu-primary);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--pmu-primary) 72%, transparent);
+  animation: pmuWaitingPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pmuWaitingDrift {
+  from {
+    transform: scale(1.02) translate3d(-0.5%, 0, 0);
+  }
+  to {
+    transform: scale(1.11) translate3d(1.5%, -1%, 0);
+  }
+}
+
+@keyframes pmuWaitingScan {
+  0%,
+  28% {
+    transform: translateX(0) skewX(-14deg);
+    opacity: 0;
+  }
+  42% {
+    opacity: 1;
+  }
+  70%,
+  100% {
+    transform: translateX(430%) skewX(-14deg);
+    opacity: 0;
+  }
+}
+
+@keyframes pmuWaitingPulse {
+  0%,
+  100% {
+    opacity: 0.38;
+    transform: scale(0.82);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 /* VMAX racing terminal */
 .vmax-page {
   --vmax-bg: #0A0E1A;
