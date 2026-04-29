@@ -247,7 +247,12 @@ export function TurfEdgeCoach() {
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const messagesRef = useRef<HTMLDivElement | null>(null);
 
-  const disabled = pathname === "/login" || pathname.startsWith("/admin");
+  const disabled =
+    pathname === "/" ||
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/dashboard" ||
+    pathname.startsWith("/admin");
   const canSubmit = draft.trim().length > 0 && !loading;
 
   const statusLabel = useMemo(() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ReferralInput } from "@/components/ui/ReferralInput";
@@ -80,7 +80,7 @@ function LoginPageContent() {
   const [error, setError] = useState("");
 
   const redirectTo = useMemo(
-    () => getSafeRedirectPath(searchParams.get("redirect"), "/"),
+    () => getSafeRedirectPath(searchParams.get("redirect"), "/dashboard"),
     [searchParams]
   );
   const premiumIntent = useMemo(
@@ -94,6 +94,12 @@ function LoginPageContent() {
     () => normalizeReferralCode(searchParams.get("ref")),
     [searchParams]
   );
+
+  useEffect(() => {
+    if (searchParams.get("mode") === "signup") {
+      setIsSignUp(true);
+    }
+  }, [searchParams]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
