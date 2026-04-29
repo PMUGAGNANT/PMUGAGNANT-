@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   getSupabaseBrowserClient,
@@ -58,6 +59,7 @@ function hasPremium(profile: ProfileSubscription | null) {
 }
 
 export default function DashboardHeaderAccount() {
+  const router = useRouter();
   const [account, setAccount] = useState<AccountState>({ status: "loading" });
 
   useEffect(() => {
@@ -131,6 +133,14 @@ export default function DashboardHeaderAccount() {
     );
   }
 
+  async function signOut() {
+    if (!hasSupabaseConfig()) return;
+    const supabase = getSupabaseBrowserClient();
+    await supabase.auth.signOut();
+    router.replace("/");
+    router.refresh();
+  }
+
   return (
     <div className="flex items-center justify-end gap-2">
       {!account.isPro ? (
@@ -153,6 +163,15 @@ export default function DashboardHeaderAccount() {
           {account.initials}
         </span>
       </Link>
+      <button
+        type="button"
+        onClick={() => {
+          void signOut();
+        }}
+        className="hidden rounded-full border border-white/10 px-3 py-1.5 text-xs font-black text-slate-300 transition hover:border-[#D4AF37]/40 hover:text-[#D4AF37] sm:inline-flex"
+      >
+        Deconnexion
+      </button>
     </div>
   );
 }

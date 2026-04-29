@@ -1,3 +1,4 @@
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
@@ -80,10 +81,66 @@ function checkRateLimit(request: NextRequest): RateLimitResult {
   };
 }
 
-function withRateLimitHeaders(response: NextResponse, result: RateLimitResult) {
+function withRateLimitHeaders(response: NextResponse, result: RateLimitResult | null) {
+  if (!result) return response;
   response.headers.set("x-ratelimit-limit", String(result.limit));
   response.headers.set("x-ratelimit-remaining", String(result.remaining));
   response.headers.set("x-ratelimit-reset", String(Math.ceil(result.resetAt / 1000)));
+  return response;
+}
+
+function hasSupabaseProxyConfig() {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+}
+
+async function handlePageAuth(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (pathname !== "/" && !pathname.startsWith("/dashboard")) {
+    return null;
+  }
+
+  if (!hasSupabaseProxyConfig()) {
+    return pathname.startsWith("/dashboard")
+      ? NextResponse.redirect(new URL("/", request.url))
+      : NextResponse.next();
+  }
+
+  let response = NextResponse.next({ request });
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (pathname === "/" && user) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  if (pathname.startsWith("/dashboard") && !user) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
   return response;
 }
 
@@ -91,9 +148,16 @@ function withRateLimitHeaders(response: NextResponse, result: RateLimitResult) {
  * Heavy backtest refresh is public on /api/backtest but must not be abusable in production.
  * This does not replace route logic; it only gates ?refresh=1 when NODE_ENV=production.
  */
-export function proxy(request: NextRequest) {
-  const rateLimit = checkRateLimit(request);
-  if (!rateLimit.allowed) {
+export async function proxy(request: NextRequest) {
+  const authResponse = await handlePageAuth(request);
+  if (authResponse) {
+    return authResponse;
+  }
+
+  const rateLimit = request.nextUrl.pathname.startsWith("/api/")
+    ? checkRateLimit(request)
+    : null;
+  if (rateLimit && !rateLimit.allowed) {
     return withRateLimitHeaders(
       NextResponse.json(
         { success: false, error: "Trop de requetes. Reessayez dans quelques instants." },
@@ -145,5 +209,9 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: "/api/:path*",
+  matcher: [
+    "/",
+    "/dashboard/:path*",
+    "/api/:path*",
+  ],
 };

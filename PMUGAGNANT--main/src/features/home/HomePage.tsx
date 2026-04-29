@@ -1,18 +1,18 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import DashboardHeaderAccount from "@/components/dashboard/DashboardHeaderAccount";
 import { AccordionPanel } from "@/components/ui/AccordionPanel";
 import { DayRadar } from "@/features/home/components/DayRadar";
-import { HomeControlBar } from "@/features/home/components/HomeControlBar";
 import { HomeHero } from "@/features/home/components/HomeHero";
 import { HomeLoadingSkeleton } from "@/features/home/components/HomeLoadingSkeleton";
-import { PriorityTickets } from "@/features/home/components/PriorityTickets";
 import { ProgrammeTable } from "@/features/home/components/ProgrammeTable";
 import { TopParisStrip } from "@/features/home/components/TopParisStrip";
 import { BIG_ALLOCATION_LIMIT, QUICK_FILTER_STORAGE_KEY, URGENT_MINUTES_LIMIT, isQuickFilter, type HomeLane, type HomeStats, type QuickFilter, type QuickFilterOption } from "@/features/home/components/home-page-types";
-import { addDays, buildFeaturedRaces, coerceRaceSummaries, formatRaceCode, getRadarRace, getTopParisItems, normalizeDateParam, normalizeFocusParticipants, sortFeaturedRaces, type FocusDetailResponse, type FocusParticipant, type RaceScore, type RacesResponse, type ScoresResponse, type SortMode } from "@/features/home/lib/home-page-model";
+import { addDays, buildFeaturedRaces, coerceRaceSummaries, formatDisplayDate, formatRaceCode, getRadarRace, getTopParisItems, normalizeDateParam, normalizeFocusParticipants, sortFeaturedRaces, type FocusDetailResponse, type FocusParticipant, type RaceScore, type RacesResponse, type ScoresResponse, type SortMode } from "@/features/home/lib/home-page-model";
 import { fetchRaceDetails, fetchRaceScoresForDate, fetchRacesForDate, normalizeRaceScoresPayload } from "@/features/races/api/client";
 import { getTodayDateStr } from "@/lib/date-utils";
 import { useLiveStats } from "@/lib/use-live-stats";
@@ -27,7 +27,7 @@ function PageContent() {
   const [races, setRaces] = useState<RaceSummary[]>([]);
   const [scores, setScores] = useState<RaceScore[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isFocusLoading, setIsFocusLoading] = useState(false);
+  const [, setIsFocusLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fetchRevision, setFetchRevision] = useState(0);
   const [focusDetail, setFocusDetail] = useState<FocusDetailResponse | null>(null);
@@ -63,7 +63,7 @@ function PageContent() {
   useEffect(() => {
     const currentParam = normalizeDateParam(searchParams.get("date"));
     if (currentParam === selectedDate) return;
-    router.replace(selectedDate === getTodayDateStr() ? "/" : `/?date=${selectedDate}`, { scroll: false });
+    router.replace(selectedDate === getTodayDateStr() ? "/dashboard" : `/dashboard?date=${selectedDate}`, { scroll: false });
   }, [router, searchParams, selectedDate]);
 
   useEffect(() => {
@@ -173,18 +173,73 @@ function PageContent() {
     playable: featuredRaces.filter((item) => item.status === "jouable").length,
     active: featuredRaces.filter((item) => item.status !== "resultat").length,
   }), [featuredRaces, races]);
+  const dayScore = focusRace
+    ? Math.max(0, Math.min(100, Math.round(focusRace.scoreValue * 10)))
+    : 0;
+  const liveSnapshot = liveStats.data;
 
   return (
-    <div className="turf-home-page mx-auto flex w-full max-w-[96rem] flex-col gap-6 lg:gap-8">
-      <HomeHero
-        stats={stats}
-        liveStats={liveStats.data}
-        focusRace={focusRace}
-        onOpenPremium={() => router.push("/premium")}
-        onOpenFocus={() => (focusRace ? navigateToRace(focusRace.race) : router.push("/premium"))}
-      />
-      <HomeControlBar selectedDate={selectedDate} sortMode={sortMode} stats={stats} focusRace={focusRace} onPrevDay={() => setSelectedDate(addDays(selectedDate, -1))} onToday={() => setSelectedDate(getTodayDateStr())} onNextDay={() => setSelectedDate(addDays(selectedDate, 1))} onDateChange={setSelectedDate} onSortChange={setSortMode} />
-      <div className="turf-main-layout">
+    <div className="min-h-screen bg-[var(--pmu-bg)]">
+      <header className="sticky top-0 z-40 border-b border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-bg)_92%,transparent)] backdrop-blur-xl">
+        <div className="mx-auto flex w-full max-w-[96rem] items-center justify-between gap-4 px-4 py-4">
+          <Link href="/dashboard" className="inline-flex items-center gap-3" aria-label="PMU Gagnant">
+            <span className="grid h-11 w-11 place-items-center rounded-lg bg-[var(--pmu-primary)] font-black text-black">
+              PG
+            </span>
+            <span>
+              <span className="block font-[var(--font-display)] text-2xl font-black leading-none text-[var(--pmu-text)]">
+                PMU<span className="text-[var(--pmu-primary)]">Gagnant</span>
+              </span>
+              <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--pmu-text-muted)]">
+                Dashboard
+              </span>
+            </span>
+          </Link>
+          <nav className="hidden items-center gap-2 md:flex" aria-label="Navigation connectee">
+            <Link href="/mes-paris" className="rounded-lg px-3 py-2 text-sm font-black text-[var(--pmu-text-soft)] hover:bg-[var(--pmu-surface)] hover:text-[var(--pmu-text)]">
+              Mon compte
+            </Link>
+            <Link href="/premium" className="turf-premium-link">
+              Passer premium
+            </Link>
+          </nav>
+          <DashboardHeaderAccount />
+        </div>
+      </header>
+
+      <main className="turf-home-page mx-auto flex w-full max-w-[96rem] flex-col gap-6 px-4 py-6 lg:gap-8">
+        <section className="app-card flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="app-kicker">Aujourd&apos;hui</p>
+            <h1 className="mt-1 text-3xl font-black text-[var(--pmu-text)]">
+              {formatDisplayDate(selectedDate)}
+            </h1>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] px-4 py-3 text-sm font-black text-[var(--pmu-text)]">
+              Score journee {dayScore || "--"} / 100
+            </span>
+            <button type="button" className="app-button-secondary min-h-11" onClick={() => setSelectedDate(addDays(selectedDate, -1))}>
+              Jour precedent
+            </button>
+            <button type="button" className="app-button-secondary min-h-11" onClick={() => setSelectedDate(getTodayDateStr())}>
+              Aujourd&apos;hui
+            </button>
+            <button type="button" className="app-button-secondary min-h-11" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>
+              Jour suivant
+            </button>
+          </div>
+        </section>
+
+        <HomeHero
+          stats={stats}
+          liveStats={liveSnapshot}
+          focusRace={focusRace}
+          onOpenPremium={() => router.push("/premium")}
+          onOpenFocus={() => (focusRace ? navigateToRace(focusRace.race) : router.push("/premium"))}
+        />
+
+        <div className="turf-main-layout">
         <div className="turf-main-column">
           {isLoading ? <HomeLoadingSkeleton /> : error ? (
             <section className="app-card border border-[color-mix(in_srgb,var(--pmu-red)_35%,transparent)] p-6" role="alert" aria-live="assertive">
@@ -199,22 +254,11 @@ function PageContent() {
             </section>
           ) : (
             <>
-              <AccordionPanel
-                kicker="Fenetre principale"
-                title="Ticket prioritaire"
-                summary={focusRace ? `${formatRaceCode(focusRace.race)} · ${focusRace.status}` : "En attente"}
-                defaultOpen
-                bodyClassName="px-0 py-0"
-              >
-                <PriorityTickets focusRace={focusRace} focusDetail={focusDetail} focusParticipants={focusParticipants} isFocusLoading={isFocusLoading} sortMode={sortMode} onOpenRace={navigateToRace} onOpenPremium={() => router.push("/premium")} />
-              </AccordionPanel>
-
               {topParisItems.length > 0 ? (
                 <AccordionPanel
                   kicker="Sous-fenetre"
                   title="Top decisions"
                   summary={`${topParisItems.length} tickets`}
-                  defaultOpen
                   bodyClassName="px-0 py-0"
                 >
                   <TopParisStrip items={topParisItems} />
@@ -223,18 +267,45 @@ function PageContent() {
 
               <AccordionPanel
                 kicker="Sous-fenetre"
-                title="Programme range par filtres"
+                title="Toutes les courses du jour"
                 summary={`${filteredFeaturedRaces.length} courses`}
-                defaultOpen
                 bodyClassName="px-0 py-0"
               >
                 <ProgrammeTable quickFilter={quickFilter} quickFilterOptions={quickFilterOptions} lanes={lanes} playableCount={stats.playable} onQuickFilterChange={setQuickFilter} onOpenRace={navigateToRace} />
+              </AccordionPanel>
+
+              <AccordionPanel
+                kicker="Sous-fenetre"
+                title="Stats ROI, bankroll, validees"
+                summary={`${stats.playable}/${stats.total || "--"} validees`}
+              >
+                <div className="grid gap-3 md:grid-cols-3">
+                  <article className="app-card-muted px-4 py-4">
+                    <p className="app-label">ROI 30 jours</p>
+                    <p className="mt-2 text-3xl font-black text-[var(--pmu-primary)]">
+                      {liveSnapshot.roi30d !== null ? `${liveSnapshot.roi30d >= 0 ? "+" : ""}${liveSnapshot.roi30d.toFixed(1)}%` : "--"}
+                    </p>
+                  </article>
+                  <article className="app-card-muted px-4 py-4">
+                    <p className="app-label">Bankroll</p>
+                    <p className="mt-2 text-3xl font-black text-[var(--pmu-gold)]">
+                      {liveSnapshot.netGain7d !== null ? `${liveSnapshot.netGain7d >= 0 ? "+" : ""}${Math.round(liveSnapshot.netGain7d)} EUR` : "--"}
+                    </p>
+                  </article>
+                  <article className="app-card-muted px-4 py-4">
+                    <p className="app-label">Validees</p>
+                    <p className="mt-2 text-3xl font-black text-[var(--pmu-text)]">
+                      {stats.playable}
+                    </p>
+                  </article>
+                </div>
               </AccordionPanel>
             </>
           )}
         </div>
         <DayRadar focusRace={focusRace} focusParticipants={focusParticipants} stats={stats} />
       </div>
+      </main>
     </div>
   );
 }
