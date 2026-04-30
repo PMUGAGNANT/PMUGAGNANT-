@@ -451,7 +451,12 @@ export function ComboPanel() {
   const canCopy = selections.length >= 2;
   const missingCount = Math.max(0, 2 - selections.length);
   const slotsToShow = Math.max(0, 2 - selections.length);
-  const disabled = pathname === "/login" || pathname.startsWith("/admin");
+  const disabled =
+    pathname === "/" ||
+    pathname === "/dashboard" ||
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname.startsWith("/admin");
 
   async function copyTicket() {
     if (!canCopy || !navigator.clipboard) return;

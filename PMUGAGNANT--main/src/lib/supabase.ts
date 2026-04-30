@@ -1,3 +1,4 @@
+import { createBrowserClient } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 let browserClient: SupabaseClient | null = null;
@@ -37,7 +38,7 @@ export function getSupabaseBrowserClient() {
   }
 
   if (!browserClient) {
-    browserClient = createClient(getSupabaseUrl()!, getSupabaseAnonKey()!);
+    browserClient = createBrowserClient(getSupabaseUrl()!, getSupabaseAnonKey()!);
   }
 
   return browserClient;
