@@ -150,11 +150,12 @@ function LoginPageContent() {
 
     try {
       const supabase = getSupabaseBrowserClient();
-      const redirectUrl = new URL(redirectTo, window.location.origin).toString();
+      const callbackUrl = new URL("/auth/callback", window.location.origin);
+      callbackUrl.searchParams.set("next", redirectTo);
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: redirectUrl,
+          redirectTo: callbackUrl.toString(),
         },
       });
 
