@@ -1,21 +1,29 @@
 import Image from "next/image";
 
 import type { HomeStats } from "@/features/home/components/home-page-types";
-import { formatCourseMeta, formatStake, type FeaturedRace } from "@/features/home/lib/home-page-model";
+import {
+  formatCourseMeta,
+  formatMinutesLabel,
+  formatRaceCode,
+  formatStake,
+  type FeaturedRace,
+} from "@/features/home/lib/home-page-model";
 import { formatLiveRoi, hasLiveStatsData, type LiveStatsSnapshot } from "@/lib/live-stats";
 
 type HomeHeroProps = {
   stats: HomeStats;
   liveStats: LiveStatsSnapshot;
   focusRace: FeaturedRace | null;
+  programmeRaces: FeaturedRace[];
   onOpenPremium: () => void;
   onOpenFocus: () => void;
+  onOpenRace: (race: FeaturedRace) => void;
 };
 
 function getHeroDecision(focusRace: FeaturedRace | null) {
   if (!focusRace) {
     return {
-      label: "Analyse en cours",
+      label: "Analyse",
       tone: "neutral" as const,
       text: "Le moteur attend les courses du jour.",
     };
@@ -33,7 +41,7 @@ function getHeroDecision(focusRace: FeaturedRace | null) {
     return {
       label: "SURVEILLER",
       tone: "warning" as const,
-      text: "Le moteur garde la course, sans feu vert total.",
+      text: "Le signal est interessant, mais le moteur attend confirmation.",
     };
   }
 
@@ -44,12 +52,21 @@ function getHeroDecision(focusRace: FeaturedRace | null) {
   };
 }
 
+function getStatusLabel(status: FeaturedRace["status"]) {
+  if (status === "jouable") return "Jouer";
+  if (status === "surveillance") return "A suivre";
+  if (status === "resultat") return "Resultat";
+  return "Passer";
+}
+
 export function HomeHero({
   stats,
   liveStats,
   focusRace,
+  programmeRaces,
   onOpenPremium,
   onOpenFocus,
+  onOpenRace,
 }: HomeHeroProps) {
   const decision = getHeroDecision(focusRace);
   const hasStats = hasLiveStatsData(liveStats);
@@ -57,10 +74,6 @@ export function HomeHero({
   const performanceLabel = hasStats
     ? `${liveStats.totalPredictions} tickets mesures sur 30 jours`
     : "Stats Supabase en cours";
-  const weeklyGain =
-    hasStats && liveStats.predictions7d > 0
-      ? `${liveStats.netGain7d >= 0 ? "+" : ""}${Math.round(liveStats.netGain7d)} EUR`
-      : "--";
   const focusPick = focusRace?.score?.pick;
   const focusStake = formatStake(
     focusPick?.confidence ? Math.max(6, Math.round(focusPick.confidence * 2.5)) : 8
@@ -69,157 +82,203 @@ export function HomeHero({
     focusPick?.nom || focusPick?.numPmu
       ? `#${focusPick?.numPmu ?? "--"} ${focusPick?.nom ?? "Selection"}`
       : "Ticket du jour";
-  const focusCode = focusRace ? `R${focusRace.race.reunion}C${focusRace.race.course}` : "--";
+  const focusCode = focusRace ? formatRaceCode(focusRace.race) : "--";
   const focusMeta = focusRace ? formatCourseMeta(focusRace.race) : "Programme en attente";
   const focusTime = focusRace?.race.heureDepart ?? "--:--";
   const focusTitle = focusRace?.race.nomCourse ?? "Course prioritaire en preparation";
+  const programme = programmeRaces.slice(0, 7);
 
   return (
-    <section className="app-page-hero overflow-hidden p-0">
-      <div className="grid border-b border-[var(--pmu-border)] sm:grid-cols-2 xl:grid-cols-4">
-        <div className="border-b border-[var(--pmu-border)] p-4 sm:border-r xl:border-b-0">
-          <p className="app-label">Decision IA</p>
-          <div className="mt-2 flex items-center gap-2">
-            <span className="turf-decision-badge" data-tone={decision.tone}>
-              {decision.label}
-            </span>
-            <span className="text-xs font-black uppercase text-[var(--pmu-primary)]">V9.2</span>
-          </div>
-          <p className="mt-3 text-sm font-semibold text-[var(--pmu-text-soft)]">{decision.text}</p>
-        </div>
-
-        <div className="border-b border-[var(--pmu-border)] p-4 xl:border-b-0 xl:border-r">
-          <p className="app-label">Course focus</p>
-          <p className="mt-2 text-3xl font-black text-[var(--pmu-primary)]">{focusCode}</p>
-          <p className="mt-1 truncate text-sm font-semibold text-[var(--pmu-text-soft)]">{focusTime} - {focusRace?.race.hippodrome ?? "Hippodrome"}</p>
-        </div>
-
-        <div className="border-b border-[var(--pmu-border)] p-4 sm:border-r xl:border-b-0">
-          <p className="app-label">Tickets valides</p>
-          <p className="mt-2 text-3xl font-black text-[var(--pmu-text)]">{stats.playable}</p>
-          <p className="mt-1 text-sm font-semibold text-[var(--pmu-text-soft)]">sur {stats.total || "--"} courses analysees</p>
-        </div>
-
-        <div className="p-4">
-          <p className="app-label">ROI reel</p>
-          <p className="mt-2 text-3xl font-black text-[var(--pmu-gold)]">{performanceValue}</p>
-          <p className="mt-1 truncate text-sm font-semibold text-[var(--pmu-text-soft)]">{performanceLabel}</p>
-        </div>
-      </div>
-
-      <div className="grid gap-0 xl:grid-cols-[1fr,25rem]">
-        <div className="p-5 md:p-7">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-lg border border-[color-mix(in_srgb,var(--pmu-primary)_28%,transparent)] bg-[var(--pmu-primary-fade)] px-3 py-2 text-sm font-black uppercase text-[var(--pmu-primary)]">
-              Programme trie
-            </span>
-            <span className="rounded-lg border border-[var(--pmu-border)] px-3 py-2 text-sm font-bold text-[var(--pmu-text-soft)]">
-              {focusMeta}
-            </span>
-          </div>
-
-          <h1 className="mt-5 max-w-4xl text-[2.3rem] font-black leading-[0.95] text-[var(--pmu-text)] md:text-[3.7rem]">
-            {focusCode} - {focusTitle}
-          </h1>
-          <p className="mt-4 max-w-3xl text-base leading-7 text-[var(--pmu-text-soft)]">
-            Un seul ecran pour decider : course, cheval, mise, confiance et
-            action. Le reste est range dans les fenetres plus bas.
-          </p>
-
-          <div className="mt-6 grid gap-3 md:grid-cols-3">
-            <div className="result-chip px-4 py-3.5">
-              <p className="app-label">Cheval</p>
-              <p className="mt-1 truncate text-lg font-black text-[var(--pmu-text)]">{focusHorse}</p>
-            </div>
-            <div className="result-chip px-4 py-3.5">
-              <p className="app-label">Mise</p>
-              <p className="mt-1 text-2xl font-black text-[var(--pmu-gold)]">{focusStake}</p>
-            </div>
-            <div className="result-chip px-4 py-3.5">
-              <p className="app-label">Confiance</p>
-              <p className="mt-1 text-2xl font-black text-[var(--pmu-primary)]">
-                {focusRace ? `${focusRace.scoreValue.toFixed(1)}/10` : "--"}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <button
-              type="button"
-              className="app-button-primary min-h-12 w-full sm:w-auto"
-              onClick={onOpenFocus}
-            >
-              Ouvrir la course
-            </button>
-            <button
-              type="button"
-              className="app-button-secondary min-h-12 w-full sm:w-auto"
-              onClick={onOpenPremium}
-            >
-              Debloquer premium
-            </button>
-          </div>
-        </div>
-
-        <aside className="border-t border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_78%,transparent)] p-5 xl:border-l xl:border-t-0">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="app-kicker">Ticket express</p>
-              <h2 className="mt-2 text-2xl font-black text-[var(--pmu-text)]">A faire maintenant</h2>
-            </div>
-            <span className="turf-decision-badge" data-tone={decision.tone}>
-              {decision.label}
-            </span>
-          </div>
-
-          <div className="pmu-waiting-scene relative mt-5 h-36 overflow-hidden rounded-lg border border-[var(--pmu-border)] bg-black">
-            <Image
-              src="/pmu-waiting-race.png"
-              alt="Chevaux au depart en attente du signal PMU"
-              fill
-              sizes="(min-width: 1280px) 25rem, 100vw"
-              className="pmu-waiting-scene__image object-cover opacity-80"
-            />
-            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,11,24,0.78),rgba(5,11,24,0.16)),linear-gradient(180deg,transparent,rgba(5,11,24,0.68))]" />
-            <div className="pmu-waiting-scene__scan" aria-hidden />
-            <div className="absolute right-3 top-3 flex items-center gap-1.5" aria-hidden>
-              <span className="pmu-waiting-dot" />
-              <span className="pmu-waiting-dot [animation-delay:0.18s]" />
-              <span className="pmu-waiting-dot [animation-delay:0.36s]" />
-            </div>
-            <div className="absolute bottom-3 left-3 right-3">
-              <p className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-[var(--pmu-primary)]">
-                En attente du feu vert
-              </p>
-              <p className="mt-1 text-sm font-black text-white">
-                Le moteur garde la course sous surveillance.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-5 space-y-3">
-            {[
-              ["1", "Lire", `${focusCode} - ${focusTime}`],
-              ["2", "Verifier", focusHorse],
-              ["3", "Decider", decision.label],
-            ].map(([step, title, value]) => (
-              <div key={step} className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] p-3">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--pmu-primary)] text-sm font-black text-black">
-                    {step}
+    <section className="overflow-hidden rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] shadow-[var(--pmu-shadow-lg)]">
+      <div className="grid min-h-[34rem] xl:grid-cols-[1fr,28rem]">
+        <div className="relative min-h-[32rem] overflow-hidden bg-black">
+          <Image
+            src="/pmu-waiting-race.png"
+            alt="Course hippique analysee par PMU Gagnant"
+            fill
+            priority
+            sizes="(min-width: 1280px) calc(100vw - 28rem), 100vw"
+            className="object-cover opacity-90"
+          />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,8,18,0.96)_0%,rgba(2,8,18,0.72)_42%,rgba(2,8,18,0.18)_100%),linear-gradient(180deg,rgba(2,8,18,0.22),rgba(2,8,18,0.92))]" />
+          <div className="absolute inset-x-0 top-0 border-b border-white/10 bg-black/18 px-4 py-3 backdrop-blur-sm md:px-8">
+            <div className="grid gap-3 sm:grid-cols-4">
+              <div>
+                <p className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-white/55">
+                  Decision IA
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="turf-decision-badge" data-tone={decision.tone}>
+                    {decision.label}
                   </span>
-                  <div className="min-w-0">
-                    <p className="text-xs font-black uppercase text-[var(--pmu-text-muted)]">{title}</p>
-                    <p className="truncate text-sm font-black text-[var(--pmu-text)]">{value}</p>
-                  </div>
+                  <span className="text-xs font-black text-[var(--pmu-primary)]">V9.2</span>
                 </div>
               </div>
-            ))}
+              <div>
+                <p className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-white/55">
+                  Course focus
+                </p>
+                <p className="mt-2 text-2xl font-black text-[var(--pmu-primary)]">{focusCode}</p>
+              </div>
+              <div>
+                <p className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-white/55">
+                  Tickets valides
+                </p>
+                <p className="mt-2 text-2xl font-black text-white">{stats.playable}</p>
+              </div>
+              <div>
+                <p className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-white/55">
+                  ROI reel
+                </p>
+                <p className="mt-2 text-2xl font-black text-[var(--pmu-gold)]">{performanceValue}</p>
+              </div>
+            </div>
           </div>
 
-          <p className="mt-5 text-sm leading-6 text-[var(--pmu-text-soft)]">
-            {hasStats ? `${liveStats.predictions7d} tickets mesures cette semaine, resultat net ${weeklyGain}.` : "Les mesures live se rempliront quand Supabase renvoie les donnees."}
-          </p>
+          <div className="relative z-[1] flex min-h-[32rem] flex-col justify-end px-5 pb-7 pt-32 md:px-8 md:pb-9">
+            <div className="max-w-4xl">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-lg bg-[var(--pmu-primary)] px-3 py-2 text-sm font-black uppercase text-black">
+                  Programme IA
+                </span>
+                <span className="rounded-lg border border-white/20 bg-black/28 px-3 py-2 text-sm font-black uppercase text-white">
+                  {focusMeta}
+                </span>
+                <span className="rounded-lg border border-white/20 bg-black/28 px-3 py-2 text-sm font-black uppercase text-white">
+                  {focusTime}
+                </span>
+              </div>
+
+              <p className="mt-6 text-sm font-black text-[var(--pmu-primary)]">
+                Depart dans {formatMinutesLabel(focusRace?.minutesUntilStart)}
+              </p>
+              <h1 className="mt-3 max-w-3xl font-[var(--font-display)] text-[3.2rem] font-black leading-[0.9] text-white md:text-[5.3rem]">
+                {focusCode} {focusTitle}
+              </h1>
+              <p className="mt-5 max-w-2xl text-base font-semibold leading-7 text-white/78">
+                {decision.text} Le reste du programme est range a droite et dans les sous-fenetres.
+              </p>
+
+              <div className="mt-6 grid gap-3 md:grid-cols-3">
+                <div className="rounded-lg border border-white/15 bg-black/45 px-4 py-4 backdrop-blur">
+                  <p className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-white/48">
+                    Cheval
+                  </p>
+                  <p className="mt-2 truncate text-xl font-black text-white">{focusHorse}</p>
+                </div>
+                <div className="rounded-lg border border-white/15 bg-black/45 px-4 py-4 backdrop-blur">
+                  <p className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-white/48">
+                    Mise
+                  </p>
+                  <p className="mt-2 text-3xl font-black text-[var(--pmu-gold)]">{focusStake}</p>
+                </div>
+                <div className="rounded-lg border border-white/15 bg-black/45 px-4 py-4 backdrop-blur">
+                  <p className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-white/48">
+                    Confiance
+                  </p>
+                  <p className="mt-2 text-3xl font-black text-[var(--pmu-primary)]">
+                    {focusRace ? `${focusRace.scoreValue.toFixed(1)}/10` : "--"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <button type="button" className="app-button-primary min-h-12" onClick={onOpenFocus}>
+                  Ouvrir la course
+                </button>
+                <button type="button" className="app-button-secondary min-h-12" onClick={onOpenPremium}>
+                  Debloquer premium
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside className="bg-[#e7f4f1] p-4 text-[#062f2a]">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#05725f]">
+                Programme du jour
+              </p>
+              <h2 className="mt-1 text-2xl font-black">Courses IA</h2>
+            </div>
+            <div className="grid h-11 w-11 place-items-center rounded-lg bg-[#00594f] text-sm font-black text-white">
+              {stats.total}
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 rounded-lg bg-white/70 p-1 text-sm font-black">
+            <span className="rounded-md bg-[#00594f] px-4 py-3 text-center text-white">Courses</span>
+            <span className="px-4 py-3 text-center text-[#00594f]">Reunions</span>
+          </div>
+
+          <div className="mt-4 max-h-[28.5rem] space-y-3 overflow-y-auto pr-1">
+            {programme.length > 0 ? (
+              programme.map((item) => {
+                const code = formatRaceCode(item.race);
+                const isFocus =
+                  focusRace &&
+                  item.race.reunion === focusRace.race.reunion &&
+                  item.race.course === focusRace.race.course;
+
+                return (
+                  <button
+                    key={`${item.race.reunion}-${item.race.course}-${item.race.dateStr}`}
+                    type="button"
+                    onClick={() => onOpenRace(item)}
+                    className={`w-full rounded-lg p-3 text-left transition hover:-translate-y-0.5 ${
+                      isFocus
+                        ? "bg-[#00594f] text-white shadow-lg"
+                        : "bg-white text-[#062f2a] shadow-sm"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span
+                        className={`grid h-14 w-14 shrink-0 place-items-center rounded-lg font-[var(--font-display)] text-xl font-black ${
+                          isFocus ? "bg-white/16 text-white" : "bg-[#e7f4f1] text-[#00594f]"
+                        }`}
+                      >
+                        {code}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-start justify-between gap-2">
+                          <strong className="block truncate text-lg font-black">
+                            {item.race.hippodrome}
+                          </strong>
+                          <em className="shrink-0 text-sm font-black not-italic">
+                            {item.race.heureDepart}
+                          </em>
+                        </span>
+                        <span className={`mt-1 block truncate text-sm font-bold ${isFocus ? "text-white/78" : "text-[#55706b]"}`}>
+                          {item.race.nomCourse}
+                        </span>
+                        <span className="mt-2 flex flex-wrap gap-1.5">
+                          <span className={`rounded-full px-2 py-1 text-[11px] font-black ${isFocus ? "bg-white/16 text-white" : "bg-[#e7f4f1] text-[#00594f]"}`}>
+                            {getStatusLabel(item.status)}
+                          </span>
+                          <span className={`rounded-full px-2 py-1 text-[11px] font-black ${isFocus ? "bg-white/16 text-white" : "bg-[#e7f4f1] text-[#00594f]"}`}>
+                            {item.race.nombrePartants} partants
+                          </span>
+                        </span>
+                      </span>
+                    </div>
+                  </button>
+                );
+              })
+            ) : (
+              <div className="rounded-lg bg-white p-5 text-sm font-bold text-[#55706b]">
+                Le programme charge les courses du jour.
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 rounded-lg bg-white p-4">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#55706b]">
+              Preuve moteur
+            </p>
+            <p className="mt-2 text-xl font-black text-[#00594f]">{performanceValue}</p>
+            <p className="mt-1 text-sm font-bold text-[#55706b]">{performanceLabel}</p>
+          </div>
         </aside>
       </div>
     </section>

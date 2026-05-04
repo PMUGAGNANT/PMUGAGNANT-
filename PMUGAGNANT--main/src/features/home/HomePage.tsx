@@ -235,8 +235,10 @@ function PageContent() {
           stats={stats}
           liveStats={liveSnapshot}
           focusRace={focusRace}
+          programmeRaces={filteredFeaturedRaces}
           onOpenPremium={() => router.push("/premium")}
           onOpenFocus={() => (focusRace ? navigateToRace(focusRace.race) : router.push("/premium"))}
+          onOpenRace={(item) => navigateToRace(item.race)}
         />
 
         <div className="turf-main-layout">

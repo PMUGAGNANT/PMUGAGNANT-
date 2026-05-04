@@ -133,7 +133,8 @@ test("buildPerformanceDashboard filtre segment et type de pari", () => {
         distance: 1400,
       }),
     ],
-    { period: "30j", segment: "PLAT_SPRINT", betType: "PLACE" }
+    { period: "30j", segment: "PLAT_SPRINT", betType: "PLACE" },
+    "2026-04-15T12:00:00.000Z"
   );
 
   assert.equal(dashboard.kpis.validatedBets, 1);
