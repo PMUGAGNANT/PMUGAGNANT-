@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════════
@@ -3765,4 +3766,43 @@ html[data-theme="warm"] .premium-ticket-shell {
   .turf-coach-panel__form button {
     min-height: auto;
   }
+}
+
+.legal-page {
+  max-width: 780px;
+  margin: 100px auto 80px;
+  padding: 0 24px;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.legal-page h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 52px;
+  font-weight: 300;
+  color: #F5F0E8;
+  margin-bottom: 48px;
+}
+
+.legal-page h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 26px;
+  font-weight: 600;
+  color: #D4AF37;
+  margin: 36px 0 12px;
+}
+
+.legal-page p,
+.legal-page li {
+  font-size: 15px;
+  color: rgba(245,240,232,0.6);
+  line-height: 1.85;
+  margin-bottom: 8px;
+}
+
+.legal-page ul {
+  padding-left: 20px;
+}
+
+.legal-page a {
+  color: #D4AF37;
 }

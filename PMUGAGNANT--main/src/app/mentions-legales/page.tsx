@@ -1,61 +1,22 @@
-import type { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "Mentions légales | TurfEdge",
-  description: "Informations d'édition et d'hébergement de TurfEdge.",
+export const metadata = {
+  title: "Mentions legales - PMU Gagnant",
 };
 
-const LEGAL_ROWS = [
-  {
-    label: "Éditeur",
-    value: "À compléter avant lancement public : nom légal, forme juridique, adresse et numéro d'immatriculation.",
-  },
-  {
-    label: "Contact",
-    value: "À compléter avec l'adresse email support officielle du service.",
-  },
-  {
-    label: "Hébergement",
-    value: "Application prévue pour un hébergement Vercel avec stockage Supabase.",
-  },
-  {
-    label: "Marque",
-    value: "TurfEdge est le nom public utilisé par l'interface et les communications produit.",
-  },
-];
-
-export default function LegalNoticePage() {
+export default function MentionsLegalesPage() {
   return (
-    <div className="mx-auto flex w-full max-w-[58rem] flex-col gap-6 px-4 py-6 md:px-6">
-      <section className="app-page-hero p-6 md:p-8">
-        <p className="app-kicker">Mentions légales</p>
-        <h1 className="mt-3 text-4xl font-black leading-[0.98] text-[var(--pmu-text)] md:text-5xl">
-          Informations à publier avant ouverture officielle.
-        </h1>
-        <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--pmu-text-soft)] md:text-base">
-          Cette page centralise les informations légales du service. Les champs
-          éditeur et contact doivent être remplacés par les informations réelles
-          avant une mise en production commerciale.
-        </p>
-      </section>
-
-      <section className="app-card p-6 md:p-7">
-        <div className="grid gap-3">
-          {LEGAL_ROWS.map((row) => (
-            <article key={row.label} className="app-card-muted px-4 py-4">
-              <p className="app-label">{row.label}</p>
-              <p className="mt-2 text-sm leading-7 text-[var(--pmu-text-soft)]">
-                {row.value}
-              </p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="app-card-muted px-5 py-4 text-sm leading-7 text-[var(--pmu-text-soft)]">
-        TurfEdge n&apos;est pas affilié au PMU. Les noms de courses, hippodromes et
-        rapports publics servent uniquement à la lecture sportive et statistique.
-      </section>
+    <div className="legal-page">
+      <h1>Mentions legales</h1>
+      <h2>Editeur</h2>
+      <p>[NOM / RAISON SOCIALE], [ADRESSE], France.</p>
+      <p>Email : contact@pmugagnant.com</p>
+      <p>Directeur de publication : [PRENOM NOM]</p>
+      <h2>Hebergement</h2>
+      <p>Vercel Inc., San Francisco, CA.</p>
+      <h2>Propriete intellectuelle</h2>
+      <p>Tout le contenu du site PMU Gagnant est protege. Toute reproduction non autorisee est interdite.</p>
+      <h2>Jeu responsable</h2>
+      <p>Jouer comporte des risques : endettement, isolement, dependance.</p>
+      <p>Pour etre aide, appelez le 09 74 75 13 13 ou consultez <a href="https://www.joueurs-info-service.fr">joueurs-info-service.fr</a>.</p>
     </div>
   );
 }

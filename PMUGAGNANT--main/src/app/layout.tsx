@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Barlow_Condensed, DM_Sans, Roboto_Mono } from "next/font/google";
+import Script from "next/script";
 import { ComboPanel, ComboProvider } from "@/components/ComboBuilder";
 import { AppShell } from "@/features/layout/components/AppShell";
 import { GlossaryPanel } from "@/components/ui/Glossary";
@@ -127,6 +128,25 @@ export default function RootLayout({
               "try{var t=localStorage.getItem('pmu-theme-v2');document.documentElement.dataset.theme=t==='cream'?'cream':'warm'}catch(e){}",
           }}
         />
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"
+          strategy="afterInteractive"
+        />
+        <Script id="ga4-init" strategy="afterInteractive">{`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-XXXXXXXXXX');
+        `}</Script>
+        <Script id="meta-pixel" strategy="afterInteractive">{`
+          !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+          n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+          n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+          t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+          document,'script','https://connect.facebook.net/en_US/fbevents.js');
+          fbq('init', 'XXXXXXXXXXXXXXXX');
+          fbq('track', 'PageView');
+        `}</Script>
       </head>
       <body
         className={`${uiFont.variable} ${displayFont.variable} ${monoFont.variable} min-h-screen text-[var(--pmu-text)] antialiased`}
