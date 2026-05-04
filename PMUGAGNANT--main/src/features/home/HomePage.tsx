@@ -207,25 +207,25 @@ function PageContent() {
         </div>
       </header>
 
-      <main className="turf-home-page mx-auto flex w-full max-w-[96rem] flex-col gap-6 px-4 py-6 lg:gap-8">
-        <section className="app-card flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between">
+      <main className="turf-home-page mx-auto flex w-full max-w-[112rem] flex-col gap-4 px-3 py-4 sm:px-4 lg:gap-5">
+        <section className="flex flex-col gap-3 rounded-lg border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_76%,black)] px-4 py-3 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="app-kicker">Aujourd&apos;hui</p>
-            <h1 className="mt-1 text-3xl font-black text-[var(--pmu-text)]">
+            <h1 className="mt-1 text-2xl font-black text-[var(--pmu-text)]">
               {formatDisplayDate(selectedDate)}
             </h1>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] px-4 py-3 text-sm font-black text-[var(--pmu-text)]">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+            <span className="col-span-2 rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] px-3 py-2 text-center text-sm font-black text-[var(--pmu-text)] sm:col-span-1">
               Score journee {dayScore || "--"} / 100
             </span>
-            <button type="button" className="app-button-secondary min-h-11" onClick={() => setSelectedDate(addDays(selectedDate, -1))}>
+            <button type="button" className="app-button-secondary min-h-10 px-3 text-sm" onClick={() => setSelectedDate(addDays(selectedDate, -1))}>
               Jour precedent
             </button>
-            <button type="button" className="app-button-secondary min-h-11" onClick={() => setSelectedDate(getTodayDateStr())}>
+            <button type="button" className="app-button-secondary min-h-10 px-3 text-sm" onClick={() => setSelectedDate(getTodayDateStr())}>
               Aujourd&apos;hui
             </button>
-            <button type="button" className="app-button-secondary min-h-11" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>
+            <button type="button" className="app-button-secondary min-h-10 px-3 text-sm" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>
               Jour suivant
             </button>
           </div>
@@ -235,8 +235,10 @@ function PageContent() {
           stats={stats}
           liveStats={liveSnapshot}
           focusRace={focusRace}
+          programmeRaces={filteredFeaturedRaces}
           onOpenPremium={() => router.push("/premium")}
           onOpenFocus={() => (focusRace ? navigateToRace(focusRace.race) : router.push("/premium"))}
+          onOpenRace={(item) => navigateToRace(item.race)}
         />
 
         <div className="turf-main-layout">
