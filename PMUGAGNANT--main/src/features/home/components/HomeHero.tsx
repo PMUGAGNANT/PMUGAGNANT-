@@ -86,18 +86,18 @@ export function HomeHero({
   const focusMeta = focusRace ? formatCourseMeta(focusRace.race) : "Programme en attente";
   const focusTime = focusRace?.race.heureDepart ?? "--:--";
   const focusTitle = focusRace?.race.nomCourse ?? "Course prioritaire en preparation";
-  const programme = programmeRaces.slice(0, 7);
+  const programme = programmeRaces.slice(0, 9);
 
   return (
     <section className="overflow-hidden rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] shadow-[var(--pmu-shadow-lg)]">
-      <div className="grid min-h-[34rem] xl:grid-cols-[1fr,28rem]">
-        <div className="relative min-h-[32rem] overflow-hidden bg-black">
+      <div className="grid min-h-[40rem] lg:grid-cols-[minmax(0,1fr)_27rem] 2xl:grid-cols-[minmax(0,1fr)_30rem]">
+        <div className="relative min-h-[36rem] overflow-hidden bg-black lg:min-h-[40rem]">
           <Image
             src="/pmu-waiting-race.png"
             alt="Course hippique analysee par PMU Gagnant"
             fill
             priority
-            sizes="(min-width: 1280px) calc(100vw - 28rem), 100vw"
+            sizes="(min-width: 1024px) calc(100vw - 27rem), 100vw"
             className="object-cover opacity-90"
           />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,8,18,0.96)_0%,rgba(2,8,18,0.72)_42%,rgba(2,8,18,0.18)_100%),linear-gradient(180deg,rgba(2,8,18,0.22),rgba(2,8,18,0.92))]" />
@@ -135,7 +135,7 @@ export function HomeHero({
             </div>
           </div>
 
-          <div className="relative z-[1] flex min-h-[32rem] flex-col justify-end px-5 pb-7 pt-32 md:px-8 md:pb-9">
+          <div className="relative z-[1] flex min-h-[36rem] flex-col justify-end px-5 pb-7 pt-32 md:px-8 md:pb-9 lg:min-h-[40rem]">
             <div className="max-w-4xl">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-lg bg-[var(--pmu-primary)] px-3 py-2 text-sm font-black uppercase text-black">
@@ -152,11 +152,11 @@ export function HomeHero({
               <p className="mt-6 text-sm font-black text-[var(--pmu-primary)]">
                 Depart dans {formatMinutesLabel(focusRace?.minutesUntilStart)}
               </p>
-              <h1 className="mt-3 max-w-3xl font-[var(--font-display)] text-[3.2rem] font-black leading-[0.9] text-white md:text-[5.3rem]">
+              <h1 className="mt-3 max-w-3xl font-[var(--font-display)] text-[3.1rem] font-black leading-[0.9] text-white md:text-[4.8rem] 2xl:text-[5.4rem]">
                 {focusCode} {focusTitle}
               </h1>
               <p className="mt-5 max-w-2xl text-base font-semibold leading-7 text-white/78">
-                {decision.text} Le reste du programme est range a droite et dans les sous-fenetres.
+                {decision.text} Choisis la course, verifie le cheval, ouvre le ticket. Le programme reste range a droite.
               </p>
 
               <div className="mt-6 grid gap-3 md:grid-cols-3">
@@ -194,13 +194,13 @@ export function HomeHero({
           </div>
         </div>
 
-        <aside className="bg-[#e7f4f1] p-4 text-[#062f2a]">
+        <aside className="flex min-h-[36rem] flex-col bg-[#e8f6f2] p-4 text-[#062f2a] lg:min-h-[40rem]">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.14em] text-[#05725f]">
                 Programme du jour
               </p>
-              <h2 className="mt-1 text-2xl font-black">Courses IA</h2>
+              <h2 className="mt-1 text-2xl font-black text-[#062f2a]">Courses IA</h2>
             </div>
             <div className="grid h-11 w-11 place-items-center rounded-lg bg-[#00594f] text-sm font-black text-white">
               {stats.total}
@@ -212,7 +212,7 @@ export function HomeHero({
             <span className="px-4 py-3 text-center text-[#00594f]">Reunions</span>
           </div>
 
-          <div className="mt-4 max-h-[28.5rem] space-y-3 overflow-y-auto pr-1">
+          <div className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
             {programme.length > 0 ? (
               programme.map((item) => {
                 const code = formatRaceCode(item.race);
