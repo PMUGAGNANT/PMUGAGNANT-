@@ -17,6 +17,7 @@ import { fetchRaceDetails, fetchRaceScoresForDate, fetchRacesForDate, normalizeR
 import { getTodayDateStr } from "@/lib/date-utils";
 import { useLiveStats } from "@/lib/use-live-stats";
 import type { RaceSummary } from "@/lib/types";
+import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 
 function PageContent() {
   const router = useRouter();
@@ -32,6 +33,30 @@ function PageContent() {
   const [fetchRevision, setFetchRevision] = useState(0);
   const [focusDetail, setFocusDetail] = useState<FocusDetailResponse | null>(null);
   const liveStats = useLiveStats();
+  const [isPro, setIsPro] = useState(false);
+
+  useEffect(() => {
+    if (!hasSupabaseConfig()) return;
+    const supabase = getSupabaseBrowserClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) return;
+      supabase
+        .from("profiles")
+        .select("is_subscribed,subscription_status,premium_access_expires_at")
+        .eq("id", session.user.id)
+        .maybeSingle()
+        .then(({ data: profile }) => {
+          if (!profile) return;
+          const expiry = profile.premium_access_expires_at ? new Date(profile.premium_access_expires_at) : null;
+          setIsPro(
+            !!profile.is_subscribed ||
+            profile.subscription_status === "active" ||
+            profile.subscription_status === "trialing" ||
+            (expiry !== null && !isNaN(expiry.getTime()) && expiry.getTime() > Date.now())
+          );
+        });
+    });
+  }, []);
 
   const navigateToRace = useCallback(
     (race: RaceSummary) => router.push(`/course/${race.reunion}/${race.course}?date=${race.dateStr}`),
@@ -236,6 +261,7 @@ function PageContent() {
           liveStats={liveSnapshot}
           focusRace={focusRace}
           programmeRaces={filteredFeaturedRaces}
+          isPro={isPro}
           onOpenPremium={() => router.push("/premium")}
           onOpenFocus={() => (focusRace ? navigateToRace(focusRace.race) : router.push("/premium"))}
           onOpenRace={(item) => navigateToRace(item.race)}
