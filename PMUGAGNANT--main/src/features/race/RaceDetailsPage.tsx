@@ -179,15 +179,26 @@ function RaceDetailsContent({
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-5">
+
+        {/* 1. HEADER COURSE — comme PMU.fr */}
+        <RaceHeroSection
+          courseInfo={courseInfo}
+          selectedDate={selectedDate}
+          minutesUntilStart={data.minutesUntilStart}
+          paywallRequired={paywallRequired}
+          isFinished={isFinished}
+          refreshPriority={data.refreshPriority ?? null}
+          meteo={data.meteo ?? null}
+          lisibilite={roleLisibilite}
+        />
+
+        {/* 2. ARRIVÉE OFFICIELLE — en haut si dispo, comme PMU.fr */}
         {isFinished && pronostic && officialArrival.length > 0 ? (
-          <section>
-            <SectionKicker>Résultat du ticket</SectionKicker>
-            <TicketResultBanner
-              pronostic={pronostic}
-              officialArrival={officialArrival}
-            />
-          </section>
+          <TicketResultBanner
+            pronostic={pronostic}
+            officialArrival={officialArrival}
+          />
         ) : null}
 
         {isFinished && officialArrival.length > 0 ? (
@@ -197,8 +208,9 @@ function RaceDetailsContent({
           </section>
         ) : null}
 
+        {/* 3. VERDICT IA — la décision claire */}
         <section>
-          <SectionKicker>Decision TurfEdge</SectionKicker>
+          <SectionKicker>Verdict TurfEdge V9.2</SectionKicker>
           {paywallRequired ? (
             <LockedTicketCard
               previewLabel={data.paywall?.preview?.favori?.nom ?? null}
@@ -215,25 +227,38 @@ function RaceDetailsContent({
             <AnalysisPendingCard />
           )}
           <p className="mt-3 rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-4 py-3 text-xs font-semibold leading-5 text-[var(--pmu-text-muted)]">
-            Lecture pratique: decision, cheval, mise et raisons. Un pari reste
-            risque; PMU Gagnant sert d&apos;aide au tri, pas de garantie de gain.
+            Lecture pratique: decision, cheval, mise et raisons. Un pari reste risque; PMU Gagnant sert d&apos;aide au tri, pas de garantie de gain.
           </p>
         </section>
 
-        <RaceHeroSection
-          courseInfo={courseInfo}
-          selectedDate={selectedDate}
-          minutesUntilStart={data.minutesUntilStart}
-          paywallRequired={paywallRequired}
-          isFinished={isFinished}
-          refreshPriority={data.refreshPriority ?? null}
-          meteo={data.meteo ?? null}
-          lisibilite={roleLisibilite}
-        />
+        {/* 4. TABLE DES PARTANTS — comme PMU.fr, section centrale */}
+        <section>
+          <SectionKicker>Table des partants</SectionKicker>
+          <ParticipantsTable
+            participants={participants}
+            favoriNum={pronostic?.favoris?.[0] ?? null}
+            pepiteNum={data.analysis?.pepiteDuJour?.numPmu ?? null}
+            estPlat={courseInfo.discipline?.toUpperCase() === "PLAT"}
+            courseFinished={isFinished}
+            officialArrival={officialArrival}
+          />
+        </section>
 
+        {/* 5. TOP 5 AVIS EXPERT */}
+        {!isFinished ? (
+          <section>
+            <SectionKicker>Avis expert IA — top 5</SectionKicker>
+            <AvisExpert
+              predictions={data.avisExpert ?? []}
+              isPremium={!paywallRequired}
+            />
+          </section>
+        ) : null}
+
+        {/* 6. RÔLES CLÉS — en bas, optionnel */}
         {roles.length > 0 ? (
           <section>
-            <SectionKicker>4 rôles clés</SectionKicker>
+            <SectionKicker>Rôles clés</SectionKicker>
             <CourseRoles
               roles={roles}
               lisibilite={roleLisibilite}
@@ -243,16 +268,7 @@ function RaceDetailsContent({
           </section>
         ) : null}
 
-        {!isFinished ? (
-          <section>
-            <SectionKicker>Avis expert - top 5</SectionKicker>
-            <AvisExpert
-              predictions={data.avisExpert ?? []}
-              isPremium={!paywallRequired}
-            />
-          </section>
-        ) : null}
-
+        {/* 7. ÉVOLUTION COTES */}
         {(data.liveCotes ?? []).length > 0 ? (
           <section>
             <SectionKicker>Évolution des cotes</SectionKicker>
@@ -263,17 +279,6 @@ function RaceDetailsContent({
           </section>
         ) : null}
 
-        <section>
-          <SectionKicker>Pour les experts</SectionKicker>
-          <ParticipantsTable
-            participants={participants}
-            favoriNum={pronostic?.favoris?.[0] ?? null}
-            pepiteNum={data.analysis?.pepiteDuJour?.numPmu ?? null}
-            estPlat={courseInfo.discipline?.toUpperCase() === "PLAT"}
-            courseFinished={isFinished}
-            officialArrival={officialArrival}
-          />
-        </section>
       </div>
     </>
   );
