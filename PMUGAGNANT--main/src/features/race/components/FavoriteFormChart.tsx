@@ -40,7 +40,7 @@ export function FavoriteFormChart({ musique }: { musique?: string | null }) {
         <div>
           <p className="app-label">Forme du cheval</p>
           <h3 className="mt-1 text-lg font-black text-[var(--pmu-text)]">
-            Les 5 derni\u00E8res sorties
+            Les 5 dernières sorties
           </h3>
         </div>
         <span className={`turf-trend-pill is-${trend.direction}`}>
@@ -65,7 +65,7 @@ export function FavoriteFormChart({ musique }: { musique?: string | null }) {
       </div>
 
       <p className="mt-3 text-xs leading-5 text-[var(--pmu-text-soft)]">
-        M\u00E9dailles = podium r\u00E9cent. Pastilles noires = sortie moins convaincante.
+        Médailles = podium récent. Pastilles noires = sortie moins convaincante.
       </p>
     </div>
   );

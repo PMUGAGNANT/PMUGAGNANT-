@@ -135,7 +135,7 @@ function factorToSentence(raw: string) {
 function getConfidenceProfile(confidence: number): ConfidenceProfile {
   if (confidence >= 8.5) {
     return {
-      label: "S\u00FBr",
+      label: "Sûr",
       color: "var(--pmu-primary)",
       tone: "safe",
     };
@@ -158,7 +158,7 @@ function getConfidenceProfile(confidence: number): ConfidenceProfile {
   }
 
   return {
-    label: "Risqu\u00E9",
+    label: "Risqué",
     color: "var(--pmu-red)",
     tone: "risk",
   };
@@ -300,7 +300,7 @@ export function CoursePronostic({ pronostic, participants, courseInfo }: CourseP
     betState === "loading"
       ? "Enregistrement..."
       : betState === "success"
-        ? "Ticket enregistr\u00E9"
+        ? "Ticket enregistré"
         : shouldPlay
           ? "Je joue ce ticket"
           : "On passe cette course";
@@ -347,7 +347,7 @@ export function CoursePronostic({ pronostic, participants, courseInfo }: CourseP
       }
 
       setBetState("success");
-      setBetMessage("Ticket enregistr\u00E9 dans ton historique.");
+      setBetMessage("Ticket enregistré dans ton historique.");
       setConfirmationVisible(true);
       playConfirmationSound();
       window.setTimeout(() => setConfirmationVisible(false), 1800);
@@ -366,13 +366,13 @@ export function CoursePronostic({ pronostic, participants, courseInfo }: CourseP
       {confirmationVisible ? (
         <div className="turf-confirmation-burst" role="status">
           <span>{ICONS.check}</span>
-          Ticket ajout\u00E9
+          Ticket ajouté
         </div>
       ) : null}
 
       <div className="turf-decision-hero" data-tone={confidenceProfile.tone}>
         <div>
-          <p className="app-kicker">{getRaceCode(courseInfo)} - d\u00E9cision imm\u00E9diate</p>
+          <p className="app-kicker">{getRaceCode(courseInfo)} - décision immédiate</p>
           <h2>{decision}</h2>
           <p>
             {shouldPlay
@@ -404,7 +404,7 @@ export function CoursePronostic({ pronostic, participants, courseInfo }: CourseP
 
       <div className="grid gap-3 p-4 md:grid-cols-[1fr,0.78fr] md:p-5">
         <div className="turf-stake-panel">
-          <p className="app-label">Mise conseill\u00E9e</p>
+          <p className="app-label">Mise conseillée</p>
           <div className="mt-2 flex items-end justify-between gap-3">
             <strong>{formatEuros(stake)}</strong>
             <span>{betType}</span>
@@ -433,7 +433,7 @@ export function CoursePronostic({ pronostic, participants, courseInfo }: CourseP
             ))}
           </div>
           <p className="mt-3 text-xs font-semibold text-[var(--pmu-text-soft)]">
-            {positiveSignals}/7 signaux positifs. Lecture simple, mise ma\u00EEtris\u00E9e.
+            {positiveSignals}/7 signaux positifs. Lecture simple, mise maîtrisée.
           </p>
         </div>
       </div>
@@ -452,7 +452,7 @@ export function CoursePronostic({ pronostic, participants, courseInfo }: CourseP
             {actionLabel}
           </button>
           <p className="mt-3 text-xs leading-5 text-[var(--pmu-text-soft)]">
-            Le ticket est enregistr\u00E9 dans ton historique perso avec la mise, la cote et
+            Le ticket est enregistré dans ton historique perso avec la mise, la cote et
             le cheval joue.
           </p>
           {betMessage ? (
