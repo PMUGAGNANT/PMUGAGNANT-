@@ -187,7 +187,7 @@ export function CourseRoles({
             <p
               title={role.cheval_nom}
               style={{
-                color: "var(--pmu-text)",
+                color: "#1A2018",
                 fontFamily: "var(--font-display), Georgia, serif",
                 fontSize: "1rem",
                 fontStyle: "italic",
@@ -199,7 +199,7 @@ export function CourseRoles({
             >
               {role.cheval_nom}
             </p>
-            <p style={{ color: "var(--pmu-text-muted)", fontSize: "0.65rem" }}>
+            <p style={{ color: "#6b6b4a", fontSize: "0.65rem" }}>
               N°{role.cheval_num}
               {positionFinale ? ` · arrivée ${positionFinale}` : ""}
             </p>
@@ -217,7 +217,7 @@ export function CourseRoles({
 
             <p
               style={{
-                color: "var(--pmu-text-muted)",
+                color: "#6b6b4a",
                 fontSize: "0.68rem",
                 lineHeight: 1.3,
                 marginTop: "0.45rem",
@@ -238,10 +238,10 @@ export function CourseRoles({
                     className="app-input mt-1 w-full"
                   />
                 </label>
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--pmu-text-soft)]">
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs" style={{ color: "#6b6b4a" }}>
                   <span>
                     Mise suggérée :{" "}
-                    <strong className="text-[var(--pmu-text)]">
+                    <strong style={{ color: "#1A2018" }}>
                       {kelly.mise_conseille} EUR
                     </strong>{" "}
                     ({kelly.fraction_bankroll}%)

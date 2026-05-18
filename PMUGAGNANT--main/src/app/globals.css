@@ -4683,6 +4683,11 @@ html { scroll-behavior: smooth; }
   border-top: 1px solid var(--pmu-border);
   z-index: 20;
 }
+@media (min-width: 768px) {
+  .turf-sticky-play {
+    display: none;
+  }
+}
 .turf-sticky-play > div p {
   font-size: 14px;
   font-weight: 700;
