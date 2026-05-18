@@ -46,7 +46,7 @@ export const metadata: Metadata = {
   publisher: "PMU Gagnant",
   title: "PMU Gagnant - L'IA qui trie les courses PMU",
   description:
-    "Chaque matin, PMU Gagnant analyse les courses PMU, affiche les tickets jouables, les courses a eviter, la confiance IA et la mise conseillee.",
+    "Chaque matin, PMU Gagnant analyse les courses PMU, affiche les tickets jouables, les courses à éviter, la confiance IA et la mise conseillée.",
   keywords: [
     "PMU",
     "pronostic",
@@ -96,7 +96,7 @@ export const metadata: Metadata = {
   twitter: {
     images: [defaultOgImage],
     card: "summary_large_image",
-    title: "PMU Gagnant - L'IA qui trie les courses PMU",
+    title: "PMU Gagnant · L'IA qui trie les courses PMU",
     description:
       "Courses triees, confiance IA, tickets jouables et courses a eviter.",
   },

@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Resultats PMU - TurfEdge",
+  title: "Résultats PMU - TurfEdge",
   description:
-    "Resultats PMU et suivi des performances TurfEdge pour comparer pronostics, scores IA, gains et pertes.",
+    "Résultats PMU et suivi des performances TurfEdge pour comparer pronostics, scores IA, gains et pertes.",
+  openGraph: {
+    title: "Résultats réels TurfEdge",
+    description: "Taux de réussite, ROI et historique complet — gains comme pertes.",
+  },
 };
 
 export { default } from "@/features/results/ResultsPage";

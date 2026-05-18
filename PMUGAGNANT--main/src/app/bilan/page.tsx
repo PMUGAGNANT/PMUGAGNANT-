@@ -3,11 +3,11 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Bilan TurfEdge - ROI, gains et calibration PMU",
   description:
-    "Suivez le ROI TurfEdge sur 7, 30 et 90 jours, comparez les mises conseillees aux gains et exportez votre bilan mensuel.",
+    "Suivez le ROI TurfEdge sur 7, 30 et 90 jours, comparez les mises conseillées aux gains et exportez votre bilan mensuel.",
   openGraph: {
-    title: "Bilan TurfEdge",
+    title: "Bilan TurfEdge · ROI réel",
     description:
-      "Tableau de bord ROI, performance algo, calibration et historique des pronostics PMU notes.",
+      "Tableau de bord ROI, performance algo, calibration et historique des pronostics PMU notés.",
   },
 };
 

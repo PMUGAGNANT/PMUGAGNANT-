@@ -31,7 +31,7 @@ export const STATUS_CONFIG: Record<
     background: "color-mix(in srgb, var(--pmu-orange) 14%, transparent)",
   },
   GAGNE: {
-    label: "Gagne",
+    label: "Gagné",
     color: "var(--pmu-primary)",
     background: "color-mix(in srgb, var(--pmu-primary) 14%, transparent)",
   },
