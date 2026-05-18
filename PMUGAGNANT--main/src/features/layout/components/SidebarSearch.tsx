@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { getTodayDateStr } from "@/lib/date-utils";
 
-type SearchRunnerType = "numero" | "jockey" | "driver" | "entraineur" | "cheval";
+type SearchRunnerType = "numero" | "jockey" | "driver" | "entraineur" | "cheval" | "hippodrome";
 
 type SearchRunnerEntry = {
   reunion: number;
@@ -47,6 +47,7 @@ const TYPE_LABELS: Record<SearchRunnerType, string> = {
   driver: "Driver",
   entraineur: "Entraîneur",
   cheval: "Cheval",
+  hippodrome: "Hippodrome",
 };
 
 const TYPE_ICONS: Record<SearchRunnerType, string> = {
@@ -55,6 +56,7 @@ const TYPE_ICONS: Record<SearchRunnerType, string> = {
   driver: "🏇",
   entraineur: "🎯",
   cheval: "🐎",
+  hippodrome: "🏟",
 };
 
 function formatOdds(value: number | null) {
@@ -74,7 +76,7 @@ type SidebarSearchProps = {
 
 export function SidebarSearch({
   className = "",
-  placeholder = "No, cheval, jockey, driver, entraineur",
+  placeholder = "No, cheval, jockey, entraîneur, hippodrome",
 }: SidebarSearchProps) {
   const router = useRouter();
   const inputId = useId();
@@ -379,11 +381,12 @@ export function SidebarSearch({
                         >
                           <div className="text-[12px] font-semibold text-[var(--pmu-text)]">
                             <span className="mr-1 text-[var(--pmu-text-muted)]">{prefix}</span>
-                            R{entry.reunion}C{entry.course} {entry.hippodrome} {entry.heureDepart} → N°
-                            {entry.numPmu} {entry.cheval}
+                            R{entry.reunion}C{entry.course} {entry.hippodrome} {entry.heureDepart}
+                            {group.type !== "hippodrome" ? ` → N°${entry.numPmu} ${entry.cheval}` : null}
                           </div>
                           <div className="mt-1 pl-4 text-[11px] text-[var(--pmu-text-soft)]">
-                            {entry.nomCourse} • {entry.discipline} • Cote {formatOdds(entry.cote)}
+                            {entry.nomCourse} • {entry.discipline}
+                            {group.type !== "hippodrome" ? ` • Cote ${formatOdds(entry.cote)}` : null}
                           </div>
                         </button>
                       );

@@ -76,9 +76,9 @@ function EmptyTeaser() {
   );
 }
 
-function TeaserCard({ teaser }: { teaser: SubscribeTeaser }) {
+function TeaserCard({ teaser, checkoutHref }: { teaser: SubscribeTeaser; checkoutHref: string }) {
   return (
-    <article className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] p-4 shadow-[0_18px_45px_rgba(0,0,0,0.20)]">
+    <article className="relative overflow-hidden rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] p-4 shadow-[0_18px_45px_rgba(0,0,0,0.20)]">
       <div className="flex items-center justify-between gap-3">
         <span className="rounded-full bg-[var(--pmu-gold)] px-3 py-1 text-xs font-black uppercase text-black">
           {teaser.raceLabel}
@@ -91,10 +91,10 @@ function TeaserCard({ teaser }: { teaser: SubscribeTeaser }) {
         {teaser.hippodrome}
       </p>
       <div className="mt-2 flex items-center gap-3">
-        <span className="grid h-11 w-11 place-items-center rounded-full border border-[var(--pmu-gold)] bg-[var(--pmu-gold-light)] text-xl font-black text-[var(--pmu-gold)]">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-[var(--pmu-gold)] bg-[var(--pmu-gold-light)] text-xl font-black text-[var(--pmu-gold)]">
           {teaser.dossard}
         </span>
-        <h3 className="min-w-0 text-2xl font-black leading-tight text-[var(--pmu-text)]">
+        <h3 className="min-w-0 select-none truncate text-2xl font-black leading-tight text-[var(--pmu-text)] blur-sm">
           {teaser.cheval}
         </h3>
       </div>
@@ -106,11 +106,19 @@ function TeaserCard({ teaser }: { teaser: SubscribeTeaser }) {
           </p>
         </div>
         <div className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] p-3">
-          <p className="app-label">Cote</p>
-          <p className="mt-1 text-2xl font-black text-[var(--pmu-gold)]">
-            {teaser.odds ? teaser.odds.toFixed(1) : "--"}
-          </p>
+          <p className="app-label">Mise conseillée</p>
+          <p className="mt-1 select-none text-2xl font-black text-[var(--pmu-gold)] blur-sm">●●€</p>
         </div>
+      </div>
+      {/* Lock overlay */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--pmu-surface)]/60 backdrop-blur-[2px]">
+        <span className="text-2xl">🔒</span>
+        <Link
+          href={checkoutHref}
+          className="app-button-primary !py-2 !text-xs"
+        >
+          Débloquer · 9.99€/mois
+        </Link>
       </div>
     </article>
   );
@@ -124,6 +132,7 @@ export default async function SubscribePage() {
   const teasers = buildSubscribeTeasers(todayRows);
   const roi = computeSubscribeRoiSummary(historyRows);
   const roiLabel = roi.bets > 0 ? formatSubscribeRoi(roi.roi) : "En cours";
+  const checkoutHref = "/mes-paris?billing=checkout";
 
   return (
     <main className="mx-auto flex w-full max-w-[76rem] flex-col gap-7 px-4 pb-16">
@@ -208,7 +217,7 @@ export default async function SubscribePage() {
         </div>
         <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-1">
           {teasers.length > 0
-            ? teasers.map((teaser) => <TeaserCard key={teaser.id} teaser={teaser} />)
+            ? teasers.map((teaser) => <TeaserCard key={teaser.id} teaser={teaser} checkoutHref={checkoutHref} />)
             : [0, 1, 2].map((item) => <EmptyTeaser key={item} />)}
         </div>
       </section>

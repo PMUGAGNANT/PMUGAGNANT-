@@ -106,14 +106,14 @@ export function HomeControlBar({
           <span>/ 10</span>
         </div>
         <div className="app-card-muted">
-          <p className="app-label">ROI semaine</p>
-          <p>+8.3%</p>
+          <p className="app-label">Alertes T-10</p>
+          <p>{alertCount || "--"}</p>
           <span>{stats.active} courses actives</span>
         </div>
-        <div className="app-card-muted turf-bankroll-kpi">
-          <p className="app-label">Bankroll</p>
-          <p>1 240 EUR</p>
-          <span>+240 ce mois</span>
+        <div className="app-card-muted">
+          <p className="app-label">Réunions</p>
+          <p>{stats.meetings || "--"}</p>
+          <span>hippodrome{stats.meetings > 1 ? "s" : ""} aujourd&apos;hui</span>
         </div>
       </div>
     </section>
