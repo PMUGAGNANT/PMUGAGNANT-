@@ -9,7 +9,7 @@ export function BetHistoryCard({ bet }: { bet: Bet }) {
   const gainLabel =
     bet.gain !== null
       ? `${bet.gain >= 0 ? "+" : ""}${formatEuros(bet.gain)}`
-      : "Resultat en attente";
+      : "Résultat en attente";
 
   return (
     <article className="app-card p-5">
@@ -19,7 +19,7 @@ export function BetHistoryCard({ bet }: { bet: Bet }) {
             R{bet.reunion}C{bet.course} - {bet.hippodrome}
           </p>
           <h3 className="mt-2 text-xl font-black leading-tight text-[var(--pmu-text)]">
-            N{bet.cheval_num} {bet.cheval_nom}
+            #{bet.cheval_num} {bet.cheval_nom}
           </h3>
         </div>
 
@@ -42,7 +42,7 @@ export function BetHistoryCard({ bet }: { bet: Bet }) {
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <div className="rounded-[1rem] border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface-2)_90%,transparent)] px-4 py-3 text-sm text-[var(--pmu-text-soft)]">
-          {bet.date_str} a {bet.heure_depart}
+          {bet.date_str} à {bet.heure_depart}
         </div>
         <div
           className="rounded-[1rem] border px-4 py-3 text-sm font-black"

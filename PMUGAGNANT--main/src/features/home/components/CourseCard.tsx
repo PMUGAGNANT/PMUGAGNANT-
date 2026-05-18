@@ -311,7 +311,7 @@ export function CourseCard({
         <div className="stake-chip px-4 py-4">
           <p className="app-label text-[var(--pmu-gold)]">Mise</p>
           <p className="mt-2 text-2xl font-black text-[var(--pmu-text)]">
-            {detailsLocked ? "PRO masque" : stakeLabel}
+            {detailsLocked ? "●●●" : stakeLabel}
           </p>
         </div>
         <div className="app-card-muted px-4 py-4">

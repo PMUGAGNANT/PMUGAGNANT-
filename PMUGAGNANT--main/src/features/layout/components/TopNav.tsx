@@ -65,11 +65,11 @@ export function TopNav() {
         <div className="turf-search-strip__inner">
           <div className="turf-search-strip__label">
             <span>Recherche directe</span>
-            <small>No, cheval, jockey, driver, entraineur</small>
+            <small>No, cheval, jockey, hippodrome</small>
           </div>
           <SidebarSearch
             className="turf-search-strip__field"
-            placeholder="Tape un no, cheval, jockey, driver ou entraineur"
+            placeholder="No, cheval, jockey, hippodrome..."
           />
         </div>
       </div>

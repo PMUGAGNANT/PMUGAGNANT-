@@ -116,15 +116,15 @@ function factorToSentence(raw: string) {
   const normalized = normalizeKey(raw);
 
   if (normalized.includes("forme recente")) return "Il reste sur une forme solide";
-  if (normalized.includes("musique recente")) return "Ses dernieres sorties sont regulieres";
-  if (normalized.includes("poids fraicheur")) return "Le poids et la fraicheur sont bons";
-  if (normalized.includes("distance piste")) return "La distance correspond a son profil";
-  if (normalized.includes("marche pmu")) return "Le marche confirme sa chance";
+  if (normalized.includes("musique recente")) return "Ses dernières sorties sont régulières";
+  if (normalized.includes("poids fraicheur")) return "Le poids et la fraîcheur sont bons";
+  if (normalized.includes("distance piste")) return "La distance correspond à son profil";
+  if (normalized.includes("marche pmu")) return "Le marché confirme sa chance";
   if (normalized.includes("jockey")) return "Son jockey renforce le ticket";
   if (normalized.includes("driver")) return "Son driver est un vrai plus";
-  if (normalized.includes("entraineur")) return "Son entrainement est fiable";
+  if (normalized.includes("entraineur")) return "Son entraîneur est fiable";
   if (normalized.includes("terrain")) return "Le terrain joue pour lui";
-  if (normalized.includes("corde")) return "Son numero de corde est correct";
+  if (normalized.includes("corde")) return "Son numéro de corde est correct";
 
   const cleaned = raw.trim().replace(/\.$/, "");
   if (!cleaned) return "";
@@ -185,25 +185,25 @@ function buildReasons(
   }
 
   if (selectedHorse.musique && selectedHorse.musique !== "--") {
-    addPositive("Sa forme recente soutient le choix", ICONS.chart);
+    addPositive("Sa forme récente soutient le choix", ICONS.chart);
   }
 
   const human = selectedHorse.jockey || selectedHorse.driver;
   if (human) {
-    addPositive(`${human} est associe au cheval`, ICONS.human);
+    addPositive(`${human} est associé au cheval`, ICONS.human);
   }
 
   const warnings: ReasonCard[] = [];
   if (odds !== null && odds >= 12) {
     warnings.push({
       icon: ICONS.warning,
-      text: "Cote elevee, risque plus fort",
+      text: "Cote élevée, risque plus fort",
       tone: "warning",
     });
   } else if (!selectedHorse.musique || selectedHorse.musique === "--") {
     warnings.push({
       icon: ICONS.warning,
-      text: "Historique recent incomplet",
+      text: "Historique récent incomplet",
       tone: "warning",
     });
   } else if (confidence < 7) {
@@ -273,16 +273,17 @@ export function CoursePronostic({ pronostic, participants, courseInfo }: CourseP
   const confidence = Math.max(0, Math.min(pronostic.scoreConfiance ?? 0, 10));
   const confidenceProfile = getConfidenceProfile(confidence);
   const betType = formatBetType(pronostic.betType ?? pronostic.recommandation);
-  const human = selectedHorse.jockey || selectedHorse.driver || "Jockey / driver a confirmer";
-  const trainer = selectedHorse.entraineur || "Entraineur a confirmer";
+  const human = selectedHorse.jockey || selectedHorse.driver || "Jockey / driver à confirmer";
+  const trainer = selectedHorse.entraineur || "Entraîneur à confirmer";
   const stake = getVisibleStake(pronostic, betType, confidence);
   const odds =
     typeof selectedHorse.cote === "number" && Number.isFinite(selectedHorse.cote)
       ? selectedHorse.cote
       : null;
-  const grossReturn = odds ? stake * odds : null;
-  const netReturn = grossReturn !== null ? grossReturn - stake : null;
   const shouldPlay = confidence >= 6 && stake > 0;
+  const displayStake = shouldPlay ? stake : 0;
+  const grossReturn = shouldPlay && odds ? stake * odds : null;
+  const netReturn = grossReturn !== null ? grossReturn - stake : null;
   const decision = shouldPlay ? "JOUER" : "PASSER";
   const betCode = normalizeBetCode(pronostic.betType ?? pronostic.recommandation);
   const positiveSignals = Math.min(7, Math.max(1, Math.round(confidence * 0.7)));
@@ -393,7 +394,7 @@ export function CoursePronostic({ pronostic, participants, courseInfo }: CourseP
         <div className="turf-horse-number">{selectedHorse.numero ?? "--"}</div>
         <div className="min-w-0 flex-1">
           <p className="app-label">Cheval star</p>
-          <h3>{selectedHorse.nom || "Cheval a confirmer"}</h3>
+          <h3>{selectedHorse.nom || "Cheval à confirmer"}</h3>
           <div className="mt-3 grid gap-2 sm:grid-cols-3">
             <span>{human}</span>
             <span>{trainer}</span>
@@ -406,15 +407,17 @@ export function CoursePronostic({ pronostic, participants, courseInfo }: CourseP
         <div className="turf-stake-panel">
           <p className="app-label">Mise conseillée</p>
           <div className="mt-2 flex items-end justify-between gap-3">
-            <strong>{formatEuros(stake)}</strong>
-            <span>{betType}</span>
+            <strong>{formatEuros(displayStake)}</strong>
+            <span>{shouldPlay ? betType : "Bankroll protégée"}</span>
           </div>
           <p className="mt-3 text-sm font-bold text-[var(--pmu-text)]">
-            {odds
-              ? `Mise ${formatEuros(stake)} -> gain potentiel ${formatEuros(grossReturn ?? 0)}`
-              : "Gain potentiel calcule des que la cote est disponible."}
+            {shouldPlay
+              ? odds
+                ? `Mise ${formatEuros(stake)} → gain potentiel ${formatEuros(grossReturn ?? 0)}`
+                : "Gain potentiel calculé dès que la cote est disponible."
+              : "Signal insuffisant · mise à 0 · bankroll préservée."}
           </p>
-          {netReturn !== null ? (
+          {shouldPlay && netReturn !== null ? (
             <p className="mt-1 text-xs font-semibold text-[var(--pmu-primary)]">
               Net potentiel : {netReturn >= 0 ? "+" : ""}
               {formatEuros(netReturn)}
@@ -433,7 +436,7 @@ export function CoursePronostic({ pronostic, participants, courseInfo }: CourseP
             ))}
           </div>
           <p className="mt-3 text-xs font-semibold text-[var(--pmu-text-soft)]">
-            {positiveSignals}/7 signaux positifs. Lecture simple, mise maîtrisée.
+            {positiveSignals}/7 signaux positifs · lecture simple, mise maîtrisée.
           </p>
         </div>
       </div>
@@ -452,8 +455,8 @@ export function CoursePronostic({ pronostic, participants, courseInfo }: CourseP
             {actionLabel}
           </button>
           <p className="mt-3 text-xs leading-5 text-[var(--pmu-text-soft)]">
-            Le ticket est enregistré dans ton historique perso avec la mise, la cote et
-            le cheval joue.
+            Le ticket est enregistré dans ton historique avec la mise, la cote et
+            le cheval joué.
           </p>
           {betMessage ? (
             <p
@@ -469,9 +472,11 @@ export function CoursePronostic({ pronostic, participants, courseInfo }: CourseP
 
       <div className="turf-sticky-play md:hidden">
         <div>
-          <p>{selectedHorse.nom || "Cheval conseille"}</p>
+          <p>{selectedHorse.nom || "Cheval conseillé"}</p>
           <span>
-            {formatEuros(stake)} - cote {formatOdds(selectedHorse.cote)}
+            {shouldPlay
+              ? `${formatEuros(stake)} · cote ${formatOdds(selectedHorse.cote)}`
+              : "On passe · bankroll protégée"}
           </span>
         </div>
         <button

@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin
+Disallow: /api/
+Disallow: /subscribe/success
+
+Sitemap: https://pmugagnant.fr/sitemap.xml

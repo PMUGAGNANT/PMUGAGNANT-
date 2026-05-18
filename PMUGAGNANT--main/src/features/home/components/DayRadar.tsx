@@ -10,6 +10,24 @@ import type { HomeStats } from "@/features/home/components/home-page-types";
 
 const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V"];
 
+function LiveDot() {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        width: 7,
+        height: 7,
+        borderRadius: "50%",
+        background: "#00C851",
+        boxShadow: "0 0 0 0 rgba(0,200,81,.4)",
+        animation: "livePulse 1.8s ease-in-out infinite",
+        flexShrink: 0,
+      }}
+      aria-hidden
+    />
+  );
+}
+
 export function DayRadar({
   focusRace,
   focusParticipants,
@@ -27,18 +45,33 @@ export function DayRadar({
   const focusRaceMeta = focusRace
     ? {
         code: formatRaceCode(focusRace.race),
-        label: `Reunion ${focusRace.race.reunion} - Course ${focusRace.race.course}`,
+        label: `Réunion ${focusRace.race.reunion} - Course ${focusRace.race.course}`,
         hippodrome: focusRace.race.hippodrome,
         heureDepart: focusRace.race.heureDepart,
       }
     : null;
 
+  const lisibiliteWidth = focusRace ? Math.max(55, Math.min(98, radarScore + 2)) : 36;
+  const valueWidth = focusRace ? Math.max(34, Math.min(92, radarScore - 8)) : 28;
+  const fiabiliteWidth = focusRace ? Math.max(40, Math.min(96, radarScore - 2)) : 30;
+  const bankrollWidth = focusRace ? Math.max(20, Math.min(80, radarScore - 20)) : 0;
+
   return (
     <aside className="turf-home-aside" aria-label="Radar du jour">
       <section className="turf-aside-card turf-radar-card">
-        <p className="app-kicker">Radar du jour</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="app-kicker">Radar du jour</p>
+          {focusRace?.minutesUntilStart != null && focusRace.minutesUntilStart <= 30 && focusRace.minutesUntilStart > 0 ? (
+            <div className="flex items-center gap-1.5">
+              <LiveDot />
+              <span style={{ fontSize: 10, fontWeight: 700, color: "#00C851", letterSpacing: ".08em", textTransform: "uppercase" }}>
+                Live
+              </span>
+            </div>
+          ) : null}
+        </div>
         <div className="turf-radar-card__score">{radarScore || "--"}</div>
-        <p className="app-label">Score journee - lisibilite</p>
+        <p className="app-label">Score journée · Lisibilité</p>
 
         {focusRaceMeta ? (
           <div className="mt-4 rounded-[0.7rem] border border-[color-mix(in_srgb,var(--pmu-primary)_28%,transparent)] bg-[var(--pmu-primary-fade)] px-3 py-2">
@@ -49,28 +82,30 @@ export function DayRadar({
               {focusRaceMeta.code}
             </p>
             <p className="mt-1 text-xs text-[var(--pmu-text-soft)]">
-              {focusRaceMeta.hippodrome} - {focusRaceMeta.heureDepart}
+              {focusRaceMeta.hippodrome} · {focusRaceMeta.heureDepart}
             </p>
           </div>
         ) : null}
 
         <div className="turf-radar-lines">
           <div>
-            <span>Lisibilite</span>
-            <i style={{ width: `${focusRace ? 82 : 36}%` }} />
+            <span>Lisibilité</span>
+            <i style={{ width: `${lisibiliteWidth}%` }} />
           </div>
           <div>
             <span>Value</span>
-            <i style={{ width: `${focusRace ? Math.max(34, radarScore - 10) : 28}%` }} />
+            <i style={{ width: `${valueWidth}%` }} />
           </div>
           <div>
-            <span>Fiabilite</span>
-            <i style={{ width: `${focusRace ? Math.max(38, radarScore - 4) : 30}%` }} />
+            <span>Fiabilité</span>
+            <i style={{ width: `${fiabiliteWidth}%` }} />
           </div>
-          <div>
-            <span>Bankroll</span>
-            <i className="is-gold" style={{ width: "0%" }} />
-          </div>
+          {bankrollWidth > 0 ? (
+            <div>
+              <span>Bankroll</span>
+              <i className="is-gold" style={{ width: `${bankrollWidth}%` }} />
+            </div>
+          ) : null}
         </div>
       </section>
 
@@ -79,7 +114,7 @@ export function DayRadar({
           <span>Ticket prioritaire</span>
           {focusRaceMeta ? (
             <span className="turf-ticket-card__race">
-              {focusRaceMeta.label} - {focusRaceMeta.hippodrome.toLocaleUpperCase("fr-FR")}
+              {focusRaceMeta.label} · {focusRaceMeta.hippodrome.toLocaleUpperCase("fr-FR")}
             </span>
           ) : null}
         </header>
@@ -99,8 +134,8 @@ export function DayRadar({
                       {participant.nom ?? "Cheval"}
                     </p>
                     <small>
-                      Cote {formatOddsLabel(participant.cote)} -{" "}
-                      {participant.jockey ?? participant.driver ?? "monte a confirmer"}
+                      Cote {formatOddsLabel(participant.cote)} ·{" "}
+                      {participant.jockey ?? participant.driver ?? "monté à confirmer"}
                     </small>
                   </div>
                 </div>
@@ -118,7 +153,7 @@ export function DayRadar({
               </div>
             </div>
           ) : (
-            <p className="turf-ticket-card__empty">Ticket principal en preparation</p>
+            <p className="turf-ticket-card__empty">Ticket principal en préparation</p>
           )}
         </div>
       </section>
@@ -127,7 +162,7 @@ export function DayRadar({
         <p>Jouer juste, jouer rare, jouer fort</p>
         <span>TurfEdge &middot; Algo v9.2</span>
         <small>
-          {stats.playable} validee{stats.playable > 1 ? "s" : ""} sur {stats.total} courses
+          {stats.playable} validée{stats.playable > 1 ? "s" : ""} sur {stats.total} courses
         </small>
       </section>
     </aside>

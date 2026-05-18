@@ -296,7 +296,7 @@ export function PriorityTickets({
         <section className="rounded-lg border border-[var(--pmu-border)] bg-[color-mix(in_srgb,var(--pmu-surface)_82%,transparent)] p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="app-label">Cheval a jouer</p>
+              <p className="app-label">Cheval à jouer</p>
               <h3 className="mt-1 text-[1.9rem] font-black leading-[0.98] text-[var(--pmu-text)]">
                 {focusPickTitle}
               </h3>
