@@ -430,7 +430,7 @@ export function ParticipantsTable({
                       {getHumanLead(participant, estPlat)}
                     </p>
                     <p className="truncate text-xs text-[var(--pmu-text-soft)]">
-                      {participant.entraineur || "Entraineur --"}
+                      {participant.entraineur || "Entraîneur --"}
                     </p>
                   </td>
                   <td className="font-mono text-[0.65rem] text-[var(--pmu-text-soft)]">
