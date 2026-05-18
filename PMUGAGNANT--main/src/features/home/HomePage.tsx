@@ -242,10 +242,10 @@ function PageContent() {
           </div>
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
             <span className="col-span-2 rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface)] px-3 py-2 text-center text-sm font-black text-[var(--pmu-text)] sm:col-span-1">
-              Score journee {dayScore || "--"} / 100
+              Score journée {dayScore || "--"} / 100
             </span>
             <button type="button" className="app-button-secondary min-h-10 px-3 text-sm" onClick={() => setSelectedDate(addDays(selectedDate, -1))}>
-              Jour precedent
+              Jour précédent
             </button>
             <button type="button" className="app-button-secondary min-h-10 px-3 text-sm" onClick={() => setSelectedDate(getTodayDateStr())}>
               Aujourd&apos;hui
@@ -273,18 +273,18 @@ function PageContent() {
             <section className="app-card border border-[color-mix(in_srgb,var(--pmu-red)_35%,transparent)] p-6" role="alert" aria-live="assertive">
               <p className="text-lg font-bold text-[var(--pmu-red)]">Impossible de charger la page Courses</p>
               <p className="mt-2 text-sm leading-6 text-[var(--pmu-text-soft)]">{error}</p>
-              <button type="button" className="app-button-primary mt-4" onClick={() => setFetchRevision((revision) => revision + 1)}>Reessayer</button>
+              <button type="button" className="app-button-primary mt-4" onClick={() => setFetchRevision((revision) => revision + 1)}>Réessayer</button>
             </section>
           ) : featuredRaces.length === 0 ? (
             <section className="app-card p-8 text-center">
               <p className="text-xl font-black text-[var(--pmu-text)]">Aucune course exploitable pour cette date</p>
-              <p className="mt-3 text-sm leading-6 text-[var(--pmu-text-soft)]">Recharge la journee ou change de date.</p>
+              <p className="mt-3 text-sm leading-6 text-[var(--pmu-text-soft)]">Recharge la journée ou change de date.</p>
             </section>
           ) : (
             <>
               {topParisItems.length > 0 ? (
                 <AccordionPanel
-                  kicker="Sous-fenetre"
+                  kicker="Sous-fenêtre"
                   title="Top decisions"
                   summary={`${topParisItems.length} tickets`}
                   bodyClassName="px-0 py-0"
@@ -294,7 +294,7 @@ function PageContent() {
               ) : null}
 
               <AccordionPanel
-                kicker="Sous-fenetre"
+                kicker="Sous-fenêtre"
                 title="Toutes les courses du jour"
                 summary={`${filteredFeaturedRaces.length} courses`}
                 bodyClassName="px-0 py-0"
@@ -303,9 +303,9 @@ function PageContent() {
               </AccordionPanel>
 
               <AccordionPanel
-                kicker="Sous-fenetre"
-                title="Stats ROI, bankroll, validees"
-                summary={`${stats.playable}/${stats.total || "--"} validees`}
+                kicker="Sous-fenêtre"
+                title="Stats ROI, bankroll, validées"
+                summary={`${stats.playable}/${stats.total || "--"} validées`}
               >
                 <div className="grid gap-3 md:grid-cols-3">
                   <article className="app-card-muted px-4 py-4">
