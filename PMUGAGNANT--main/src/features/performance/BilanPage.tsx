@@ -423,18 +423,18 @@ function BilanPageContent() {
                 </span>
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--pmu-text-soft)]">
-                Calcul base sur les tickets valides, les mises conseillees et les
-                resultats officiels deja rapproches dans l&apos;historique.
+                Calcul basé sur les tickets validés, les mises conseillées et les
+                résultats officiels déjà rapprochés dans l&apos;historique.
               </p>
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
                 <div className="result-chip px-4 py-3">
-                  <p className="app-label">Mises conseillees</p>
+                  <p className="app-label">Mises conseillées</p>
                   <p className="mt-1 text-xl font-black text-[var(--pmu-text)]">
                     {formatCurrency(weeklyStake)}
                   </p>
                 </div>
                 <div className="result-chip px-4 py-3">
-                  <p className="app-label">Tickets valides</p>
+                  <p className="app-label">Tickets validés</p>
                   <p className="mt-1 text-xl font-black text-[var(--pmu-text)]">
                     {weeklySummary?.bets ?? 0}
                   </p>
@@ -466,7 +466,7 @@ function BilanPageContent() {
                     {formatCurrency(weeklyNetGain)}
                   </p>
                   <p className="mt-1 text-xs leading-5 text-[var(--pmu-text-soft)]">
-                    Des courses filtrees, une mise conseillee, un resultat verifie.
+                    Des courses filtrées, une mise conseillée, un résultat vérifié.
                   </p>
                 </div>
               </div>
@@ -720,9 +720,9 @@ function BilanPageContent() {
                       <th className="px-5 py-3">Cheval</th>
                       <th className="px-5 py-3">Arrivee</th>
                       <th className="px-5 py-3">Pari</th>
-                      <th className="px-5 py-3">Decision</th>
-                      <th className="px-5 py-3">Mise conseillee</th>
-                      <th className="px-5 py-3">Mise jouee</th>
+                      <th className="px-5 py-3">Décision</th>
+                      <th className="px-5 py-3">Mise conseillée</th>
+                      <th className="px-5 py-3">Mise jouée</th>
                       <th className="px-5 py-3">Gain</th>
                       <th className="px-5 py-3">Net</th>
                       <th className="px-5 py-3">Resultat</th>

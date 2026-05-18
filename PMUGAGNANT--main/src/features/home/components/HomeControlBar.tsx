@@ -41,11 +41,11 @@ export function HomeControlBar({
         <h1>{formatDisplayDate(selectedDate)}</h1>
         <div className="turf-day-strip__pills">
           <span>{stats.total} courses</span>
-          <span>{stats.playable} validees</span>
+          <span>{stats.playable} validées</span>
           <span>{alertCount} alertes T-10</span>
         </div>
         <p>
-          Score journee <strong>{dayScore || "--"} / 100</strong>
+          Score journée <strong>{dayScore || "--"} / 100</strong>
         </p>
       </div>
 
@@ -68,7 +68,7 @@ export function HomeControlBar({
         <div className="turf-date-tools">
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={onPrevDay} className="app-button-secondary !px-4 !py-3">
-              Jour precedent
+              Jour précédent
             </button>
             <button type="button" onClick={onToday} className="app-button-secondary !px-4 !py-3">
               Aujourd&apos;hui

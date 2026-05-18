@@ -59,9 +59,13 @@ export function HomeHero({
     ? `${liveStats.totalPredictions} tickets · 30 jours`
     : "Données en cours";
   const focusPick = focusRace?.score?.pick;
-  const focusStake = formatStake(
-    focusPick?.confidence ? Math.max(6, Math.round(focusPick.confidence * 2.5)) : 8
-  );
+  const rawConfidence = focusPick?.confidence ?? 0;
+  const shouldPlayFocus = rawConfidence >= 6;
+  const focusStake = !focusRace
+    ? "--"
+    : shouldPlayFocus
+      ? formatStake(Math.max(6, Math.round(rawConfidence * 2.5)))
+      : "0 €";
 
   // Cheval : visible si PRO ou si le pick est disponible ET non verrouillé
   const hasHorse = !!(focusPick?.nom || focusPick?.numPmu);
@@ -236,7 +240,7 @@ export function HomeHero({
               <div className="hh-stat-val" style={{color:"#00C851"}}>{focusCode}</div>
             </div>
             <div className="hh-stat">
-              <div className="hh-stat-lbl">Tickets valides</div>
+              <div className="hh-stat-lbl">Tickets validés</div>
               <div className="hh-stat-val" style={{color:"#F6F2E8"}}>{stats.playable}</div>
             </div>
             <div className="hh-stat">
