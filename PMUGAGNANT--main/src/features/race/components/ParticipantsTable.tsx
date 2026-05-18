@@ -421,7 +421,7 @@ export function ParticipantsTable({
                     <div className="min-w-0">
                       <p
                         className={`truncate font-bold ${struck}`}
-                        style={{ color: isWinner ? "#1A2018" : "var(--pmu-text)" }}
+                        style={{ color: (isWinner || isAlgoPick) ? "#1A2018" : "var(--pmu-text)" }}
                       >
                         {participant.nom || "--"}
                       </p>
@@ -431,13 +431,13 @@ export function ParticipantsTable({
                   <td>
                     <p
                       className="truncate text-sm font-bold"
-                      style={{ color: isWinner ? "#1A2018" : "var(--pmu-text)" }}
+                      style={{ color: (isWinner || isAlgoPick) ? "#1A2018" : "var(--pmu-text)" }}
                     >
                       {getHumanLead(participant, estPlat)}
                     </p>
                     <p
                       className="truncate text-xs"
-                      style={{ color: isWinner ? "#5a5a3e" : "var(--pmu-text-soft)" }}
+                      style={{ color: (isWinner || isAlgoPick) ? "#5a5a3e" : "var(--pmu-text-soft)" }}
                     >
                       {participant.entraineur || "Entraîneur --"}
                     </p>
