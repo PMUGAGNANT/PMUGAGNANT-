@@ -46,6 +46,11 @@ function TicketResultBanner({
     return null;
   }
 
+  const confidence = Math.max(0, Math.min(pronostic.scoreConfiance ?? 0, 10));
+  const rawStake = pronostic.miseConseil ?? 0;
+  const shouldPlay = confidence >= 6 && rawStake > 0;
+  const displayMise = shouldPlay ? rawStake : 0;
+
   const arrival = officialArrival.find(
     (row) => String(row.numPmu) === String(pickNum)
   );
@@ -111,8 +116,7 @@ function TicketResultBanner({
             marginTop: "0.15rem",
           }}
         >
-          {pronostic.betType || "Simple gagnant"} · Mise{" "}
-          {pronostic.miseConseil ?? 0} EUR
+          {pronostic.betType || "Simple gagnant"} · Mise {displayMise} EUR
           {position ? ` · Arrivée ${position === 1 ? "1er" : `${position}e`}` : ""}
         </p>
       </div>
@@ -227,7 +231,7 @@ function RaceDetailsContent({
             <AnalysisPendingCard />
           )}
           <p className="mt-3 rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] px-4 py-3 text-xs font-semibold leading-5 text-[var(--pmu-text-muted)]">
-            Lecture pratique: decision, cheval, mise et raisons. Un pari reste risque; PMU Gagnant sert d&apos;aide au tri, pas de garantie de gain.
+            Lecture pratique : décision, cheval, mise et raisons. Un pari reste risqué ; PMU Gagnant sert d&apos;aide au tri, pas de garantie de gain.
           </p>
         </section>
 
