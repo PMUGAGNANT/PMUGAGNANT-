@@ -22,11 +22,18 @@ interface InviteResponse {
 
 type PageState = "loading" | "active" | "error";
 
+const PERKS = [
+  { icon: "🎯", label: "Cheval conseillé", desc: "Le bon numéro à jouer sur chaque course" },
+  { icon: "💶", label: "Mise Kelly", desc: "La mise exacte pour protéger ta bankroll" },
+  { icon: "🔔", label: "Alertes T-30", desc: "Notifications avant chaque départ fort" },
+  { icon: "📈", label: "Bilan ROI complet", desc: "Toutes tes performances en un coup d'œil" },
+];
+
 export default function SubscribeSuccessPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [state, setState] = useState<PageState>("loading");
-  const [message, setMessage] = useState("Verification du paiement Stripe...");
+  const [message, setMessage] = useState("Vérification du paiement Stripe...");
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -48,32 +55,22 @@ export default function SubscribeSuccessPage() {
 
       try {
         const supabase = getSupabaseBrowserClient();
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
 
         if (!session) {
-          router.push(
-            `/login?redirect=${encodeURIComponent(
-              `/subscribe/success?session_id=${sessionId}`
-            )}`
-          );
+          router.push(`/login?redirect=${encodeURIComponent(`/subscribe/success?session_id=${sessionId}`)}`);
           return;
         }
 
         const statusResponse = await fetch(
           `/api/stripe/checkout-status?session_id=${encodeURIComponent(sessionId)}`,
-          {
-            headers: { Authorization: `Bearer ${session.access_token}` },
-          }
+          { headers: { Authorization: `Bearer ${session.access_token}` } }
         );
         const statusPayload = (await statusResponse.json()) as StatusResponse;
 
         if (!statusResponse.ok || statusPayload.activated !== true) {
           throw new Error(
-            typeof statusPayload.error === "string"
-              ? statusPayload.error
-              : "Paiement non confirme."
+            typeof statusPayload.error === "string" ? statusPayload.error : "Paiement non confirmé."
           );
         }
 
@@ -84,7 +81,7 @@ export default function SubscribeSuccessPage() {
 
         if (!cancelled) {
           setState("active");
-          setMessage("Ton acces complet est actif.");
+          setMessage("Ton accès complet est actif.");
           if (inviteResponse.ok && typeof invitePayload.inviteUrl === "string") {
             setInviteUrl(invitePayload.inviteUrl);
           }
@@ -92,69 +89,94 @@ export default function SubscribeSuccessPage() {
       } catch (error) {
         if (!cancelled) {
           setState("error");
-          setMessage(
-            error instanceof Error
-              ? error.message
-              : "Verification du paiement impossible."
-          );
+          setMessage(error instanceof Error ? error.message : "Vérification du paiement impossible.");
         }
       }
     }
 
     void verifyPayment();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [router, searchParams]);
 
   return (
-    <main className="mx-auto flex min-h-[70vh] w-full max-w-[58rem] flex-col justify-center px-4 py-12">
-      <section className="app-page-hero p-6 md:p-10">
-        <p className="app-kicker">Abonnement TurfEdge</p>
-        <h1 className="mt-3 text-4xl font-black leading-tight text-[var(--pmu-text)] md:text-6xl">
-          {state === "active" ? "Bienvenue dans le club PRO." : "Activation en cours."}
-        </h1>
-        <p className="mt-4 max-w-2xl text-base leading-8 text-[var(--pmu-text-soft)]">
-          {message}
-        </p>
+    <main className="mx-auto flex min-h-[80vh] w-full max-w-[58rem] flex-col justify-center px-4 py-12">
 
-        <div className="mt-6 grid gap-3 md:grid-cols-3">
-          {["Pronostics complets", "Mises conseillees", "Telegram prive"].map((item) => (
-            <div
-              key={item}
-              className="rounded-lg border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] p-4 text-sm font-black text-[var(--pmu-text)]"
-            >
-              {item}
+      {/* Status card */}
+      <section className="app-page-hero overflow-hidden p-0">
+        <div className="p-6 md:p-10">
+
+          {state === "loading" ? (
+            <div className="flex flex-col items-center gap-4 py-8 text-center">
+              <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--pmu-border)] border-t-[var(--pmu-primary)]" />
+              <p className="text-sm font-bold text-[var(--pmu-text-soft)]">{message}</p>
             </div>
-          ))}
-        </div>
+          ) : state === "error" ? (
+            <div className="flex flex-col items-center gap-4 py-8 text-center">
+              <span className="text-4xl">⚠️</span>
+              <p className="app-kicker text-[var(--pmu-orange)]">Problème de vérification</p>
+              <p className="text-sm text-[var(--pmu-text-soft)]">{message}</p>
+              <div className="flex flex-wrap justify-center gap-3">
+                <Link href="/dashboard" className="app-button-primary">Aller au dashboard</Link>
+                <Link href="/premium" className="app-button-secondary">Retour Premium</Link>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-3">
+                <span className="text-4xl">🎉</span>
+                <span className="turf-decision-badge" data-tone="success">Accès PRO activé</span>
+              </div>
+              <p className="app-kicker mt-4">Bienvenue dans le club PMU Gagnant PRO</p>
+              <h1 className="mt-2 text-4xl font-black leading-tight text-[var(--pmu-text)] md:text-5xl">
+                Tu es prêt à jouer juste.
+              </h1>
+              <p className="mt-4 max-w-2xl text-base leading-8 text-[var(--pmu-text-soft)]">
+                Tous tes accès sont débloqués. Chaque matin, TurfEdge prépare tes sélections avec mise et gain potentiel.
+              </p>
 
-        <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-          {inviteUrl ? (
-            <a
-              href={inviteUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="app-button-primary min-h-12 w-full justify-center sm:w-auto"
-            >
-              Rejoindre le Telegram prive
-            </a>
-          ) : null}
-          <Link
-            href="/dashboard"
-            className="app-button-secondary min-h-12 w-full justify-center sm:w-auto"
-          >
-            Ouvrir le dashboard
-          </Link>
-        </div>
+              {/* Perks grid */}
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                {PERKS.map((perk) => (
+                  <div key={perk.label} className="flex items-start gap-3 rounded-xl border border-[var(--pmu-border)] bg-[var(--pmu-surface-2)] p-4">
+                    <span className="text-xl">{perk.icon}</span>
+                    <div>
+                      <p className="text-sm font-black text-[var(--pmu-text)]">{perk.label}</p>
+                      <p className="mt-0.5 text-xs text-[var(--pmu-text-soft)]">{perk.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-        {state === "active" && !inviteUrl ? (
-          <p className="mt-4 rounded-lg border border-[var(--pmu-gold)] bg-[var(--pmu-gold-light)] px-4 py-3 text-sm font-bold text-[var(--pmu-text)]">
-            Acces PRO active. L&apos;invitation Telegram privee sera disponible des que la
-            variable TELEGRAM_PRIVATE_INVITE_LINK ou TELEGRAM_PRIVATE_CHAT_ID est configuree.
-          </p>
-        ) : null}
+              {/* CTAs */}
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                {inviteUrl ? (
+                  <a
+                    href={inviteUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="app-button-primary min-h-12 w-full justify-center sm:w-auto"
+                  >
+                    📱 Rejoindre le Telegram privé
+                  </a>
+                ) : null}
+                <Link href="/" className="app-button-primary min-h-12 w-full justify-center sm:w-auto">
+                  Voir les courses du jour
+                </Link>
+                <Link href="/dashboard" className="app-button-secondary min-h-12 w-full justify-center sm:w-auto">
+                  Ouvrir le dashboard
+                </Link>
+              </div>
+
+              {state === "active" && !inviteUrl ? (
+                <div className="mt-4 rounded-xl border border-[var(--pmu-gold)] bg-[var(--pmu-gold-light)] px-4 py-3">
+                  <p className="text-sm font-bold text-[var(--pmu-text)]">
+                    💬 L&apos;invitation Telegram sera disponible dès la configuration du bot privé.
+                  </p>
+                </div>
+              ) : null}
+            </>
+          )}
+        </div>
       </section>
     </main>
   );

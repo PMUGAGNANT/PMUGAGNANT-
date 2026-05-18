@@ -3494,6 +3494,89 @@ html[data-theme="warm"] .premium-ticket-shell {
   }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   AMÉLIORATIONS GLOBALES v2
+═══════════════════════════════════════════════════════════ */
+
+/* Pulse "LIVE" indicator */
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.6; transform: scale(0.92); }
+}
+.live-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #00C851;
+  animation: livePulse 1.8s ease-in-out infinite;
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position: 600px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg,
+    var(--pmu-surface-2) 0%,
+    color-mix(in srgb, var(--pmu-text) 8%, var(--pmu-surface-2)) 50%,
+    var(--pmu-surface-2) 100%
+  );
+  background-size: 600px 100%;
+  animation: shimmer 1.5s infinite linear;
+  border-radius: 6px;
+}
+
+/* Card hover glow — premium green */
+.app-card-glow:hover {
+  box-shadow: 0 0 0 2px var(--pmu-primary-soft), var(--pmu-shadow);
+  border-color: color-mix(in srgb, var(--pmu-primary) 30%, transparent);
+}
+
+/* Gradient text utility */
+.text-gradient-gold {
+  background: linear-gradient(135deg, var(--pmu-gold) 0%, #e8b84b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.text-gradient-green {
+  background: linear-gradient(135deg, var(--pmu-primary) 0%, var(--pmu-primary-bright) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Focus-visible global improvement */
+:focus-visible {
+  outline: 2px solid var(--pmu-primary);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Smooth scrolling for anchors */
+html { scroll-behavior: smooth; }
+
+/* Better table on mobile */
+@media (max-width: 640px) {
+  .app-card table { font-size: 0.78rem; }
+}
+
+/* Sticky premium bar (desktop) */
+.premium-sticky-bar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  border-bottom: 1px solid var(--pmu-border);
+  background: color-mix(in srgb, var(--pmu-surface) 92%, transparent);
+  backdrop-filter: blur(16px);
+  padding: 0.6rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 @media print {
   body {
     background: #fff;
