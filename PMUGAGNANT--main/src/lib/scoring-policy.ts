@@ -9,8 +9,8 @@
  */
 
 /** NIVEAU 2 — paliers carte programme / radar (client + badges) */
-export const SEUIL_JOUABLE = 8.5;
-export const SEUIL_SURVEILLANCE = 6.5;
+export const SEUIL_JOUABLE = 7.5;
+export const SEUIL_SURVEILLANCE = 5.5;
 
 /** NIVEAU 2 — buckets confiance (bilan API, teintes secondaires course, ajustements cote) */
 export const CONFIDENCE_BUCKET_HIGH = 7.5;
