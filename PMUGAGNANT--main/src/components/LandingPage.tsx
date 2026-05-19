@@ -6,16 +6,16 @@ interface HistEntry { date:string; course:string; hippodrome:string; cheval:stri
 interface LiveData { roi30d:number; totalPredictions:number; winRate:number; netGain30d:number; currentStreak:number; bestStreak:number; }
 
 function useCountdown() {
-  const [label, setLabel] = useState("07:00");
+  const [label, setLabel] = useState("07h00");
   useEffect(() => {
     const tick = () => {
       const now = new Date();
-      const target = new Date(now);
-      target.setHours(7, 0, 0, 0);
-      if (now >= target) target.setDate(target.getDate() + 1);
-      const diff = Math.floor((target.getTime() - now.getTime()) / 1000);
-      const h = Math.floor(diff / 3600);
-      const m = Math.floor((diff % 3600) / 60);
+      const t = new Date(now);
+      t.setHours(7, 0, 0, 0);
+      if (now >= t) t.setDate(t.getDate() + 1);
+      const d = Math.floor((t.getTime() - now.getTime()) / 1000);
+      const h = Math.floor(d / 3600);
+      const m = Math.floor((d % 3600) / 60);
       setLabel(`${h}h${String(m).padStart(2, "0")}m`);
     };
     tick();
@@ -32,7 +32,7 @@ export default function LandingPage() {
   const [cv, setCv] = useState({roi:0,tickets:0,win:0,gain:0});
   const [notif, setNotif] = useState<{id:number;name:string;txt:string;gain?:string}|null>(null);
   const [faqOpen, setFaqOpen] = useState<number|null>(0);
-  const [cardScanned, setCardScanned] = useState(false);
+  const [barAnim, setBarAnim] = useState(false);
   const statsRef = useRef<HTMLDivElement>(null);
   const countdown = useCountdown();
 
@@ -45,8 +45,7 @@ export default function LandingPage() {
     const obs = new IntersectionObserver(([e]) => { if(e.isIntersecting){ setCounted(true); obs.disconnect(); }},{threshold:0.3});
     if(statsRef.current) obs.observe(statsRef.current);
 
-    // Scanning animation on ticket card after 1.2s
-    const scanTimer = setTimeout(() => setCardScanned(true), 1200);
+    const barTimer = setTimeout(() => setBarAnim(true), 600);
 
     const pool=[
       {name:"Marc L.",txt:"vient de gagner",gain:"+37 €"},{name:"Thomas M.",txt:"vient de s'inscrire"},
@@ -54,14 +53,9 @@ export default function LandingPage() {
       {name:"Ahmed B.",txt:"vient de rejoindre"},{name:"Julie M.",txt:"vient de gagner",gain:"+28 €"},
     ];
     let idx=0;
-    const fire=()=>{
-      const u=pool[idx%pool.length];idx++;
-      setNotif({id:Date.now(),...u});
-      setTimeout(()=>setNotif(null),5000);
-      setTimeout(fire,10000+Math.random()*7000);
-    };
+    const fire=()=>{ const u=pool[idx%pool.length];idx++;setNotif({id:Date.now(),...u});setTimeout(()=>setNotif(null),5000);setTimeout(fire,10000+Math.random()*7000); };
     const t=setTimeout(fire,4000);
-    return()=>{clearTimeout(t);clearTimeout(scanTimer);obs.disconnect();};
+    return()=>{clearTimeout(t);clearTimeout(barTimer);obs.disconnect();};
   },[]);
 
   useEffect(()=>{
@@ -85,8 +79,8 @@ export default function LandingPage() {
   };
 
   const faqs=[
-    {q:"Comment TurfEdge V9.2 analyse-t-il les courses ?",a:"Chaque matin à 7h, il charge 100% du programme PMU et score chaque cheval sur 30+ signaux : forme sur 6 dernières sorties (décroissance temporelle), cote PMU vs probabilité calculée, jockey×hippodrome sur 24 mois, distance exacte, terrain et météo. Les courses jugées illisibles sont automatiquement écartées."},
-    {q:"Le ROI affiché est-il réel ?",a:"Oui. Chaque pari est enregistré dans Supabase avant le départ de la course. Les résultats sont intégrés automatiquement. Vous voyez les vraies données, pas des chiffres marketing."},
+    {q:"Comment TurfEdge V9.2 analyse-t-il les courses ?",a:"Chaque matin à 7h, il charge 100% du programme PMU et score chaque cheval sur 30+ signaux : forme récente, cotes marché, jockey×hippodrome, distance exacte, terrain et météo. Les courses illisibles sont automatiquement écartées."},
+    {q:"Le ROI affiché est-il réel ?",a:"Oui. Chaque pari est enregistré dans Supabase avant le départ. Les résultats sont intégrés automatiquement. Vous voyez les vraies données, pas des chiffres marketing."},
     {q:"Puis-je résilier à tout moment ?",a:"Oui, sans engagement, depuis votre espace compte. La résiliation prend effet à la fin de la période en cours, sans frais."},
     {q:"Comment je reçois le ticket ?",a:"Sur votre dashboard (desktop & mobile) + alerte Telegram T-15min avant le départ via @pmugagnantbot pour les abonnés Premium."},
     {q:"Vous pariez à ma place ?",a:"Non. PMU Gagnant analyse et recommande. Vous décidez seul. Nous n'avons aucun accès à votre compte PMU.fr."},
@@ -95,509 +89,555 @@ export default function LandingPage() {
   return(
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
+
         :root{
-          --g:#00FF87;--g2:#00E87A;--y:#FFD700;--r:#FF4D5A;--b:#3B82F6;
-          --bg:#030308;--s1:#06060F;--s2:#08081A;
-          --br:rgba(255,255,255,.07);--t:#F0F0FF;--ts:rgba(240,240,255,.55);--tm:rgba(240,240,255,.28)
+          --blk:#08080F;
+          --panel:#0F0F1A;
+          --panel2:#13131F;
+          --ylw:#FFE600;
+          --ylw2:#FFC800;
+          --red:#FF1A1A;
+          --wht:#FFFFFF;
+          --ts:rgba(255,255,255,.6);
+          --tm:rgba(255,255,255,.35);
+          --bdr:rgba(255,255,255,.08);
         }
-        .lp{background:var(--bg);color:var(--t);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-        .lp *{box-sizing:border-box}
 
-        /* ── FOND ── */
-        .lp-bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
-        .lp-bg-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse 120% 80% at 50% 0%,black 10%,transparent 100%)}
-        .lp-bg-glow1{position:absolute;top:-300px;left:30%;width:1000px;height:900px;background:radial-gradient(ellipse,rgba(0,255,135,.06) 0%,transparent 60%)}
-        .lp-bg-glow2{position:absolute;top:50%;right:-15%;width:600px;height:600px;background:radial-gradient(circle,rgba(59,130,246,.04) 0%,transparent 65%)}
-        .lp-bg-glow3{position:absolute;bottom:10%;left:-10%;width:500px;height:500px;background:radial-gradient(circle,rgba(255,215,0,.03) 0%,transparent 65%)}
+        .mg{background:var(--blk);color:var(--wht);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+        .mg *{box-sizing:border-box}
 
-        /* ── NOTIF ── */
-        .lp-notif{position:fixed;bottom:80px;right:24px;z-index:9999;background:rgba(6,6,15,.96);border:1px solid rgba(0,255,135,.18);border-left:3px solid var(--g);border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:12px;min-width:280px;backdrop-filter:blur(24px);box-shadow:0 24px 64px rgba(0,0,0,.7),0 0 0 1px rgba(0,255,135,.05);animation:notifIn .45s cubic-bezier(.34,1.56,.64,1)}
+        /* ═══ FOND SPEED LINES ═══ */
+        .mg-bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+        .mg-bg-lines{position:absolute;inset:-50%;width:200%;height:200%;
+          background:conic-gradient(from 0deg at 50% 50%,
+            transparent 0deg,rgba(255,230,0,.025) 1deg,transparent 2.5deg,
+            rgba(255,230,0,.015) 5deg,transparent 6.5deg,
+            rgba(255,230,0,.03) 10deg,transparent 11.5deg,
+            rgba(255,230,0,.02) 15deg,transparent 16.5deg,
+            rgba(255,230,0,.025) 20deg,transparent 21.5deg,
+            rgba(255,230,0,.015) 26deg,transparent 27.5deg,
+            rgba(255,230,0,.03) 30deg,transparent 31.5deg,
+            rgba(255,230,0,.02) 36deg,transparent 37.5deg,
+            rgba(255,230,0,.025) 41deg,transparent 42.5deg,
+            rgba(255,230,0,.015) 47deg,transparent 48.5deg,
+            rgba(255,230,0,.03) 51deg,transparent 52.5deg,
+            rgba(255,230,0,.02) 57deg,transparent 58.5deg,
+            rgba(255,230,0,.025) 62deg,transparent 63.5deg,
+            rgba(255,230,0,.015) 68deg,transparent 69.5deg,
+            rgba(255,230,0,.03) 72deg,transparent 73.5deg,
+            rgba(255,230,0,.02) 78deg,transparent 79.5deg,
+            rgba(255,230,0,.025) 82deg,transparent 83.5deg,
+            rgba(255,230,0,.015) 88deg,transparent 89.5deg,
+            rgba(255,230,0,.03) 93deg,transparent 94.5deg,
+            rgba(255,230,0,.02) 98deg,transparent 99.5deg,
+            rgba(255,230,0,.025) 103deg,transparent 104.5deg,
+            rgba(255,230,0,.015) 109deg,transparent 110.5deg,
+            rgba(255,230,0,.03) 114deg,transparent 115.5deg,
+            rgba(255,230,0,.02) 119deg,transparent 120.5deg,
+            rgba(255,230,0,.025) 125deg,transparent 126.5deg,
+            rgba(255,230,0,.015) 130deg,transparent 131.5deg,
+            rgba(255,230,0,.03) 136deg,transparent 137.5deg,
+            rgba(255,230,0,.02) 141deg,transparent 142.5deg,
+            rgba(255,230,0,.025) 146deg,transparent 147.5deg,
+            rgba(255,230,0,.015) 152deg,transparent 153.5deg,
+            rgba(255,230,0,.03) 157deg,transparent 158.5deg,
+            rgba(255,230,0,.02) 162deg,transparent 163.5deg,
+            rgba(255,230,0,.025) 168deg,transparent 169.5deg,
+            rgba(255,230,0,.015) 173deg,transparent 174.5deg,
+            rgba(255,230,0,.03) 178deg,transparent 179.5deg,
+            rgba(255,230,0,.02) 184deg,transparent 185.5deg,
+            rgba(255,230,0,.025) 188deg,transparent 189.5deg,
+            rgba(255,230,0,.015) 194deg,transparent 195.5deg,
+            rgba(255,230,0,.03) 199deg,transparent 200.5deg,
+            rgba(255,230,0,.02) 204deg,transparent 205.5deg,
+            rgba(255,230,0,.025) 210deg,transparent 211.5deg,
+            rgba(255,230,0,.015) 215deg,transparent 216.5deg,
+            rgba(255,230,0,.03) 221deg,transparent 222.5deg,
+            rgba(255,230,0,.02) 226deg,transparent 227.5deg,
+            rgba(255,230,0,.025) 231deg,transparent 232.5deg,
+            rgba(255,230,0,.015) 237deg,transparent 238.5deg,
+            rgba(255,230,0,.03) 242deg,transparent 243.5deg,
+            rgba(255,230,0,.02) 247deg,transparent 248.5deg,
+            rgba(255,230,0,.025) 253deg,transparent 254.5deg,
+            rgba(255,230,0,.015) 258deg,transparent 259.5deg,
+            rgba(255,230,0,.03) 263deg,transparent 264.5deg,
+            rgba(255,230,0,.02) 269deg,transparent 270.5deg,
+            rgba(255,230,0,.025) 274deg,transparent 275.5deg,
+            rgba(255,230,0,.015) 280deg,transparent 281.5deg,
+            rgba(255,230,0,.03) 285deg,transparent 286.5deg,
+            rgba(255,230,0,.02) 290deg,transparent 291.5deg,
+            rgba(255,230,0,.025) 296deg,transparent 297.5deg,
+            rgba(255,230,0,.015) 301deg,transparent 302.5deg,
+            rgba(255,230,0,.03) 306deg,transparent 307.5deg,
+            rgba(255,230,0,.02) 312deg,transparent 313.5deg,
+            rgba(255,230,0,.025) 317deg,transparent 318.5deg,
+            rgba(255,230,0,.015) 323deg,transparent 324.5deg,
+            rgba(255,230,0,.03) 328deg,transparent 329.5deg,
+            rgba(255,230,0,.02) 333deg,transparent 334.5deg,
+            rgba(255,230,0,.025) 339deg,transparent 340.5deg,
+            rgba(255,230,0,.015) 344deg,transparent 345.5deg,
+            rgba(255,230,0,.03) 350deg,transparent 351.5deg,
+            rgba(255,230,0,.02) 355deg,transparent 356.5deg,
+            transparent 360deg
+          );
+          animation:spinSlow 120s linear infinite}
+        @keyframes spinSlow{to{transform:rotate(360deg)}}
+        .mg-bg-dots{position:absolute;inset:0;
+          background-image:radial-gradient(circle,rgba(255,230,0,.04) 1px,transparent 1px);
+          background-size:28px 28px;
+          mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 20%,transparent 100%)}
+
+        /* ═══ NOTIF ═══ */
+        .mg-notif{position:fixed;bottom:80px;right:24px;z-index:9999;
+          background:#0F0F1A;border:2px solid var(--ylw);border-left:4px solid var(--ylw);
+          border-radius:4px;padding:14px 18px;display:flex;align-items:center;gap:12px;min-width:280px;
+          box-shadow:4px 4px 0 var(--ylw);animation:notifIn .4s cubic-bezier(.34,1.56,.64,1)}
         @keyframes notifIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
-        .lp-notif-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#00C851,#00FF87);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#030308;flex-shrink:0}
-        .lp-notif-name{font-size:13px;font-weight:700;color:var(--t)}
-        .lp-notif-sub{font-size:11px;color:var(--tm);margin-top:1px}
-        .lp-notif-gain{font-size:15px;font-weight:800;color:var(--g);margin-left:auto;flex-shrink:0}
+        .mg-notif-av{width:32px;height:32px;border-radius:2px;background:var(--ylw);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#000;flex-shrink:0}
+        .mg-notif-name{font-size:13px;font-weight:700}
+        .mg-notif-sub{font-size:11px;color:var(--tm);margin-top:1px}
+        .mg-notif-gain{font-size:15px;font-weight:900;color:var(--ylw);margin-left:auto}
 
-        /* ── NAV ── */
-        .lp-nav{position:fixed;top:0;left:0;right:0;z-index:100;height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 32px;background:rgba(3,3,8,.9);backdrop-filter:blur(24px);border-bottom:1px solid rgba(255,255,255,.05)}
-        .lp-nav-logo{display:flex;align-items:center;gap:9px;text-decoration:none}
-        .lp-nav-badge{width:30px;height:30px;background:var(--g);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#030308;letter-spacing:-.02em}
-        .lp-nav-name{font-size:15px;font-weight:800;letter-spacing:-.03em;color:var(--t)}
-        .lp-nav-v{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(0,255,135,.4);display:block;margin-top:-2px}
-        .lp-nav-links{display:flex;align-items:center;gap:2px;list-style:none}
-        .lp-nav-links a{padding:6px 12px;border-radius:7px;font-size:13px;font-weight:500;color:var(--tm);text-decoration:none;transition:all .15s}
-        .lp-nav-links a:hover{color:var(--t);background:rgba(255,255,255,.05)}
-        .lp-nav-r{display:flex;align-items:center;gap:8px}
-        .lp-btn-sm{padding:7px 16px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;transition:all .2s}
-        .lp-btn-sm.ghost{border:1px solid rgba(255,255,255,.1);color:var(--ts)}
-        .lp-btn-sm.ghost:hover{border-color:rgba(255,255,255,.25);color:var(--t)}
-        .lp-btn-sm.green{background:var(--g);color:#030308;font-weight:700}
-        .lp-btn-sm.green:hover{background:#33FF9E;box-shadow:0 6px 24px rgba(0,255,135,.35)}
+        /* ═══ NAV ═══ */
+        .mg-nav{position:fixed;top:0;left:0;right:0;z-index:100;height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 32px;background:rgba(8,8,15,.95);backdrop-filter:blur(16px);border-bottom:2px solid rgba(255,230,0,.12)}
+        .mg-nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+        .mg-nav-badge{width:32px;height:32px;background:var(--ylw);border:2px solid #000;border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:14px;color:#000;letter-spacing:.04em}
+        .mg-nav-name{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.08em;color:var(--wht)}
+        .mg-nav-v{font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,230,0,.4);display:block;margin-top:-3px}
+        .mg-nav-links{display:flex;align-items:center;gap:2px;list-style:none}
+        .mg-nav-links a{padding:6px 13px;border-radius:2px;font-size:12px;font-weight:600;color:var(--tm);text-decoration:none;letter-spacing:.04em;text-transform:uppercase;transition:all .15s}
+        .mg-nav-links a:hover{color:var(--ylw);background:rgba(255,230,0,.06)}
+        .mg-nav-r{display:flex;align-items:center;gap:8px}
+        .mg-btn-ghost{padding:7px 16px;border:2px solid rgba(255,255,255,.15);border-radius:2px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ts);text-decoration:none;transition:all .2s}
+        .mg-btn-ghost:hover{border-color:var(--ylw);color:var(--ylw)}
+        .mg-btn-ylw{padding:8px 18px;background:var(--ylw);border:2px solid var(--ylw);border-radius:2px;font-size:12px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:#000;text-decoration:none;transition:all .2s}
+        .mg-btn-ylw:hover{background:var(--ylw2);box-shadow:3px 3px 0 rgba(255,200,0,.4)}
 
-        /* ── HERO (SPLIT) ── */
-        .lp-hero{position:relative;z-index:1;min-height:100vh;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:48px;padding:100px 64px 80px;max-width:1300px;margin:0 auto}
-        .lp-hero-left{}
-        .lp-hero-tag{display:inline-flex;align-items:center;gap:8px;padding:5px 14px;background:rgba(0,255,135,.07);border:1px solid rgba(0,255,135,.18);border-radius:100px;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--g);text-transform:uppercase;margin-bottom:28px;animation:fIn .5s ease both}
-        @keyframes fIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes fInR{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}
-        .lp-live-dot{width:6px;height:6px;border-radius:50%;background:var(--g);animation:pls 2s ease infinite;flex-shrink:0}
-        @keyframes pls{0%,100%{box-shadow:0 0 0 0 rgba(0,255,135,.6)}60%{box-shadow:0 0 0 8px rgba(0,255,135,0)}}
-        .lp-h1{font-size:clamp(44px,4.8vw,82px);font-weight:900;line-height:.88;letter-spacing:-.05em;margin-bottom:22px;animation:fIn .6s .1s ease both}
-        .lp-h1 .g{color:var(--g)}.lp-h1 .y{color:var(--y)}
-        .lp-h1-sub{font-size:17px;color:var(--ts);line-height:1.75;max-width:520px;margin-bottom:36px;font-weight:400;animation:fIn .6s .2s ease both}
-        .lp-h1-sub strong{color:var(--t);font-weight:600}
-        .lp-hero-ctas{display:flex;align-items:center;gap:10px;flex-wrap:wrap;animation:fIn .6s .3s ease both;margin-bottom:20px}
-        .lp-hero-btn{padding:15px 32px;border-radius:11px;font-size:15px;font-weight:700;text-decoration:none;transition:all .25s;display:inline-flex;align-items:center;gap:7px;letter-spacing:-.01em}
-        .lp-hero-btn.main{background:var(--g);color:#030308;box-shadow:0 0 60px rgba(0,255,135,.25),0 4px 20px rgba(0,255,135,.15)}
-        .lp-hero-btn.main:hover{background:#33FF9E;transform:translateY(-2px);box-shadow:0 0 80px rgba(0,255,135,.4),0 8px 32px rgba(0,255,135,.25)}
-        .lp-hero-btn.sec{border:1px solid rgba(255,255,255,.12);color:var(--ts)}
-        .lp-hero-btn.sec:hover{border-color:rgba(255,255,255,.28);color:var(--t);background:rgba(255,255,255,.04)}
-        .lp-hero-proof{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:500;color:var(--tm);animation:fIn .6s .4s ease both;letter-spacing:.02em;flex-wrap:wrap}
-        .lp-hero-proof-sep{width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,.15)}
+        /* ═══ HERO ═══ */
+        .mg-hero{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:90px 24px 60px;text-align:center;overflow:hidden}
+        .mg-hero::before{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--ylw),transparent)}
+        .mg-hero-kicker{display:inline-flex;align-items:center;gap:8px;padding:4px 14px;background:rgba(255,230,0,.08);border:2px solid rgba(255,230,0,.3);border-radius:2px;font-size:11px;font-weight:700;letter-spacing:.16em;color:var(--ylw);text-transform:uppercase;margin-bottom:24px;animation:popIn .5s cubic-bezier(.34,1.56,.64,1) both}
+        @keyframes popIn{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+        .mg-live-dot{width:7px;height:7px;border-radius:50%;background:var(--ylw);animation:pls 1.5s ease infinite;flex-shrink:0}
+        @keyframes pls{0%,100%{box-shadow:0 0 0 0 rgba(255,230,0,.6)}60%{box-shadow:0 0 0 10px rgba(255,230,0,0)}}
 
-        /* ── HERO CARD TICKET ── */
-        .lp-hero-right{animation:fInR .7s .3s ease both;position:relative;display:flex;align-items:center;justify-content:center}
-        .lp-hero-card-wrap{position:relative}
-        .lp-hero-card-glow{position:absolute;inset:-40px;background:radial-gradient(ellipse,rgba(0,255,135,.12) 0%,transparent 65%);z-index:0;border-radius:50%}
-        .lp-hero-card{position:relative;z-index:1;background:rgba(8,8,22,.9);border:1px solid rgba(0,255,135,.2);border-radius:20px;padding:28px;width:360px;backdrop-filter:blur(20px);box-shadow:0 32px 80px rgba(0,0,0,.6),0 0 0 1px rgba(0,255,135,.08),inset 0 1px 0 rgba(255,255,255,.06)}
-        .lp-hc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
-        .lp-hc-tag{font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(0,255,135,.5)}
-        .lp-hc-course{font-size:11px;font-weight:700;color:var(--tm);letter-spacing:.04em}
-        .lp-hc-score-row{margin-bottom:18px}
-        .lp-hc-score-lbl{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--tm);margin-bottom:6px}
-        .lp-hc-bar{height:6px;border-radius:100px;background:rgba(255,255,255,.07);overflow:hidden;margin-bottom:4px}
-        .lp-hc-bar-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,#00C851,#00FF87);transition:width 1.2s cubic-bezier(.34,1.2,.64,1)}
-        .lp-hc-score-val{font-size:28px;font-weight:900;color:var(--g);letter-spacing:-.04em;line-height:1}
-        .lp-hc-score-max{font-size:14px;color:var(--tm);font-weight:500}
-        .lp-hc-horse{display:flex;align-items:center;justify-content:space-between;background:rgba(0,255,135,.05);border:1px solid rgba(0,255,135,.12);border-radius:10px;padding:12px 14px;margin-bottom:16px}
-        .lp-hc-horse-name{font-size:16px;font-weight:800;color:var(--t);letter-spacing:-.02em}
-        .lp-hc-horse-num{font-size:11px;color:rgba(0,255,135,.5);margin-top:2px}
-        .lp-hc-verdict{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:rgba(0,255,135,.12);border:1px solid rgba(0,255,135,.25);border-radius:7px;font-size:12px;font-weight:800;color:var(--g);letter-spacing:.06em}
-        .lp-hc-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:18px}
-        .lp-hc-cell{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:8px;padding:10px 12px}
-        .lp-hc-cell-lbl{font-size:8px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--tm);margin-bottom:5px}
-        .lp-hc-cell-val{font-size:18px;font-weight:900;letter-spacing:-.02em}
-        .lp-hc-cell-val.g{color:var(--g)}.lp-hc-cell-val.y{color:var(--y)}.lp-hc-cell-val.w{color:var(--t)}
-        .lp-hc-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;background:var(--g);border-radius:9px;border:none;font-size:14px;font-weight:800;color:#030308;cursor:pointer;letter-spacing:-.01em}
-        .lp-hc-scan{position:absolute;inset:0;border-radius:20px;overflow:hidden;pointer-events:none;z-index:2}
-        .lp-hc-scan-line{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(0,255,135,.6),transparent);animation:scan 2s ease forwards;opacity:0}
-        @keyframes scan{0%{top:-2px;opacity:0}10%{opacity:1}80%{opacity:.8}100%{top:102%;opacity:0}}
-        .lp-hc-countdown{display:flex;align-items:center;gap:7px;margin-top:12px;padding:8px 12px;background:rgba(255,215,0,.04);border:1px solid rgba(255,215,0,.1);border-radius:8px;font-size:11px;font-weight:600;color:rgba(255,215,0,.55)}
-        .lp-hc-cd-val{color:var(--y);font-weight:800;font-variant-numeric:tabular-nums}
+        /* TITRE BEBAS */
+        .mg-h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(72px,11vw,156px);line-height:.82;letter-spacing:.04em;margin-bottom:18px;animation:slideUp .6s .1s ease both}
+        @keyframes slideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+        .mg-h1-line1{color:var(--wht);display:block;text-shadow:0 0 60px rgba(255,230,0,.12)}
+        .mg-h1-line2{color:var(--ylw);display:block;text-shadow:3px 3px 0 rgba(200,150,0,.4),0 0 80px rgba(255,230,0,.2)}
+        .mg-h1-line3{color:var(--wht);display:block}
+        .mg-h1-sub{font-size:16px;color:var(--ts);line-height:1.75;max-width:560px;margin:0 auto 36px;animation:slideUp .6s .2s ease both}
+        .mg-h1-sub strong{color:var(--wht);font-weight:700}
 
-        /* ── WINS TICKER (social proof) ── */
-        .lp-wins{position:relative;z-index:1;overflow:hidden;white-space:nowrap;background:rgba(0,255,135,.025);border-top:1px solid rgba(0,255,135,.08);border-bottom:1px solid rgba(0,255,135,.08);padding:10px 0}
-        .lp-wins-inner{display:inline-flex;animation:tick 28s linear infinite}
-        @keyframes tick{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
-        .lp-wins-item{display:inline-flex;align-items:center;gap:8px;padding:0 24px;font-size:11px;font-weight:700;letter-spacing:.04em;color:rgba(255,255,255,.35)}
-        .lp-wins-item .win{color:var(--g)}.lp-wins-item .gain{color:var(--g);font-weight:800}
-        .lp-wins-dot{width:3px;height:3px;border-radius:50%;background:rgba(0,255,135,.25);flex-shrink:0}
+        /* HERO CARD TICKET — style manga panel */
+        .mg-ticket{position:relative;background:var(--panel);border:2px solid rgba(255,230,0,.25);border-radius:4px;padding:24px 28px;max-width:480px;width:100%;margin:0 auto 32px;box-shadow:0 0 0 1px rgba(255,230,0,.06),6px 6px 0 rgba(255,200,0,.15);animation:slideUp .6s .25s ease both}
+        .mg-ticket::before{content:'VERDICT IA · V9.2';position:absolute;top:-11px;left:20px;background:var(--ylw);color:#000;font-size:9px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;padding:2px 10px;border-radius:2px}
+        .mg-ticket-course{text-align:right;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--tm);margin-bottom:16px}
 
-        /* ── TICKER ── */
-        .lp-ticker{position:relative;z-index:1;overflow:hidden;white-space:nowrap;border-top:1px solid rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.04);background:rgba(255,255,255,.01);padding:10px 0}
-        .lp-ticker-inner{display:inline-flex;animation:tick 22s linear infinite}
-        .lp-ticker-item{display:inline-flex;align-items:center;gap:10px;padding:0 28px;font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.22)}
-        .lp-ticker-dot{width:3px;height:3px;border-radius:50%;background:var(--g);opacity:.4;display:inline-block}
+        /* POWER BAR */
+        .mg-power-row{margin-bottom:16px}
+        .mg-power-lbl{display:flex;align-items:center;justify-content:space-between;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--tm);margin-bottom:6px}
+        .mg-power-val{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--ylw);letter-spacing:.04em}
+        .mg-power-bar-track{height:10px;background:rgba(255,255,255,.07);border-radius:0;overflow:hidden;border:1px solid rgba(255,230,0,.15)}
+        .mg-power-bar-fill{height:100%;background:linear-gradient(90deg,#FFE600,#FF8C00,#FF1A1A);transition:width 1.4s cubic-bezier(.34,1.2,.64,1);box-shadow:0 0 12px rgba(255,200,0,.5)}
 
-        /* ── JOURNAL ── */
-        .lp-journal{position:relative;z-index:1;padding:100px 24px;background:var(--s1)}
-        .lp-journal-inner{max-width:1000px;margin:0 auto}
-        .lp-section-tag{font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--g);margin-bottom:14px}
-        .lp-section-h{font-size:clamp(34px,4.2vw,58px);font-weight:900;letter-spacing:-.04em;line-height:.92;margin-bottom:16px}
-        .lp-section-h em{font-style:normal;color:var(--y)}
-        .lp-section-p{font-size:16px;color:var(--ts);line-height:1.7;max-width:540px;font-weight:400;margin-bottom:48px}
+        /* HORSE */
+        .mg-horse-row{display:flex;align-items:center;justify-content:space-between;background:rgba(255,230,0,.05);border:1px solid rgba(255,230,0,.18);border-radius:2px;padding:12px 16px;margin-bottom:14px}
+        .mg-horse-name{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em;color:var(--wht)}
+        .mg-horse-num{font-size:10px;font-weight:700;letter-spacing:.12em;color:rgba(255,230,0,.5);margin-top:2px}
+        .mg-verdict-badge{display:inline-flex;align-items:center;gap:4px;padding:6px 14px;background:var(--ylw);color:#000;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.08em;border-radius:2px;box-shadow:3px 3px 0 rgba(180,130,0,.4)}
 
-        /* TABLE JOURNAL */
-        .lp-jt{border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.07);background:rgba(4,4,12,.7);backdrop-filter:blur(12px)}
-        .lp-jt-head{display:grid;grid-template-columns:80px 1fr 1fr 80px 80px 90px 100px;padding:12px 20px;border-bottom:1px solid rgba(255,255,255,.06);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.25)}
-        .lp-jt-row{display:grid;grid-template-columns:80px 1fr 1fr 80px 80px 90px 100px;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.04);align-items:center;transition:background .15s}
-        .lp-jt-row:last-child{border-bottom:none}
-        .lp-jt-row:hover{background:rgba(255,255,255,.02)}
-        .lp-jt-row.win{border-left:2px solid var(--g);padding-left:18px}
-        .lp-jt-row.lose{border-left:2px solid var(--r);padding-left:18px}
-        .lp-jt-row.place{border-left:2px solid var(--y);padding-left:18px}
-        .lp-jt-date{font-size:12px;font-weight:600;color:var(--tm);font-variant-numeric:tabular-nums}
-        .lp-jt-hippe{font-size:13px;font-weight:700;color:var(--t)}
-        .lp-jt-course{font-size:11px;color:var(--tm);margin-top:1px}
-        .lp-jt-cheval{font-size:13px;font-weight:700;color:var(--t)}
-        .lp-jt-cote{font-size:13px;font-weight:700;color:var(--y);font-variant-numeric:tabular-nums}
-        .lp-jt-mise{font-size:13px;font-weight:600;color:var(--ts);font-variant-numeric:tabular-nums}
-        .lp-jt-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:5px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;width:fit-content}
-        .lp-jt-badge.win{background:rgba(0,255,135,.1);color:var(--g);border:1px solid rgba(0,255,135,.2)}
-        .lp-jt-badge.lose{background:rgba(255,77,90,.1);color:var(--r);border:1px solid rgba(255,77,90,.2)}
-        .lp-jt-badge.place{background:rgba(255,215,0,.1);color:var(--y);border:1px solid rgba(255,215,0,.2)}
-        .lp-jt-gain{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;text-align:right}
-        .lp-jt-gain.pos{color:var(--g)}.lp-jt-gain.neg{color:var(--r)}.lp-jt-gain.neu{color:var(--y)}
-        .lp-jt-empty{padding:40px;text-align:center;font-size:14px;color:var(--tm)}
-        .lp-jt-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.02)}
-        .lp-jt-footer-stat{font-size:12px;color:var(--tm);font-weight:500}
-        .lp-jt-footer-stat strong{color:var(--t);font-weight:700}
-        .lp-skel{background:linear-gradient(90deg,rgba(255,255,255,.04) 0%,rgba(255,255,255,.08) 50%,rgba(255,255,255,.04) 100%);background-size:200% 100%;animation:shimmer 1.5s ease infinite;border-radius:4px}
+        /* TICKET STATS */
+        .mg-ticket-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:18px}
+        .mg-ts-cell{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:2px;padding:10px 12px;text-align:center}
+        .mg-ts-lbl{font-size:8px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--tm);margin-bottom:4px}
+        .mg-ts-val{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.04em}
+        .mg-ts-val.y{color:var(--ylw)}.mg-ts-val.r{color:var(--red)}.mg-ts-val.w{color:var(--wht)}
+
+        /* MAIN CTA */
+        .mg-cta-main{display:inline-flex;align-items:center;gap:10px;padding:16px 40px;background:var(--ylw);color:#000;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.1em;text-decoration:none;border:none;cursor:pointer;border-radius:2px;box-shadow:5px 5px 0 rgba(200,140,0,.4);transition:all .2s;animation:slideUp .6s .35s ease both}
+        .mg-cta-main:hover{background:var(--ylw2);transform:translate(-2px,-2px);box-shadow:7px 7px 0 rgba(200,140,0,.35)}
+        .mg-cta-main:active{transform:translate(2px,2px);box-shadow:2px 2px 0 rgba(200,140,0,.3)}
+        .mg-hero-proof{display:flex;align-items:center;justify-content:center;gap:16px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--tm);margin-top:16px;flex-wrap:wrap;animation:slideUp .6s .4s ease both}
+        .mg-hero-proof span{display:flex;align-items:center;gap:5px}
+        .mg-hero-proof .chk{color:var(--ylw)}
+
+        /* COUNTDOWN */
+        .mg-countdown{margin-top:12px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tm);animation:slideUp .6s .45s ease both}
+        .mg-countdown strong{font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--ylw);letter-spacing:.06em}
+
+        /* ═══ SECTION LABELS ═══ */
+        .mg-sec-tag{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--ylw);margin-bottom:12px}
+        .mg-sec-tag::before{content:'';display:inline-block;width:12px;height:2px;background:var(--ylw)}
+        .mg-sec-h{font-family:'Bebas Neue',sans-serif;font-size:clamp(42px,5.5vw,80px);line-height:.88;letter-spacing:.04em;margin-bottom:16px}
+        .mg-sec-h em{font-style:normal;color:var(--ylw)}
+        .mg-sec-p{font-size:15px;color:var(--ts);line-height:1.75;max-width:520px;font-weight:400;margin-bottom:48px}
+
+        /* ═══ PANEL STYLE ═══ */
+        .mg-panel-card{background:var(--panel);border:1px solid rgba(255,255,255,.07);border-radius:4px}
+        .mg-panel-card-ylw{background:var(--panel);border:2px solid rgba(255,230,0,.2);border-radius:4px;box-shadow:4px 4px 0 rgba(255,200,0,.1)}
+
+        /* ═══ JOURNAL ═══ */
+        .mg-journal{position:relative;z-index:1;padding:100px 24px;background:var(--panel)}
+        .mg-journal-inner{max-width:1000px;margin:0 auto}
+        .mg-jt{border-radius:4px;overflow:hidden;border:2px solid rgba(255,230,0,.15);background:rgba(8,8,15,.8)}
+        .mg-jt-head{display:grid;grid-template-columns:80px 1fr 1fr 80px 80px 90px 100px;padding:11px 20px;border-bottom:1px solid rgba(255,255,255,.06);font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--tm);background:rgba(255,230,0,.03)}
+        .mg-jt-row{display:grid;grid-template-columns:80px 1fr 1fr 80px 80px 90px 100px;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.04);align-items:center;transition:background .15s}
+        .mg-jt-row:last-child{border-bottom:none}
+        .mg-jt-row:hover{background:rgba(255,230,0,.02)}
+        .mg-jt-row.win{border-left:3px solid var(--ylw);padding-left:17px}
+        .mg-jt-row.lose{border-left:3px solid var(--red);padding-left:17px}
+        .mg-jt-row.place{border-left:3px solid rgba(255,230,0,.5);padding-left:17px}
+        .mg-jt-date{font-size:12px;font-weight:600;color:var(--tm);font-variant-numeric:tabular-nums}
+        .mg-jt-hippe{font-size:13px;font-weight:700}
+        .mg-jt-course{font-size:11px;color:var(--tm);margin-top:1px}
+        .mg-jt-cheval{font-size:13px;font-weight:700}
+        .mg-jt-cote{font-size:13px;font-weight:700;color:var(--ylw);font-variant-numeric:tabular-nums}
+        .mg-jt-mise{font-size:13px;font-weight:600;color:var(--ts);font-variant-numeric:tabular-nums}
+        .mg-jt-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:2px;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+        .mg-jt-badge.win{background:rgba(255,230,0,.1);color:var(--ylw);border:1px solid rgba(255,230,0,.25)}
+        .mg-jt-badge.lose{background:rgba(255,26,26,.1);color:var(--red);border:1px solid rgba(255,26,26,.25)}
+        .mg-jt-badge.place{background:rgba(255,200,0,.07);color:rgba(255,200,0,.7);border:1px solid rgba(255,200,0,.2)}
+        .mg-jt-gain{font-size:14px;font-weight:900;font-variant-numeric:tabular-nums;text-align:right;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.04em}
+        .mg-jt-gain.pos{color:var(--ylw)}.mg-jt-gain.neg{color:var(--red)}.mg-jt-gain.neu{color:rgba(255,200,0,.6)}
+        .mg-jt-footer{padding:14px 20px;border-top:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:space-between;background:rgba(255,230,0,.02)}
+        .mg-jt-footer-stat{font-size:12px;color:var(--tm);font-weight:500}
+        .mg-jt-footer-stat strong{color:var(--wht);font-weight:700}
+        .mg-skel{background:linear-gradient(90deg,rgba(255,255,255,.04) 0%,rgba(255,255,255,.07) 50%,rgba(255,255,255,.04) 100%);background-size:200% 100%;animation:shimmer 1.5s ease infinite;border-radius:2px}
         @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
-        /* ── STATS ── */
-        .lp-stats{position:relative;z-index:1;display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(255,255,255,.05);border-top:1px solid rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.04)}
-        .lp-stat{background:var(--bg);padding:44px 28px;text-align:center;position:relative;overflow:hidden;transition:background .2s}
-        .lp-stat:hover{background:rgba(255,255,255,.015)}
-        .lp-stat::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,255,135,.2),transparent);opacity:0;transition:opacity .3s}
-        .lp-stat:hover::before{opacity:1}
-        .lp-stat-v{font-size:52px;font-weight:900;letter-spacing:-.04em;line-height:1;margin-bottom:8px;font-variant-numeric:tabular-nums}
-        .lp-stat-v.g{color:var(--g)}.lp-stat-v.y{color:var(--y)}.lp-stat-v.w{color:var(--t)}
-        .lp-stat-l{font-size:13px;font-weight:500;color:var(--ts)}
-        .lp-stat-s{font-size:11px;color:var(--tm);margin-top:4px}
+        /* ═══ STATS — POWER LEVEL STYLE ═══ */
+        .mg-stats{position:relative;z-index:1;display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:rgba(255,230,0,.1);border-top:2px solid rgba(255,230,0,.2);border-bottom:2px solid rgba(255,230,0,.2)}
+        .mg-stat{background:var(--blk);padding:48px 24px;text-align:center;position:relative;overflow:hidden;transition:background .2s}
+        .mg-stat:hover{background:rgba(255,230,0,.03)}
+        .mg-stat-v{font-family:'Bebas Neue',sans-serif;font-size:64px;letter-spacing:.02em;line-height:1;margin-bottom:6px;font-variant-numeric:tabular-nums}
+        .mg-stat-v.y{color:var(--ylw);text-shadow:0 0 30px rgba(255,230,0,.25)}
+        .mg-stat-v.r{color:var(--red)}.mg-stat-v.w{color:var(--wht)}
+        .mg-stat-l{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ts)}
+        .mg-stat-s{font-size:10px;color:var(--tm);margin-top:4px;letter-spacing:.04em}
+        .mg-stat-bar{height:3px;background:rgba(255,255,255,.06);margin:12px 0 0;overflow:hidden}
+        .mg-stat-bar-fill{height:100%;background:linear-gradient(90deg,var(--ylw),var(--red));animation:expandBar 1.8s .5s ease both}
+        @keyframes expandBar{from{width:0}to{width:100%}}
 
-        /* ── COMMENT ÇA MARCHE ── */
-        .lp-sec{position:relative;z-index:1;padding:100px 24px}
-        .lp-sec.dark{background:var(--s1)}.lp-sec.mid{background:var(--s2)}
-        .lp-cont{max-width:1100px;margin:0 auto}
-        .lp-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:52px}
-        .lp-step{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:32px 26px;transition:all .25s;position:relative;overflow:hidden}
-        .lp-step::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,255,135,.03),transparent);opacity:0;transition:opacity .3s;border-radius:16px}
-        .lp-step:hover{transform:translateY(-5px);border-color:rgba(0,255,135,.18)}
-        .lp-step:hover::after{opacity:1}
-        .lp-step-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-        .lp-step-n{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(0,255,135,.4)}
-        .lp-step-ico{width:40px;height:40px;border-radius:11px;background:rgba(0,255,135,.06);border:1px solid rgba(0,255,135,.1);display:flex;align-items:center;justify-content:center;font-size:19px}
-        .lp-step h3{font-size:20px;font-weight:800;letter-spacing:-.03em;margin-bottom:10px}
-        .lp-step p{font-size:13px;color:var(--ts);line-height:1.75}
-        .lp-step-chip{margin-top:16px;display:inline-flex;align-items:center;gap:6px;padding:4px 11px;background:rgba(255,215,0,.04);border:1px solid rgba(255,215,0,.1);border-radius:100px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,215,0,.5)}
+        /* ═══ COMMENT ÇA MARCHE — COMIC PANELS ═══ */
+        .mg-sec{position:relative;z-index:1;padding:100px 24px}
+        .mg-sec.dark{background:var(--panel)}.mg-sec.mid{background:var(--panel2)}
+        .mg-cont{max-width:1100px;margin:0 auto}
+        .mg-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:52px;border:2px solid rgba(255,230,0,.15);overflow:hidden;border-radius:4px}
+        .mg-step{background:var(--panel2);padding:36px 28px;transition:all .2s;position:relative;border-right:1px solid rgba(255,230,0,.1)}
+        .mg-step:last-child{border-right:none}
+        .mg-step:hover{background:rgba(255,230,0,.03)}
+        .mg-step::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--ylw);transform:scaleX(0);transition:transform .3s;transform-origin:left}
+        .mg-step:hover::after{transform:scaleX(1)}
+        .mg-step-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+        .mg-step-n{font-family:'Bebas Neue',sans-serif;font-size:48px;letter-spacing:.02em;color:rgba(255,230,0,.12);line-height:1}
+        .mg-step-ico{width:44px;height:44px;background:rgba(255,230,0,.08);border:2px solid rgba(255,230,0,.15);border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:20px}
+        .mg-step h3{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.04em;margin-bottom:10px}
+        .mg-step p{font-size:13px;color:var(--ts);line-height:1.75}
+        .mg-step-chip{margin-top:18px;display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:rgba(255,230,0,.06);border:1px solid rgba(255,230,0,.15);border-radius:2px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,230,0,.55)}
 
-        /* ── AVANT/APRÈS ── */
-        .lp-avap{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:52px}
-        .lp-card-red{border-radius:18px;padding:36px;background:rgba(255,77,90,.025);border:1px solid rgba(255,77,90,.12)}
-        .lp-card-green{border-radius:18px;padding:36px;background:rgba(0,255,135,.025);border:1px solid rgba(0,255,135,.12)}
-        .lp-avap-tag{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;margin-bottom:12px}
-        .lp-card-red .lp-avap-tag{color:rgba(255,77,90,.55)}
-        .lp-card-green .lp-avap-tag{color:rgba(0,255,135,.55)}
-        .lp-avap-h{font-size:24px;font-weight:800;letter-spacing:-.03em;margin-bottom:20px}
-        .lp-avap-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px}
-        .lp-avap-ico{width:20px;height:20px;border-radius:50%;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800}
-        .lp-card-red .lp-avap-ico{background:rgba(255,77,90,.1);color:var(--r)}
-        .lp-card-green .lp-avap-ico{background:rgba(0,255,135,.08);color:var(--g)}
-        .lp-avap-txt{font-size:13px;color:var(--ts);line-height:1.6}
-        .lp-avap-stat{margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,.06)}
-        .lp-avap-big{font-size:52px;font-weight:900;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
-        .lp-card-red .lp-avap-big{color:var(--r)}
-        .lp-card-green .lp-avap-big{color:var(--g)}
-        .lp-avap-k{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.22);margin-top:5px}
+        /* ═══ AVANT/APRÈS ═══ */
+        .mg-avap{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:52px;border:2px solid rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
+        .mg-card-red{padding:40px;background:rgba(255,26,26,.03);border-right:1px solid rgba(255,255,255,.06)}
+        .mg-card-grn{padding:40px;background:rgba(255,230,0,.02)}
+        .mg-avap-tag{font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;margin-bottom:12px}
+        .mg-card-red .mg-avap-tag{color:rgba(255,26,26,.6)}
+        .mg-card-grn .mg-avap-tag{color:rgba(255,230,0,.55)}
+        .mg-avap-h{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:.04em;margin-bottom:22px}
+        .mg-avap-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px}
+        .mg-avap-ico{width:20px;height:20px;border-radius:2px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900}
+        .mg-card-red .mg-avap-ico{background:rgba(255,26,26,.12);color:var(--red)}
+        .mg-card-grn .mg-avap-ico{background:rgba(255,230,0,.08);color:var(--ylw)}
+        .mg-avap-txt{font-size:13px;color:var(--ts);line-height:1.65}
+        .mg-avap-stat{margin-top:28px;padding-top:20px;border-top:1px solid rgba(255,255,255,.06)}
+        .mg-avap-big{font-family:'Bebas Neue',sans-serif;font-size:72px;letter-spacing:.02em;line-height:1;font-variant-numeric:tabular-nums}
+        .mg-card-red .mg-avap-big{color:var(--red)}.mg-card-grn .mg-avap-big{color:var(--ylw)}
+        .mg-avap-k{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tm);margin-top:5px}
 
-        /* ── TÉMOIGNAGES ── */
-        .lp-testis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:52px}
-        .lp-testi{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:28px;transition:all .22s;position:relative}
-        .lp-testi:hover{background:rgba(255,255,255,.04);border-color:rgba(0,255,135,.14);transform:translateY(-3px)}
-        .lp-testi-stars{color:var(--y);font-size:12px;letter-spacing:2px;margin-bottom:12px}
-        .lp-testi-txt{font-size:14px;color:rgba(255,255,255,.65);line-height:1.75;font-style:italic;margin-bottom:20px}
-        .lp-testi-row{display:flex;align-items:center;gap:9px}
-        .lp-testi-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#030308;flex-shrink:0}
-        .lp-testi-name{font-size:13px;font-weight:700}
-        .lp-testi-meta{font-size:11px;color:var(--tm);margin-top:1px}
-        .lp-testi-roi{margin-left:auto;font-size:17px;font-weight:900;color:var(--g);letter-spacing:-.02em}
+        /* ═══ TÉMOIGNAGES — SPEECH BUBBLES ═══ */
+        .mg-testis{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:52px}
+        .mg-testi{background:var(--panel2);border:2px solid rgba(255,255,255,.07);border-radius:4px;padding:28px;transition:all .22s;position:relative}
+        .mg-testi:hover{border-color:rgba(255,230,0,.2);transform:translateY(-4px);box-shadow:0 8px 32px rgba(0,0,0,.4),4px 4px 0 rgba(255,200,0,.08)}
+        .mg-testi::before{content:'';position:absolute;bottom:-12px;left:32px;width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-top:12px solid rgba(255,255,255,.07)}
+        .mg-testi-stars{font-size:14px;letter-spacing:2px;margin-bottom:14px;color:var(--ylw)}
+        .mg-testi-txt{font-size:14px;color:rgba(255,255,255,.65);line-height:1.75;font-style:italic;margin-bottom:22px}
+        .mg-testi-row{display:flex;align-items:center;gap:10px}
+        .mg-testi-av{width:36px;height:36px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:16px;color:#000;flex-shrink:0}
+        .mg-testi-name{font-size:13px;font-weight:700;letter-spacing:.02em}
+        .mg-testi-meta{font-size:11px;color:var(--tm);margin-top:1px}
+        .mg-testi-roi{margin-left:auto;font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.04em;color:var(--ylw)}
 
-        /* ── PLANS ── */
-        .lp-plans{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:960px;margin:52px auto 0}
-        .lp-plan{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:18px;padding:34px 26px;position:relative;transition:all .22s}
-        .lp-plan:hover{transform:translateY(-4px)}
-        .lp-plan.rec{border-color:rgba(0,255,135,.28);background:rgba(0,255,135,.02);box-shadow:0 0 60px rgba(0,255,135,.06)}
-        .lp-plan-badge{position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--g);color:#030308;font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:5px 14px;border-radius:100px;white-space:nowrap}
-        .lp-plan-cat{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--tm);margin-bottom:8px}
-        .lp-plan-name{font-size:26px;font-weight:900;letter-spacing:-.04em;margin-bottom:6px}
-        .lp-plan-name.g{color:var(--g)}
-        .lp-plan-price{font-size:50px;font-weight:900;letter-spacing:-.05em;line-height:1;font-variant-numeric:tabular-nums;margin-bottom:4px}
-        .lp-plan-price sup{font-size:20px;vertical-align:top;margin-top:10px;display:inline-block;font-weight:700}
-        .lp-plan-per{font-size:13px;color:var(--tm);font-weight:400}
-        .lp-plan-desc{font-size:12px;color:var(--ts);margin:12px 0 20px;line-height:1.6;min-height:36px}
-        .lp-plan-feats{list-style:none;display:flex;flex-direction:column;gap:9px;margin-bottom:24px}
-        .lp-plan-feats li{display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,.72)}
-        .lp-plan-feats .on{color:var(--g);font-size:11px}.lp-plan-feats .off{color:rgba(255,255,255,.16);font-size:11px}
-        .lp-plan-feats .off+span{color:rgba(255,255,255,.26)}
-        .lp-plan-btn{display:block;text-align:center;padding:13px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none;transition:all .2s}
-        .lp-plan-btn.fr{border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.65)}
-        .lp-plan-btn.fr:hover{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.04)}
-        .lp-plan-btn.pa{background:var(--g);color:#030308}
-        .lp-plan-btn.pa:hover{background:#33FF9E;box-shadow:0 8px 32px rgba(0,255,135,.38)}
-        .lp-plan-btn.an{border:1px solid rgba(0,255,135,.22);color:var(--g)}
-        .lp-plan-btn.an:hover{background:rgba(0,255,135,.06)}
-        .lp-plan-eco{text-align:center;font-size:11px;font-weight:600;color:rgba(0,255,135,.45);margin-top:7px}
-        .lp-plan-saving{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:rgba(255,77,90,.1);border:1px solid rgba(255,77,90,.2);border-radius:5px;font-size:9px;font-weight:800;color:var(--r);letter-spacing:.06em;margin-left:8px;vertical-align:middle}
+        /* ═══ PLANS ═══ */
+        .mg-plans{display:grid;grid-template-columns:repeat(3,1fr);gap:0;max-width:960px;margin:52px auto 0;border:2px solid rgba(255,230,0,.15);border-radius:4px;overflow:hidden}
+        .mg-plan{background:var(--panel2);padding:36px 28px;position:relative;transition:all .22s;border-right:1px solid rgba(255,230,0,.1)}
+        .mg-plan:last-child{border-right:none}
+        .mg-plan:hover{background:rgba(255,230,0,.025)}
+        .mg-plan.rec{background:rgba(255,230,0,.035);border-top:3px solid var(--ylw)}
+        .mg-plan-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;background:var(--ylw);color:#000;font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;border-radius:2px;margin-bottom:16px}
+        .mg-plan-cat{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--tm);margin-bottom:6px}
+        .mg-plan-name{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:.04em;margin-bottom:4px}
+        .mg-plan-name.y{color:var(--ylw)}
+        .mg-plan-price{font-family:'Bebas Neue',sans-serif;font-size:64px;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums;margin-bottom:2px}
+        .mg-plan-price sup{font-size:22px;vertical-align:top;margin-top:10px;display:inline-block}
+        .mg-plan-per{font-size:13px;color:var(--tm)}
+        .mg-plan-desc{font-size:12px;color:var(--ts);margin:14px 0 20px;line-height:1.65;min-height:36px}
+        .mg-plan-feats{list-style:none;display:flex;flex-direction:column;gap:9px;margin-bottom:26px}
+        .mg-plan-feats li{display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(255,255,255,.72)}
+        .mg-plan-feats .on{color:var(--ylw);font-size:10px;font-weight:900}
+        .mg-plan-feats .off{color:rgba(255,255,255,.15);font-size:10px}
+        .mg-plan-feats .off+span{color:rgba(255,255,255,.25)}
+        .mg-plan-btn{display:block;text-align:center;padding:13px;border-radius:2px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;transition:all .2s}
+        .mg-plan-btn.fr{border:2px solid rgba(255,255,255,.1);color:rgba(255,255,255,.6)}
+        .mg-plan-btn.fr:hover{border-color:rgba(255,255,255,.2)}
+        .mg-plan-btn.pa{background:var(--ylw);color:#000;font-weight:900}
+        .mg-plan-btn.pa:hover{background:var(--ylw2);box-shadow:3px 3px 0 rgba(200,140,0,.3)}
+        .mg-plan-btn.an{border:2px solid rgba(255,230,0,.2);color:var(--ylw)}
+        .mg-plan-btn.an:hover{background:rgba(255,230,0,.06)}
+        .mg-plan-eco{text-align:center;font-size:11px;font-weight:600;color:rgba(255,230,0,.4);margin-top:8px;letter-spacing:.06em}
 
-        /* ── FAQ ── */
-        .lp-faqs{max-width:720px;margin:52px auto 0;display:flex;flex-direction:column;gap:3px}
-        .lp-faq{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:11px;overflow:hidden;transition:border-color .2s}
-        .lp-faq.on{border-color:rgba(0,255,135,.18)}
-        .lp-faq-q{padding:18px 22px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;gap:12px;user-select:none}
-        .lp-faq-q-txt{font-size:14px;font-weight:600;color:rgba(255,255,255,.78);transition:color .2s}
-        .lp-faq-q:hover .lp-faq-q-txt{color:var(--t)}
-        .lp-faq-ico{width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:rgba(0,255,135,.55);font-size:15px;transition:all .28s;flex-shrink:0}
-        .lp-faq.on .lp-faq-ico{transform:rotate(45deg);border-color:rgba(0,255,135,.28);background:rgba(0,255,135,.07)}
-        .lp-faq-a{max-height:0;overflow:hidden;transition:max-height .35s ease,padding .3s;font-size:13px;color:var(--ts);line-height:1.8;padding:0 22px}
-        .lp-faq.on .lp-faq-a{max-height:200px;padding:0 22px 18px}
+        /* ═══ FAQ ═══ */
+        .mg-faqs{max-width:720px;margin:52px auto 0;display:flex;flex-direction:column;gap:2px}
+        .mg-faq{background:var(--panel2);border:1px solid rgba(255,255,255,.06);border-radius:2px;overflow:hidden;transition:border-color .2s}
+        .mg-faq.on{border-color:rgba(255,230,0,.2);border-left:3px solid var(--ylw)}
+        .mg-faq-q{padding:18px 22px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;gap:12px;user-select:none}
+        .mg-faq-q-txt{font-size:14px;font-weight:600;color:rgba(255,255,255,.75);transition:color .2s}
+        .mg-faq-q:hover .mg-faq-q-txt{color:var(--wht)}
+        .mg-faq-ico{width:22px;height:22px;border:2px solid rgba(255,255,255,.1);border-radius:2px;display:flex;align-items:center;justify-content:center;color:rgba(255,230,0,.6);font-size:14px;font-weight:900;transition:all .25s;flex-shrink:0}
+        .mg-faq.on .mg-faq-ico{transform:rotate(45deg);border-color:rgba(255,230,0,.3);background:rgba(255,230,0,.08)}
+        .mg-faq-a{max-height:0;overflow:hidden;transition:max-height .35s ease,padding .3s;font-size:13px;color:var(--ts);line-height:1.8;padding:0 22px}
+        .mg-faq.on .mg-faq-a{max-height:200px;padding:0 22px 18px}
 
-        /* ── CTA FINAL ── */
-        .lp-cta{position:relative;z-index:1;padding:140px 24px;text-align:center;overflow:hidden;background:var(--s1)}
-        .lp-cta::before{content:'';position:absolute;bottom:-80px;left:50%;transform:translateX(-50%);width:900px;height:700px;background:radial-gradient(ellipse,rgba(0,255,135,.08) 0%,transparent 60%);pointer-events:none}
-        .lp-cta-h{font-size:clamp(50px,9vw,112px);font-weight:900;line-height:.84;letter-spacing:-.06em;margin-bottom:28px}
-        .lp-cta-h .g{color:var(--g)}
-        .lp-cta-p{font-size:17px;color:var(--ts);max-width:460px;margin:0 auto 48px;line-height:1.7}
-        .lp-cta-strip{display:flex;align-items:center;justify-content:center;gap:14px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--tm);margin-top:28px;flex-wrap:wrap}
-        .lp-cta-strip-dot{width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,.12)}
-        .lp-cta-strip .hi{color:var(--ts)}
+        /* ═══ CTA FINAL — ULTRA IMPACT ═══ */
+        .mg-cta{position:relative;z-index:1;padding:140px 24px;text-align:center;overflow:hidden;background:var(--panel)}
+        .mg-cta::before{content:'';position:absolute;bottom:-60px;left:50%;transform:translateX(-50%);width:800px;height:600px;background:radial-gradient(ellipse,rgba(255,230,0,.07) 0%,transparent 60%);pointer-events:none}
+        .mg-cta::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--ylw),transparent)}
+        .mg-cta-h{font-family:'Bebas Neue',sans-serif;font-size:clamp(60px,11vw,140px);line-height:.82;letter-spacing:.04em;margin-bottom:24px}
+        .mg-cta-h .y{color:var(--ylw);text-shadow:0 0 40px rgba(255,230,0,.25)}
+        .mg-cta-p{font-size:17px;color:var(--ts);max-width:440px;margin:0 auto 48px;line-height:1.75}
+        .mg-cta-strip{display:flex;align-items:center;justify-content:center;gap:14px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--tm);margin-top:28px;flex-wrap:wrap}
+        .mg-cta-strip-dot{width:4px;height:4px;border-radius:50%;background:rgba(255,230,0,.2)}
 
-        /* ── JEU RESPONSABLE ── */
-        .lp-jr{position:relative;z-index:1;overflow:hidden;white-space:nowrap;background:rgba(255,255,255,.01);border-top:1px solid rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.04)}
-        .lp-jr-inner{display:inline-flex;animation:tick 42s linear infinite}
-        .lp-jr-item{display:inline-flex;align-items:center;gap:10px;padding:12px 28px;font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.16)}
+        /* ═══ JEU RESPONSABLE + FOOTER ═══ */
+        .mg-jr{position:relative;z-index:1;overflow:hidden;white-space:nowrap;background:rgba(255,26,26,.03);border-top:2px solid rgba(255,26,26,.1);border-bottom:2px solid rgba(255,26,26,.1)}
+        .mg-jr-inner{display:inline-flex;animation:tick 42s linear infinite}
+        @keyframes tick{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+        .mg-jr-item{display:inline-flex;align-items:center;gap:10px;padding:11px 28px;font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,100,100,.35)}
+        .mg-footer{position:relative;z-index:1;background:#030308;border-top:2px solid rgba(255,255,255,.05);padding:60px 24px 32px}
+        .mg-footer-grid{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:48px}
+        .mg-footer-brand p{font-size:12px;color:rgba(255,255,255,.25);line-height:1.75;margin-top:12px}
+        .mg-footer-col-t{font-size:9px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,230,0,.25);margin-bottom:14px}
+        .mg-footer-col ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+        .mg-footer-col ul a{font-size:13px;color:rgba(255,255,255,.3);text-decoration:none;transition:color .15s}
+        .mg-footer-col ul a:hover{color:var(--ylw)}
+        .mg-footer-bot{max-width:1100px;margin:0 auto;padding-top:20px;border-top:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:space-between;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.15)}
+        .mg-footer-bot a{color:rgba(255,230,0,.2);text-decoration:none}
 
-        /* ── FOOTER ── */
-        .lp-footer{position:relative;z-index:1;background:#01010A;border-top:1px solid rgba(255,255,255,.05);padding:60px 24px 32px}
-        .lp-footer-grid{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:48px}
-        .lp-footer-brand p{font-size:12px;color:rgba(255,255,255,.26);line-height:1.75;margin-top:12px}
-        .lp-footer-col-t{font-size:9.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.2);margin-bottom:14px}
-        .lp-footer-col ul{list-style:none;display:flex;flex-direction:column;gap:9px}
-        .lp-footer-col ul a{font-size:13px;color:rgba(255,255,255,.32);text-decoration:none;transition:color .15s}
-        .lp-footer-col ul a:hover{color:rgba(255,255,255,.72)}
-        .lp-footer-bot{max-width:1100px;margin:0 auto;padding-top:20px;border-top:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:space-between;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.16)}
-        .lp-footer-bot a{color:rgba(0,255,135,.22);text-decoration:none}
-
-        @media(max-width:1024px){
-          .lp-hero{grid-template-columns:1fr;padding:100px 32px 60px;text-align:center;max-width:640px}
-          .lp-hero-right{display:none}
-          .lp-h1-sub,.lp-hero-proof{margin-left:auto;margin-right:auto}
-          .lp-hero-ctas{justify-content:center}
-        }
+        /* ═══ RESPONSIVE ═══ */
         @media(max-width:860px){
-          .lp-nav-links{display:none}
-          .lp-nav{padding:0 18px}
-          .lp-hero,.lp-sec,.lp-journal,.lp-cta{padding:80px 18px}
-          .lp-stats{grid-template-columns:1fr 1fr}
-          .lp-steps,.lp-avap,.lp-testis,.lp-plans{grid-template-columns:1fr}
-          .lp-footer-grid{grid-template-columns:1fr 1fr}
-          .lp-jt-head,.lp-jt-row{grid-template-columns:60px 1fr 1fr 70px 80px}
-          .lp-jt-head>*:nth-child(4),.lp-jt-head>*:nth-child(5),.lp-jt-row>*:nth-child(4),.lp-jt-row>*:nth-child(5){display:none}
+          .mg-nav-links{display:none}
+          .mg-nav{padding:0 18px}
+          .mg-hero,.mg-sec,.mg-journal,.mg-cta{padding:80px 18px}
+          .mg-stats{grid-template-columns:1fr 1fr}
+          .mg-steps,.mg-avap,.mg-testis,.mg-plans{grid-template-columns:1fr}
+          .mg-step,.mg-plan{border-right:none;border-bottom:1px solid rgba(255,230,0,.1)}
+          .mg-step:last-child,.mg-plan:last-child{border-bottom:none}
+          .mg-card-red{border-right:none;border-bottom:1px solid rgba(255,255,255,.06)}
+          .mg-footer-grid{grid-template-columns:1fr 1fr}
+          .mg-jt-head,.mg-jt-row{grid-template-columns:60px 1fr 1fr 70px 80px}
+          .mg-jt-head>*:nth-child(4),.mg-jt-head>*:nth-child(5),.mg-jt-row>*:nth-child(4),.mg-jt-row>*:nth-child(5){display:none}
         }
       `}</style>
 
-      <div className="lp">
+      <div className="mg">
         {/* FOND */}
-        <div className="lp-bg">
-          <div className="lp-bg-grid"/>
-          <div className="lp-bg-glow1"/>
-          <div className="lp-bg-glow2"/>
-          <div className="lp-bg-glow3"/>
+        <div className="mg-bg">
+          <div className="mg-bg-lines"/>
+          <div className="mg-bg-dots"/>
         </div>
 
-        {/* NOTIF LIVE */}
+        {/* NOTIF */}
         {notif && (
-          <div className="lp-notif" key={notif.id}>
-            <div className="lp-notif-av">{notif.name.split(" ").map((p:string)=>p[0]).join("")}</div>
-            <div><div className="lp-notif-name">{notif.name}</div><div className="lp-notif-sub">{notif.txt}</div></div>
-            {notif.gain && <div className="lp-notif-gain">{notif.gain}</div>}
+          <div className="mg-notif" key={notif.id}>
+            <div className="mg-notif-av">{notif.name.split(" ").map((p:string)=>p[0]).join("")}</div>
+            <div><div className="mg-notif-name">{notif.name}</div><div className="mg-notif-sub">{notif.txt}</div></div>
+            {notif.gain && <div className="mg-notif-gain">{notif.gain}</div>}
           </div>
         )}
 
         {/* NAV */}
-        <nav className="lp-nav">
-          <Link href="/" className="lp-nav-logo">
-            <div className="lp-nav-badge">PG</div>
-            <div><span className="lp-nav-name">PMUGagnant</span><span className="lp-nav-v">TurfEdge V9.2</span></div>
+        <nav className="mg-nav">
+          <Link href="/" className="mg-nav-logo">
+            <div className="mg-nav-badge">PG</div>
+            <div><span className="mg-nav-name">PMUGagnant</span><span className="mg-nav-v">TurfEdge V9.2</span></div>
           </Link>
-          <ul className="lp-nav-links">
+          <ul className="mg-nav-links">
             <li><a href="#preuves">Preuves réelles</a></li>
             <li><a href="#comment">Comment ça marche</a></li>
             <li><a href="#plans">Tarifs</a></li>
           </ul>
-          <div className="lp-nav-r">
-            <Link href="/login" className="lp-btn-sm ghost">Connexion</Link>
-            <Link href="/signup" className="lp-btn-sm green">Essai gratuit →</Link>
+          <div className="mg-nav-r">
+            <Link href="/login" className="mg-btn-ghost">Connexion</Link>
+            <Link href="/signup" className="mg-btn-ylw">Essai gratuit →</Link>
           </div>
         </nav>
 
-        {/* ════════ HERO SPLIT ════════ */}
-        <section style={{position:"relative",zIndex:1}}>
-          <div className="lp-hero">
-            {/* LEFT */}
-            <div className="lp-hero-left">
-              <div className="lp-hero-tag">
-                <div className="lp-live-dot"/>
-                Moteur actif · Prochain verdict dans <strong style={{color:"var(--g)",marginLeft:4}}>{countdown}</strong>
+        {/* ════════ HERO ════════ */}
+        <section className="mg-hero">
+          <div className="mg-hero-kicker">
+            <div className="mg-live-dot"/>
+            Moteur actif · Verdict dans <strong style={{marginLeft:4,color:"var(--ylw)"}}>{countdown}</strong>
+          </div>
+
+          <h1 className="mg-h1">
+            <span className="mg-h1-line1">L&apos;IA qui lit</span>
+            <span className="mg-h1-line2">chaque course</span>
+            <span className="mg-h1-line3">PMU !!</span>
+          </h1>
+
+          <p className="mg-h1-sub">
+            <strong>TurfEdge V9.2 analyse 30+ signaux par cheval</strong> — écarte les courses illisibles et vous envoie un seul ticket par jour. Cheval, mise Kelly, cote. Prêt à jouer.
+          </p>
+
+          {/* TICKET CARD MANGA */}
+          <div className="mg-ticket">
+            <div className="mg-ticket-course">R2C5 · VIRE · 14:12</div>
+
+            <div className="mg-power-row">
+              <div className="mg-power-lbl">
+                <span>Score de confiance</span>
+                <span className="mg-power-val">88<span style={{fontSize:14,color:"var(--tm)"}}>/ 100</span></span>
               </div>
-              <h1 className="lp-h1">
-                L&apos;IA qui lit<br/>
-                <span className="g">chaque course</span><br/>
-                PMU. Chaque matin.
-              </h1>
-              <p className="lp-h1-sub">
-                <strong>TurfEdge V9.2 score 30+ signaux par cheval,</strong> écarte les courses illisibles et vous donne un seul ticket — cheval, mise Kelly, cote. Les résultats réels sont affichés ci-dessous.
-              </p>
-              <div className="lp-hero-ctas">
-                <Link href="/signup" className="lp-hero-btn main">Démarrer gratuitement →</Link>
-                <a href="#preuves" className="lp-hero-btn sec">Voir les résultats réels</a>
-              </div>
-              <div className="lp-hero-proof">
-                <span>✓ 14 jours d&apos;essai</span>
-                <div className="lp-hero-proof-sep"/>
-                <span>✓ Sans carte bancaire</span>
-                <div className="lp-hero-proof-sep"/>
-                <span>✓ Résiliation en 1 clic</span>
+              <div className="mg-power-bar-track">
+                <div className="mg-power-bar-fill" style={{width: barAnim ? "88%" : "0%"}}/>
               </div>
             </div>
 
-            {/* RIGHT — TICKET CARD */}
-            <div className="lp-hero-right">
-              <div className="lp-hero-card-wrap">
-                <div className="lp-hero-card-glow"/>
-                <div className="lp-hero-card">
-                  {/* Scan line animation */}
-                  <div className="lp-hc-scan">
-                    {cardScanned && <div className="lp-hc-scan-line"/>}
-                  </div>
+            <div className="mg-horse-row">
+              <div>
+                <div className="mg-horse-name">LINA DU RIB</div>
+                <div className="mg-horse-num">N°1 · PÉPITE DU JOUR 💎</div>
+              </div>
+              <div className="mg-verdict-badge">▶ JOUER !!</div>
+            </div>
 
-                  <div className="lp-hc-header">
-                    <div className="lp-hc-tag">● VERDICT IA · V9.2</div>
-                    <div className="lp-hc-course">R2C5 · VIRE · 14:12</div>
-                  </div>
-
-                  <div className="lp-hc-score-row">
-                    <div className="lp-hc-score-lbl">Score de confiance</div>
-                    <div className="lp-hc-bar">
-                      <div className="lp-hc-bar-fill" style={{width: cardScanned ? "88%" : "0%"}}/>
-                    </div>
-                    <span className="lp-hc-score-val">88</span>
-                    <span className="lp-hc-score-max"> / 100</span>
-                  </div>
-
-                  <div className="lp-hc-horse">
-                    <div>
-                      <div className="lp-hc-horse-name">LINA DU RIB</div>
-                      <div className="lp-hc-horse-num">N°1 · Pépite du jour 💎</div>
-                    </div>
-                    <div className="lp-hc-verdict">✓ JOUER</div>
-                  </div>
-
-                  <div className="lp-hc-grid">
-                    <div className="lp-hc-cell">
-                      <div className="lp-hc-cell-lbl">Mise Kelly</div>
-                      <div className="lp-hc-cell-val g">12 €</div>
-                    </div>
-                    <div className="lp-hc-cell">
-                      <div className="lp-hc-cell-lbl">Cote PMU</div>
-                      <div className="lp-hc-cell-val y">9.8x</div>
-                    </div>
-                    <div className="lp-hc-cell">
-                      <div className="lp-hc-cell-lbl">Signal</div>
-                      <div className="lp-hc-cell-val w">8.8/10</div>
-                    </div>
-                  </div>
-
-                  <div className="lp-hc-btn">
-                    <span>✓</span> Ticket enregistré
-                  </div>
-
-                  <div className="lp-hc-countdown">
-                    <span>⏱</span>
-                    <span>Prochain verdict dans <span className="lp-hc-cd-val">{countdown}</span></span>
-                  </div>
-                </div>
+            <div className="mg-ticket-stats">
+              <div className="mg-ts-cell">
+                <div className="mg-ts-lbl">Mise Kelly</div>
+                <div className="mg-ts-val y">12 €</div>
+              </div>
+              <div className="mg-ts-cell">
+                <div className="mg-ts-lbl">Cote PMU</div>
+                <div className="mg-ts-val r">9.8×</div>
+              </div>
+              <div className="mg-ts-cell">
+                <div className="mg-ts-lbl">Signal</div>
+                <div className="mg-ts-val w">8.8/10</div>
               </div>
             </div>
           </div>
+
+          <Link href="/signup" className="mg-cta-main">
+            ▶ Démarrer gratuitement
+          </Link>
+
+          <div className="mg-hero-proof">
+            <span><span className="chk">■</span> 14 jours d&apos;essai</span>
+            <span><span className="chk">■</span> Sans carte bancaire</span>
+            <span><span className="chk">■</span> Résiliation 1 clic</span>
+          </div>
+
+          <div className="mg-countdown">
+            Prochain verdict dans <strong>{countdown}</strong>
+          </div>
         </section>
 
-        {/* WINS SOCIAL PROOF TICKER */}
-        <div className="lp-wins">
-          <div className="lp-wins-inner" id="lp-wins"/>
-        </div>
+        {/* ════════ JOURNAL ════════ */}
+        <section className="mg-journal" id="preuves">
+          <div className="mg-journal-inner">
+            <div className="mg-sec-tag">Journal de bord · Données réelles</div>
+            <h2 className="mg-sec-h">Ce que l&apos;IA a dit.<br/>Ce qui s&apos;est passé <em>réellement.</em></h2>
+            <p className="mg-sec-p">Chaque ligne est un pari réel — enregistré avant le départ. Aucun cherry-picking. La preuve brute.</p>
 
-        {/* HIPPODROME TICKER */}
-        <div className="lp-ticker"><div className="lp-ticker-inner" id="lp-ticker"/></div>
-
-        {/* ════════ JOURNAL DE BORD ════════ */}
-        <section className="lp-journal" id="preuves">
-          <div className="lp-journal-inner">
-            <div className="lp-section-tag">Journal de bord · Données réelles Supabase</div>
-            <h2 className="lp-section-h">Ce que l&apos;IA a dit.<br/>Ce qui s&apos;est passé <em>réellement.</em></h2>
-            <p className="lp-section-p">Chaque ligne est un pari réel — enregistré avant le départ. Aucun cherry-picking. Aucune retouche. La preuve brute.</p>
-
-            <div className="lp-jt">
-              <div className="lp-jt-head">
+            <div className="mg-jt">
+              <div className="mg-jt-head">
                 <div>Date</div><div>Hippodrome</div><div>Cheval IA</div>
                 <div>Cote</div><div>Mise</div><div>Résultat</div>
                 <div style={{textAlign:"right"}}>Gain net</div>
               </div>
-
               {hist.length===0 ? (
                 [1,2,3,4,5].map(i=>(
-                  <div key={i} className="lp-jt-row">
+                  <div key={i} className="mg-jt-row">
                     {[80,140,140,60,60,80,80].map((w,j)=>(
-                      <div key={j}><div className="lp-skel" style={{height:14,width:`${w*0.7}px`,borderRadius:4}}/></div>
+                      <div key={j}><div className="mg-skel" style={{height:14,width:`${w*0.7}px`,borderRadius:2}}/></div>
                     ))}
                   </div>
                 ))
               ) : (
                 hist.map((h,i)=>{
-                  const isWin=h.resultat==="GAGNANT";
-                  const isPlace=h.resultat==="PLACE";
-                  const isLose=h.resultat==="PERDU";
-                  const gainPos=h.gain>0;
+                  const isWin=h.resultat==="GAGNANT";const isPlace=h.resultat==="PLACE";const isLose=h.resultat==="PERDU";const gainPos=h.gain>0;
                   return(
-                    <div key={i} className={`lp-jt-row ${isWin?"win":isPlace?"place":isLose?"lose":""}`}>
-                      <div className="lp-jt-date">{fmtDate(h.date)}</div>
-                      <div><div className="lp-jt-hippe">{h.hippodrome}</div><div className="lp-jt-course">{h.course}</div></div>
-                      <div className="lp-jt-cheval">#{h.chevalNum} {h.cheval}</div>
-                      <div className="lp-jt-cote">{h.cote?`${h.cote.toFixed(1)}x`:"—"}</div>
-                      <div className="lp-jt-mise">{h.mise}€</div>
-                      <div><div className={`lp-jt-badge ${isWin?"win":isPlace?"place":"lose"}`}>{isWin?"✓ Gagné":isPlace?"~ Placé":"✗ Perdu"}</div></div>
-                      <div className={`lp-jt-gain ${gainPos?"pos":h.gain===0?"neu":"neg"}`} style={{textAlign:"right"}}>{gainPos?"+":""}{Math.round(h.gain)}€</div>
+                    <div key={i} className={`mg-jt-row ${isWin?"win":isPlace?"place":isLose?"lose":""}`}>
+                      <div className="mg-jt-date">{fmtDate(h.date)}</div>
+                      <div><div className="mg-jt-hippe">{h.hippodrome}</div><div className="mg-jt-course">{h.course}</div></div>
+                      <div className="mg-jt-cheval">#{h.chevalNum} {h.cheval}</div>
+                      <div className="mg-jt-cote">{h.cote?`${h.cote.toFixed(1)}x`:"—"}</div>
+                      <div className="mg-jt-mise">{h.mise}€</div>
+                      <div><div className={`mg-jt-badge ${isWin?"win":isPlace?"place":"lose"}`}>{isWin?"✓ Gagné":isPlace?"~ Placé":"✗ Perdu"}</div></div>
+                      <div className={`mg-jt-gain ${gainPos?"pos":h.gain===0?"neu":"neg"}`} style={{textAlign:"right"}}>{gainPos?"+":""}{Math.round(h.gain)}€</div>
                     </div>
                   );
                 })
               )}
-
-              <div className="lp-jt-footer">
-                <div className="lp-jt-footer-stat">
+              <div className="mg-jt-footer">
+                <div className="mg-jt-footer-stat">
                   {liveBest>0&&<><strong>{liveBest}</strong> meilleure série · </>}
-                  {liveStreak>0&&<><strong style={{color:"var(--g)"}}>{liveStreak}</strong> en cours · </>}
+                  {liveStreak>0&&<><strong style={{color:"var(--ylw)"}}>{liveStreak}</strong> en cours · </>}
                   Données mises à jour toutes les 5 minutes
                 </div>
-                <Link href="/signup" style={{fontSize:13,fontWeight:700,color:"var(--g)",textDecoration:"none"}}>Voir l&apos;historique complet →</Link>
+                <Link href="/signup" style={{fontSize:12,fontWeight:700,color:"var(--ylw)",textDecoration:"none",letterSpacing:".06em",textTransform:"uppercase"}}>
+                  Voir l&apos;historique complet →
+                </Link>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ════════ STATS ANIMÉES ════════ */}
-        <div className="lp-stats" ref={statsRef}>
+        {/* ════════ STATS POWER LEVEL ════════ */}
+        <div className="mg-stats" ref={statsRef}>
           {[
-            {v:`+${cv.roi}%`,l:"ROI moyen 30 jours",s:"Sur bankroll 1 000 €",c:"g"},
+            {v:`+${cv.roi}%`,l:"ROI moyen 30 jours",s:"Sur bankroll 1 000 €",c:"y"},
             {v:`${cv.tickets}`,l:"Tickets enregistrés",s:"30 derniers jours",c:"w"},
-            {v:`${cv.win}%`,l:"Taux de réussite",s:"Gagnant ou placé",c:"y"},
-            {v:`+${cv.gain}€`,l:"Gain net 30 jours",s:"Bankroll de départ 1 000 €",c:"g"},
+            {v:`${cv.win}%`,l:"Taux de réussite",s:"Gagnant ou placé",c:"r"},
+            {v:`+${cv.gain}€`,l:"Gain net 30 jours",s:"Bankroll de départ 1 000 €",c:"y"},
           ].map(s=>(
-            <div key={s.l} className="lp-stat">
-              <div className={`lp-stat-v ${s.c}`}>{s.v}</div>
-              <div className="lp-stat-l">{s.l}</div>
-              <div className="lp-stat-s">{s.s}</div>
+            <div key={s.l} className="mg-stat">
+              <div className={`mg-stat-v ${s.c}`}>{s.v}</div>
+              <div className="mg-stat-l">{s.l}</div>
+              <div className="mg-stat-s">{s.s}</div>
+              <div className="mg-stat-bar"><div className="mg-stat-bar-fill"/></div>
             </div>
           ))}
         </div>
 
         {/* ════════ COMMENT ÇA MARCHE ════════ */}
-        <section className="lp-sec mid" id="comment">
-          <div className="lp-cont">
-            <div className="lp-section-tag">Comment ça marche</div>
-            <h2 className="lp-section-h">3 étapes.<br/><em>0 heure</em> perdue.</h2>
-            <div className="lp-steps">
+        <section className="mg-sec mid" id="comment">
+          <div className="mg-cont">
+            <div className="mg-sec-tag">Comment ça marche</div>
+            <h2 className="mg-sec-h">3 étapes.<br/><em>0 heure</em> perdue.</h2>
+            <div className="mg-steps">
               {[
-                {n:"01",ico:"🔍",h:"TurfEdge analyse",p:"Chaque matin à 7h, le moteur charge 100% du programme PMU et score chaque partant sur 30+ signaux : forme récente, cotes marché, jockey×hippodrome, distance exacte, terrain du jour.",chip:"⏰ 07:00 · Automatique"},
-                {n:"02",ico:"🎯",h:"TurfEdge filtre",p:"Les courses jugées illisibles sont automatiquement écartées. Une course sur deux ne passe pas le filtre. Seules les courses où la value est mathématiquement défendable sont retenues.",chip:"📊 ~50% de courses écartées"},
-                {n:"03",ico:"📲",h:"Vous recevez",p:"Un seul verdict par jour : hippodrome, cheval, mise Kelly, niveau de confiance. Sur le dashboard + alerte Telegram T-15min avant le départ pour les abonnés Premium.",chip:"⚡ Alerte T-15min"},
+                {n:"01",ico:"🔍",h:"TurfEdge analyse",p:"Chaque matin à 7h, 100% du programme PMU est chargé. Chaque cheval scoré sur 30+ signaux : forme récente, cote marché, jockey×hippodrome, distance, terrain.",chip:"⏰ 07:00 · Automatique"},
+                {n:"02",ico:"🎯",h:"TurfEdge filtre",p:"Les courses illisibles sont écartées automatiquement. Une sur deux ne passe pas le filtre. Seule la value mathématiquement défendable est retenue.",chip:"📊 ~50% écartées"},
+                {n:"03",ico:"📲",h:"Vous recevez",p:"Un seul verdict : hippodrome, cheval, mise Kelly, confiance. Dashboard + alerte Telegram T-15min pour les abonnés Premium.",chip:"⚡ Alerte T-15min"},
               ].map(s=>(
-                <div key={s.n} className="lp-step">
-                  <div className="lp-step-top"><div className="lp-step-n">Étape {s.n}</div><div className="lp-step-ico">{s.ico}</div></div>
+                <div key={s.n} className="mg-step">
+                  <div className="mg-step-top"><div className="mg-step-n">{s.n}</div><div className="mg-step-ico">{s.ico}</div></div>
                   <h3>{s.h}</h3>
                   <p>{s.p}</p>
-                  <div className="lp-step-chip">{s.chip}</div>
+                  <div className="mg-step-chip">{s.chip}</div>
                 </div>
               ))}
             </div>
@@ -605,49 +645,49 @@ export default function LandingPage() {
         </section>
 
         {/* ════════ AVANT/APRÈS ════════ */}
-        <section className="lp-sec dark">
-          <div className="lp-cont">
-            <div className="lp-section-tag">Avant vs Après</div>
-            <h2 className="lp-section-h">La différence.<br/><em>En chiffres réels.</em></h2>
-            <div className="lp-avap">
-              <div className="lp-card-red">
-                <div className="lp-avap-tag">❌ Sans PMU Gagnant</div>
-                <div className="lp-avap-h">Le parieur qui improvise</div>
-                {["Joue 5 à 8 courses par jour sur instinct","Aucune rigueur sur la mise — double quand il « sent »","Aucun suivi de bankroll — ne sait jamais où il en est","Perd 2–3h à éplucher le programme chaque matin","Parie les courses loterie par FOMO"].map(t=>(
-                  <div key={t} className="lp-avap-item"><div className="lp-avap-ico">✗</div><div className="lp-avap-txt">{t}</div></div>
+        <section className="mg-sec dark">
+          <div className="mg-cont">
+            <div className="mg-sec-tag">Avant vs Après</div>
+            <h2 className="mg-sec-h">La différence.<br/><em>En chiffres réels.</em></h2>
+            <div className="mg-avap">
+              <div className="mg-card-red">
+                <div className="mg-avap-tag">❌ Sans PMU Gagnant</div>
+                <div className="mg-avap-h">Le parieur qui improvise</div>
+                {["Joue 5 à 8 courses par jour sur instinct","Aucune rigueur sur la mise — double quand il « sent »","Aucun suivi de bankroll","Perd 2–3h à éplucher le programme chaque matin","Parie les courses loterie par FOMO"].map(t=>(
+                  <div key={t} className="mg-avap-item"><div className="mg-avap-ico">✗</div><div className="mg-avap-txt">{t}</div></div>
                 ))}
-                <div className="lp-avap-stat"><div className="lp-avap-big">-18%</div><div className="lp-avap-k">ROI moyen parieur sans méthode</div></div>
+                <div className="mg-avap-stat"><div className="mg-avap-big">-18%</div><div className="mg-avap-k">ROI moyen sans méthode</div></div>
               </div>
-              <div className="lp-card-green">
-                <div className="lp-avap-tag">✅ Avec PMU Gagnant</div>
-                <div className="lp-avap-h">Le parieur qui maîtrise</div>
-                {["1 seul ticket par jour — 30 secondes pour valider","Mise Kelly calculée automatiquement sur votre bankroll","Bilan ROI mis à jour chaque soir — vous savez toujours où vous en êtes","Alerte Telegram — aucune surveillance du programme","Les courses illisibles écartées automatiquement par V9.2"].map(t=>(
-                  <div key={t} className="lp-avap-item"><div className="lp-avap-ico">✓</div><div className="lp-avap-txt">{t}</div></div>
+              <div className="mg-card-grn">
+                <div className="mg-avap-tag">✅ Avec PMU Gagnant</div>
+                <div className="mg-avap-h">Le parieur qui maîtrise</div>
+                {["1 ticket par jour — 30 secondes pour valider","Mise Kelly calculée automatiquement","Bilan ROI mis à jour chaque soir","Alerte Telegram — zéro surveillance du programme","Courses illisibles écartées par V9.2"].map(t=>(
+                  <div key={t} className="mg-avap-item"><div className="mg-avap-ico">✓</div><div className="mg-avap-txt">{t}</div></div>
                 ))}
-                <div className="lp-avap-stat"><div className="lp-avap-big">+{liveRoi||26}%</div><div className="lp-avap-k">ROI moyen abonné · 30 jours réels</div></div>
+                <div className="mg-avap-stat"><div className="mg-avap-big">+{liveRoi||26}%</div><div className="mg-avap-k">ROI moyen abonné · 30 jours réels</div></div>
               </div>
             </div>
           </div>
         </section>
 
         {/* ════════ TÉMOIGNAGES ════════ */}
-        <section className="lp-sec mid">
-          <div className="lp-cont">
-            <div className="lp-section-tag">Témoignages vérifiés</div>
-            <h2 className="lp-section-h">Ce qu&apos;ils disent <em>vraiment.</em></h2>
-            <div className="lp-testis">
+        <section className="mg-sec mid">
+          <div className="mg-cont">
+            <div className="mg-sec-tag">Témoignages vérifiés</div>
+            <h2 className="mg-sec-h">Ce qu&apos;ils disent <em>vraiment.</em></h2>
+            <div className="mg-testis">
               {[
-                {av:"M",bg:"#075E36",n:"Marc L.",m:"8 mois · Versailles",roi:"+31%",s:"★★★★★",t:"Avant je jouais 8 courses par jour. Maintenant j'en joue une. Et je gagne plus. C'est tout bête mais ça change tout."},
-                {av:"S",bg:"#A9832E",n:"Sylvie R.",m:"1 an · Lyon",roi:"+18%",s:"★★★★★",t:"Le verdict tombe à 9h. Je le lis avec mon café. Je joue ou je joue pas. Et c'est fini pour la journée."},
-                {av:"A",bg:"#0E7A47",n:"Antoine D.",m:"4 mois · Bordeaux",roi:"+24%",s:"★★★★☆",t:"Le truc dingue c'est voir V9.2 écarter une course que j'aurais jouée. À chaque fois il avait raison."},
+                {av:"M",bg:"#1A5C2E",n:"Marc L.",m:"8 mois · Versailles",roi:"+31%",s:"★★★★★",t:"Avant je jouais 8 courses par jour. Maintenant j'en joue une. Et je gagne plus. C'est tout bête mais ça change tout."},
+                {av:"S",bg:"#6B4E10",n:"Sylvie R.",m:"1 an · Lyon",roi:"+18%",s:"★★★★★",t:"Le verdict tombe à 9h. Je le lis avec mon café. Je joue ou je joue pas. Et c'est fini pour la journée."},
+                {av:"A",bg:"#0E4A2A",n:"Antoine D.",m:"4 mois · Bordeaux",roi:"+24%",s:"★★★★☆",t:"Le truc dingue c'est voir V9.2 écarter une course que j'aurais jouée. À chaque fois il avait raison."},
               ].map(t=>(
-                <div key={t.n} className="lp-testi">
-                  <div className="lp-testi-stars">{t.s}</div>
-                  <p className="lp-testi-txt">&quot;{t.t}&quot;</p>
-                  <div className="lp-testi-row">
-                    <div className="lp-testi-av" style={{background:t.bg}}>{t.av}</div>
-                    <div><div className="lp-testi-name">{t.n}</div><div className="lp-testi-meta">Abonné depuis {t.m}</div></div>
-                    <div className="lp-testi-roi">{t.roi}</div>
+                <div key={t.n} className="mg-testi">
+                  <div className="mg-testi-stars">{t.s}</div>
+                  <p className="mg-testi-txt">&quot;{t.t}&quot;</p>
+                  <div className="mg-testi-row">
+                    <div className="mg-testi-av" style={{background:t.bg,color:"var(--ylw)"}}>{t.av}</div>
+                    <div><div className="mg-testi-name">{t.n}</div><div className="mg-testi-meta">Abonné depuis {t.m}</div></div>
+                    <div className="mg-testi-roi">{t.roi}</div>
                   </div>
                 </div>
               ))}
@@ -656,119 +696,103 @@ export default function LandingPage() {
         </section>
 
         {/* ════════ PLANS ════════ */}
-        <section className="lp-sec dark" id="plans">
-          <div className="lp-cont" style={{textAlign:"center"}}>
-            <div className="lp-section-tag">Tarifs</div>
-            <h2 className="lp-section-h">Simple.<br/><em>Sans engagement.</em></h2>
-            <p style={{fontSize:16,color:"var(--ts)",margin:"0 auto",lineHeight:1.7}}>14 jours pour juger sur résultats réels. Sans carte bancaire.</p>
+        <section className="mg-sec dark" id="plans">
+          <div className="mg-cont" style={{textAlign:"center"}}>
+            <div className="mg-sec-tag">Tarifs</div>
+            <h2 className="mg-sec-h">Simple.<br/><em>Sans engagement.</em></h2>
+            <p style={{fontSize:15,color:"var(--ts)",margin:"0 auto",lineHeight:1.75}}>14 jours pour juger sur résultats réels. Sans carte bancaire.</p>
           </div>
-          <div className="lp-plans">
+          <div className="mg-plans">
             {[
-              {cat:"Découverte",n:"Gratuit",ng:"",p:"0",per:"/mois",rec:false,saving:"",desc:"Pour découvrir V9.2 et tester 14 jours complets.",feats:[{on:true,t:"Verdict du jour (Jouer/Passer)"},{on:true,t:"3 courses analysées / semaine"},{on:false,t:"Cheval sélectionné + mise"},{on:false,t:"Alertes Telegram T-15"},{on:false,t:"Score V9.2 complet"}],href:"/signup",bc:"fr",bt:"Commencer gratuitement",eco:""},
-              {cat:"Parieurs actifs",n:"Premium",ng:"g",p:"19",per:"/mois",rec:true,saving:"-66% vs sans méthode",desc:"Tout : cheval, mise Kelly, score, Telegram, ROI complet.",feats:[{on:true,t:"Tout le programme analysé"},{on:true,t:"Cheval + score V9.2 + Kelly"},{on:true,t:"Alertes Telegram T-15min"},{on:true,t:"Coach IA illimité"},{on:true,t:"Bilan ROI temps réel"}],href:"/subscribe",bc:"pa",bt:"Essai 14 jours gratuit →",eco:""},
-              {cat:"Méthodiques",n:"Annuel",ng:"",p:"149",per:"/an",rec:false,saving:"",desc:"Tout Premium + 2 mois offerts + backtests V9.2.",feats:[{on:true,t:"Tout le plan Premium"},{on:true,t:"2 mois offerts"},{on:true,t:"Backtests historiques"},{on:true,t:"Export CSV"},{on:true,t:"Support prioritaire"}],href:"/subscribe?plan=annual",bc:"an",bt:"Économiser 79 € →",eco:"soit 12,41 € / mois"},
+              {cat:"Découverte",n:"Gratuit",ny:"",p:"0",per:"/mois",rec:false,desc:"Découvrez V9.2 et testez 14 jours complets.",feats:[{on:true,t:"Verdict du jour (Jouer/Passer)"},{on:true,t:"3 courses analysées / semaine"},{on:false,t:"Cheval sélectionné + mise"},{on:false,t:"Alertes Telegram T-15"},{on:false,t:"Score V9.2 complet"}],href:"/signup",bc:"fr",bt:"Commencer gratuitement",eco:""},
+              {cat:"Parieurs actifs",n:"Premium",ny:"y",p:"19",per:"/mois",rec:true,desc:"Tout : cheval, mise Kelly, score V9.2, Telegram, ROI.",feats:[{on:true,t:"Tout le programme analysé"},{on:true,t:"Cheval + score V9.2 + Kelly"},{on:true,t:"Alertes Telegram T-15min"},{on:true,t:"Coach IA illimité"},{on:true,t:"Bilan ROI temps réel"}],href:"/subscribe",bc:"pa",bt:"Essai 14 jours gratuit →",eco:""},
+              {cat:"Méthodiques",n:"Annuel",ny:"",p:"149",per:"/an",rec:false,desc:"Tout Premium + 2 mois offerts + backtests V9.2.",feats:[{on:true,t:"Tout le plan Premium"},{on:true,t:"2 mois offerts"},{on:true,t:"Backtests historiques"},{on:true,t:"Export CSV"},{on:true,t:"Support prioritaire"}],href:"/subscribe?plan=annual",bc:"an",bt:"Économiser 79 € →",eco:"soit 12,41 € / mois"},
             ].map(p=>(
-              <div key={p.n} className={`lp-plan${p.rec?" rec":""}`}>
-                {p.rec&&<div className="lp-plan-badge">★ RECOMMANDÉ</div>}
-                <div className="lp-plan-cat">{p.cat}</div>
-                <div className={`lp-plan-name ${p.ng}`}>
-                  {p.n}
-                  {p.saving&&<span className="lp-plan-saving">{p.saving}</span>}
-                </div>
-                <div className="lp-plan-price"><sup>€</sup>{p.p}<span className="lp-plan-per">{p.per}</span></div>
-                <p className="lp-plan-desc">{p.desc}</p>
-                <ul className="lp-plan-feats">{p.feats.map(f=><li key={f.t}><span className={f.on?"on":"off"}>●</span><span>{f.t}</span></li>)}</ul>
-                <Link href={p.href} className={`lp-plan-btn ${p.bc}`}>{p.bt}</Link>
-                {p.eco&&<div className="lp-plan-eco">↳ {p.eco}</div>}
+              <div key={p.n} className={`mg-plan${p.rec?" rec":""}`}>
+                {p.rec&&<div className="mg-plan-badge">★ RECOMMANDÉ</div>}
+                <div className="mg-plan-cat">{p.cat}</div>
+                <div className={`mg-plan-name ${p.ny}`}>{p.n}</div>
+                <div className="mg-plan-price"><sup>€</sup>{p.p}<span className="mg-plan-per">{p.per}</span></div>
+                <p className="mg-plan-desc">{p.desc}</p>
+                <ul className="mg-plan-feats">{p.feats.map(f=><li key={f.t}><span className={f.on?"on":"off"}>●</span><span>{f.t}</span></li>)}</ul>
+                <Link href={p.href} className={`mg-plan-btn ${p.bc}`}>{p.bt}</Link>
+                {p.eco&&<div className="mg-plan-eco">↳ {p.eco}</div>}
               </div>
             ))}
           </div>
         </section>
 
         {/* ════════ FAQ ════════ */}
-        <section className="lp-sec mid">
-          <div className="lp-cont" style={{textAlign:"center",marginBottom:52}}>
-            <div className="lp-section-tag">FAQ</div>
-            <h2 className="lp-section-h">Questions <em>fréquentes.</em></h2>
+        <section className="mg-sec mid">
+          <div className="mg-cont" style={{textAlign:"center",marginBottom:48}}>
+            <div className="mg-sec-tag">FAQ</div>
+            <h2 className="mg-sec-h">Questions <em>fréquentes.</em></h2>
           </div>
-          <div className="lp-faqs">
+          <div className="mg-faqs">
             {faqs.map((f,i)=>(
-              <div key={i} className={`lp-faq${faqOpen===i?" on":""}`}>
-                <div className="lp-faq-q" onClick={()=>setFaqOpen(faqOpen===i?null:i)}>
-                  <span className="lp-faq-q-txt">{f.q}</span><div className="lp-faq-ico">+</div>
+              <div key={i} className={`mg-faq${faqOpen===i?" on":""}`}>
+                <div className="mg-faq-q" onClick={()=>setFaqOpen(faqOpen===i?null:i)}>
+                  <span className="mg-faq-q-txt">{f.q}</span><div className="mg-faq-ico">+</div>
                 </div>
-                <div className="lp-faq-a">{f.a}</div>
+                <div className="mg-faq-a">{f.a}</div>
               </div>
             ))}
           </div>
         </section>
 
         {/* ════════ CTA FINAL ════════ */}
-        <section className="lp-cta">
+        <section className="mg-cta">
           <div style={{position:"relative",zIndex:1}}>
-            <div className="lp-section-tag" style={{justifyContent:"center",display:"flex",marginBottom:20}}>Prêt à commencer ?</div>
-            <h2 className="lp-cta-h">Le prochain<br/>verdict tombe<br/><span className="g">dans {countdown}.</span></h2>
-            <p className="lp-cta-p">14 jours d&apos;essai complet. Sans carte bancaire. Si ce n&apos;est pas pour vous, vous partez sans frais.</p>
-            <Link href="/signup" className="lp-hero-btn main" style={{display:"inline-flex",fontSize:17,padding:"17px 42px"}}>
-              Démarrer gratuitement →
+            <div className="mg-sec-tag" style={{justifyContent:"center",display:"flex",marginBottom:20}}>Prêt à commencer ?</div>
+            <h2 className="mg-cta-h">
+              Le verdict<br/>tombe dans<br/><span className="y">{countdown} !!</span>
+            </h2>
+            <p className="mg-cta-p">14 jours d&apos;essai complet. Sans carte bancaire. Si ce n&apos;est pas pour vous, vous partez sans frais.</p>
+            <Link href="/signup" className="mg-cta-main" style={{fontSize:"clamp(18px,2.5vw,26px)"}}>
+              ▶ Démarrer gratuitement
             </Link>
-            <div className="lp-cta-strip">
-              <span><span className="hi">14 jours</span> d&apos;essai</span><div className="lp-cta-strip-dot"/>
-              <span><span className="hi">Sans</span> CB</span><div className="lp-cta-strip-dot"/>
-              <span>Résiliation <span className="hi">1 clic</span></span><div className="lp-cta-strip-dot"/>
-              <span>ROI <span className="hi">mesuré</span> en direct</span>
+            <div className="mg-cta-strip">
+              <span>14 jours d&apos;essai</span><div className="mg-cta-strip-dot"/>
+              <span>Sans CB</span><div className="mg-cta-strip-dot"/>
+              <span>Résiliation 1 clic</span><div className="mg-cta-strip-dot"/>
+              <span>ROI mesuré en direct</span>
             </div>
           </div>
         </section>
 
         {/* JEU RESPONSABLE */}
-        <div className="lp-jr"><div className="lp-jr-inner" id="lp-jr"/></div>
+        <div className="mg-jr"><div className="mg-jr-inner" id="mg-jr"/></div>
 
         {/* FOOTER */}
-        <footer className="lp-footer">
-          <div className="lp-footer-grid">
-            <div className="lp-footer-brand">
-              <Link href="/" className="lp-nav-logo" style={{display:"inline-flex"}}>
-                <div className="lp-nav-badge">PG</div>
-                <div><span className="lp-nav-name">PMUGagnant</span><span className="lp-nav-v">TurfEdge V9.2</span></div>
+        <footer className="mg-footer">
+          <div className="mg-footer-grid">
+            <div className="mg-footer-brand">
+              <Link href="/" className="mg-nav-logo" style={{display:"inline-flex"}}>
+                <div className="mg-nav-badge">PG</div>
+                <div><span className="mg-nav-name">PMUGagnant</span><span className="mg-nav-v">TurfEdge V9.2</span></div>
               </Link>
-              <p>L&apos;IA qui analyse 30+ signaux par course PMU et vous donne un seul verdict — celui où la value est défendable. Résultats réels affichés.</p>
+              <p>L&apos;IA qui analyse 30+ signaux par course PMU et vous donne un seul verdict. Résultats réels affichés.</p>
             </div>
             {[{t:"Produit",l:[["Dashboard","/dashboard"],["Mon bilan","/bilan"],["Mes paris","/mes-paris"],["Premium","/subscribe"]]},
               {t:"Compte",l:[["Connexion","/login"],["Inscription","/signup"],["Abonnement","/subscribe"]]},
-              {t:"Légal",l:[["Mentions légales","/mentions-legales"],["CGV","/cgv"],["Confidentialité","/politique-confidentialite"],["Cookies","/politique-cookies"],["Jeu responsable","/jeu-responsable"]]},
+              {t:"Légal",l:[["Mentions légales","/mentions-legales"],["CGV","/cgv"],["Confidentialité","/politique-confidentialite"],["Jeu responsable","/jeu-responsable"]]},
             ].map(col=>(
-              <div key={col.t} className="lp-footer-col">
-                <div className="lp-footer-col-t">{col.t}</div>
+              <div key={col.t} className="mg-footer-col">
+                <div className="mg-footer-col-t">{col.t}</div>
                 <ul>{col.l.map(([lbl,href])=><li key={lbl}><Link href={href}>{lbl}</Link></li>)}</ul>
               </div>
             ))}
           </div>
-          <div className="lp-footer-bot">
+          <div className="mg-footer-bot">
             <span>© 2026 PMU GAGNANT · TURFEDGE V9.2</span>
-            <span>JOUER COMPORTE DES RISQUES · <a href="tel:0974751313">09 74 75 13 13</a> · <a href="https://www.joueurs-info-service.fr" target="_blank" rel="noopener noreferrer">JOUEURS-INFO-SERVICE.FR</a></span>
+            <span>JOUER COMPORTE DES RISQUES · <a href="tel:0974751313">09 74 75 13 13</a></span>
           </div>
         </footer>
       </div>
 
       <script dangerouslySetInnerHTML={{__html:`
-        var hippos=['Longchamp','Vincennes','Chantilly','Saint-Cloud','Deauville','Enghien','Cagnes-sur-Mer','Pau','Bordeaux','Auteuil','Compiègne','Moulins'];
-        var tk=document.getElementById('lp-ticker');
-        if(tk){[0,1].forEach(function(){hippos.forEach(function(n){tk.innerHTML+='<span class="lp-ticker-item"><span class="lp-ticker-dot"></span>'+n+'</span>';});});}
-
-        var wins=[
-          {name:'Marc L.',city:'Versailles',gain:'+37 €',date:'14/05'},
-          {name:'Thomas M.',city:'Lyon',gain:'+52 €',date:'14/05'},
-          {name:'Sylvie R.',city:'Bordeaux',gain:'+28 €',date:'13/05'},
-          {name:'Karim D.',city:'Paris',gain:'+61 €',date:'13/05'},
-          {name:'Julie M.',city:'Nantes',gain:'+44 €',date:'12/05'},
-          {name:'Ahmed B.',city:'Marseille',gain:'+33 €',date:'12/05'},
-        ];
-        var wk=document.getElementById('lp-wins');
-        if(wk){[0,1].forEach(function(){wins.forEach(function(w){wk.innerHTML+='<span class="lp-wins-item"><span class="lp-wins-dot"></span><span>'+w.name+'</span><span style="color:rgba(255,255,255,.18)">'+w.city+' · '+w.date+'</span><span class="gain">'+w.gain+'</span></span>';});});}
-
-        var jr=document.getElementById('lp-jr');
-        if(jr){var items=['⚠ JOUER COMPORTE DES RISQUES','ENDETTEMENT · DÉPENDANCE','APPELEZ LE 09 74 75 13 13','JOUEURS-INFO-SERVICE.FR','INTERDIT AUX MINEURS'];[0,1,2].forEach(function(){items.forEach(function(i){jr.innerHTML+='<span class="lp-jr-item">'+i+'</span>';});});}
+        var jr=document.getElementById('mg-jr');
+        if(jr){var items=['⚠ JOUER COMPORTE DES RISQUES','ENDETTEMENT · DÉPENDANCE','APPELEZ LE 09 74 75 13 13','JOUEURS-INFO-SERVICE.FR','INTERDIT AUX MINEURS'];[0,1,2].forEach(function(){items.forEach(function(i){jr.innerHTML+='<span class="mg-jr-item">'+i+'</span>';});});}
       `}}/>
     </>
   );
