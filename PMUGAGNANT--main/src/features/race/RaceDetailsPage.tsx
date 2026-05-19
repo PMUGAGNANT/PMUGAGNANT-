@@ -28,6 +28,7 @@ import {
   type RaceApiResponse,
 } from "@/features/race/lib/race-page-model";
 import { fetchRaceDetails } from "@/features/races/api/client";
+import type { RoleCheval } from "@/lib/horse-roles";
 
 function SectionKicker({ children }: { children: ReactNode }) {
   return <p className="app-kicker mb-3">{children}</p>;
@@ -124,6 +125,162 @@ function TicketResultBanner({
   );
 }
 
+function PronosticRecap({
+  roles,
+  officialArrival,
+}: {
+  roles: RoleCheval[];
+  officialArrival: ArrivalRow[];
+}) {
+  const keyRoles = roles.filter((r) => r.role !== "OUBLIE");
+  if (keyRoles.length === 0) return null;
+
+  const results = keyRoles.map((role) => {
+    const arrival = officialArrival.find(
+      (row) => String(row.numPmu) === String(role.cheval_num)
+    );
+    const position = arrival?.position ?? null;
+    return {
+      role,
+      position,
+      isWinner: position === 1,
+      isPlaced: position !== null && position <= 3,
+    };
+  });
+
+  const anyWinner = results.find((r) => r.isWinner);
+  const placedCount = results.filter((r) => r.isPlaced).length;
+
+  let verdictText: string;
+  let verdictColor: string;
+  let verdictBg: string;
+
+  if (anyWinner) {
+    const lbl =
+      anyWinner.role.role === "FAVORI"
+        ? "Favori"
+        : anyWinner.role.role === "PEPITE"
+          ? "Pépite"
+          : "Outsider";
+    verdictText = `${anyWinner.role.emoji} ${lbl} gagnant !`;
+    verdictColor = anyWinner.role.role === "FAVORI" ? "#2A4D12" : "#8C6D2F";
+    verdictBg = anyWinner.role.role === "FAVORI" ? "#EAF3DE" : "#FDFAF2";
+  } else if (placedCount > 0) {
+    verdictText = `${placedCount} pick${placedCount > 1 ? "s" : ""} placé${placedCount > 1 ? "s" : ""}`;
+    verdictColor = "#7A6020";
+    verdictBg = "#FDF8EC";
+  } else {
+    verdictText = "Aucun pick dans le top 3";
+    verdictColor = "#9C9485";
+    verdictBg = "var(--pmu-surface-2)";
+  }
+
+  return (
+    <section>
+      <SectionKicker>Notre pronostic</SectionKicker>
+      <div
+        className="overflow-hidden rounded-lg border border-[var(--pmu-border)]"
+        style={{ background: "var(--pmu-surface)" }}
+      >
+        <div
+          className="grid divide-x divide-[var(--pmu-border)]"
+          style={{ gridTemplateColumns: `repeat(${keyRoles.length}, 1fr)` }}
+        >
+          {results.map(({ role, position, isWinner, isPlaced }) => {
+            const posLabel =
+              position === null ? "—" : position === 1 ? "1er" : `${position}e`;
+            const tagColor = isWinner
+              ? "#2A7D12"
+              : isPlaced
+                ? "#8C6D2F"
+                : "#9C9485";
+            const tagBg = isWinner
+              ? "#EAF3DE"
+              : isPlaced
+                ? "#FDF8EC"
+                : "var(--pmu-surface-2)";
+
+            return (
+              <div key={role.role} className="flex flex-col gap-1 p-3">
+                <span
+                  style={{
+                    color: "var(--pmu-text-muted)",
+                    fontSize: "0.62rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.07em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {role.emoji} {role.label}
+                </span>
+                <p
+                  title={role.cheval_nom}
+                  style={{
+                    color: "var(--pmu-text)",
+                    fontSize: "0.85rem",
+                    fontWeight: 700,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  N°{role.cheval_num} {role.cheval_nom}
+                </p>
+                <span
+                  style={{ color: "var(--pmu-text-muted)", fontSize: "0.65rem" }}
+                >
+                  {role.cote.toFixed(1)}x
+                </span>
+                <span
+                  style={{
+                    alignSelf: "flex-start",
+                    background: tagBg,
+                    border: `1px solid ${tagColor}33`,
+                    borderRadius: "999px",
+                    color: tagColor,
+                    fontSize: "0.7rem",
+                    fontWeight: 700,
+                    marginTop: "0.25rem",
+                    padding: "0.15rem 0.65rem",
+                  }}
+                >
+                  {posLabel}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div
+          style={{
+            background: verdictBg,
+            borderTop: "1px solid var(--pmu-border)",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            padding: "0.55rem 1rem",
+          }}
+        >
+          <span
+            style={{ color: verdictColor, fontSize: "0.72rem", fontWeight: 700 }}
+          >
+            {verdictText}
+          </span>
+          <span
+            style={{
+              color: "var(--pmu-text-muted)",
+              fontSize: "0.68rem",
+              marginLeft: "auto",
+            }}
+          >
+            {placedCount}/{keyRoles.length} placés
+          </span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function CourseLoadError({
   error,
   onRetry,
@@ -203,6 +360,10 @@ function RaceDetailsContent({
             pronostic={pronostic}
             officialArrival={officialArrival}
           />
+        ) : null}
+
+        {isFinished && roles.length > 0 && officialArrival.length > 0 ? (
+          <PronosticRecap roles={roles} officialArrival={officialArrival} />
         ) : null}
 
         {isFinished && officialArrival.length > 0 ? (
