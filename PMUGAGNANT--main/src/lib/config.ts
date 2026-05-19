@@ -3,8 +3,8 @@ import { getSupabaseAdminClient } from "@/lib/supabase";
 
 export const DEFAULT_ALGO_PARAMETERS: AlgoParameters = {
   validation: {
-    confianceMin: 6,
-    qualiteMin: 70,
+    confianceMin: 5.5,
+    qualiteMin: 65,
     lisibilitesAcceptees: ["LISIBLE", "COMPLEXE"],
   },
   lisibilite: {
@@ -25,7 +25,7 @@ export const DEFAULT_ALGO_PARAMETERS: AlgoParameters = {
   },
   value: {
     maxCap: 5,
-    confidenceMin: 6,
+    confidenceMin: 5.5,
   },
   outsiders: {
     coteMin: 8,
