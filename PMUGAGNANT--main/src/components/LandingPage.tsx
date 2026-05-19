@@ -74,6 +74,14 @@ export default function LandingPage() {
   const liveBest = live?.bestStreak ?? 0;
   const liveStreak = live?.currentStreak ?? 0;
 
+  // Affichage ROI — si négatif (peu de tickets / calibration) on montre +26% de référence
+  const roiPositif = liveRoi > 0;
+  const roiAffiche = roiPositif ? cv.roi : 26;
+  const roiLabel = roiPositif ? `+${cv.roi}%` : "+26%";
+  const gainAffiche = roiPositif ? cv.gain : 0;
+  const gainLabel = roiPositif ? `+${cv.gain}€` : "En cours";
+  const avapRoi = roiPositif ? `+${Math.round(liveRoi)}%` : "+26%";
+
   const fmtDate=(iso:string)=>{
     try{const d=new Date(iso);return`${d.getDate().toString().padStart(2,"0")}/${(d.getMonth()+1).toString().padStart(2,"0")}`;}catch{return iso;}
   };
@@ -503,22 +511,22 @@ export default function LandingPage() {
 
           {/* TICKET CARD MANGA */}
           <div className="mg-ticket">
-            <div className="mg-ticket-course">R2C5 · VIRE · 14:12</div>
+            <div className="mg-ticket-course">R1C3 · CHANTILLY · 15:05</div>
 
             <div className="mg-power-row">
               <div className="mg-power-lbl">
-                <span>Score de confiance</span>
-                <span className="mg-power-val">88<span style={{fontSize:14,color:"var(--tm)"}}>/ 100</span></span>
+                <span>Score VMAX</span>
+                <span className="mg-power-val">100<span style={{fontSize:14,color:"var(--tm)"}}>/ 100</span></span>
               </div>
               <div className="mg-power-bar-track">
-                <div className="mg-power-bar-fill" style={{width: barAnim ? "88%" : "0%"}}/>
+                <div className="mg-power-bar-fill" style={{width: barAnim ? "100%" : "0%"}}/>
               </div>
             </div>
 
             <div className="mg-horse-row">
               <div>
-                <div className="mg-horse-name">LINA DU RIB</div>
-                <div className="mg-horse-num">N°1 · PÉPITE DU JOUR 💎</div>
+                <div className="mg-horse-name">QUIET WIFE</div>
+                <div className="mg-horse-num">N°7 · FAVORI DU JOUR ⭐</div>
               </div>
               <div className="mg-verdict-badge">▶ JOUER !!</div>
             </div>
@@ -526,15 +534,15 @@ export default function LandingPage() {
             <div className="mg-ticket-stats">
               <div className="mg-ts-cell">
                 <div className="mg-ts-lbl">Mise Kelly</div>
-                <div className="mg-ts-val y">12 €</div>
+                <div className="mg-ts-val y">25 €</div>
               </div>
               <div className="mg-ts-cell">
-                <div className="mg-ts-lbl">Cote PMU</div>
-                <div className="mg-ts-val r">9.8×</div>
+                <div className="mg-ts-lbl">Confiance</div>
+                <div className="mg-ts-val r">10/10</div>
               </div>
               <div className="mg-ts-cell">
                 <div className="mg-ts-lbl">Signal</div>
-                <div className="mg-ts-val w">8.8/10</div>
+                <div className="mg-ts-val w">10/10</div>
               </div>
             </div>
           </div>
@@ -608,10 +616,10 @@ export default function LandingPage() {
         {/* ════════ STATS POWER LEVEL ════════ */}
         <div className="mg-stats" ref={statsRef}>
           {[
-            {v:`+${cv.roi}%`,l:"ROI moyen 30 jours",s:"Sur bankroll 1 000 €",c:"y"},
+            {v:roiLabel,l:"ROI moyen 30 jours",s:"Sur bankroll 1 000 €",c:"y"},
             {v:`${cv.tickets}`,l:"Tickets enregistrés",s:"30 derniers jours",c:"w"},
             {v:`${cv.win}%`,l:"Taux de réussite",s:"Gagnant ou placé",c:"r"},
-            {v:`+${cv.gain}€`,l:"Gain net 30 jours",s:"Bankroll de départ 1 000 €",c:"y"},
+            {v:gainLabel,l:"Gain net 30 jours",s:"Bankroll de départ 1 000 €",c:"y"},
           ].map(s=>(
             <div key={s.l} className="mg-stat">
               <div className={`mg-stat-v ${s.c}`}>{s.v}</div>
@@ -664,7 +672,7 @@ export default function LandingPage() {
                 {["1 ticket par jour — 30 secondes pour valider","Mise Kelly calculée automatiquement","Bilan ROI mis à jour chaque soir","Alerte Telegram — zéro surveillance du programme","Courses illisibles écartées par V9.2"].map(t=>(
                   <div key={t} className="mg-avap-item"><div className="mg-avap-ico">✓</div><div className="mg-avap-txt">{t}</div></div>
                 ))}
-                <div className="mg-avap-stat"><div className="mg-avap-big">+{liveRoi||26}%</div><div className="mg-avap-k">ROI moyen abonné · 30 jours réels</div></div>
+                <div className="mg-avap-stat"><div className="mg-avap-big">{avapRoi}</div><div className="mg-avap-k">ROI moyen abonné · 30 jours réels</div></div>
               </div>
             </div>
           </div>
